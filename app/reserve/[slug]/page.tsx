@@ -119,6 +119,25 @@ function formatRdvHeure(isoStr: string) {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
+async function envoyerPushNotif(proId: string, title: string, body: string) {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('push_token')
+      .eq('id', proId)
+      .single()
+    const pushToken = data?.push_token
+    if (!pushToken) return
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: pushToken, title, body }),
+    })
+  } catch (e) {
+    console.error('[envoyerPushNotif] Erreur:', e)
+  }
+}
+
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
@@ -374,6 +393,8 @@ export default function ReservationPage() {
   async function handleAnnulerRdv(rdvId: string) {
     setAnnulationEnCours(rdvId)
     try {
+      const rdv = rdvsAVenir.find(r => r.id === rdvId)
+
       const { error } = await supabase
         .from('rendez_vous')
         .update({ statut: 'annule' })
@@ -381,6 +402,14 @@ export default function ReservationPage() {
 
       if (error) throw error
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
+
+      if (rdv && pro) {
+        envoyerPushNotif(
+          pro.id,
+          '❌ RDV annulé',
+          `${clientePrenom} a annulé son RDV du ${formatRdvDate(rdv.date)} à ${formatRdvHeure(rdv.date)}`
+        )
+      }
     } catch (e) {
       console.error('[handleAnnulerRdv] Erreur:', e)
       alert('Impossible d\'annuler ce rendez-vous.')
@@ -484,6 +513,11 @@ export default function ReservationPage() {
 
       if (rdvErr) throw rdvErr
       setPageState('confirmed')
+      envoyerPushNotif(
+        pro.id,
+        '🌸 Nouveau RDV !',
+        `${clientePrenom} a réservé ${specialite} le ${formatDateLong(date)} à ${heure}`
+      )
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
       alert('Une erreur est survenue. Ouvre la console (F12) pour voir le détail.')
