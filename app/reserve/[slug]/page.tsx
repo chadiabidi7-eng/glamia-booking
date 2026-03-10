@@ -600,25 +600,7 @@ export default function ReservationPage() {
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom} {pro?.nom}</p>
-              {pro?.message_accueil && (
-                <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0', fontStyle: 'italic', lineHeight: 1.4 }}>
-                  {pro.message_accueil}
-                </p>
-              )}
-              {hasSocials ? (
-                <div style={{ marginTop: 8 }}>
-                  <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 8px', fontWeight: 500 }}>
-                    Retrouvez-moi sur les réseaux
-                  </p>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={32} />}
-                    {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={32} />}
-                    {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={32} />}
-                  </div>
-                </div>
-              ) : (
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Réservation en ligne</p>
-              )}
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
             </div>
           </div>
 
@@ -643,6 +625,40 @@ export default function ReservationPage() {
 
       {/* ── Content ── */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 48px' }}>
+
+        {/* ── Bannière pro : message d'accueil + réseaux ── */}
+        {(pro?.message_accueil || hasSocials) && (
+          <div style={{
+            textAlign: 'center',
+            marginBottom: 28,
+            paddingBottom: 28,
+            borderBottom: '1px solid #f3f4f6',
+          }}>
+            {pro?.message_accueil && (
+              <p style={{
+                fontSize: 16,
+                color: PINK,
+                fontStyle: 'italic',
+                margin: hasSocials ? '0 0 20px' : '0',
+                lineHeight: 1.6,
+              }}>
+                {pro.message_accueil}
+              </p>
+            )}
+            {hasSocials && (
+              <div>
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>
+                  Retrouvez-moi sur les réseaux
+                </p>
+                <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+                  {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={36} />}
+                  {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={36} />}
+                  {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={36} />}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ────────────────────────────────────────
             STEP 1 — Identification
