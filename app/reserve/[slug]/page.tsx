@@ -18,6 +18,20 @@ type ProInfo = {
   nom: string
   photo_url?: string
   horaires: HorairesHebdo
+  instagram?: string
+  tiktok?: string
+  snapchat?: string
+  message_accueil?: string
+}
+
+type RdvAVenir = {
+  id: string
+  date: string
+  specialite: string
+  technique: string
+  duree: number
+  prix: number | null
+  statut: string
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -65,7 +79,6 @@ function normalizeStr(str: string) {
     .replace(/^-|-$/g, '')
 }
 
-// Normalise un numéro de téléphone : supprime espaces/tirets, +33 → 0X, 0033 → 0X
 function normalizePhone(tel: string): string {
   let n = tel.replace(/[\s\-\.\(\)]/g, '')
   if (n.startsWith('+33')) n = '0' + n.slice(3)
@@ -95,11 +108,21 @@ function formatDateLong(dateStr: string) {
   })
 }
 
+function formatRdvDate(isoStr: string) {
+  const d = new Date(isoStr)
+  const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+  return formatDateLong(dateStr)
+}
+
+function formatRdvHeure(isoStr: string) {
+  const d = new Date(isoStr)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
 
-// Monday-first: Mon=0 … Sun=6
 function getFirstDayOfWeek(year: number, month: number) {
   return (new Date(year, month, 1).getDay() + 6) % 7
 }
@@ -143,6 +166,60 @@ function generateSlots(
 }
 
 // ─────────────────────────────────────────────
+// Social icons (inline SVG)
+// ─────────────────────────────────────────────
+function IconInstagram() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#E1306C" aria-label="Instagram">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+    </svg>
+  )
+}
+
+function IconTikTok() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#333333" aria-label="TikTok">
+      <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+    </svg>
+  )
+}
+
+function IconSnapchat() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#E8C100" aria-label="Snapchat">
+      <path d="M5.332 14.1c-.05 0-.12-.01-.21-.03-1.18-.3-1.95-.55-2.29-.76-.16-.1-.27-.28-.24-.48.02-.16.14-.3.3-.35.83-.26 1.43-.74 1.76-1.44.06-.13.06-.29-.01-.42-.22-.4-.34-.83-.34-1.29 0-.15.09-.28.23-.34.13-.05.27-.03.38.06.24.19.5.29.76.29.14 0 .27-.03.39-.08 0-.42-.02-.85-.04-1.27-.06-1.22-.05-2.5.42-3.64C7.54 1.82 9.94.5 12 .5s4.46 1.32 5.77 4.35c.47 1.14.48 2.42.42 3.64-.02.42-.04.85-.04 1.27.12.05.25.08.39.08.26 0 .52-.1.76-.29.11-.09.25-.11.38-.06.14.06.23.19.23.34 0 .46-.12.89-.34 1.29-.07.13-.07.29-.01.42.33.7.93 1.18 1.76 1.44.16.05.28.19.3.35.03.2-.08.38-.24.48-.34.21-1.11.46-2.29.76-.09.02-.16.03-.21.03-.06.14-.09.44.03.83.06.19.01.4-.13.54-.2.19-.57.35-1.38.35-.41 0-.91-.07-1.51-.25-.48-.14-.98-.22-1.5-.22-.52 0-1.02.08-1.5.22-.6.18-1.1.25-1.51.25-.81 0-1.18-.16-1.38-.35-.14-.14-.19-.35-.13-.54.12-.39.09-.69.03-.83z" />
+    </svg>
+  )
+}
+
+function SocialLink({ reseau, pseudo }: { reseau: 'instagram' | 'tiktok' | 'snapchat'; pseudo: string }) {
+  const config = {
+    instagram: { icon: <IconInstagram />, url: `https://instagram.com/${pseudo}`,   label: `Instagram : @${pseudo}` },
+    tiktok:    { icon: <IconTikTok />,    url: `https://tiktok.com/@${pseudo}`,     label: `TikTok : @${pseudo}` },
+    snapchat:  { icon: <IconSnapchat />,  url: `https://snapchat.com/add/${pseudo}`, label: `Snapchat : ${pseudo}` },
+  }[reseau]
+
+  return (
+    <a
+      href={config.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={config.label}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 28, height: 28, borderRadius: 8,
+        background: '#f3f4f6', textDecoration: 'none', flexShrink: 0,
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = '#e5e7eb')}
+      onMouseLeave={e => (e.currentTarget.style.background = '#f3f4f6')}
+    >
+      {config.icon}
+    </a>
+  )
+}
+
+// ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
 export default function ReservationPage() {
@@ -165,6 +242,11 @@ export default function ReservationPage() {
   const [clienteNom,    setClienteNom]    = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+
+  // RDVs à venir (cliente connue)
+  const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
+  const [loadingRdvs,       setLoadingRdvs]       = useState(false)
+  const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null)
 
   // Step 2
   const [specialite, setSpecialite] = useState('')
@@ -194,7 +276,7 @@ export default function ReservationPage() {
     try {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, prenom, nom, photo_url, horaires')
+        .select('id, prenom, nom, photo_url, horaires, instagram, tiktok, snapchat, message_accueil')
 
       if (error) throw error
 
@@ -205,11 +287,15 @@ export default function ReservationPage() {
       if (!found) { setPageState('notfound'); return }
 
       setPro({
-        id:        found.id,
-        prenom:    found.prenom,
-        nom:       found.nom,
-        photo_url: found.photo_url ?? undefined,
-        horaires:  found.horaires ?? DEFAULT_HORAIRES,
+        id:              found.id,
+        prenom:          found.prenom,
+        nom:             found.nom,
+        photo_url:       found.photo_url ?? undefined,
+        horaires:        found.horaires ?? DEFAULT_HORAIRES,
+        instagram:       found.instagram ?? undefined,
+        tiktok:          found.tiktok ?? undefined,
+        snapchat:        found.snapchat ?? undefined,
+        message_accueil: found.message_accueil ?? undefined,
       })
 
       const { data: prestData } = await supabase
@@ -233,33 +319,78 @@ export default function ReservationPage() {
     if (normalized.length < 8) return
 
     setPhoneStatus('checking')
-    console.log('[handleCheckPhone] Recherche pour pro_id:', pro.id, '| téléphone normalisé:', normalized)
 
     try {
-      // On récupère toutes les clientes de la pro et on compare les numéros normalisés
       const { data: clientes, error } = await supabase
         .from('clientes')
         .select('id, prenom, nom, telephone')
         .eq('pro_id', pro.id)
 
-      console.log('[handleCheckPhone] Clientes récupérées:', clientes, '| Erreur:', error)
-
       if (error) throw error
 
       const found = clientes?.find(c => normalizePhone(c.telephone) === normalized)
-      console.log('[handleCheckPhone] Cliente trouvée:', found ?? 'aucune')
 
       if (found) {
         setClienteId(found.id)
         setClientePrenom(found.prenom)
         setClienteNom(found.nom)
         setPhoneStatus('known')
+        chargerRdvsAVenir(found.id, pro.id)
       } else {
         setPhoneStatus('unknown')
       }
     } catch (e) {
       console.error('[handleCheckPhone] Erreur:', e)
       setPhoneStatus('unknown')
+    }
+  }
+
+  // ── RDVs à venir ─────────────────────────────
+  async function chargerRdvsAVenir(cId: string, proId: string) {
+    setLoadingRdvs(true)
+    try {
+      const now = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('id, date, specialite, technique, duree, prix, statut')
+        .eq('cliente_id', cId)
+        .eq('pro_id', proId)
+        .gte('date', now)
+        .neq('statut', 'annule')
+        .order('date', { ascending: true })
+
+      if (error) throw error
+      setRdvsAVenir(data ?? [])
+    } catch (e) {
+      console.error('[chargerRdvsAVenir] Erreur:', e)
+    } finally {
+      setLoadingRdvs(false)
+    }
+  }
+
+  async function handleAnnulerRdv(rdvId: string) {
+    setAnnulationEnCours(rdvId)
+    try {
+      const { error } = await supabase
+        .from('rendez_vous')
+        .update({ statut: 'annule' })
+        .eq('id', rdvId)
+
+      if (error) throw error
+      setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
+    } catch (e) {
+      console.error('[handleAnnulerRdv] Erreur:', e)
+      alert('Impossible d\'annuler ce rendez-vous.')
+    } finally {
+      setAnnulationEnCours(null)
+    }
+  }
+
+  function confirmerAnnulation(rdv: RdvAVenir) {
+    const dateLabel = formatRdvDate(rdv.date)
+    const heureLabel = formatRdvHeure(rdv.date)
+    if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?`)) {
+      handleAnnulerRdv(rdv.id)
     }
   }
 
@@ -299,44 +430,25 @@ export default function ReservationPage() {
 
   // ── Step 6: Confirm ───────────────────────────
   async function handleConfirm() {
-    if (!pro || !technique || !date || !heure) {
-      console.error('[handleConfirm] Champs manquants:', { pro: !!pro, technique: !!technique, date, heure })
-      return
-    }
+    if (!pro || !technique || !date || !heure) return
     setSubmitting(true)
 
     try {
       let cId = clienteId
       const telNormalized = normalizePhone(telephone)
 
-      console.log('[handleConfirm] Début. clienteId existant:', cId, '| pro.id:', pro.id)
-
-      // ── Étape 1 : Résoudre l'id cliente ──────
       if (!cId) {
-        console.log('[handleConfirm] Pas de clienteId en mémoire, recherche par téléphone:', telNormalized)
-
         const { data: allClientes, error: fetchErr } = await supabase
           .from('clientes')
           .select('id, telephone')
           .eq('pro_id', pro.id)
 
-        console.log('[handleConfirm] Clientes existantes:', allClientes, '| Erreur:', fetchErr)
-
         if (!fetchErr && allClientes) {
           const found = allClientes.find(c => normalizePhone(c.telephone) === telNormalized)
-          if (found) {
-            cId = found.id
-            console.log('[handleConfirm] Cliente retrouvée par téléphone:', cId)
-          }
+          if (found) cId = found.id
         }
 
         if (!cId) {
-          console.log('[handleConfirm] Création nouvelle cliente:', {
-            prenom: clientePrenom.trim(),
-            nom: clienteNom.trim(),
-            telephone: telNormalized,
-          })
-
           const { data: created, error: createErr } = await supabase
             .from('clientes')
             .insert({
@@ -348,45 +460,26 @@ export default function ReservationPage() {
             .select('id')
             .single()
 
-          console.log('[handleConfirm] Résultat création cliente:', created, '| Erreur:', createErr)
-
-          if (createErr) {
-            console.error('[handleConfirm] Échec création cliente. Code:', createErr.code, '| Message:', createErr.message)
-            throw createErr
-          }
+          if (createErr) throw createErr
           cId = created!.id
         }
       }
 
-      // ── Étape 2 : Créer le RDV ───────────────
-      const rdvPayload = {
-        pro_id:     pro.id,
-        cliente_id: cId,
-        date:       `${date}T${heure}:00.000Z`,
-        duree:      technique.duree,
-        specialite: specialite,
-        technique:  technique.nom,
-        prix:       technique.prix > 0 ? technique.prix : null,
-        statut:     'en_attente',
-        notes:      commentaire.trim() || null,
-      }
-
-      console.log('[handleConfirm] Insertion RDV:', rdvPayload)
-
-      const { data: rdvData, error: rdvErr } = await supabase
+      const { error: rdvErr } = await supabase
         .from('rendez_vous')
-        .insert(rdvPayload)
-        .select('id')
-        .single()
+        .insert({
+          pro_id:     pro.id,
+          cliente_id: cId,
+          date:       `${date}T${heure}:00.000Z`,
+          duree:      technique.duree,
+          specialite: specialite,
+          technique:  technique.nom,
+          prix:       technique.prix > 0 ? technique.prix : null,
+          statut:     'en_attente',
+          notes:      commentaire.trim() || null,
+        })
 
-      console.log('[handleConfirm] Résultat insertion RDV:', rdvData, '| Erreur:', rdvErr)
-
-      if (rdvErr) {
-        console.error('[handleConfirm] Échec insertion RDV. Code:', rdvErr.code, '| Message:', rdvErr.message)
-        throw rdvErr
-      }
-
-      console.log('[handleConfirm] ✅ RDV créé avec succès:', rdvData?.id)
+      if (rdvErr) throw rdvErr
       setPageState('confirmed')
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
@@ -421,6 +514,8 @@ export default function ReservationPage() {
     if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
     else setCalMonth(m => m + 1)
   }
+
+  const hasSocials = pro?.instagram || pro?.tiktok || pro?.snapchat
 
   // ─────────────────────────────────────────────
   // Render states
@@ -488,21 +583,35 @@ export default function ReservationPage() {
       {/* ── Header ── */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
             {pro?.photo_url ? (
               <img
                 src={pro.photo_url}
                 alt={pro.prenom}
-                style={{ width: 36, height: 36, borderRadius: 18, objectFit: 'cover', border: `2px solid ${PINK}` }}
+                style={{ width: 36, height: 36, borderRadius: 18, objectFit: 'cover', border: `2px solid ${PINK}`, flexShrink: 0 }}
               />
             ) : (
               <div style={{ width: 36, height: 36, borderRadius: 18, background: PINK_LIGHT, color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
                 {pro?.prenom?.[0]?.toUpperCase()}
               </div>
             )}
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom} {pro?.nom}</p>
-              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Réservation en ligne</p>
+              {pro?.message_accueil && (
+                <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0', fontStyle: 'italic', lineHeight: 1.4 }}>
+                  {pro.message_accueil}
+                </p>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Réservation en ligne</p>
+                {hasSocials && (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} />}
+                    {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok} />}
+                    {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat} />}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -562,14 +671,81 @@ export default function ReservationPage() {
 
             {phoneStatus === 'known' && (
               <div>
-                <div style={{ ...S.infoBox, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Accueil cliente connue */}
+                <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 28 }}>👋</span>
                   <div>
                     <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
                     <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Nous vous avons reconnue.</p>
                   </div>
                 </div>
-                <button onClick={() => setStep(2)} style={S.btn}>Continuer →</button>
+
+                {/* RDVs à venir */}
+                {loadingRdvs ? (
+                  <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 16 }}>
+                    Chargement de vos rendez-vous...
+                  </p>
+                ) : rdvsAVenir.length > 0 ? (
+                  <div style={{ marginBottom: 20 }}>
+                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>
+                      Vos rendez-vous à venir
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {rdvsAVenir.map(rdv => (
+                        <div
+                          key={rdv.id}
+                          style={{
+                            ...S.card,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {EMOJI_MAP[rdv.specialite] ?? '✨'} {rdv.technique}
+                            </p>
+                            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                              {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                            </p>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                              <span style={{
+                                fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                                background: rdv.statut === 'confirme' ? '#d1fae5' : PINK_LIGHT,
+                                color: rdv.statut === 'confirme' ? '#065f46' : PINK,
+                              }}>
+                                {rdv.statut === 'confirme' ? '✓ Confirmé' : rdv.statut === 'en_attente' ? '⏳ En attente' : rdv.statut}
+                              </span>
+                              {rdv.prix && rdv.prix > 0 && (
+                                <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => confirmerAnnulation(rdv)}
+                            disabled={annulationEnCours === rdv.id}
+                            style={{
+                              flexShrink: 0, padding: '7px 12px', borderRadius: 10,
+                              border: '1.5px solid #fca5a5', background: '#fff',
+                              color: '#ef4444', fontSize: 13, fontWeight: 600,
+                              cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ ...S.card, textAlign: 'center', marginBottom: 20, color: '#9ca3af', fontSize: 14 }}>
+                    Aucun rendez-vous à venir.
+                  </div>
+                )}
+
+                {/* Prendre un nouveau RDV */}
+                <button onClick={() => setStep(2)} style={S.btn}>
+                  + Prendre un nouveau rendez-vous
+                </button>
               </div>
             )}
 
@@ -700,7 +876,6 @@ export default function ReservationPage() {
             <h2 style={S.h2}>📅 Choisissez une date</h2>
             <p style={S.sub}>Sélectionnez un jour disponible.</p>
 
-            {/* Month navigator */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <button
                 onClick={prevMonth}
@@ -715,7 +890,6 @@ export default function ReservationPage() {
               <button onClick={nextMonth} style={S.navBtn}>›</button>
             </div>
 
-            {/* Day headers */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
               {JOURS_COURT.map(j => (
                 <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>
@@ -724,13 +898,10 @@ export default function ReservationPage() {
               ))}
             </div>
 
-            {/* Days */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-              {/* Empty cells for offset */}
               {Array.from({ length: getFirstDayOfWeek(calYear, calMonth) }).map((_, i) => (
                 <div key={`e-${i}`} />
               ))}
-              {/* Day cells */}
               {Array.from({ length: getDaysInMonth(calYear, calMonth) }).map((_, i) => {
                 const day     = i + 1
                 const dateStr = buildDateStr(calYear, calMonth, day)
@@ -823,7 +994,6 @@ export default function ReservationPage() {
             <h2 style={S.h2}>Confirmation 🌸</h2>
             <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
 
-            {/* Summary card */}
             <div style={{ ...S.card, marginBottom: 20 }}>
               <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 16 }}>Récapitulatif</p>
               {[
@@ -846,7 +1016,6 @@ export default function ReservationPage() {
               ))}
             </div>
 
-            {/* Commentaire */}
             <label style={S.label}>Commentaire (optionnel)</label>
             <textarea
               value={commentaire}
@@ -856,7 +1025,6 @@ export default function ReservationPage() {
               style={{ ...S.input, resize: 'none', marginBottom: 16 }}
             />
 
-            {/* Rappel checkbox */}
             <label
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
@@ -877,7 +1045,6 @@ export default function ReservationPage() {
               </span>
             </label>
 
-            {/* Confirm button */}
             <button
               onClick={handleConfirm}
               disabled={submitting}
