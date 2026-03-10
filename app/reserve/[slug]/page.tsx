@@ -728,31 +728,14 @@ export default function ReservationPage() {
 
             {phoneStatus === 'known' && (
               <div>
-                {/* Accueil cliente connue — message pro + réseaux, ou fallback générique */}
-                {(pro?.message_accueil || hasSocials) ? (
-                  <div style={{ ...S.infoBox, marginBottom: 20 }}>
-                    {pro?.message_accueil && (
-                      <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 15, margin: 0, marginBottom: hasSocials ? 12 : 0, lineHeight: 1.5 }}>
-                        {pro.message_accueil}
-                      </p>
-                    )}
-                    {hasSocials && (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={28} />}
-                        {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={28} />}
-                        {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={28} />}
-                      </div>
-                    )}
+                {/* Accueil cliente connue — message de bienvenue personnalisé uniquement */}
+                <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>👋</span>
+                  <div>
+                    <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
+                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
                   </div>
-                ) : (
-                  <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 28 }}>👋</span>
-                    <div>
-                      <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
-                      <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Nous vous avons reconnue.</p>
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* RDVs à venir */}
                 {loadingRdvs ? (
