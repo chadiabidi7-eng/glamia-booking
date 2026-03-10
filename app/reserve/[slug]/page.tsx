@@ -65,6 +65,14 @@ function normalizeStr(str: string) {
     .replace(/^-|-$/g, '')
 }
 
+// Normalise un numéro de téléphone : supprime espaces/tirets, +33 → 0X, 0033 → 0X
+function normalizePhone(tel: string): string {
+  let n = tel.replace(/[\s\-\.\(\)]/g, '')
+  if (n.startsWith('+33')) n = '0' + n.slice(3)
+  if (n.startsWith('0033')) n = '0' + n.slice(4)
+  return n
+}
+
 function timeToMin(t: string) {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -220,25 +228,37 @@ export default function ReservationPage() {
 
   // ── Step 1: Check phone ───────────────────────
   async function handleCheckPhone() {
-    if (!pro || telephone.replace(/\s/g, '').length < 8) return
-    setPhoneStatus('checking')
-    try {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, prenom, nom')
-        .eq('pro_id', pro.id)
-        .eq('telephone', telephone.trim())
-        .single()
+    if (!pro) return
+    const normalized = normalizePhone(telephone)
+    if (normalized.length < 8) return
 
-      if (data) {
-        setClienteId(data.id)
-        setClientePrenom(data.prenom)
-        setClienteNom(data.nom)
+    setPhoneStatus('checking')
+    console.log('[handleCheckPhone] Recherche pour pro_id:', pro.id, '| téléphone normalisé:', normalized)
+
+    try {
+      // On récupère toutes les clientes de la pro et on compare les numéros normalisés
+      const { data: clientes, error } = await supabase
+        .from('clientes')
+        .select('id, prenom, nom, telephone')
+        .eq('pro_id', pro.id)
+
+      console.log('[handleCheckPhone] Clientes récupérées:', clientes, '| Erreur:', error)
+
+      if (error) throw error
+
+      const found = clientes?.find(c => normalizePhone(c.telephone) === normalized)
+      console.log('[handleCheckPhone] Cliente trouvée:', found ?? 'aucune')
+
+      if (found) {
+        setClienteId(found.id)
+        setClientePrenom(found.prenom)
+        setClienteNom(found.nom)
         setPhoneStatus('known')
       } else {
         setPhoneStatus('unknown')
       }
-    } catch {
+    } catch (e) {
+      console.error('[handleCheckPhone] Erreur:', e)
       setPhoneStatus('unknown')
     }
   }
@@ -279,59 +299,98 @@ export default function ReservationPage() {
 
   // ── Step 6: Confirm ───────────────────────────
   async function handleConfirm() {
-    if (!pro || !technique || !date || !heure) return
+    if (!pro || !technique || !date || !heure) {
+      console.error('[handleConfirm] Champs manquants:', { pro: !!pro, technique: !!technique, date, heure })
+      return
+    }
     setSubmitting(true)
+
     try {
       let cId = clienteId
+      const telNormalized = normalizePhone(telephone)
 
+      console.log('[handleConfirm] Début. clienteId existant:', cId, '| pro.id:', pro.id)
+
+      // ── Étape 1 : Résoudre l'id cliente ──────
       if (!cId) {
-        // Try to find existing
-        const { data: existing } = await supabase
-          .from('clientes')
-          .select('id')
-          .eq('pro_id', pro.id)
-          .eq('telephone', telephone.trim())
-          .single()
+        console.log('[handleConfirm] Pas de clienteId en mémoire, recherche par téléphone:', telNormalized)
 
-        if (existing) {
-          cId = existing.id
-        } else {
+        const { data: allClientes, error: fetchErr } = await supabase
+          .from('clientes')
+          .select('id, telephone')
+          .eq('pro_id', pro.id)
+
+        console.log('[handleConfirm] Clientes existantes:', allClientes, '| Erreur:', fetchErr)
+
+        if (!fetchErr && allClientes) {
+          const found = allClientes.find(c => normalizePhone(c.telephone) === telNormalized)
+          if (found) {
+            cId = found.id
+            console.log('[handleConfirm] Cliente retrouvée par téléphone:', cId)
+          }
+        }
+
+        if (!cId) {
+          console.log('[handleConfirm] Création nouvelle cliente:', {
+            prenom: clientePrenom.trim(),
+            nom: clienteNom.trim(),
+            telephone: telNormalized,
+          })
+
           const { data: created, error: createErr } = await supabase
             .from('clientes')
             .insert({
               pro_id:    pro.id,
               prenom:    clientePrenom.trim(),
               nom:       clienteNom.trim(),
-              telephone: telephone.trim(),
-              photos:    [],
+              telephone: telNormalized,
             })
             .select('id')
             .single()
 
-          if (createErr) throw createErr
-          cId = created.id
+          console.log('[handleConfirm] Résultat création cliente:', created, '| Erreur:', createErr)
+
+          if (createErr) {
+            console.error('[handleConfirm] Échec création cliente. Code:', createErr.code, '| Message:', createErr.message)
+            throw createErr
+          }
+          cId = created!.id
         }
       }
 
-      const { error: rdvErr } = await supabase
-        .from('rendez_vous')
-        .insert({
-          pro_id:     pro.id,
-          cliente_id: cId,
-          date:       `${date}T${heure}:00.000Z`,
-          duree:      technique.duree,
-          specialite: specialite,
-          technique:  technique.nom,
-          prix:       technique.prix || null,
-          statut:     'en_attente',
-          notes:      commentaire.trim() || null,
-        })
+      // ── Étape 2 : Créer le RDV ───────────────
+      const rdvPayload = {
+        pro_id:     pro.id,
+        cliente_id: cId,
+        date:       `${date}T${heure}:00.000Z`,
+        duree:      technique.duree,
+        specialite: specialite,
+        technique:  technique.nom,
+        prix:       technique.prix > 0 ? technique.prix : null,
+        statut:     'en_attente',
+        notes:      commentaire.trim() || null,
+      }
 
-      if (rdvErr) throw rdvErr
+      console.log('[handleConfirm] Insertion RDV:', rdvPayload)
+
+      const { data: rdvData, error: rdvErr } = await supabase
+        .from('rendez_vous')
+        .insert(rdvPayload)
+        .select('id')
+        .single()
+
+      console.log('[handleConfirm] Résultat insertion RDV:', rdvData, '| Erreur:', rdvErr)
+
+      if (rdvErr) {
+        console.error('[handleConfirm] Échec insertion RDV. Code:', rdvErr.code, '| Message:', rdvErr.message)
+        throw rdvErr
+      }
+
+      console.log('[handleConfirm] ✅ RDV créé avec succès:', rdvData?.id)
       setPageState('confirmed')
     } catch (e) {
-      console.error(e)
-      alert('Une erreur est survenue. Veuillez réessayer.')
+      console.error('[handleConfirm] Erreur globale:', e)
+      alert('Une erreur est survenue. Ouvre la console (F12) pour voir le détail.')
     } finally {
       setSubmitting(false)
     }
