@@ -1,0 +1,932 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+type HorairesJour = { actif: boolean; debut: string; fin: string }
+type HorairesHebdo = Record<number, HorairesJour>
+type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number }
+type CataloguePrestations = Record<string, Technique[]>
+
+type ProInfo = {
+  id: string
+  prenom: string
+  nom: string
+  photo_url?: string
+  horaires: HorairesHebdo
+}
+
+type Slot = { heure: string; disponible: boolean }
+
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+const PINK = '#C2779E'
+const PINK_LIGHT = '#F9EEF4'
+
+const DEFAULT_HORAIRES: HorairesHebdo = {
+  0: { actif: false, debut: '09:00', fin: '18:00' },
+  1: { actif: true,  debut: '09:00', fin: '18:00' },
+  2: { actif: true,  debut: '09:00', fin: '18:00' },
+  3: { actif: true,  debut: '09:00', fin: '18:00' },
+  4: { actif: true,  debut: '09:00', fin: '18:00' },
+  5: { actif: true,  debut: '09:00', fin: '18:00' },
+  6: { actif: true,  debut: '09:00', fin: '14:00' },
+}
+
+const EMOJI_MAP: Record<string, string> = {
+  'Ongles': '💅', 'Cils': '👁️', 'Sourcils': '✨',
+  'Lèvres': '💋', 'Épilation': '🌸', 'Maquillage': '💄',
+  'Soins visage': '🌿', 'Autre': '⭐',
+}
+
+const MOIS = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+]
+
+const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+const STEP_LABELS = ['Identification', 'Prestation', 'Technique', 'Date', 'Heure', 'Confirmation']
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function normalizeStr(str: string) {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function timeToMin(t: string) {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minToTime(m: number) {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+function formatDuree(min: number) {
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+}
+
+function formatDateLong(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate()
+}
+
+// Monday-first: Mon=0 … Sun=6
+function getFirstDayOfWeek(year: number, month: number) {
+  return (new Date(year, month, 1).getDay() + 6) % 7
+}
+
+function buildDateStr(year: number, month: number, day: number) {
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
+  const jour = new Date(dateStr + 'T00:00:00').getDay()
+  const h = horaires[jour]
+  return h?.actif === true
+}
+
+function generateSlots(
+  date: string,
+  duree: number,
+  horaires: HorairesHebdo,
+  rdvExistants: { heure: string; duree: number }[],
+): Slot[] {
+  const jour = new Date(date + 'T00:00:00').getDay()
+  const h = horaires[jour]
+  if (!h?.actif) return []
+
+  const debut = timeToMin(h.debut)
+  const fin   = timeToMin(h.fin)
+  const INTERVAL = 30
+
+  const taken = rdvExistants.map(r => ({
+    start: timeToMin(r.heure),
+    end:   timeToMin(r.heure) + r.duree,
+  }))
+
+  const slots: Slot[] = []
+  for (let t = debut; t + duree <= fin; t += INTERVAL) {
+    const end = t + duree
+    const isTaken = taken.some(r => t < r.end && end > r.start)
+    slots.push({ heure: minToTime(t), disponible: !isTaken })
+  }
+  return slots
+}
+
+// ─────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────
+export default function ReservationPage() {
+  const params  = useParams()
+  const slug    = params.slug as string
+  const todayJs = new Date()
+
+  // ── Pro & catalogue ──────────────────────────
+  const [pro,        setPro]        = useState<ProInfo | null>(null)
+  const [catalogue,  setCatalogue]  = useState<CataloguePrestations>({})
+  const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed'>('loading')
+  const [submitting, setSubmitting] = useState(false)
+
+  // ── Booking state ────────────────────────────
+  const [step, setStep] = useState(1)
+
+  // Step 1
+  const [telephone,     setTelephone]     = useState('')
+  const [clientePrenom, setClientePrenom] = useState('')
+  const [clienteNom,    setClienteNom]    = useState('')
+  const [clienteId,     setClienteId]     = useState<string | null>(null)
+  const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+
+  // Step 2
+  const [specialite, setSpecialite] = useState('')
+
+  // Step 3
+  const [technique, setTechnique] = useState<Technique | null>(null)
+
+  // Step 4
+  const [date,     setDate]     = useState('')
+  const [calYear,  setCalYear]  = useState(todayJs.getFullYear())
+  const [calMonth, setCalMonth] = useState(todayJs.getMonth())
+
+  // Step 5
+  const [slots,        setSlots]        = useState<Slot[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [heure,        setHeure]        = useState('')
+
+  // Step 6
+  const [commentaire, setCommentaire] = useState('')
+  const [rappel,      setRappel]      = useState(false)
+
+  // ── Load pro ─────────────────────────────────
+  useEffect(() => { loadPro() }, [slug])
+
+  async function loadPro() {
+    setPageState('loading')
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, prenom, nom, photo_url, horaires')
+
+      if (error) throw error
+
+      const found = profiles?.find(p =>
+        normalizeStr(`${p.prenom}-${p.nom}`) === normalizeStr(slug)
+      )
+
+      if (!found) { setPageState('notfound'); return }
+
+      setPro({
+        id:        found.id,
+        prenom:    found.prenom,
+        nom:       found.nom,
+        photo_url: found.photo_url ?? undefined,
+        horaires:  found.horaires ?? DEFAULT_HORAIRES,
+      })
+
+      const { data: prestData } = await supabase
+        .from('prestations')
+        .select('data')
+        .eq('pro_id', found.id)
+        .single()
+
+      if (prestData?.data) setCatalogue(prestData.data as CataloguePrestations)
+      setPageState('ready')
+    } catch (e) {
+      console.error(e)
+      setPageState('notfound')
+    }
+  }
+
+  // ── Step 1: Check phone ───────────────────────
+  async function handleCheckPhone() {
+    if (!pro || telephone.replace(/\s/g, '').length < 8) return
+    setPhoneStatus('checking')
+    try {
+      const { data } = await supabase
+        .from('clientes')
+        .select('id, prenom, nom')
+        .eq('pro_id', pro.id)
+        .eq('telephone', telephone.trim())
+        .single()
+
+      if (data) {
+        setClienteId(data.id)
+        setClientePrenom(data.prenom)
+        setClienteNom(data.nom)
+        setPhoneStatus('known')
+      } else {
+        setPhoneStatus('unknown')
+      }
+    } catch {
+      setPhoneStatus('unknown')
+    }
+  }
+
+  // ── Step 5: Load slots ────────────────────────
+  useEffect(() => {
+    if (step === 5 && date && technique && pro) loadSlots()
+  }, [step, date])
+
+  async function loadSlots() {
+    if (!pro || !technique || !date) return
+    setLoadingSlots(true)
+    setSlots([])
+    try {
+      const { data: rdvs } = await supabase
+        .from('rendez_vous')
+        .select('date, duree, statut')
+        .eq('pro_id', pro.id)
+        .gte('date', `${date}T00:00:00.000Z`)
+        .lte('date', `${date}T23:59:59.999Z`)
+        .neq('statut', 'annule')
+
+      const rdvExistants = (rdvs ?? []).map(r => {
+        const d = new Date(r.date)
+        return {
+          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+          duree: r.duree,
+        }
+      })
+
+      setSlots(generateSlots(date, technique.duree, pro.horaires, rdvExistants))
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingSlots(false)
+    }
+  }
+
+  // ── Step 6: Confirm ───────────────────────────
+  async function handleConfirm() {
+    if (!pro || !technique || !date || !heure) return
+    setSubmitting(true)
+    try {
+      let cId = clienteId
+
+      if (!cId) {
+        // Try to find existing
+        const { data: existing } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('pro_id', pro.id)
+          .eq('telephone', telephone.trim())
+          .single()
+
+        if (existing) {
+          cId = existing.id
+        } else {
+          const { data: created, error: createErr } = await supabase
+            .from('clientes')
+            .insert({
+              pro_id:    pro.id,
+              prenom:    clientePrenom.trim(),
+              nom:       clienteNom.trim(),
+              telephone: telephone.trim(),
+              photos:    [],
+            })
+            .select('id')
+            .single()
+
+          if (createErr) throw createErr
+          cId = created.id
+        }
+      }
+
+      const { error: rdvErr } = await supabase
+        .from('rendez_vous')
+        .insert({
+          pro_id:     pro.id,
+          cliente_id: cId,
+          date:       `${date}T${heure}:00.000Z`,
+          duree:      technique.duree,
+          specialite: specialite,
+          technique:  technique.nom,
+          prix:       technique.prix || null,
+          statut:     'en_attente',
+          notes:      commentaire.trim() || null,
+        })
+
+      if (rdvErr) throw rdvErr
+      setPageState('confirmed')
+    } catch (e) {
+      console.error(e)
+      alert('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // ── Derived ───────────────────────────────────
+  const specialitesActives = Object.entries(catalogue)
+    .filter(([, techs]) => techs.some(t => t.active))
+    .map(([nom, techs]) => ({
+      nom,
+      emoji:      EMOJI_MAP[nom] ?? '✨',
+      techniques: techs.filter(t => t.active),
+    }))
+
+  const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
+
+  function isAtCurrentMonth() {
+    return calYear === todayJs.getFullYear() && calMonth === todayJs.getMonth()
+  }
+
+  function prevMonth() {
+    if (isAtCurrentMonth()) return
+    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) }
+    else setCalMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
+    else setCalMonth(m => m + 1)
+  }
+
+  // ─────────────────────────────────────────────
+  // Render states
+  // ─────────────────────────────────────────────
+  if (pageState === 'loading') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
+          <p style={{ color: PINK, fontWeight: 600, fontSize: 16 }}>Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (pageState === 'notfound') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#fff' }}>
+        <div style={{ textAlign: 'center', maxWidth: 320 }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🔍</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Page introuvable</h1>
+          <p style={{ color: '#6b7280', fontSize: 15 }}>Ce lien de réservation n'existe pas ou a été désactivé.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (pageState === 'confirmed') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: PINK_LIGHT }}>
+        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
+            ✅
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>RDV enregistré !</h1>
+          <p style={{ color: '#6b7280', marginBottom: 24, fontSize: 15 }}>
+            Votre demande est en attente de confirmation par {pro?.prenom}.
+          </p>
+          <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 20 }}>
+            {[
+              { emoji: '👤', label: `${clientePrenom} ${clienteNom}` },
+              { emoji: EMOJI_MAP[specialite] ?? '✨', label: `${specialite} · ${technique?.nom}` },
+              { emoji: '📅', label: formatDateLong(date) },
+              { emoji: '🕐', label: `${heure} · ${formatDuree(technique!.duree)}` },
+              ...(technique!.prix > 0 ? [{ emoji: '💶', label: `${technique!.prix} €` }] : []),
+            ].map((row, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 4 ? 8 : 0 }}>
+                <span style={{ fontSize: 18, width: 24 }}>{row.emoji}</span>
+                <span style={{ fontSize: 14, color: '#374151' }}>{row.label}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: '#9ca3af' }}>Vous serez contacté(e) pour confirmation.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────
+  // Main booking UI
+  // ─────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: '100vh', background: '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+      {/* ── Header ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            {pro?.photo_url ? (
+              <img
+                src={pro.photo_url}
+                alt={pro.prenom}
+                style={{ width: 36, height: 36, borderRadius: 18, objectFit: 'cover', border: `2px solid ${PINK}` }}
+              />
+            ) : (
+              <div style={{ width: 36, height: 36, borderRadius: 18, background: PINK_LIGHT, color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                {pro?.prenom?.[0]?.toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom} {pro?.nom}</p>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Réservation en ligne</p>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+            {STEP_LABELS.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1, height: 4, borderRadius: 2,
+                  background: i < step ? PINK : '#e5e7eb',
+                  transition: 'background 0.3s',
+                }}
+              />
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: PINK, fontWeight: 600, margin: 0 }}>
+            Étape {step}/{STEP_LABELS.length} — {STEP_LABELS[step - 1]}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 48px' }}>
+
+        {/* ────────────────────────────────────────
+            STEP 1 — Identification
+        ──────────────────────────────────────── */}
+        {step === 1 && (
+          <div>
+            <h2 style={S.h2}>Bonjour ! 👋</h2>
+            <p style={S.sub}>Entrez votre numéro pour commencer.</p>
+
+            <label style={S.label}>Téléphone</label>
+            <input
+              type="tel"
+              value={telephone}
+              onChange={e => { setTelephone(e.target.value); setPhoneStatus('idle') }}
+              placeholder="06 12 34 56 78"
+              style={S.input}
+              onKeyDown={e => e.key === 'Enter' && handleCheckPhone()}
+            />
+
+            {phoneStatus === 'idle' && (
+              <button
+                onClick={handleCheckPhone}
+                disabled={telephone.replace(/\s/g, '').length < 8}
+                style={{ ...S.btn, opacity: telephone.replace(/\s/g, '').length < 8 ? 0.5 : 1 }}
+              >
+                Continuer →
+              </button>
+            )}
+
+            {phoneStatus === 'checking' && (
+              <button style={{ ...S.btn, opacity: 0.7 }} disabled>Vérification...</button>
+            )}
+
+            {phoneStatus === 'known' && (
+              <div>
+                <div style={{ ...S.infoBox, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>👋</span>
+                  <div>
+                    <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
+                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Nous vous avons reconnue.</p>
+                  </div>
+                </div>
+                <button onClick={() => setStep(2)} style={S.btn}>Continuer →</button>
+              </div>
+            )}
+
+            {phoneStatus === 'unknown' && (
+              <div>
+                <div style={{ ...S.card, marginBottom: 16 }}>
+                  <p style={{ fontWeight: 600, color: '#374151', marginBottom: 16, fontSize: 15 }}>
+                    Première visite ? Enchanté(e) ! 🌸
+                  </p>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={S.label}>Prénom</label>
+                      <input
+                        type="text"
+                        value={clientePrenom}
+                        onChange={e => setClientePrenom(e.target.value)}
+                        placeholder="Sophie"
+                        style={S.input}
+                        autoCapitalize="words"
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={S.label}>Nom</label>
+                      <input
+                        type="text"
+                        value={clienteNom}
+                        onChange={e => setClienteNom(e.target.value)}
+                        placeholder="Martin"
+                        style={S.input}
+                        autoCapitalize="words"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim()) setStep(2) }}
+                  disabled={!clientePrenom.trim() || !clienteNom.trim()}
+                  style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim()) ? 0.5 : 1 }}
+                >
+                  Continuer →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────────────────────────
+            STEP 2 — Spécialité
+        ──────────────────────────────────────── */}
+        {step === 2 && (
+          <div>
+            <BackBtn onClick={() => setStep(1)} />
+            <h2 style={S.h2}>Quelle prestation ?</h2>
+            <p style={S.sub}>Choisissez votre type de soin.</p>
+
+            {specialitesActives.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#9ca3af' }}>
+                Aucune prestation disponible pour le moment.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {specialitesActives.map(s => (
+                  <button
+                    key={s.nom}
+                    onClick={() => { setSpecialite(s.nom); setTechnique(null); setStep(3) }}
+                    style={{
+                      ...S.card,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, padding: '20px 12px', cursor: 'pointer',
+                      borderColor: specialite === s.nom ? PINK : '#e5e7eb',
+                      background: specialite === s.nom ? PINK_LIGHT : '#fff',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: 32 }}>{s.emoji}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', textAlign: 'center' }}>{s.nom}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────────────────────────
+            STEP 3 — Technique
+        ──────────────────────────────────────── */}
+        {step === 3 && (
+          <div>
+            <BackBtn onClick={() => setStep(2)} />
+            <h2 style={S.h2}>{EMOJI_MAP[specialite] ?? '✨'} {specialite}</h2>
+            <p style={S.sub}>Choisissez votre technique.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(catalogue[specialite] ?? []).filter(t => t.active).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => { setTechnique(t); setDate(''); setHeure(''); setStep(4) }}
+                  style={{
+                    ...S.card,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', cursor: 'pointer', textAlign: 'left',
+                    borderColor: technique?.id === t.id ? PINK : '#e5e7eb',
+                    background: technique?.id === t.id ? PINK_LIGHT : '#fff',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 15 }}>{t.nom}</p>
+                    <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>{formatDuree(t.duree)}</p>
+                  </div>
+                  {t.prix > 0 && (
+                    <span style={{ fontWeight: 700, color: '#374151', fontSize: 16, marginLeft: 12, whiteSpace: 'nowrap' }}>
+                      {t.prix} €
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ────────────────────────────────────────
+            STEP 4 — Calendrier
+        ──────────────────────────────────────── */}
+        {step === 4 && (
+          <div>
+            <BackBtn onClick={() => setStep(3)} />
+            <h2 style={S.h2}>📅 Choisissez une date</h2>
+            <p style={S.sub}>Sélectionnez un jour disponible.</p>
+
+            {/* Month navigator */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <button
+                onClick={prevMonth}
+                disabled={isAtCurrentMonth()}
+                style={{ ...S.navBtn, opacity: isAtCurrentMonth() ? 0.3 : 1 }}
+              >
+                ‹
+              </button>
+              <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16, textTransform: 'capitalize' }}>
+                {MOIS[calMonth]} {calYear}
+              </span>
+              <button onClick={nextMonth} style={S.navBtn}>›</button>
+            </div>
+
+            {/* Day headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+              {JOURS_COURT.map(j => (
+                <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>
+                  {j}
+                </div>
+              ))}
+            </div>
+
+            {/* Days */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {/* Empty cells for offset */}
+              {Array.from({ length: getFirstDayOfWeek(calYear, calMonth) }).map((_, i) => (
+                <div key={`e-${i}`} />
+              ))}
+              {/* Day cells */}
+              {Array.from({ length: getDaysInMonth(calYear, calMonth) }).map((_, i) => {
+                const day     = i + 1
+                const dateStr = buildDateStr(calYear, calMonth, day)
+                const dayDate = new Date(calYear, calMonth, day)
+                const isPast  = dayDate < today0
+                const isOff   = !isDayWorking(dateStr, pro!.horaires)
+                const isDisabled = isPast || isOff
+                const isSelected = date === dateStr
+
+                return (
+                  <CalendarDay
+                    key={day}
+                    day={day}
+                    isSelected={isSelected}
+                    isDisabled={isDisabled}
+                    onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setStep(5) } }}
+                  />
+                )
+              })}
+            </div>
+
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: PINK }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Sélectionné</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Indisponible</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ────────────────────────────────────────
+            STEP 5 — Heure
+        ──────────────────────────────────────── */}
+        {step === 5 && (
+          <div>
+            <BackBtn onClick={() => setStep(4)} />
+            <h2 style={S.h2}>🕐 Choisissez une heure</h2>
+            <p style={{ ...S.sub, textTransform: 'capitalize' }}>{formatDateLong(date)}</p>
+
+            {loadingSlots ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <p style={{ color: PINK, fontWeight: 600 }}>Chargement des créneaux...</p>
+              </div>
+            ) : slots.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>😔</div>
+                <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau disponible ce jour.</p>
+                <button onClick={() => setStep(4)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  ← Choisir une autre date
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {slots.map(s => (
+                  <button
+                    key={s.heure}
+                    disabled={!s.disponible}
+                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(6) } }}
+                    style={{
+                      padding: '12px 0',
+                      borderRadius: 12,
+                      border: `1.5px solid ${!s.disponible ? '#e5e7eb' : heure === s.heure ? PINK : '#e5e7eb'}`,
+                      background: !s.disponible ? '#f9f9f9' : heure === s.heure ? PINK : '#fff',
+                      color: !s.disponible ? '#d1d5db' : heure === s.heure ? '#fff' : '#374151',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: s.disponible ? 'pointer' : 'default',
+                      transition: 'all 0.15s',
+                      textDecoration: !s.disponible ? 'line-through' : 'none',
+                    }}
+                  >
+                    {s.heure}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ────────────────────────────────────────
+            STEP 6 — Confirmation
+        ──────────────────────────────────────── */}
+        {step === 6 && (
+          <div>
+            <BackBtn onClick={() => setStep(5)} />
+            <h2 style={S.h2}>Confirmation 🌸</h2>
+            <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
+
+            {/* Summary card */}
+            <div style={{ ...S.card, marginBottom: 20 }}>
+              <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 16 }}>Récapitulatif</p>
+              {[
+                { emoji: '👤', label: 'Cliente',    value: `${clientePrenom} ${clienteNom}` },
+                { emoji: EMOJI_MAP[specialite] ?? '✨', label: 'Prestation', value: `${specialite} · ${technique?.nom}` },
+                { emoji: '📅', label: 'Date',       value: formatDateLong(date) },
+                { emoji: '🕐', label: 'Heure',      value: `${heure} · ${formatDuree(technique!.duree)}` },
+                ...(technique!.prix > 0 ? [{ emoji: '💶', label: 'Prix', value: `${technique!.prix} €` }] : []),
+              ].map((row, i, arr) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0' }}>
+                    <span style={{ fontSize: 20, width: 26, flexShrink: 0 }}>{row.emoji}</span>
+                    <div>
+                      <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{row.label}</p>
+                      <p style={{ fontSize: 15, color: '#1f2937', fontWeight: 500, margin: '2px 0 0', textTransform: 'capitalize' }}>{row.value}</p>
+                    </div>
+                  </div>
+                  {i < arr.length - 1 && <div style={{ height: 1, background: '#f3f4f6' }} />}
+                </div>
+              ))}
+            </div>
+
+            {/* Commentaire */}
+            <label style={S.label}>Commentaire (optionnel)</label>
+            <textarea
+              value={commentaire}
+              onChange={e => setCommentaire(e.target.value)}
+              placeholder="Informations supplémentaires pour votre praticienne..."
+              rows={3}
+              style={{ ...S.input, resize: 'none', marginBottom: 16 }}
+            />
+
+            {/* Rappel checkbox */}
+            <label
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                padding: 16, borderRadius: 16, border: '1.5px solid #e5e7eb',
+                background: '#fff', marginBottom: 24,
+              }}
+              onClick={() => setRappel(r => !r)}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 6, border: `2px solid ${rappel ? PINK : '#d1d5db'}`,
+                background: rappel ? PINK : 'transparent', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s',
+              }}>
+                {rappel && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.4 }}>
+                Souhaitez-vous être rappelée avant votre rendez-vous ?
+              </span>
+            </label>
+
+            {/* Confirm button */}
+            <button
+              onClick={handleConfirm}
+              disabled={submitting}
+              style={{
+                ...S.btn,
+                opacity: submitting ? 0.7 : 1,
+                boxShadow: `0 4px 20px ${PINK}55`,
+              }}
+            >
+              {submitting ? 'Enregistrement...' : '✓ Confirmer ma réservation'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: PINK, fontWeight: 600, fontSize: 14, padding: '0 0 16px', display: 'block',
+      }}
+    >
+      ← Retour
+    </button>
+  )
+}
+
+function CalendarDay({
+  day, isSelected, isDisabled, onClick,
+}: { day: number; isSelected: boolean; isDisabled: boolean; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+
+  const bg = isSelected
+    ? PINK
+    : hovered && !isDisabled
+      ? PINK_LIGHT
+      : 'transparent'
+
+  const color = isSelected
+    ? '#fff'
+    : isDisabled
+      ? '#d1d5db'
+      : hovered
+        ? PINK
+        : '#374151'
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={isDisabled}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        aspectRatio: '1', borderRadius: '50%', border: 'none',
+        background: bg, color, fontWeight: 500, fontSize: 14,
+        cursor: isDisabled ? 'default' : 'pointer',
+        transition: 'all 0.15s', display: 'flex', alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {day}
+    </button>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Shared styles
+// ─────────────────────────────────────────────
+const S: Record<string, React.CSSProperties> = {
+  h2: {
+    fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 4,
+  },
+  sub: {
+    fontSize: 15, color: '#6b7280', marginBottom: 24,
+  },
+  label: {
+    display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280',
+    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
+  },
+  input: {
+    width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 16,
+    padding: '14px 16px', fontSize: 15, color: '#1f2937',
+    outline: 'none', boxSizing: 'border-box', marginBottom: 12,
+    background: '#fff', fontFamily: 'inherit',
+  },
+  btn: {
+    width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+    background: PINK, color: '#fff', fontWeight: 700, fontSize: 16,
+    cursor: 'pointer', transition: 'opacity 0.15s', fontFamily: 'inherit',
+  },
+  card: {
+    background: '#fff', borderRadius: 16, padding: 16,
+    border: '1.5px solid #e5e7eb', boxSizing: 'border-box' as const,
+  },
+  infoBox: {
+    background: PINK_LIGHT, borderRadius: 16, padding: 16,
+  },
+  navBtn: {
+    width: 36, height: 36, borderRadius: 18, border: '1px solid #e5e7eb',
+    background: '#fff', cursor: 'pointer', fontSize: 20, color: '#6b7280',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+}
