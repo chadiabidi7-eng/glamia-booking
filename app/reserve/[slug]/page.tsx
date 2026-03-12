@@ -175,8 +175,15 @@ function generateSlots(
     end:   timeToMin(r.heure) + r.duree,
   }))
 
+  // Si date = aujourd'hui → exclure les créneaux avant now() + 1h
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const limite = date === todayStr ? new Date(Date.now() + 60 * 60 * 1000) : null
+  const limiteMin = limite ? limite.getHours() * 60 + limite.getMinutes() : 0
+
   const slots: Slot[] = []
   for (let t = debut; t + duree <= fin; t += INTERVAL) {
+    if (limite && t < limiteMin) continue
     const end = t + duree
     const isTaken = taken.some(r => t < r.end && end > r.start)
     slots.push({ heure: minToTime(t), disponible: !isTaken })
@@ -587,10 +594,7 @@ export default function ReservationPage() {
           <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
             ✅
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>RDV enregistré !</h1>
-          <p style={{ color: '#6b7280', marginBottom: 24, fontSize: 15 }}>
-            Votre demande est en attente de confirmation par {pro?.prenom}.
-          </p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est confirmé ✓</h1>
           <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 20 }}>
             {[
               { emoji: '👤', label: `${clientePrenom} ${clienteNom}` },
@@ -605,7 +609,7 @@ export default function ReservationPage() {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 12, color: '#9ca3af' }}>Vous serez contacté(e) pour confirmation.</p>
+          <p style={{ fontSize: 12, color: '#9ca3af' }}>À bientôt !</p>
         </div>
       </div>
     )
