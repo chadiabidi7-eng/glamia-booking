@@ -12,6 +12,9 @@ type HorairesHebdo = Record<number, HorairesJour>
 type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number }
 type CataloguePrestations = Record<string, Technique[]>
 
+// Technique sélectionnée avec catégorie embarquée
+type TechSelec = { categorie: string; nom: string; prix: number; duree: number }
+
 type ProInfo = {
   id: string
   prenom: string
@@ -22,6 +25,7 @@ type ProInfo = {
   tiktok?: string
   snapchat?: string
   message_accueil?: string
+  adresse?: string
 }
 
 type RdvAVenir = {
@@ -65,7 +69,8 @@ const MOIS = [
 
 const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-const STEP_LABELS = ['Identification', 'Prestation', 'Technique', 'Date', 'Heure', 'Confirmation']
+// 5 étapes : Techniques fusionnées en une seule étape accordéon
+const STEP_LABELS = ['Identification', 'Techniques', 'Date', 'Heure', 'Confirmation']
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -175,7 +180,6 @@ function generateSlots(
     end:   timeToMin(r.heure) + r.duree,
   }))
 
-  // Si date = aujourd'hui → exclure les créneaux avant now() + 1h
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const limite = date === todayStr ? new Date(Date.now() + 60 * 60 * 1000) : null
@@ -262,40 +266,40 @@ export default function ReservationPage() {
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed'>('loading')
   const [submitting, setSubmitting] = useState(false)
 
-  // ── Booking state ────────────────────────────
+  // ── Navigation ───────────────────────────────
   const [step, setStep] = useState(1)
 
-  // Step 1
+  // ── Step 1 : Identification ──────────────────
   const [telephone,     setTelephone]     = useState('')
   const [clientePrenom, setClientePrenom] = useState('')
   const [clienteNom,    setClienteNom]    = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
-
-  // RDVs à venir (cliente connue)
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
   const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null)
 
-  // Step 2
-  const [specialite, setSpecialite] = useState('')
+  // ── Step 2 : Multi-select techniques ─────────
+  const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
+  const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
 
-  // Step 3
-  const [technique, setTechnique] = useState<Technique | null>(null)
-
-  // Step 4
+  // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
   const [calYear,  setCalYear]  = useState(todayJs.getFullYear())
   const [calMonth, setCalMonth] = useState(todayJs.getMonth())
 
-  // Step 5
+  // ── Step 4 : Heure ───────────────────────────
   const [slots,        setSlots]        = useState<Slot[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [heure,        setHeure]        = useState('')
 
-  // Step 6
+  // ── Step 5 : Confirmation ────────────────────
   const [commentaire, setCommentaire] = useState('')
   const [rappel,      setRappel]      = useState(false)
+
+  // ── Totaux calculés (toutes spécialités) ─────
+  const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
+  const prixTotal  = techniquesSelectionnees.reduce((s, t) => s + t.prix,  0)
 
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
@@ -303,15 +307,26 @@ export default function ReservationPage() {
   async function loadPro() {
     setPageState('loading')
     try {
-      const { data: profiles, error } = await supabase
+      // 1. Chercher par colonne slug directement
+      const { data: bySlug } = await supabase
         .from('profiles')
-        .select('id, prenom, nom, photo_url, horaires, instagram, tiktok, snapchat, message_accueil')
+        .select('id, prenom, nom, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug')
+        .eq('slug', slug)
+        .maybeSingle()
 
-      if (error) throw error
+      let found: any = bySlug
 
-      const found = profiles?.find(p =>
-        normalizeStr(`${p.prenom}-${p.nom}`) === normalizeStr(slug)
-      )
+      // 2. Fallback : matching par nom normalisé (anciens profils sans slug)
+      if (!found) {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, prenom, nom, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug')
+
+        if (error) throw error
+        found = profiles?.find(p =>
+          normalizeStr(`${p.prenom}-${p.nom}`) === normalizeStr(slug)
+        )
+      }
 
       if (!found) { setPageState('notfound'); return }
 
@@ -319,12 +334,13 @@ export default function ReservationPage() {
         id:              found.id,
         prenom:          found.prenom,
         nom:             found.nom,
-        photo_url:       found.photo_url ?? undefined,
+        photo_url:       found.avatar_url ?? found.photo_url ?? undefined,
         horaires:        found.horaires ?? DEFAULT_HORAIRES,
         instagram:       found.instagram ?? undefined,
         tiktok:          found.tiktok ?? undefined,
         snapchat:        found.snapchat ?? undefined,
         message_accueil: found.message_accueil ?? undefined,
+        adresse:         found.adresse ?? undefined,
       })
 
       const { data: prestData } = await supabase
@@ -341,7 +357,7 @@ export default function ReservationPage() {
     }
   }
 
-  // ── Step 1: Check phone ───────────────────────
+  // ── Step 1 : Check phone ─────────────────────
   async function handleCheckPhone() {
     if (!pro) return
     const normalized = normalizePhone(telephone)
@@ -426,20 +442,42 @@ export default function ReservationPage() {
   }
 
   function confirmerAnnulation(rdv: RdvAVenir) {
-    const dateLabel = formatRdvDate(rdv.date)
+    const dateLabel  = formatRdvDate(rdv.date)
     const heureLabel = formatRdvHeure(rdv.date)
     if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?`)) {
       handleAnnulerRdv(rdv.id)
     }
   }
 
-  // ── Step 5: Load slots ────────────────────────
+  // ── Step 2 : Accordion techniques ────────────
+  function toggleSection(cat: string) {
+    setSectionsOuvertes(prev => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
+
+  function toggleTechnique(t: Technique, cat: string) {
+    setTechniquesSelectionnees(prev => {
+      const exists = prev.find(s => s.nom === t.nom && s.categorie === cat)
+      if (exists) return prev.filter(s => !(s.nom === t.nom && s.categorie === cat))
+      return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat }]
+    })
+    // Réinitialiser date/heure si on change les techniques
+    setDate('')
+    setHeure('')
+  }
+
+  // ── Step 4 : Load slots ───────────────────────
+  // Dépend du step + date (dureeTotal est stable quand on arrive à step 4)
   useEffect(() => {
-    if (step === 5 && date && technique && pro) loadSlots()
+    if (step === 4 && date && dureeTotal > 0 && pro) loadSlots()
   }, [step, date])
 
   async function loadSlots() {
-    if (!pro || !technique || !date) return
+    if (!pro || dureeTotal === 0 || !date) return
     setLoadingSlots(true)
     setSlots([])
     try {
@@ -459,7 +497,7 @@ export default function ReservationPage() {
         }
       })
 
-      setSlots(generateSlots(date, technique.duree, pro.horaires, rdvExistants))
+      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants))
     } catch (e) {
       console.error(e)
     } finally {
@@ -467,10 +505,14 @@ export default function ReservationPage() {
     }
   }
 
-  // ── Step 6: Confirm ───────────────────────────
+  // ── Step 5 : Confirm ──────────────────────────
   async function handleConfirm() {
-    if (!pro || !technique || !date || !heure) return
+    if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
     setSubmitting(true)
+
+    const categories    = [...new Set(techniquesSelectionnees.map(t => t.categorie))]
+    const categoriesStr = categories.join(', ')
+    const techniquesStr = techniquesSelectionnees.map(t => t.nom).join(', ')
 
     try {
       let cId = clienteId
@@ -483,8 +525,8 @@ export default function ReservationPage() {
           .eq('pro_id', pro.id)
 
         if (!fetchErr && allClientes) {
-          const found = allClientes.find(c => normalizePhone(c.telephone) === telNormalized)
-          if (found) cId = found.id
+          const fc = allClientes.find(c => normalizePhone(c.telephone) === telNormalized)
+          if (fc) cId = fc.id
         }
 
         if (!cId) {
@@ -510,10 +552,11 @@ export default function ReservationPage() {
           pro_id:     pro.id,
           cliente_id: cId,
           date:       `${date}T${heure}:00.000Z`,
-          duree:      technique.duree,
-          specialite: specialite,
-          technique:  technique.nom,
-          prix:       technique.prix > 0 ? technique.prix : null,
+          duree:      dureeTotal,
+          specialite: categoriesStr,
+          technique:  techniquesStr,
+          techniques: techniquesSelectionnees,
+          prix:       prixTotal > 0 ? prixTotal : null,
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
         })
@@ -523,7 +566,7 @@ export default function ReservationPage() {
       envoyerPushNotif(
         pro.id,
         '🌸 Nouveau RDV !',
-        `${clientePrenom} a réservé ${specialite} le ${formatDateLong(date)} à ${heure}`
+        `${clientePrenom} a réservé ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
       )
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
@@ -590,25 +633,52 @@ export default function ReservationPage() {
   if (pageState === 'confirmed') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: PINK_LIGHT }}>
-        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div style={{ textAlign: 'center', maxWidth: 380, width: '100%', background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
             ✅
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est confirmé ✓</h1>
-          <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 20 }}>
+
+          {/* Infos générales */}
+          <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
             {[
               { emoji: '👤', label: `${clientePrenom} ${clienteNom}` },
-              { emoji: EMOJI_MAP[specialite] ?? '✨', label: `${specialite} · ${technique?.nom}` },
               { emoji: '📅', label: formatDateLong(date) },
-              { emoji: '🕐', label: `${heure} · ${formatDuree(technique!.duree)}` },
-              ...(technique!.prix > 0 ? [{ emoji: '💶', label: `${technique!.prix} €` }] : []),
+              { emoji: '🕐', label: `${heure} · ${formatDuree(dureeTotal)}` },
+              ...(prixTotal > 0 ? [{ emoji: '💶', label: `${prixTotal} €` }] : []),
             ].map((row, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 4 ? 8 : 0 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 18, width: 24 }}>{row.emoji}</span>
                 <span style={{ fontSize: 14, color: '#374151' }}>{row.label}</span>
               </div>
             ))}
           </div>
+
+          {/* Techniques sélectionnées */}
+          <div style={{ background: '#f9f9f9', borderRadius: 12, padding: 12, textAlign: 'left', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Prestations
+            </p>
+            {techniquesSelectionnees.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                <div>
+                  <span style={{ fontSize: 14, color: '#1f2937', fontWeight: 500 }}>{EMOJI_MAP[t.categorie] ?? '✨'} {t.nom}</span>
+                  <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>{t.categorie}</span>
+                </div>
+                <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8 }}>
+                  {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Adresse — uniquement sur la page de confirmation, style discret */}
+          {pro?.adresse && (
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5 }}>
+              📍 {pro.adresse}
+            </p>
+          )}
+
           <p style={{ fontSize: 12, color: '#9ca3af' }}>À bientôt !</p>
         </div>
       </div>
@@ -662,32 +732,19 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 48px' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 80px' }}>
 
-        {/* ── Bannière pro : message d'accueil + réseaux ── */}
+        {/* ── Bannière pro ── */}
         {(pro?.message_accueil || hasSocials) && (
-          <div style={{
-            textAlign: 'center',
-            marginBottom: 28,
-            paddingBottom: 28,
-            borderBottom: '1px solid #f3f4f6',
-          }}>
+          <div style={{ textAlign: 'center', marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid #f3f4f6' }}>
             {pro?.message_accueil && (
-              <p style={{
-                fontSize: 16,
-                color: PINK,
-                fontStyle: 'italic',
-                margin: hasSocials ? '0 0 20px' : '0',
-                lineHeight: 1.6,
-              }}>
+              <p style={{ fontSize: 16, color: PINK, fontStyle: 'italic', margin: hasSocials ? '0 0 20px' : '0', lineHeight: 1.6 }}>
                 {pro.message_accueil}
               </p>
             )}
             {hasSocials && (
               <div>
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>
-                  Retrouvez-moi sur les réseaux
-                </p>
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>Retrouvez-moi sur les réseaux</p>
                 <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
                   {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={36} />}
                   {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={36} />}
@@ -732,7 +789,6 @@ export default function ReservationPage() {
 
             {phoneStatus === 'known' && (
               <div>
-                {/* Accueil cliente connue — message de bienvenue personnalisé uniquement */}
                 <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 28 }}>👋</span>
                   <div>
@@ -741,25 +797,16 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
-                {/* RDVs à venir */}
                 {loadingRdvs ? (
                   <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 16 }}>
                     Chargement de vos rendez-vous...
                   </p>
                 ) : rdvsAVenir.length > 0 ? (
                   <div style={{ marginBottom: 20 }}>
-                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>
-                      Vos rendez-vous à venir
-                    </p>
+                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>Vos rendez-vous à venir</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {rdvsAVenir.map(rdv => (
-                        <div
-                          key={rdv.id}
-                          style={{
-                            ...S.card,
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                          }}
-                        >
+                        <div key={rdv.id} style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {EMOJI_MAP[rdv.specialite] ?? '✨'} {rdv.technique}
@@ -803,7 +850,6 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                {/* Prendre un nouveau RDV */}
                 <button onClick={() => setStep(2)} style={S.btn}>
                   + Prendre un nouveau rendez-vous
                 </button>
@@ -819,25 +865,11 @@ export default function ReservationPage() {
                   <div style={{ display: 'flex', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <label style={S.label}>Prénom</label>
-                      <input
-                        type="text"
-                        value={clientePrenom}
-                        onChange={e => setClientePrenom(e.target.value)}
-                        placeholder="Sophie"
-                        style={S.input}
-                        autoCapitalize="words"
-                      />
+                      <input type="text" value={clientePrenom} onChange={e => setClientePrenom(e.target.value)} placeholder="Sophie" style={S.input} autoCapitalize="words" />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={S.label}>Nom</label>
-                      <input
-                        type="text"
-                        value={clienteNom}
-                        onChange={e => setClienteNom(e.target.value)}
-                        placeholder="Martin"
-                        style={S.input}
-                        autoCapitalize="words"
-                      />
+                      <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder="Martin" style={S.input} autoCapitalize="words" />
                     </div>
                   </div>
                 </div>
@@ -854,97 +886,112 @@ export default function ReservationPage() {
         )}
 
         {/* ────────────────────────────────────────
-            STEP 2 — Spécialité
+            STEP 2 — Techniques multi-select
+            (sections accordéon, toutes spécialités)
         ──────────────────────────────────────── */}
         {step === 2 && (
           <div>
             <BackBtn onClick={() => setStep(1)} />
-            <h2 style={S.h2}>Quelle prestation ?</h2>
-            <p style={S.sub}>Choisissez votre type de soin.</p>
+            <h2 style={S.h2}>Quelles prestations ?</h2>
+            <p style={S.sub}>Sélectionnez une ou plusieurs techniques.</p>
 
             {specialitesActives.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0', color: '#9ca3af' }}>
                 Aucune prestation disponible pour le moment.
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {specialitesActives.map(s => (
-                  <button
-                    key={s.nom}
-                    onClick={() => { setSpecialite(s.nom); setTechnique(null); setStep(3) }}
-                    style={{
-                      ...S.card,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 8, padding: '20px 12px', cursor: 'pointer',
-                      borderColor: specialite === s.nom ? PINK : '#e5e7eb',
-                      background: specialite === s.nom ? PINK_LIGHT : '#fff',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    <span style={{ fontSize: 32 }}>{s.emoji}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', textAlign: 'center' }}>{s.nom}</span>
-                  </button>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {specialitesActives.map(s => {
+                  const ouvert  = sectionsOuvertes.has(s.nom)
+                  const nbSelec = techniquesSelectionnees.filter(t => t.categorie === s.nom).length
+                  return (
+                    <div key={s.nom} style={{ borderRadius: 16, overflow: 'hidden', border: `1.5px solid ${nbSelec > 0 ? PINK : '#e5e7eb'}`, background: '#fff' }}>
+                      {/* En-tête section */}
+                      <button
+                        onClick={() => toggleSection(s.nom)}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '14px 16px', background: nbSelec > 0 ? PINK_LIGHT : '#fff',
+                          border: 'none', cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ fontSize: 24, flexShrink: 0 }}>{s.emoji}</span>
+                        <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
+                          {s.nom}
+                        </span>
+                        {nbSelec > 0 && (
+                          <span style={{
+                            background: PINK, color: '#fff', borderRadius: 12,
+                            fontSize: 11, fontWeight: 700, padding: '2px 8px', flexShrink: 0,
+                          }}>
+                            {nbSelec}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 18, color: nbSelec > 0 ? PINK : '#9ca3af', flexShrink: 0 }}>
+                          {ouvert ? '▾' : '›'}
+                        </span>
+                      </button>
+
+                      {/* Techniques dépliées */}
+                      {ouvert && (
+                        <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #f3f4f6' }}>
+                          {s.techniques.map(t => {
+                            const selected = techniquesSelectionnees.some(
+                              sel => sel.nom === t.nom && sel.categorie === s.nom
+                            )
+                            return (
+                              <button
+                                key={t.id}
+                                onClick={() => toggleTechnique(t, s.nom)}
+                                style={{
+                                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                  padding: '11px 12px', borderRadius: 12, marginBottom: 6,
+                                  border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
+                                  background: selected ? PINK_LIGHT : '#fafafa',
+                                  cursor: 'pointer', textAlign: 'left',
+                                }}
+                              >
+                                {/* Checkbox */}
+                                <div style={{
+                                  width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                                  border: `2px solid ${selected ? PINK : '#d1d5db'}`,
+                                  background: selected ? PINK : 'transparent',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
+                                    {t.nom}
+                                  </p>
+                                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
+                                    {t.prix > 0 ? `${t.prix} €` : 'Gratuit'} · {formatDuree(t.duree)}
+                                  </p>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
         )}
 
         {/* ────────────────────────────────────────
-            STEP 3 — Technique
+            STEP 3 — Calendrier
         ──────────────────────────────────────── */}
         {step === 3 && (
           <div>
             <BackBtn onClick={() => setStep(2)} />
-            <h2 style={S.h2}>{EMOJI_MAP[specialite] ?? '✨'} {specialite}</h2>
-            <p style={S.sub}>Choisissez votre technique.</p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(catalogue[specialite] ?? []).filter(t => t.active).map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => { setTechnique(t); setDate(''); setHeure(''); setStep(4) }}
-                  style={{
-                    ...S.card,
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 16px', cursor: 'pointer', textAlign: 'left',
-                    borderColor: technique?.id === t.id ? PINK : '#e5e7eb',
-                    background: technique?.id === t.id ? PINK_LIGHT : '#fff',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 15 }}>{t.nom}</p>
-                    <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>{formatDuree(t.duree)}</p>
-                  </div>
-                  {t.prix > 0 && (
-                    <span style={{ fontWeight: 700, color: '#374151', fontSize: 16, marginLeft: 12, whiteSpace: 'nowrap' }}>
-                      {t.prix} €
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ────────────────────────────────────────
-            STEP 4 — Calendrier
-        ──────────────────────────────────────── */}
-        {step === 4 && (
-          <div>
-            <BackBtn onClick={() => setStep(3)} />
             <h2 style={S.h2}>📅 Choisissez une date</h2>
             <p style={S.sub}>Sélectionnez un jour disponible.</p>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <button
-                onClick={prevMonth}
-                disabled={isAtCurrentMonth()}
-                style={{ ...S.navBtn, opacity: isAtCurrentMonth() ? 0.3 : 1 }}
-              >
-                ‹
-              </button>
+              <button onClick={prevMonth} disabled={isAtCurrentMonth()} style={{ ...S.navBtn, opacity: isAtCurrentMonth() ? 0.3 : 1 }}>‹</button>
               <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16, textTransform: 'capitalize' }}>
                 {MOIS[calMonth]} {calYear}
               </span>
@@ -953,9 +1000,7 @@ export default function ReservationPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
               {JOURS_COURT.map(j => (
-                <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>
-                  {j}
-                </div>
+                <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>{j}</div>
               ))}
             </div>
 
@@ -977,34 +1022,43 @@ export default function ReservationPage() {
                     key={day}
                     day={day}
                     isSelected={isSelected}
+                    isPast={isPast}
+                    isOff={isOff && !isPast}
                     isDisabled={isDisabled}
-                    onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setStep(5) } }}
+                    onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setStep(4) } }}
                   />
                 )
               })}
             </div>
 
-            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: PINK }} />
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Sélectionné</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#f3f4f6', border: '1px solid #d1d5db' }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Repos</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Indisponible</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Passé</span>
               </div>
             </div>
           </div>
         )}
 
         {/* ────────────────────────────────────────
-            STEP 5 — Heure
+            STEP 4 — Heure
         ──────────────────────────────────────── */}
-        {step === 5 && (
+        {step === 4 && (
           <div>
-            <BackBtn onClick={() => setStep(4)} />
+            <BackBtn onClick={() => setStep(3)} />
             <h2 style={S.h2}>🕐 Choisissez une heure</h2>
             <p style={{ ...S.sub, textTransform: 'capitalize' }}>{formatDateLong(date)}</p>
+            <p style={{ fontSize: 13, color: '#9ca3af', marginTop: -16, marginBottom: 20 }}>
+              Durée totale : {formatDuree(dureeTotal)}
+            </p>
 
             {loadingSlots ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -1013,8 +1067,8 @@ export default function ReservationPage() {
             ) : slots.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>😔</div>
-                <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau disponible ce jour.</p>
-                <button onClick={() => setStep(4)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
+                <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
+                <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
                   ← Choisir une autre date
                 </button>
               </div>
@@ -1024,7 +1078,7 @@ export default function ReservationPage() {
                   <button
                     key={s.heure}
                     disabled={!s.disponible}
-                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(6) } }}
+                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(5) } }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
@@ -1047,34 +1101,56 @@ export default function ReservationPage() {
         )}
 
         {/* ────────────────────────────────────────
-            STEP 6 — Confirmation
+            STEP 5 — Confirmation
         ──────────────────────────────────────── */}
-        {step === 6 && (
+        {step === 5 && (
           <div>
-            <BackBtn onClick={() => setStep(5)} />
+            <BackBtn onClick={() => setStep(4)} />
             <h2 style={S.h2}>Confirmation 🌸</h2>
             <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
 
-            <div style={{ ...S.card, marginBottom: 20 }}>
+            <div style={{ ...S.card, marginBottom: 16 }}>
               <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 16 }}>Récapitulatif</p>
+
+              {/* Infos principales */}
               {[
-                { emoji: '👤', label: 'Cliente',    value: `${clientePrenom} ${clienteNom}` },
-                { emoji: EMOJI_MAP[specialite] ?? '✨', label: 'Prestation', value: `${specialite} · ${technique?.nom}` },
-                { emoji: '📅', label: 'Date',       value: formatDateLong(date) },
-                { emoji: '🕐', label: 'Heure',      value: `${heure} · ${formatDuree(technique!.duree)}` },
-                ...(technique!.prix > 0 ? [{ emoji: '💶', label: 'Prix', value: `${technique!.prix} €` }] : []),
-              ].map((row, i, arr) => (
+                { emoji: '👤', label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
+                { emoji: '📅', label: 'Date',     value: formatDateLong(date) },
+                { emoji: '🕐', label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
+                ...(prixTotal > 0 ? [{ emoji: '💶', label: 'Total', value: `${prixTotal} €` }] : []),
+              ].map((row, i) => (
                 <div key={i}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0' }}>
                     <span style={{ fontSize: 20, width: 26, flexShrink: 0 }}>{row.emoji}</span>
                     <div>
                       <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{row.label}</p>
-                      <p style={{ fontSize: 15, color: '#1f2937', fontWeight: 500, margin: '2px 0 0', textTransform: 'capitalize' }}>{row.value}</p>
+                      <p style={{ fontSize: 15, color: '#1f2937', fontWeight: 500, margin: '2px 0 0' }}>{row.value}</p>
                     </div>
                   </div>
-                  {i < arr.length - 1 && <div style={{ height: 1, background: '#f3f4f6' }} />}
+                  <div style={{ height: 1, background: '#f3f4f6' }} />
                 </div>
               ))}
+
+              {/* Techniques sélectionnées */}
+              <div style={{ padding: '10px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ fontSize: 20, width: 26, flexShrink: 0 }}>✨</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>Prestations</p>
+                    {techniquesSelectionnees.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <div>
+                          <span style={{ fontSize: 14, color: '#1f2937', fontWeight: 500 }}>{t.nom}</span>
+                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>{t.categorie}</span>
+                        </div>
+                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap' }}>
+                          {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <label style={S.label}>Commentaire (optionnel)</label>
@@ -1109,17 +1185,57 @@ export default function ReservationPage() {
             <button
               onClick={handleConfirm}
               disabled={submitting}
-              style={{
-                ...S.btn,
-                opacity: submitting ? 0.7 : 1,
-                boxShadow: `0 4px 20px ${PINK}55`,
-              }}
+              style={{ ...S.btn, opacity: submitting ? 0.7 : 1, boxShadow: `0 4px 20px ${PINK}55` }}
             >
               {submitting ? 'Enregistrement...' : '✓ Confirmer ma réservation'}
             </button>
           </div>
         )}
       </div>
+
+      {/* ── Sticky footer récap techniques (step 2) ── */}
+      {step === 2 && techniquesSelectionnees.length > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20,
+          background: '#fff', borderTop: '1px solid #f3f4f6',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+          padding: '12px 16px',
+        }}>
+          <div style={{ maxWidth: 480, margin: '0 auto' }}>
+            {/* Liste des techniques sélectionnées */}
+            <div style={{ marginBottom: 10 }}>
+              {techniquesSelectionnees.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', display: 'block' }}>
+                      {t.nom}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{t.categorie}</span>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* Total + Continuer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
+                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+              </span>
+              <button
+                onClick={() => setStep(3)}
+                style={{
+                  background: PINK, color: '#fff', fontWeight: 700, fontSize: 14,
+                  padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'pointer',
+                }}
+              >
+                Continuer →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1142,23 +1258,34 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 }
 
 function CalendarDay({
-  day, isSelected, isDisabled, onClick,
-}: { day: number; isSelected: boolean; isDisabled: boolean; onClick: () => void }) {
+  day, isSelected, isPast, isOff, isDisabled, onClick,
+}: {
+  day: number
+  isSelected: boolean
+  isPast: boolean
+  isOff: boolean
+  isDisabled: boolean
+  onClick: () => void
+}) {
   const [hovered, setHovered] = useState(false)
 
   const bg = isSelected
     ? PINK
-    : hovered && !isDisabled
-      ? PINK_LIGHT
-      : 'transparent'
+    : isOff
+      ? '#f3f4f6'   // jour repos : fond gris clair distinctif
+      : hovered && !isDisabled
+        ? '#F9EEF4'
+        : 'transparent'
 
   const color = isSelected
     ? '#fff'
-    : isDisabled
-      ? '#d1d5db'
-      : hovered
-        ? PINK
-        : '#374151'
+    : isPast
+      ? '#d1d5db'   // passé : gris clair
+      : isOff
+        ? '#c0c4cc'  // repos : gris moyen
+        : hovered
+          ? PINK
+          : '#374151'
 
   return (
     <button
@@ -1166,12 +1293,14 @@ function CalendarDay({
       disabled={isDisabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={isOff ? 'Jour de repos' : undefined}
       style={{
-        aspectRatio: '1', borderRadius: '50%', border: 'none',
+        aspectRatio: '1', borderRadius: '50%', border: isOff && !isSelected ? '1px solid #e5e7eb' : 'none',
         background: bg, color, fontWeight: 500, fontSize: 14,
         cursor: isDisabled ? 'default' : 'pointer',
         transition: 'all 0.15s', display: 'flex', alignItems: 'center',
         justifyContent: 'center',
+        textDecoration: isOff ? 'line-through' : 'none',
       }}
     >
       {day}
@@ -1209,7 +1338,7 @@ const S: Record<string, React.CSSProperties> = {
     border: '1.5px solid #e5e7eb', boxSizing: 'border-box' as const,
   },
   infoBox: {
-    background: PINK_LIGHT, borderRadius: 16, padding: 16,
+    background: '#F9EEF4', borderRadius: 16, padding: 16,
   },
   navBtn: {
     width: 36, height: 36, borderRadius: 18, border: '1px solid #e5e7eb',
