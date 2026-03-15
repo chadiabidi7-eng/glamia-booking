@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type HorairesJour = { actif: boolean; debut: string; fin: string }
+type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string }
 type HorairesHebdo = Record<number, HorairesJour>
 type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number }
 type CataloguePrestations = Record<string, Technique[]>
@@ -158,7 +158,8 @@ function buildDateStr(year: number, month: number, day: number) {
 function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
   const jour = new Date(dateStr + 'T00:00:00').getDay()
   const h = horaires[jour]
-  return h?.actif === true
+  // Supporte les deux conventions : `actif` (français, app mobile) et `active` (anglais, Supabase)
+  return h?.actif === true || h?.active === true
 }
 
 function generateSlots(
@@ -169,7 +170,7 @@ function generateSlots(
 ): Slot[] {
   const jour = new Date(date + 'T00:00:00').getDay()
   const h = horaires[jour]
-  if (!h?.actif) return []
+  if (!h?.actif && !h?.active) return []
 
   const debut = timeToMin(h.debut)
   const fin   = timeToMin(h.fin)
@@ -1037,8 +1038,8 @@ export default function ReservationPage() {
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Sélectionné</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#f3f4f6', border: '1px solid #d1d5db' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Repos</span>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#E3F2FD' }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Jour off</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
@@ -1272,7 +1273,7 @@ function CalendarDay({
   const bg = isSelected
     ? PINK
     : isOff
-      ? '#f3f4f6'   // jour repos : fond gris clair distinctif
+      ? '#E3F2FD'   // jour off : bleu ciel très clair
       : hovered && !isDisabled
         ? '#F9EEF4'
         : 'transparent'
@@ -1282,7 +1283,7 @@ function CalendarDay({
     : isPast
       ? '#d1d5db'   // passé : gris clair
       : isOff
-        ? '#c0c4cc'  // repos : gris moyen
+        ? '#90CAF9'  // off : bleu clair (lisible sur fond bleu ciel)
         : hovered
           ? PINK
           : '#374151'
@@ -1295,12 +1296,11 @@ function CalendarDay({
       onMouseLeave={() => setHovered(false)}
       title={isOff ? 'Jour de repos' : undefined}
       style={{
-        aspectRatio: '1', borderRadius: '50%', border: isOff && !isSelected ? '1px solid #e5e7eb' : 'none',
+        aspectRatio: '1', borderRadius: '50%', border: 'none',
         background: bg, color, fontWeight: 500, fontSize: 14,
         cursor: isDisabled ? 'default' : 'pointer',
         transition: 'all 0.15s', display: 'flex', alignItems: 'center',
         justifyContent: 'center',
-        textDecoration: isOff ? 'line-through' : 'none',
       }}
     >
       {day}
