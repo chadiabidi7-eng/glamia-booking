@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -305,6 +305,25 @@ export default function ReservationPage() {
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
+  // ── Realtime : sync horaires dès que la pro les modifie dans Glamia ──
+  useEffect(() => {
+    if (!pro?.id) return
+    const channel = supabase
+      .channel(`horaires-${pro.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${pro.id}` },
+        (payload) => {
+          if (payload.new?.horaires) {
+            console.log('[Realtime] horaires mis à jour:', JSON.stringify(payload.new.horaires))
+            setPro(prev => prev ? { ...prev, horaires: payload.new.horaires } : prev)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [pro?.id])
+
   async function loadPro() {
     setPageState('loading')
     try {
@@ -330,6 +349,8 @@ export default function ReservationPage() {
       }
 
       if (!found) { setPageState('notfound'); return }
+
+      console.log('[DEBUG] profiles.horaires brut:', JSON.stringify(found.horaires))
 
       setPro({
         id:              found.id,
@@ -451,11 +472,20 @@ export default function ReservationPage() {
   }
 
   // ── Step 2 : Accordion techniques ────────────
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
   function toggleSection(cat: string) {
     setSectionsOuvertes(prev => {
       const next = new Set(prev)
-      if (next.has(cat)) next.delete(cat)
-      else next.add(cat)
+      if (next.has(cat)) {
+        next.delete(cat)
+      } else {
+        next.add(cat)
+        // Scroll vers la section après ouverture (délai pour laisser le DOM se mettre à jour)
+        setTimeout(() => {
+          sectionRefs.current[cat]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 60)
+      }
       return next
     })
   }
@@ -517,6 +547,7 @@ export default function ReservationPage() {
 
     try {
       let cId = clienteId
+      let nouvelleCliente = false
       const telNormalized = normalizePhone(telephone)
 
       if (!cId) {
@@ -544,6 +575,7 @@ export default function ReservationPage() {
 
           if (createErr) throw createErr
           cId = created!.id
+          nouvelleCliente = true
         }
       }
 
@@ -564,11 +596,19 @@ export default function ReservationPage() {
 
       if (rdvErr) throw rdvErr
       setPageState('confirmed')
-      envoyerPushNotif(
-        pro.id,
-        '🌸 Nouveau RDV !',
-        `${clientePrenom} a réservé ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
-      )
+      if (nouvelleCliente) {
+        envoyerPushNotif(
+          pro.id,
+          '🌸 Nouvelle cliente !',
+          `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
+        )
+      } else {
+        envoyerPushNotif(
+          pro.id,
+          '🌸 Nouveau RDV',
+          `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
+        )
+      }
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
       alert('Une erreur est survenue. Ouvre la console (F12) pour voir le détail.')
@@ -638,7 +678,7 @@ export default function ReservationPage() {
           <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
             ✅
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est confirmé ✓</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est bien enregistré ✓</h1>
 
           {/* Infos générales */}
           <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
@@ -733,7 +773,7 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 80px' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
         {/* ── Bannière pro ── */}
         {(pro?.message_accueil || hasSocials) && (
@@ -816,13 +856,6 @@ export default function ReservationPage() {
                               {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
                             </p>
                             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                              <span style={{
-                                fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                                background: rdv.statut === 'confirme' ? '#d1fae5' : PINK_LIGHT,
-                                color: rdv.statut === 'confirme' ? '#065f46' : PINK,
-                              }}>
-                                {rdv.statut === 'confirme' ? '✓ Confirmé' : rdv.statut === 'en_attente' ? '⏳ En attente' : rdv.statut}
-                              </span>
                               {rdv.prix && rdv.prix > 0 && (
                                 <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
                               )}
@@ -906,7 +939,7 @@ export default function ReservationPage() {
                   const ouvert  = sectionsOuvertes.has(s.nom)
                   const nbSelec = techniquesSelectionnees.filter(t => t.categorie === s.nom).length
                   return (
-                    <div key={s.nom} style={{ borderRadius: 16, overflow: 'hidden', border: `1.5px solid ${nbSelec > 0 ? PINK : '#e5e7eb'}`, background: '#fff' }}>
+                    <div key={s.nom} ref={el => { sectionRefs.current[s.nom] = el }} style={{ borderRadius: 16, overflow: 'hidden', border: `1.5px solid ${nbSelec > 0 ? PINK : '#e5e7eb'}`, background: '#fff' }}>
                       {/* En-tête section */}
                       <button
                         onClick={() => toggleSection(s.nom)}
