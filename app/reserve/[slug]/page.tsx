@@ -338,16 +338,19 @@ export default function ReservationPage() {
 
       let found: any = bySlug
 
-      // 2. Fallback : matching par nom normalisé (anciens profils sans slug)
+      // 2. Fallback : matching par slug normalisé (prenom-nom ou pseudo-nom)
       if (!found) {
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select('id, prenom, nom, pseudo, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug, is_pro')
 
         if (error) throw error
-        found = profiles?.find(p =>
-          normalizeStr(`${p.prenom}-${p.nom}`) === normalizeStr(slug)
-        )
+        const normalized = normalizeStr(slug)
+        found = profiles?.find(p => {
+          const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
+          const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
+          return fromPrenom === normalized || fromPseudo === normalized
+        })
       }
 
       if (!found) { setPageState('notfound'); return }
