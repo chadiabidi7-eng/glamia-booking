@@ -19,6 +19,7 @@ type ProInfo = {
   id: string
   prenom: string
   nom: string
+  pseudo?: string
   photo_url?: string
   horaires: HorairesHebdo
   instagram?: string
@@ -26,6 +27,7 @@ type ProInfo = {
   snapchat?: string
   message_accueil?: string
   adresse?: string
+  is_pro?: boolean
 }
 
 type RdvAVenir = {
@@ -264,7 +266,7 @@ export default function ReservationPage() {
   // ── Pro & catalogue ──────────────────────────
   const [pro,        setPro]        = useState<ProInfo | null>(null)
   const [catalogue,  setCatalogue]  = useState<CataloguePrestations>({})
-  const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed'>('loading')
+  const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
 
   // ── Navigation ───────────────────────────────
@@ -330,7 +332,7 @@ export default function ReservationPage() {
       // 1. Chercher par colonne slug directement
       const { data: bySlug } = await supabase
         .from('profiles')
-        .select('id, prenom, nom, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug')
+        .select('id, prenom, nom, pseudo, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug, is_pro')
         .eq('slug', slug)
         .maybeSingle()
 
@@ -340,7 +342,7 @@ export default function ReservationPage() {
       if (!found) {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, prenom, nom, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug')
+          .select('id, prenom, nom, pseudo, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug, is_pro')
 
         if (error) throw error
         found = profiles?.find(p =>
@@ -356,6 +358,7 @@ export default function ReservationPage() {
         id:              found.id,
         prenom:          found.prenom,
         nom:             found.nom,
+        pseudo:          found.pseudo ?? undefined,
         photo_url:       found.avatar_url ?? found.photo_url ?? undefined,
         horaires:        found.horaires ?? DEFAULT_HORAIRES,
         instagram:       found.instagram ?? undefined,
@@ -363,7 +366,10 @@ export default function ReservationPage() {
         snapchat:        found.snapchat ?? undefined,
         message_accueil: found.message_accueil ?? undefined,
         adresse:         found.adresse ?? undefined,
+        is_pro:          found.is_pro ?? false,
       })
+
+      if (!found.is_pro) { setPageState('blocked'); return }
 
       const { data: prestData } = await supabase
         .from('prestations')
@@ -666,6 +672,51 @@ export default function ReservationPage() {
           <div style={{ fontSize: 56, marginBottom: 16 }}>🔍</div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Page introuvable</h1>
           <p style={{ color: '#6b7280', fontSize: 15 }}>Ce lien de réservation n'existe pas ou a été désactivé.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (pageState === 'blocked') {
+    const nomAffiche = pro?.pseudo ?? `${pro?.prenom ?? ''} ${pro?.nom ?? ''}`.trim()
+    const socials = [
+      pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: '📸' },
+      pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: '🎵' },
+      pro?.snapchat  && { label: 'Snapchat',  href: `https://snapchat.com/add/${pro.snapchat}`, icon: '👻' },
+    ].filter(Boolean) as { label: string; href: string; icon: string }[]
+
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: PINK_LIGHT }}>
+        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          {pro?.photo_url ? (
+            <img src={pro.photo_url} alt={nomAffiche} style={{ width: 72, height: 72, borderRadius: 36, objectFit: 'cover', border: `3px solid ${PINK}`, marginBottom: 16 }} />
+          ) : (
+            <div style={{ width: 72, height: 72, borderRadius: 36, background: PINK_LIGHT, color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 28, margin: '0 auto 16px' }}>
+              {pro?.prenom?.[0]?.toUpperCase() ?? '?'}
+            </div>
+          )}
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 12 }}>
+            La prise de rendez-vous en ligne est indisponible pour le moment.
+          </h1>
+          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: socials.length > 0 ? 24 : 0, lineHeight: 1.6 }}>
+            Contactez <strong style={{ color: '#1f2937' }}>{nomAffiche}</strong> sur ses réseaux sociaux.
+          </p>
+          {socials.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {socials.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+                >
+                  <span>{s.icon}</span>
+                  <span>{s.label}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
