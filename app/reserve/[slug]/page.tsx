@@ -328,13 +328,16 @@ export default function ReservationPage() {
 
   async function loadPro() {
     setPageState('loading')
+    console.log('[loadPro] slug reçu depuis URL:', JSON.stringify(slug))
     try {
       // 1. Chercher par colonne slug directement
-      const { data: bySlug } = await supabase
+      const { data: bySlug, error: errSlug } = await supabase
         .from('profiles')
-        .select('id, prenom, nom, pseudo, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug, is_pro')
+        .select('*')
         .eq('slug', slug)
         .maybeSingle()
+
+      console.log('[loadPro] requête .eq("slug") →', { found: !!bySlug, data: bySlug, error: errSlug })
 
       let found: any = bySlug
 
@@ -342,18 +345,31 @@ export default function ReservationPage() {
       if (!found) {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, prenom, nom, pseudo, photo_url, avatar_url, horaires, instagram, tiktok, snapchat, message_accueil, adresse, slug, is_pro')
+          .select('*')
 
+        console.log('[loadPro] fallback — tous les profils récupérés:', profiles?.length ?? 0, '| erreur:', error)
         if (error) throw error
+
         const normalized = normalizeStr(slug)
+        console.log('[loadPro] fallback — slug normalisé à matcher:', normalized)
+        profiles?.forEach(p => {
+          const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
+          const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
+          console.log(`  profil id=${p.id} slug_db=${JSON.stringify(p.slug)} → fromPrenom="${fromPrenom}" fromPseudo="${fromPseudo}"`)
+        })
+
         found = profiles?.find(p => {
           const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
           const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
           return fromPrenom === normalized || fromPseudo === normalized
         })
+        console.log('[loadPro] fallback — profil trouvé:', !!found, found ? `id=${found.id}` : '')
       }
 
-      if (!found) { setPageState('notfound'); return }
+      if (!found) {
+        console.warn('[loadPro] NOTFOUND — aucun profil ne correspond au slug:', JSON.stringify(slug))
+        setPageState('notfound'); return
+      }
 
       console.log('[DEBUG] profiles.horaires brut:', JSON.stringify(found.horaires))
 
