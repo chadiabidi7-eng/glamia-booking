@@ -1,0 +1,545 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+type RdvInfo = {
+  id: string
+  date: string
+  heure: string
+  prestation: string
+  categorie: string | null
+  prix: number | null
+  statut: string
+  token_expiration: string
+  cliente_id: string
+  pro_id: string
+  cliente_prenom: string
+  pro_prenom: string
+  pro_nom: string
+  pro_pseudo: string | null
+  pro_photo: string | null
+  pro_push_token: string | null
+}
+
+type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'error'
+
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+const PINK = '#C2779E'
+const PINK_LIGHT = '#F9EEF4'
+const GOLD = '#D4A853'
+
+const MOIS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+]
+
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function formatDateFr(iso: string): string {
+  const d = new Date(iso + 'T00:00:00')
+  const jour = JOURS[d.getDay()]
+  return `${jour} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+}
+
+function formatDuree(min: number): string {
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+}
+
+async function envoyerPushPro(pushToken: string, title: string, body: string) {
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: pushToken, title, body }),
+    })
+  } catch (e) {
+    console.error('Erreur push:', e)
+  }
+}
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
+export default function ConfirmationPage() {
+  const { token } = useParams<{ token: string }>()
+  const searchParams = useSearchParams()
+  const actionParam = searchParams.get('action')
+
+  const [state, setState] = useState<PageState>('loading')
+  const [rdv, setRdv] = useState<RdvInfo | null>(null)
+  const [acting, setActing] = useState(false)
+
+  // ── Chargement initial ──────────────────────
+  useEffect(() => {
+    if (!token) { setState('error'); return }
+
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select(`
+          id, date, heure, prestation, categorie, prix, statut,
+          token_expiration, cliente_id, pro_id,
+          clientes!cliente_id ( prenom ),
+          profiles!pro_id ( prenom, nom, pseudo, photo_url, push_token )
+        `)
+        .eq('token_confirmation', token)
+        .single()
+
+      if (error || !data) { setState('expired'); return }
+
+      // Token expiré ?
+      if (data.token_expiration && new Date(data.token_expiration) < new Date()) {
+        setState('expired'); return
+      }
+
+      const info: RdvInfo = {
+        id: data.id,
+        date: data.date,
+        heure: data.heure,
+        prestation: data.prestation,
+        categorie: data.categorie,
+        prix: data.prix,
+        statut: data.statut,
+        token_expiration: data.token_expiration,
+        cliente_id: data.cliente_id,
+        pro_id: data.pro_id,
+        cliente_prenom: (data.clientes as any)?.prenom ?? '',
+        pro_prenom: (data.profiles as any)?.prenom ?? '',
+        pro_nom: (data.profiles as any)?.nom ?? '',
+        pro_pseudo: (data.profiles as any)?.pseudo ?? null,
+        pro_photo: (data.profiles as any)?.photo_url ?? null,
+        pro_push_token: (data.profiles as any)?.push_token ?? null,
+      }
+
+      setRdv(info)
+
+      if (info.statut === 'confirme') { setState('already_confirmed'); return }
+      if (info.statut === 'annule') { setState('already_cancelled'); return }
+
+      setState('ready')
+    }
+
+    load()
+  }, [token])
+
+  // ── Auto-action depuis le lien email ────────
+  useEffect(() => {
+    if (state !== 'ready' || !rdv || !actionParam) return
+    if (actionParam === 'confirmer') handleConfirmer()
+    else if (actionParam === 'annuler') handleAnnuler()
+  }, [state, rdv, actionParam])
+
+  // ── Actions ─────────────────────────────────
+  const handleConfirmer = async () => {
+    if (!rdv || acting) return
+    setActing(true)
+
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ statut: 'confirme', rappel_confirme_at: new Date().toISOString() })
+      .eq('id', rdv.id)
+
+    if (error) { setState('error'); setActing(false); return }
+
+    if (rdv.pro_push_token) {
+      const dateFr = formatDateFr(rdv.date)
+      await envoyerPushPro(
+        rdv.pro_push_token,
+        'RDV confirmé',
+        `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} est confirmé`,
+      )
+    }
+
+    setState('confirmed')
+    setActing(false)
+  }
+
+  const handleAnnuler = async () => {
+    if (!rdv || acting) return
+    setActing(true)
+
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ statut: 'annule' })
+      .eq('id', rdv.id)
+
+    if (error) { setState('error'); setActing(false); return }
+
+    if (rdv.pro_push_token) {
+      const dateFr = formatDateFr(rdv.date)
+      await envoyerPushPro(
+        rdv.pro_push_token,
+        'RDV annulé',
+        `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} a été annulé`,
+      )
+    }
+
+    setState('cancelled')
+    setActing(false)
+  }
+
+  // ── Rendu ───────────────────────────────────
+  const proDisplayName = rdv?.pro_pseudo || `${rdv?.pro_prenom ?? ''} ${rdv?.pro_nom ?? ''}`.trim()
+  const prestationLabel = rdv?.categorie ? `${rdv.categorie} · ${rdv.prestation}` : rdv?.prestation
+
+  return (
+    <div style={S.page}>
+      <div style={S.container}>
+        {/* Logo */}
+        <div style={S.logoWrap}>
+          <span style={S.logoText}>Glamia</span>
+        </div>
+
+        {/* Loading */}
+        {state === 'loading' && (
+          <div style={S.center}>
+            <div style={S.spinner} />
+            <p style={S.grayText}>Chargement...</p>
+          </div>
+        )}
+
+        {/* Token expiré */}
+        {state === 'expired' && (
+          <div style={S.center}>
+            <div style={S.iconCircle}>
+              <span style={{ fontSize: 36 }}>🔗</span>
+            </div>
+            <h2 style={S.h2}>Lien expiré</h2>
+            <p style={S.grayText}>
+              Ce lien de confirmation n&apos;est plus valide.<br />
+              Contactez votre professionnelle pour un nouveau lien.
+            </p>
+          </div>
+        )}
+
+        {/* Déjà confirmé */}
+        {state === 'already_confirmed' && rdv && (
+          <div style={S.center}>
+            <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
+              <span style={{ fontSize: 36 }}>✅</span>
+            </div>
+            <h2 style={S.h2}>RDV déjà confirmé</h2>
+            <p style={S.grayText}>
+              Votre rendez-vous chez <strong>{proDisplayName}</strong> est déjà confirmé.
+            </p>
+            <div style={S.infoBox}>
+              <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
+              <p style={S.infoLineSub}>{prestationLabel}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Déjà annulé */}
+        {state === 'already_cancelled' && rdv && (
+          <div style={S.center}>
+            <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
+              <span style={{ fontSize: 36 }}>❌</span>
+            </div>
+            <h2 style={S.h2}>RDV annulé</h2>
+            <p style={S.grayText}>
+              Ce rendez-vous a été annulé.
+            </p>
+          </div>
+        )}
+
+        {/* Prêt → affichage RDV + boutons */}
+        {state === 'ready' && rdv && (
+          <>
+            {/* Avatar + nom pro */}
+            <div style={S.proSection}>
+              {rdv.pro_photo ? (
+                <img src={rdv.pro_photo} alt={proDisplayName} style={S.avatar} />
+              ) : (
+                <div style={S.avatarPlaceholder}>
+                  <span style={{ fontSize: 24, fontWeight: 700, color: PINK }}>
+                    {(rdv.pro_prenom[0] ?? '') + (rdv.pro_nom[0] ?? '')}
+                  </span>
+                </div>
+              )}
+              <h2 style={{ ...S.h2, marginBottom: 0 }}>{proDisplayName}</h2>
+            </div>
+
+            {/* Infos RDV */}
+            <div style={S.card}>
+              <p style={S.cardLabel}>Votre rendez-vous</p>
+              <div style={S.cardRow}>
+                <span style={S.cardIcon}>📅</span>
+                <span style={S.cardValue}>{formatDateFr(rdv.date)}</span>
+              </div>
+              <div style={S.cardRow}>
+                <span style={S.cardIcon}>🕐</span>
+                <span style={S.cardValue}>{rdv.heure}</span>
+              </div>
+              <div style={S.cardRow}>
+                <span style={S.cardIcon}>✨</span>
+                <span style={S.cardValue}>{prestationLabel}</span>
+              </div>
+              {rdv.prix != null && rdv.prix > 0 && (
+                <div style={S.cardRow}>
+                  <span style={S.cardIcon}>💰</span>
+                  <span style={S.cardValue}>{rdv.prix} €</span>
+                </div>
+              )}
+            </div>
+
+            {/* Boutons */}
+            <div style={S.actions}>
+              <button
+                style={{ ...S.btn, opacity: acting ? 0.6 : 1 }}
+                onClick={handleConfirmer}
+                disabled={acting}
+              >
+                {acting ? 'Confirmation...' : 'Confirmer mon RDV'}
+              </button>
+              <button
+                style={{ ...S.btnOutline, opacity: acting ? 0.6 : 1 }}
+                onClick={handleAnnuler}
+                disabled={acting}
+              >
+                {acting ? 'Annulation...' : 'Annuler mon RDV'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Succès confirmation */}
+        {state === 'confirmed' && rdv && (
+          <div style={S.center}>
+            <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
+              <span style={{ fontSize: 44 }}>✅</span>
+            </div>
+            <h2 style={S.h2}>RDV confirmé !</h2>
+            <p style={S.grayText}>
+              Votre rendez-vous chez <strong>{proDisplayName}</strong> est confirmé.
+            </p>
+            <div style={S.infoBox}>
+              <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
+              <p style={S.infoLineSub}>{prestationLabel}</p>
+            </div>
+            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
+              Vous pouvez fermer cette page.
+            </p>
+          </div>
+        )}
+
+        {/* Succès annulation */}
+        {state === 'cancelled' && rdv && (
+          <div style={S.center}>
+            <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
+              <span style={{ fontSize: 44 }}>❌</span>
+            </div>
+            <h2 style={S.h2}>RDV annulé</h2>
+            <p style={S.grayText}>
+              Votre rendez-vous a bien été annulé.
+            </p>
+            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
+              Vous pouvez fermer cette page.
+            </p>
+          </div>
+        )}
+
+        {/* Erreur */}
+        {state === 'error' && (
+          <div style={S.center}>
+            <div style={S.iconCircle}>
+              <span style={{ fontSize: 36 }}>⚠️</span>
+            </div>
+            <h2 style={S.h2}>Erreur</h2>
+            <p style={S.grayText}>
+              Une erreur est survenue. Veuillez réessayer ou contacter votre professionnelle.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
+const S: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background: '#f9fafb',
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '24px 16px',
+    fontFamily: 'inherit',
+  },
+  container: {
+    width: '100%',
+    maxWidth: 480,
+    margin: '0 auto',
+  },
+  logoWrap: {
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: 800,
+    color: PINK,
+    letterSpacing: '-0.02em',
+  },
+  center: {
+    textAlign: 'center',
+    padding: '32px 0',
+  },
+  h2: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: '#1f2937',
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  grayText: {
+    fontSize: 15,
+    color: '#6b7280',
+    lineHeight: '1.6',
+    margin: '0 0 8px',
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: '50%',
+    background: PINK_LIGHT,
+    display: 'flex' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 20px',
+  },
+  spinner: {
+    width: 32,
+    height: 32,
+    border: `3px solid #e5e7eb`,
+    borderTopColor: PINK,
+    borderRadius: '50%',
+    margin: '0 auto 16px',
+    animation: 'spin 0.8s linear infinite',
+  },
+  // Pro section
+  proSection: {
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: '50%',
+    objectFit: 'cover' as const,
+    border: `3px solid ${PINK}`,
+    marginBottom: 12,
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: '50%',
+    background: PINK_LIGHT,
+    display: 'inline-flex' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: `2px solid ${PINK}`,
+    marginBottom: 12,
+  },
+  // Card
+  card: {
+    background: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    border: '1.5px solid #e5e7eb',
+    marginBottom: 24,
+    boxSizing: 'border-box' as const,
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#6b7280',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    marginBottom: 16,
+    marginTop: 0,
+  },
+  cardRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  cardIcon: {
+    fontSize: 18,
+    width: 24,
+    textAlign: 'center' as const,
+  },
+  cardValue: {
+    fontSize: 15,
+    color: '#1f2937',
+    fontWeight: 500,
+  },
+  // Info box (résultat)
+  infoBox: {
+    background: PINK_LIGHT,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+    display: 'inline-block' as const,
+  },
+  infoLine: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: '#1f2937',
+    margin: '0 0 4px',
+    textTransform: 'capitalize' as const,
+  },
+  infoLineSub: {
+    fontSize: 14,
+    color: PINK,
+    fontWeight: 500,
+    margin: 0,
+  },
+  // Buttons
+  actions: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 12,
+  },
+  btn: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 16,
+    border: 'none',
+    background: PINK,
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: 16,
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
+    fontFamily: 'inherit',
+  },
+  btnOutline: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 16,
+    border: '1.5px solid #d1d5db',
+    background: 'transparent',
+    color: '#6b7280',
+    fontWeight: 600,
+    fontSize: 15,
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
+    fontFamily: 'inherit',
+  },
+}
