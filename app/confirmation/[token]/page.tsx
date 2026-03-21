@@ -87,44 +87,60 @@ export default function ConfirmationPage() {
     if (!token) { setState('error'); return }
 
     const load = async () => {
+      // 1. Récupérer le RDV (sans jointures — colonnes réelles de la table)
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select(`
-          id, date, heure, prestation, categorie, prix, statut,
-          token_expiration, cliente_id, pro_id,
-          clientes!cliente_id ( prenom ),
-          profiles!pro_id ( prenom, nom, pseudo, photo_url, push_token )
-        `)
+        .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
         .eq('token_confirmation', token)
-        .single()
+        .maybeSingle()
 
-      if (error || !data) { setState('expired'); return }
+      if (error) { console.error('[confirmation] Erreur lecture RDV:', error); setState('expired'); return }
+      if (!data) { console.error('[confirmation] Aucun RDV pour token:', token); setState('expired'); return }
 
       // Token expiré ?
       if (data.token_expiration && new Date(data.token_expiration) < new Date()) {
-        setState('expired'); return
+        console.log('[confirmation] Token expiré'); setState('expired'); return
       }
+
+      // 2. Récupérer la cliente
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('prenom')
+        .eq('id', data.cliente_id)
+        .maybeSingle()
+
+      // 3. Récupérer le profil pro
+      const { data: pro } = await supabase
+        .from('profiles')
+        .select('prenom, nom, pseudo, photo_url, push_token')
+        .eq('id', data.pro_id)
+        .maybeSingle()
+
+      // date = "YYYY-MM-DDTHH:MM:00+00:00"
+      const dateStr = (data.date as string).slice(0, 10)
+      const heureStr = (data.date as string).slice(11, 16)
 
       const info: RdvInfo = {
         id: data.id,
-        date: data.date,
-        heure: data.heure,
-        prestation: data.prestation,
-        categorie: data.categorie,
+        date: dateStr,
+        heure: heureStr,
+        prestation: data.technique ?? '',
+        categorie: data.specialite ?? null,
         prix: data.prix,
         statut: data.statut,
         token_expiration: data.token_expiration,
         cliente_id: data.cliente_id,
         pro_id: data.pro_id,
-        cliente_prenom: (data.clientes as any)?.prenom ?? '',
-        pro_prenom: (data.profiles as any)?.prenom ?? '',
-        pro_nom: (data.profiles as any)?.nom ?? '',
-        pro_pseudo: (data.profiles as any)?.pseudo ?? null,
-        pro_photo: (data.profiles as any)?.photo_url ?? null,
-        pro_push_token: (data.profiles as any)?.push_token ?? null,
+        cliente_prenom: cliente?.prenom ?? '',
+        pro_prenom: pro?.prenom ?? '',
+        pro_nom: pro?.nom ?? '',
+        pro_pseudo: pro?.pseudo ?? null,
+        pro_photo: pro?.photo_url ?? null,
+        pro_push_token: pro?.push_token ?? null,
       }
 
       setRdv(info)
+      console.log('[confirmation] RDV chargé:', info.id, 'statut:', info.statut)
 
       if (info.statut === 'confirme') { setState('already_confirmed'); return }
       if (info.statut === 'annule') { setState('already_cancelled'); return }
