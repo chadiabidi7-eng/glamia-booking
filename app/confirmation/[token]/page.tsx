@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Client admin avec service role key → bypass RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
 
 // ─────────────────────────────────────────────
 // Types
@@ -88,7 +94,7 @@ export default function ConfirmationPage() {
 
     const load = async () => {
       // 1. Récupérer le RDV (sans jointures — colonnes réelles de la table)
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('rendez_vous')
         .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
         .eq('token_confirmation', token)
@@ -103,14 +109,14 @@ export default function ConfirmationPage() {
       }
 
       // 2. Récupérer la cliente
-      const { data: cliente } = await supabase
+      const { data: cliente } = await supabaseAdmin
         .from('clientes')
         .select('prenom')
         .eq('id', data.cliente_id)
         .maybeSingle()
 
       // 3. Récupérer le profil pro
-      const { data: pro } = await supabase
+      const { data: pro } = await supabaseAdmin
         .from('profiles')
         .select('prenom, nom, pseudo, photo_url, push_token')
         .eq('id', data.pro_id)
@@ -163,12 +169,12 @@ export default function ConfirmationPage() {
     if (!rdv || acting) return
     setActing(true)
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('rendez_vous')
       .update({ statut: 'confirme', rappel_confirme_at: new Date().toISOString() })
       .eq('id', rdv.id)
 
-    if (error) { setState('error'); setActing(false); return }
+    if (error) { console.error('[confirmation] Erreur update confirme:', error); setState('error'); setActing(false); return }
 
     if (rdv.pro_push_token) {
       const dateFr = formatDateFr(rdv.date)
@@ -187,12 +193,12 @@ export default function ConfirmationPage() {
     if (!rdv || acting) return
     setActing(true)
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('rendez_vous')
       .update({ statut: 'annule' })
       .eq('id', rdv.id)
 
-    if (error) { setState('error'); setActing(false); return }
+    if (error) { console.error('[confirmation] Erreur update annule:', error); setState('error'); setActing(false); return }
 
     if (rdv.pro_push_token) {
       const dateFr = formatDateFr(rdv.date)
@@ -213,6 +219,41 @@ export default function ConfirmationPage() {
 
   return (
     <div style={S.page}>
+      <style>{`
+        .glamia-btn-confirm {
+          width: 100%;
+          padding: 16px;
+          border-radius: 16px;
+          border: none;
+          background: ${PINK};
+          color: #fff;
+          font-weight: 700;
+          font-size: 16px;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.1s;
+          font-family: inherit;
+        }
+        .glamia-btn-confirm:hover { opacity: 0.85; transform: scale(1.01); }
+        .glamia-btn-confirm:active { opacity: 0.7; transform: scale(0.98); }
+        .glamia-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .glamia-btn-cancel {
+          width: 100%;
+          padding: 16px;
+          border-radius: 16px;
+          border: 1.5px solid #d1d5db;
+          background: transparent;
+          color: #6b7280;
+          font-weight: 600;
+          font-size: 15px;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.1s, background 0.15s;
+          font-family: inherit;
+        }
+        .glamia-btn-cancel:hover { background: #f3f4f6; transform: scale(1.01); }
+        .glamia-btn-cancel:active { opacity: 0.7; transform: scale(0.98); }
+        .glamia-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
       <div style={S.container}>
         {/* Logo */}
         <div style={S.logoWrap}>
@@ -314,14 +355,14 @@ export default function ConfirmationPage() {
             {/* Boutons */}
             <div style={S.actions}>
               <button
-                style={{ ...S.btn, opacity: acting ? 0.6 : 1 }}
+                className="glamia-btn-confirm"
                 onClick={handleConfirmer}
                 disabled={acting}
               >
                 {acting ? 'Confirmation...' : 'Confirmer mon RDV'}
               </button>
               <button
-                style={{ ...S.btnOutline, opacity: acting ? 0.6 : 1 }}
+                className="glamia-btn-cancel"
                 onClick={handleAnnuler}
                 disabled={acting}
               >

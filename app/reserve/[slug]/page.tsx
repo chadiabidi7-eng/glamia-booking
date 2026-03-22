@@ -697,7 +697,7 @@ export default function ReservationPage() {
   }
 
   if (pageState === 'blocked') {
-    const nomAffiche = pro?.pseudo ?? `${pro?.prenom ?? ''} ${pro?.nom ?? ''}`.trim()
+    const nomAffiche = pro?.prenom ?? ''
     const socials = [
       pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: '📸' },
       pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: '🎵' },
@@ -818,8 +818,12 @@ export default function ReservationPage() {
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom} {pro?.nom}</p>
-              <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
+              <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom}</p>
+              {pro?.pseudo ? (
+                <p style={{ fontSize: 12, color: PINK, fontStyle: 'italic', margin: '2px 0 0' }}>{pro.pseudo}</p>
+              ) : (
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
+              )}
             </div>
           </div>
 
