@@ -284,6 +284,7 @@ export default function ReservationPage() {
   const [telephone,     setTelephone]     = useState('')
   const [clientePrenom, setClientePrenom] = useState('')
   const [clienteNom,    setClienteNom]    = useState('')
+  const [clienteEmail,  setClienteEmail]  = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
@@ -307,6 +308,7 @@ export default function ReservationPage() {
   // ── Step 5 : Confirmation ────────────────────
   const [commentaire, setCommentaire] = useState('')
   const [rappel,      setRappel]      = useState(false)
+  const step5Ref = useRef<HTMLDivElement>(null)
 
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
@@ -602,6 +604,7 @@ export default function ReservationPage() {
               prenom:    clientePrenom.trim(),
               nom:       clienteNom.trim(),
               telephone: telNormalized,
+              email:     clienteEmail.trim() || null,
             })
             .select('id')
             .single()
@@ -803,16 +806,23 @@ export default function ReservationPage() {
               Prestations
             </p>
             {techniquesSelectionnees.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                <div>
-                  <span style={{ fontSize: 14, color: '#1f2937', fontWeight: 500 }}>{EMOJI_MAP[t.categorie] ?? '✨'} {t.nom}</span>
-                  <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>{t.categorie}</span>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{EMOJI_MAP[t.categorie] ?? '✨'} {t.nom}</p>
+                  <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                 </div>
-                <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8 }}>
+                <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
                   {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
                 </span>
               </div>
             ))}
+            {/* Ligne total */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
+                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+              </span>
+            </div>
           </div>
 
           {/* Adresse — uniquement sur la page de confirmation, style discret */}
@@ -1030,11 +1040,16 @@ export default function ReservationPage() {
                       <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder="Martin" style={S.input} autoCapitalize="words" />
                     </div>
                   </div>
+                  <div style={{ marginTop: 4 }}>
+                    <label style={S.label}>Email</label>
+                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="votre@email.com" style={S.input} autoCapitalize="none" />
+                    <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Pour recevoir votre confirmation de RDV</p>
+                  </div>
                 </div>
                 <button
-                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim()) setStep(2) }}
-                  disabled={!clientePrenom.trim() || !clienteNom.trim()}
-                  style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim()) ? 0.5 : 1 }}
+                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(2) }}
+                  disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
+                  style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) ? 0.5 : 1 }}
                 >
                   Continuer →
                 </button>
@@ -1236,7 +1251,7 @@ export default function ReservationPage() {
                   <button
                     key={s.heure}
                     disabled={!s.disponible}
-                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(5) } }}
+                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) } }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
@@ -1262,7 +1277,7 @@ export default function ReservationPage() {
             STEP 5 — Confirmation
         ──────────────────────────────────────── */}
         {step === 5 && (
-          <div>
+          <div ref={step5Ref}>
             <BackBtn onClick={() => setStep(4)} />
             <h2 style={S.h2}>Confirmation 🌸</h2>
             <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
@@ -1296,16 +1311,23 @@ export default function ReservationPage() {
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>Prestations</p>
                     {techniquesSelectionnees.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <div>
-                          <span style={{ fontSize: 14, color: '#1f2937', fontWeight: 500 }}>{t.nom}</span>
-                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>{t.categorie}</span>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{t.nom}</p>
+                          <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                         </div>
-                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
                           {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
                         </span>
                       </div>
                     ))}
+                    {/* Ligne total */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
+                        {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
