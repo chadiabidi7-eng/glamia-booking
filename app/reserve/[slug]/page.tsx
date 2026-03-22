@@ -59,9 +59,17 @@ const DEFAULT_HORAIRES: HorairesHebdo = {
 }
 
 const EMOJI_MAP: Record<string, string> = {
-  'Ongles': '💅', 'Cils': '👁️', 'Sourcils': '✨',
-  'Lèvres': '💋', 'Épilation': '🌸', 'Maquillage': '💄',
-  'Soins visage': '🌿', 'Autre': '⭐',
+  'Manucure': '💅',
+  'Pédicure': '🦶',
+  'Cils': '👁️',
+  'Sourcils': '🪞',
+  'Épilation cire': '🪒',
+  'Maquillage': '💄',
+  'Maquillage semi-permanent': '✨',
+  'Soin visage': '💆‍♀️',
+  'Bronzage': '☀️',
+  'Soin dentaire': '🦷',
+  'Injections esthétique': '💉',
 }
 
 const MOIS = [
@@ -604,12 +612,13 @@ export default function ReservationPage() {
         }
       }
 
-      const { error: rdvErr } = await supabase
+      const dateRdvISO = `${date}T${heure}:00.000Z`
+      const { data: nouveau, error: rdvErr } = await supabase
         .from('rendez_vous')
         .insert({
           pro_id:     pro.id,
           cliente_id: cId,
-          date:       `${date}T${heure}:00.000Z`,
+          date:       dateRdvISO,
           duree:      dureeTotal,
           specialite: categoriesStr,
           technique:  techniquesStr,
@@ -618,9 +627,32 @@ export default function ReservationPage() {
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
         })
+        .select('id')
+        .single()
 
       if (rdvErr) throw rdvErr
       setPageState('confirmed')
+
+      // Envoi automatique rappel-confirmation si RDV < 24h
+      if (nouveau?.id) {
+        const heuresAvant = (new Date(dateRdvISO).getTime() - Date.now()) / (60 * 60 * 1000)
+        if (heuresAvant > 0 && heuresAvant <= 24) {
+          try {
+            await fetch(
+              'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rappel-confirmation',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rdv_id: nouveau.id }),
+              },
+            )
+            console.log('[handleConfirm] Rappel confirmation envoyé (RDV < 24h)')
+          } catch (e) {
+            console.error('[handleConfirm] Erreur envoi rappel:', e)
+          }
+        }
+      }
+
       if (nouvelleCliente) {
         envoyerPushNotif(
           pro.id,
@@ -697,7 +729,7 @@ export default function ReservationPage() {
   }
 
   if (pageState === 'blocked') {
-    const nomAffiche = pro?.prenom ?? ''
+    const nomAffiche = pro?.pseudo || pro?.prenom || ''
     const socials = [
       pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: '📸' },
       pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: '🎵' },
@@ -790,7 +822,20 @@ export default function ReservationPage() {
             </p>
           )}
 
-          <p style={{ fontSize: 12, color: '#9ca3af' }}>À bientôt !</p>
+          {/* Note rappel email */}
+          <div style={{ background: PINK_LIGHT, borderRadius: 12, padding: 14, marginBottom: 16, textAlign: 'left' }}>
+            <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
+              Vous recevrez un email de confirmation 24h avant votre rendez-vous pour confirmer votre présence.
+            </p>
+          </div>
+
+          <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>À bientôt !</p>
+
+          {/* Logo Glamia + slogan */}
+          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
+            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>L'app des professionnelles de la beauté</p>
+          </div>
         </div>
       </div>
     )
@@ -818,11 +863,16 @@ export default function ReservationPage() {
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom}</p>
               {pro?.pseudo ? (
-                <p style={{ fontSize: 12, color: PINK, fontStyle: 'italic', margin: '2px 0 0' }}>{pro.pseudo}</p>
+                <>
+                  <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro.pseudo}</p>
+                  <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0' }}>{pro.prenom}</p>
+                </>
               ) : (
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
+                <>
+                  <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom}</p>
+                  <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
+                </>
               )}
             </div>
           </div>
