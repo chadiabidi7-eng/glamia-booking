@@ -1,0 +1,110 @@
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
+
+// GET /api/confirmation/[token] — Charger les infos du RDV
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
+  const { token } = await params
+
+  const { data, error } = await supabaseAdmin
+    .from('rendez_vous')
+    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
+    .eq('token_confirmation', token)
+    .maybeSingle()
+
+  if (error || !data) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+
+  if (data.token_expiration && new Date(data.token_expiration) < new Date()) {
+    return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+
+  // Récupérer la cliente
+  const { data: cliente } = await supabaseAdmin
+    .from('clientes')
+    .select('prenom')
+    .eq('id', data.cliente_id)
+    .maybeSingle()
+
+  // Récupérer le profil pro
+  const { data: pro } = await supabaseAdmin
+    .from('profiles')
+    .select('prenom, nom, pseudo, photo_url, push_token')
+    .eq('id', data.pro_id)
+    .maybeSingle()
+
+  const dateStr = (data.date as string).slice(0, 10)
+  const heureStr = (data.date as string).slice(11, 16)
+
+  return NextResponse.json({
+    id: data.id,
+    date: dateStr,
+    heure: heureStr,
+    prestation: data.technique ?? '',
+    categorie: data.specialite ?? null,
+    prix: data.prix,
+    statut: data.statut,
+    token_expiration: data.token_expiration,
+    cliente_prenom: cliente?.prenom ?? '',
+    pro_prenom: pro?.prenom ?? '',
+    pro_nom: pro?.nom ?? '',
+    pro_pseudo: pro?.pseudo ?? null,
+    pro_photo: pro?.photo_url ?? null,
+    pro_push_token: pro?.push_token ?? null,
+  })
+}
+
+// POST /api/confirmation/[token] — Confirmer ou annuler le RDV
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
+  const { token } = await params
+  const body = await req.json()
+  const action = body.action as string
+
+  if (action !== 'confirmer' && action !== 'annuler') {
+    return NextResponse.json({ error: 'invalid_action' }, { status: 400 })
+  }
+
+  // Vérifier que le RDV existe et que le token est valide
+  const { data: rdv, error: fetchErr } = await supabaseAdmin
+    .from('rendez_vous')
+    .select('id, statut, token_expiration')
+    .eq('token_confirmation', token)
+    .maybeSingle()
+
+  if (fetchErr || !rdv) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+
+  if (rdv.token_expiration && new Date(rdv.token_expiration) < new Date()) {
+    return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+
+  const newStatut = action === 'confirmer' ? 'confirme' : 'annule'
+  const updateData: Record<string, string> = { statut: newStatut }
+  if (action === 'confirmer') {
+    updateData.rappel_confirme_at = new Date().toISOString()
+  }
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('rendez_vous')
+    .update(updateData)
+    .eq('id', rdv.id)
+
+  if (updateErr) {
+    console.error('[api/confirmation] Erreur update:', updateErr)
+    return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, statut: newStatut })
+}

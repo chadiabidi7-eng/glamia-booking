@@ -1,14 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
-
-// Client admin avec service role key → bypass RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
 
 // ─────────────────────────────────────────────
 // Types
@@ -21,9 +14,6 @@ type RdvInfo = {
   categorie: string | null
   prix: number | null
   statut: string
-  token_expiration: string
-  cliente_id: string
-  pro_id: string
   cliente_prenom: string
   pro_prenom: string
   pro_nom: string
@@ -39,7 +29,6 @@ type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelle
 // ─────────────────────────────────────────────
 const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
-const GOLD = '#D4A853'
 
 const MOIS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -57,12 +46,6 @@ function formatDateFr(iso: string): string {
   return `${jour} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
 
-function formatDuree(min: number): string {
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
-}
 
 async function envoyerPushPro(pushToken: string, title: string, body: string) {
   try {
@@ -79,7 +62,15 @@ async function envoyerPushPro(pushToken: string, title: string, body: string) {
 // ─────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────
-export default function ConfirmationPage() {
+export default function ConfirmationPageWrapper() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>Chargement...</p></div>}>
+      <ConfirmationPage />
+    </Suspense>
+  )
+}
+
+function ConfirmationPage() {
   const { token } = useParams<{ token: string }>()
   const searchParams = useSearchParams()
   const actionParam = searchParams.get('action')
@@ -93,65 +84,25 @@ export default function ConfirmationPage() {
     if (!token) { setState('error'); return }
 
     const load = async () => {
-      // 1. Récupérer le RDV (sans jointures — colonnes réelles de la table)
-      const { data, error } = await supabaseAdmin
-        .from('rendez_vous')
-        .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
-        .eq('token_confirmation', token)
-        .maybeSingle()
+      try {
+        const res = await fetch(`/api/confirmation/${token}`)
 
-      if (error) { console.error('[confirmation] Erreur lecture RDV:', error); setState('expired'); return }
-      if (!data) { console.error('[confirmation] Aucun RDV pour token:', token); setState('expired'); return }
+        if (res.status === 410) { setState('expired'); return }
+        if (res.status === 404) { setState('expired'); return }
+        if (!res.ok) { setState('error'); return }
 
-      // Token expiré ?
-      if (data.token_expiration && new Date(data.token_expiration) < new Date()) {
-        console.log('[confirmation] Token expiré'); setState('expired'); return
+        const info: RdvInfo = await res.json()
+        setRdv(info)
+        console.log('[confirmation] RDV chargé:', info.id, 'statut:', info.statut)
+
+        if (info.statut === 'confirme') { setState('already_confirmed'); return }
+        if (info.statut === 'annule') { setState('already_cancelled'); return }
+
+        setState('ready')
+      } catch (e) {
+        console.error('[confirmation] Erreur inattendue:', e)
+        setState('error')
       }
-
-      // 2. Récupérer la cliente
-      const { data: cliente } = await supabaseAdmin
-        .from('clientes')
-        .select('prenom')
-        .eq('id', data.cliente_id)
-        .maybeSingle()
-
-      // 3. Récupérer le profil pro
-      const { data: pro } = await supabaseAdmin
-        .from('profiles')
-        .select('prenom, nom, pseudo, photo_url, push_token')
-        .eq('id', data.pro_id)
-        .maybeSingle()
-
-      // date = "YYYY-MM-DDTHH:MM:00+00:00"
-      const dateStr = (data.date as string).slice(0, 10)
-      const heureStr = (data.date as string).slice(11, 16)
-
-      const info: RdvInfo = {
-        id: data.id,
-        date: dateStr,
-        heure: heureStr,
-        prestation: data.technique ?? '',
-        categorie: data.specialite ?? null,
-        prix: data.prix,
-        statut: data.statut,
-        token_expiration: data.token_expiration,
-        cliente_id: data.cliente_id,
-        pro_id: data.pro_id,
-        cliente_prenom: cliente?.prenom ?? '',
-        pro_prenom: pro?.prenom ?? '',
-        pro_nom: pro?.nom ?? '',
-        pro_pseudo: pro?.pseudo ?? null,
-        pro_photo: pro?.photo_url ?? null,
-        pro_push_token: pro?.push_token ?? null,
-      }
-
-      setRdv(info)
-      console.log('[confirmation] RDV chargé:', info.id, 'statut:', info.statut)
-
-      if (info.statut === 'confirme') { setState('already_confirmed'); return }
-      if (info.statut === 'annule') { setState('already_cancelled'); return }
-
-      setState('ready')
     }
 
     load()
@@ -169,23 +120,29 @@ export default function ConfirmationPage() {
     if (!rdv || acting) return
     setActing(true)
 
-    const { error } = await supabaseAdmin
-      .from('rendez_vous')
-      .update({ statut: 'confirme', rappel_confirme_at: new Date().toISOString() })
-      .eq('id', rdv.id)
+    try {
+      const res = await fetch(`/api/confirmation/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirmer' }),
+      })
 
-    if (error) { console.error('[confirmation] Erreur update confirme:', error); setState('error'); setActing(false); return }
+      if (!res.ok) { setState('error'); setActing(false); return }
 
-    if (rdv.pro_push_token) {
-      const dateFr = formatDateFr(rdv.date)
-      await envoyerPushPro(
-        rdv.pro_push_token,
-        'RDV confirmé',
-        `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} est confirmé`,
-      )
+      if (rdv.pro_push_token) {
+        const dateFr = formatDateFr(rdv.date)
+        await envoyerPushPro(
+          rdv.pro_push_token,
+          'RDV confirmé',
+          `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} est confirmé`,
+        )
+      }
+
+      setState('confirmed')
+    } catch (e) {
+      console.error('[confirmation] Erreur confirmer:', e)
+      setState('error')
     }
-
-    setState('confirmed')
     setActing(false)
   }
 
@@ -193,23 +150,29 @@ export default function ConfirmationPage() {
     if (!rdv || acting) return
     setActing(true)
 
-    const { error } = await supabaseAdmin
-      .from('rendez_vous')
-      .update({ statut: 'annule' })
-      .eq('id', rdv.id)
+    try {
+      const res = await fetch(`/api/confirmation/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'annuler' }),
+      })
 
-    if (error) { console.error('[confirmation] Erreur update annule:', error); setState('error'); setActing(false); return }
+      if (!res.ok) { setState('error'); setActing(false); return }
 
-    if (rdv.pro_push_token) {
-      const dateFr = formatDateFr(rdv.date)
-      await envoyerPushPro(
-        rdv.pro_push_token,
-        'RDV annulé',
-        `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} a été annulé`,
-      )
+      if (rdv.pro_push_token) {
+        const dateFr = formatDateFr(rdv.date)
+        await envoyerPushPro(
+          rdv.pro_push_token,
+          'RDV annulé',
+          `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} a été annulé`,
+        )
+      }
+
+      setState('cancelled')
+    } catch (e) {
+      console.error('[confirmation] Erreur annuler:', e)
+      setState('error')
     }
-
-    setState('cancelled')
     setActing(false)
   }
 
