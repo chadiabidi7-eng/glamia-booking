@@ -19,7 +19,6 @@ type RdvInfo = {
   pro_nom: string
   pro_pseudo: string | null
   pro_photo: string | null
-  pro_push_token: string | null
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'error'
@@ -44,19 +43,6 @@ function formatDateFr(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
   const jour = JOURS[d.getDay()]
   return `${jour} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
-}
-
-
-async function envoyerPushPro(pushToken: string, title: string, body: string) {
-  try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pushToken, title, body }),
-    })
-  } catch (e) {
-    console.error('Erreur push:', e)
-  }
 }
 
 // ─────────────────────────────────────────────
@@ -129,15 +115,6 @@ function ConfirmationPage() {
 
       if (!res.ok) { setState('error'); setActing(false); return }
 
-      if (rdv.pro_push_token) {
-        const dateFr = formatDateFr(rdv.date)
-        await envoyerPushPro(
-          rdv.pro_push_token,
-          'RDV confirmé',
-          `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} est confirmé`,
-        )
-      }
-
       setState('confirmed')
     } catch (e) {
       console.error('[confirmation] Erreur confirmer:', e)
@@ -158,15 +135,6 @@ function ConfirmationPage() {
       })
 
       if (!res.ok) { setState('error'); setActing(false); return }
-
-      if (rdv.pro_push_token) {
-        const dateFr = formatDateFr(rdv.date)
-        await envoyerPushPro(
-          rdv.pro_push_token,
-          'RDV annulé',
-          `Votre RDV avec ${rdv.cliente_prenom} le ${dateFr} à ${rdv.heure} a été annulé`,
-        )
-      }
 
       setState('cancelled')
     } catch (e) {

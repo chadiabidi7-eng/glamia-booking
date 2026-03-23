@@ -1,6 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+const MOIS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+]
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+
+function formatDateFr(iso: string): string {
+  const d = new Date(iso + 'T00:00:00')
+  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+}
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -58,7 +69,6 @@ export async function GET(
     pro_nom: pro?.nom ?? '',
     pro_pseudo: pro?.pseudo ?? null,
     pro_photo: pro?.photo_url ?? null,
-    pro_push_token: pro?.push_token ?? null,
   })
 }
 
@@ -78,7 +88,7 @@ export async function POST(
   // Vérifier que le RDV existe et que le token est valide
   const { data: rdv, error: fetchErr } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, statut, token_expiration')
+    .select('id, date, statut, token_expiration, cliente_id, pro_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -104,6 +114,47 @@ export async function POST(
   if (updateErr) {
     console.error('[api/confirmation] Erreur update:', updateErr)
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  }
+
+  // ── Envoi push notification à la pro ────────────────────────────────────
+  try {
+    const { data: pro } = await supabaseAdmin
+      .from('profiles')
+      .select('push_token')
+      .eq('id', rdv.pro_id)
+      .maybeSingle()
+
+    const pushToken = pro?.push_token
+    if (!pushToken) {
+      console.warn('[api/confirmation] Push token absent pour pro_id:', rdv.pro_id)
+    } else {
+      const { data: cliente } = await supabaseAdmin
+        .from('clientes')
+        .select('prenom')
+        .eq('id', rdv.cliente_id)
+        .maybeSingle()
+
+      const clientePrenom = cliente?.prenom ?? 'une cliente'
+      const dateStr = (rdv.date as string).slice(0, 10)
+      const heureStr = (rdv.date as string).slice(11, 16)
+      const dateFr = formatDateFr(dateStr)
+
+      const title = action === 'confirmer' ? '✅ RDV confirmé' : '❌ RDV annulé'
+      const body = action === 'confirmer'
+        ? `${clientePrenom} a confirmé son RDV du ${dateFr} à ${heureStr}`
+        : `${clientePrenom} a annulé son RDV du ${dateFr} à ${heureStr}`
+
+      const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: pushToken, title, body }),
+      })
+
+      const pushBody = await pushRes.text()
+      console.log('[api/confirmation] Push envoyé:', pushRes.status, pushBody)
+    }
+  } catch (e) {
+    console.error('[api/confirmation] Erreur push (non bloquante):', e)
   }
 
   return NextResponse.json({ success: true, statut: newStatut })
