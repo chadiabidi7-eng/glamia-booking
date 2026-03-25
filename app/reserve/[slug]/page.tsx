@@ -136,18 +136,13 @@ function formatRdvHeure(isoStr: string) {
 
 async function envoyerPushNotif(proId: string, title: string, body: string) {
   try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('push_token')
-      .eq('id', proId)
-      .single()
-    const pushToken = data?.push_token
-    if (!pushToken) return
-    await fetch('https://exp.host/--/api/v2/push/send', {
+    const res = await fetch('/api/push-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pushToken, title, body }),
+      body: JSON.stringify({ proId, title, body }),
     })
+    const data = await res.json()
+    console.log('[envoyerPushNotif] Résultat:', data)
   } catch (e) {
     console.error('[envoyerPushNotif] Erreur:', e)
   }

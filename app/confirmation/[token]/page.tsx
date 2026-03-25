@@ -107,17 +107,21 @@ function ConfirmationPage() {
     setActing(true)
 
     try {
+      console.log('[confirmation] POST vers:', `/api/confirmation/${token}`, 'action: confirmer')
       const res = await fetch(`/api/confirmation/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'confirmer' }),
       })
+      console.log('[confirmation] Réponse status:', res.status)
 
       if (!res.ok) { setState('error'); setActing(false); return }
 
+      const data = await res.json()
+      console.log('[confirmation] Succès:', data)
       setState('confirmed')
     } catch (e) {
-      console.error('[confirmation] Erreur confirmer:', e)
+      console.error('[confirmation] Erreur fetch:', e)
       setState('error')
     }
     setActing(false)
@@ -128,17 +132,21 @@ function ConfirmationPage() {
     setActing(true)
 
     try {
+      console.log('[confirmation] POST vers:', `/api/confirmation/${token}`, 'action: annuler')
       const res = await fetch(`/api/confirmation/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'annuler' }),
       })
+      console.log('[confirmation] Réponse status:', res.status)
 
       if (!res.ok) { setState('error'); setActing(false); return }
 
+      const data = await res.json()
+      console.log('[confirmation] Succès:', data)
       setState('cancelled')
     } catch (e) {
-      console.error('[confirmation] Erreur annuler:', e)
+      console.error('[confirmation] Erreur fetch:', e)
       setState('error')
     }
     setActing(false)
