@@ -26,7 +26,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, technique, specialite, prix, statut, token_expiration, client_id, pro_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -40,9 +40,9 @@ export async function GET(
 
   // Récupérer la cliente
   const { data: cliente } = await supabaseAdmin
-    .from('clientes')
+    .from('clients')
     .select('prenom')
-    .eq('id', data.cliente_id)
+    .eq('id', data.client_id)
     .maybeSingle()
 
   // Récupérer le profil pro
@@ -88,7 +88,7 @@ export async function POST(
   // Vérifier que le RDV existe et que le token est valide
   const { data: rdv, error: fetchErr } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, statut, token_expiration, client_id, pro_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -129,9 +129,9 @@ export async function POST(
       console.warn('[api/confirmation] Push token absent pour pro_id:', rdv.pro_id)
     } else {
       const { data: cliente } = await supabaseAdmin
-        .from('clientes')
+        .from('clients')
         .select('prenom')
-        .eq('id', rdv.cliente_id)
+        .eq('id', rdv.client_id)
         .maybeSingle()
 
       const clientePrenom = cliente?.prenom ?? 'une cliente'

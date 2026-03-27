@@ -28,6 +28,7 @@ type ProInfo = {
   message_accueil?: string
   adresse?: string
   is_pro?: boolean
+  pause_tampon?: number
 }
 
 type RdvAVenir = {
@@ -45,7 +46,7 @@ type Slot = { heure: string; disponible: boolean }
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-const PINK = '#C2779E'
+const PINK = '#1A1A2E'
 const PINK_LIGHT = '#F9EEF4'
 
 const DEFAULT_HORAIRES: HorairesHebdo = {
@@ -172,6 +173,7 @@ function generateSlots(
   duree: number,
   horaires: HorairesHebdo,
   rdvExistants: { heure: string; duree: number }[],
+  pauseTampon: number = 0,
 ): Slot[] {
   const jour = new Date(date + 'T00:00:00').getDay()
   const h = horaires[jour]
@@ -181,9 +183,10 @@ function generateSlots(
   const fin   = timeToMin(h.fin)
   const INTERVAL = 30
 
+  // Ajouter la pause tampon après chaque RDV existant
   const taken = rdvExistants.map(r => ({
     start: timeToMin(r.heure),
-    end:   timeToMin(r.heure) + r.duree,
+    end:   timeToMin(r.heure) + r.duree + pauseTampon,
   }))
 
   const now = new Date()
@@ -305,6 +308,12 @@ export default function ReservationPage() {
   const [rappel,      setRappel]      = useState(false)
   const step5Ref = useRef<HTMLDivElement>(null)
 
+  // ── Liste d'attente ────────────────────────
+  const [showWaitlist, setShowWaitlist]   = useState(false)
+  const [waitlistMsg, setWaitlistMsg]     = useState('')
+  const [waitlistSent, setWaitlistSent]   = useState(false)
+  const [waitlistSending, setWaitlistSending] = useState(false)
+
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
   const prixTotal  = techniquesSelectionnees.reduce((s, t) => s + t.prix,  0)
@@ -312,7 +321,7 @@ export default function ReservationPage() {
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
-  // ── Realtime : sync horaires dès que la pro les modifie dans Glamia ──
+  // ── Realtime : sync horaires dès que la pro les modifie dans Cyzo ──
   useEffect(() => {
     if (!pro?.id) return
     const channel = supabase
@@ -391,6 +400,7 @@ export default function ReservationPage() {
         message_accueil: found.message_accueil ?? undefined,
         adresse:         found.adresse ?? undefined,
         is_pro:          found.is_pro ?? false,
+        pause_tampon:    found.pause_tampon ?? 0,
       })
 
       if (!found.is_pro) { setPageState('blocked'); return }
@@ -418,14 +428,14 @@ export default function ReservationPage() {
     setPhoneStatus('checking')
 
     try {
-      const { data: clientes, error } = await supabase
-        .from('clientes')
+      const { data: clients, error } = await supabase
+        .from('clients')
         .select('id, prenom, nom, telephone')
         .eq('pro_id', pro.id)
 
       if (error) throw error
 
-      const found = clientes?.find(c => normalizePhone(c.telephone) === normalized)
+      const found = clients?.find(c => normalizePhone(c.telephone) === normalized)
 
       if (found) {
         setClienteId(found.id)
@@ -450,7 +460,7 @@ export default function ReservationPage() {
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('id, date, specialite, technique, duree, prix, statut')
-        .eq('cliente_id', cId)
+        .eq('client_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
         .neq('statut', 'annule')
@@ -558,7 +568,7 @@ export default function ReservationPage() {
         }
       })
 
-      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants))
+      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants, pro.pause_tampon ?? 0))
     } catch (e) {
       console.error(e)
     } finally {
@@ -582,7 +592,7 @@ export default function ReservationPage() {
 
       if (!cId) {
         const { data: allClientes, error: fetchErr } = await supabase
-          .from('clientes')
+          .from('clients')
           .select('id, telephone')
           .eq('pro_id', pro.id)
 
@@ -593,7 +603,7 @@ export default function ReservationPage() {
 
         if (!cId) {
           const { data: created, error: createErr } = await supabase
-            .from('clientes')
+            .from('clients')
             .insert({
               pro_id:    pro.id,
               prenom:    clientePrenom.trim(),
@@ -615,7 +625,7 @@ export default function ReservationPage() {
         .from('rendez_vous')
         .insert({
           pro_id:     pro.id,
-          cliente_id: cId,
+          client_id: cId,
           date:       dateRdvISO,
           duree:      dureeTotal,
           specialite: categoriesStr,
@@ -836,9 +846,9 @@ export default function ReservationPage() {
 
           <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>À bientôt !</p>
 
-          {/* Logo Glamia + slogan */}
+          {/* Logo Cyzo + slogan */}
           <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
+            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Cyzo</p>
             <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>L'app des professionnelles de la beauté</p>
           </div>
         </div>
@@ -1236,9 +1246,79 @@ export default function ReservationPage() {
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>😔</div>
                 <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
-                <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
+                <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16 }}>
                   ← Choisir une autre date
                 </button>
+
+                {/* Liste d'attente */}
+                {!showWaitlist && !waitlistSent && (
+                  <button
+                    onClick={() => setShowWaitlist(true)}
+                    style={{ display: 'block', margin: '0 auto', padding: '10px 20px', borderRadius: 12, border: `1.5px solid ${PINK}`, background: '#fff', color: PINK, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                    Être prévenu si un créneau se libère
+                  </button>
+                )}
+
+                {showWaitlist && !waitlistSent && (
+                  <div style={{ textAlign: 'left', background: '#f9fafb', borderRadius: 14, padding: 16, marginTop: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+                      Inscrivez-vous sur la liste d'attente
+                    </p>
+                    <textarea
+                      placeholder="Message optionnel (flexibilité horaire, etc.)"
+                      value={waitlistMsg}
+                      onChange={e => setWaitlistMsg(e.target.value)}
+                      rows={3}
+                      style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 14, resize: 'none', marginBottom: 12, fontFamily: 'inherit' }}
+                    />
+                    <button
+                      disabled={waitlistSending || !clientePrenom.trim() || !clienteEmail.trim()}
+                      onClick={async () => {
+                        if (!pro || !date) return
+                        setWaitlistSending(true)
+                        try {
+                          await supabase.from('liste_attente').insert({
+                            pro_id: pro.id,
+                            client_nom: `${clientePrenom.trim()} ${clienteNom.trim()}`.trim(),
+                            client_email: clienteEmail.trim(),
+                            client_tel: telephone.trim() || null,
+                            date_souhaitee: date,
+                            message: waitlistMsg.trim() || null,
+                          })
+                          setWaitlistSent(true)
+                          envoyerPushNotif(
+                            pro.id,
+                            '📋 Liste d\'attente',
+                            `${clientePrenom} souhaite un créneau le ${formatDateLong(date)}`
+                          )
+                        } catch (e) {
+                          console.error('[waitlist] Erreur:', e)
+                          alert('Erreur lors de l\'inscription.')
+                        } finally {
+                          setWaitlistSending(false)
+                        }
+                      }}
+                      style={{ width: '100%', padding: '12px 0', borderRadius: 12, border: 'none', background: PINK, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: waitlistSending ? 0.6 : 1 }}>
+                      {waitlistSending ? 'Envoi...' : "S'inscrire sur la liste d'attente"}
+                    </button>
+                    {!clienteEmail.trim() && (
+                      <p style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>
+                        Un email est nécessaire pour vous prévenir. Retournez à l'étape 1 pour le renseigner.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {waitlistSent && (
+                  <div style={{ background: '#ecfdf5', borderRadius: 14, padding: 16, marginTop: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#065f46' }}>
+                      Vous êtes inscrit(e) sur la liste d'attente pour le {formatDateLong(date)}.
+                    </p>
+                    <p style={{ fontSize: 13, color: '#047857', marginTop: 4 }}>
+                      Vous serez prévenu(e) par email si un créneau se libère.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
