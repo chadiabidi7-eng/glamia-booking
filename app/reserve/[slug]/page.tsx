@@ -1194,12 +1194,14 @@ export default function ReservationPage() {
                 const isOff   = !isDayWorking(dateStr, pro!.horaires)
                 const isDisabled = isPast || isOff
                 const isSelected = date === dateStr
+                const isToday   = dayDate.toDateString() === todayJs.toDateString()
 
                 return (
                   <CalendarDay
                     key={day}
                     day={day}
                     isSelected={isSelected}
+                    isToday={isToday}
                     isPast={isPast}
                     isOff={isOff && !isPast}
                     isDisabled={isDisabled}
@@ -1513,10 +1515,11 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 }
 
 function CalendarDay({
-  day, isSelected, isPast, isOff, isDisabled, onClick,
+  day, isSelected, isToday, isPast, isOff, isDisabled, onClick,
 }: {
   day: number
   isSelected: boolean
+  isToday: boolean
   isPast: boolean
   isOff: boolean
   isDisabled: boolean
@@ -1542,6 +1545,8 @@ function CalendarDay({
           ? PINK
           : '#374151'
 
+  const border = isToday && !isSelected ? `2px solid ${PINK}` : 'none'
+
   return (
     <button
       onClick={onClick}
@@ -1550,8 +1555,8 @@ function CalendarDay({
       onMouseLeave={() => setHovered(false)}
       title={isOff ? 'Jour de repos' : undefined}
       style={{
-        aspectRatio: '1', borderRadius: '50%', border: 'none',
-        background: bg, color, fontWeight: 500, fontSize: 14,
+        aspectRatio: '1', borderRadius: '50%', border,
+        background: bg, color, fontWeight: isToday ? 700 : 500, fontSize: 14,
         cursor: isDisabled ? 'default' : 'pointer',
         transition: 'all 0.15s', display: 'flex', alignItems: 'center',
         justifyContent: 'center',
