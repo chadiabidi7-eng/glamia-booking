@@ -159,7 +159,7 @@ function ConfirmationPage() {
   return (
     <div style={S.page}>
       <style>{`
-        .cyzo-btn-confirm {
+        .glamia-btn-confirm {
           width: 100%;
           padding: 16px;
           border-radius: 16px;
@@ -172,10 +172,10 @@ function ConfirmationPage() {
           transition: opacity 0.15s, transform 0.1s;
           font-family: inherit;
         }
-        .cyzo-btn-confirm:hover { opacity: 0.85; transform: scale(1.01); }
-        .cyzo-btn-confirm:active { opacity: 0.7; transform: scale(0.98); }
-        .cyzo-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .cyzo-btn-cancel {
+        .glamia-btn-confirm:hover { opacity: 0.85; transform: scale(1.01); }
+        .glamia-btn-confirm:active { opacity: 0.7; transform: scale(0.98); }
+        .glamia-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .glamia-btn-cancel {
           width: 100%;
           padding: 16px;
           border-radius: 16px;
@@ -188,15 +188,15 @@ function ConfirmationPage() {
           transition: opacity 0.15s, transform 0.1s, background 0.15s;
           font-family: inherit;
         }
-        .cyzo-btn-cancel:hover { background: #f3f4f6; transform: scale(1.01); }
-        .cyzo-btn-cancel:active { opacity: 0.7; transform: scale(0.98); }
-        .cyzo-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .glamia-btn-cancel:hover { background: #f3f4f6; transform: scale(1.01); }
+        .glamia-btn-cancel:active { opacity: 0.7; transform: scale(0.98); }
+        .glamia-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
       <div style={S.container}>
         {/* Logo */}
         <div style={S.logoWrap}>
-          <span style={S.logoText}>Cyzo</span>
+          <span style={S.logoText}>Glamia</span>
         </div>
 
         {/* Loading */}
@@ -294,14 +294,14 @@ function ConfirmationPage() {
             {/* Boutons */}
             <div style={S.actions}>
               <button
-                className="cyzo-btn-confirm"
+                className="glamia-btn-confirm"
                 onClick={handleConfirmer}
                 disabled={acting}
               >
                 {acting ? 'Confirmation...' : 'Confirmer mon RDV'}
               </button>
               <button
-                className="cyzo-btn-cancel"
+                className="glamia-btn-cancel"
                 onClick={handleAnnuler}
                 disabled={acting}
               >
