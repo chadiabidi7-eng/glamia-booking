@@ -460,7 +460,7 @@ export default function ReservationPage() {
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('id, date, specialite, technique, duree, prix, statut')
-        .eq('client_id', cId)
+        .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
         .neq('statut', 'annule')
@@ -625,7 +625,7 @@ export default function ReservationPage() {
         .from('rendez_vous')
         .insert({
           pro_id:     pro.id,
-          client_id: cId,
+          cliente_id: cId,
           date:       dateRdvISO,
           duree:      dureeTotal,
           specialite: categoriesStr,
