@@ -429,7 +429,7 @@ export default function ReservationPage() {
 
     try {
       const { data: clients, error } = await supabase
-        .from('clients')
+        .from('clientes')
         .select('id, prenom, nom, telephone')
         .eq('pro_id', pro.id)
 
@@ -592,7 +592,7 @@ export default function ReservationPage() {
 
       if (!cId) {
         const { data: allClientes, error: fetchErr } = await supabase
-          .from('clients')
+          .from('clientes')
           .select('id, telephone')
           .eq('pro_id', pro.id)
 
@@ -603,7 +603,7 @@ export default function ReservationPage() {
 
         if (!cId) {
           const { data: created, error: createErr } = await supabase
-            .from('clients')
+            .from('clientes')
             .insert({
               pro_id:    pro.id,
               prenom:    clientePrenom.trim(),
