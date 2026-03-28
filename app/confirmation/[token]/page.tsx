@@ -26,7 +26,7 @@ type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelle
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-const PINK = '#1A1A2E'
+const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
 
 const MOIS = [
