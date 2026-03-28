@@ -321,7 +321,7 @@ export default function ReservationPage() {
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
-  // ── Realtime : sync horaires dès que la pro les modifie dans Cyzo ──
+  // ── Realtime : sync horaires dès que la pro les modifie dans Glamia ──
   useEffect(() => {
     if (!pro?.id) return
     const channel = supabase
@@ -846,9 +846,9 @@ export default function ReservationPage() {
 
           <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>À bientôt !</p>
 
-          {/* Logo Cyzo + slogan */}
+          {/* Logo Glamia + slogan */}
           <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Cyzo</p>
+            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
             <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>L'app des professionnelles de la beauté</p>
           </div>
         </div>
