@@ -19,6 +19,7 @@ type RdvInfo = {
   pro_nom: string
   pro_pseudo: string | null
   pro_photo: string | null
+  pro_adresse: string | null
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'error'
@@ -324,6 +325,12 @@ function ConfirmationPage() {
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
+              {rdv.prix != null && rdv.prix > 0 && (
+                <p style={{ ...S.infoLineSub, marginTop: 8 }}>💰 {rdv.prix} €</p>
+              )}
+              {rdv.pro_adresse && (
+                <p style={{ ...S.infoLineSub, marginTop: 8 }}>📍 {rdv.pro_adresse}</p>
+              )}
             </div>
             <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
               Vous pouvez fermer cette page.

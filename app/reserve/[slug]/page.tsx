@@ -305,6 +305,10 @@ export default function ReservationPage() {
   const [rappel,      setRappel]      = useState(false)
   const step5Ref = useRef<HTMLDivElement>(null)
 
+  // ── Premier créneau disponible ─────────────
+  const [premierCreneau, setPremierCreneau] = useState<{ date: string; heure: string } | null>(null)
+  const [loadingPremierCreneau, setLoadingPremierCreneau] = useState(false)
+
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
   const prixTotal  = techniquesSelectionnees.reduce((s, t) => s + t.prix,  0)
@@ -563,6 +567,65 @@ export default function ReservationPage() {
       console.error(e)
     } finally {
       setLoadingSlots(false)
+    }
+  }
+
+  // ── Premier créneau : recherche automatique ──
+  useEffect(() => {
+    if (step === 3 && pro && dureeTotal > 0) findPremierCreneau()
+  }, [step, pro, dureeTotal])
+
+  async function findPremierCreneau() {
+    if (!pro || dureeTotal === 0) return
+    setLoadingPremierCreneau(true)
+    setPremierCreneau(null)
+
+    try {
+      const now = new Date()
+      const maxDate = new Date(now)
+      maxDate.setDate(maxDate.getDate() + 30)
+
+      const fromStr = buildDateStr(now.getFullYear(), now.getMonth(), now.getDate())
+      const toStr = buildDateStr(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
+
+      const { data: rdvs } = await supabase
+        .from('rendez_vous')
+        .select('date, duree, statut')
+        .eq('pro_id', pro.id)
+        .gte('date', `${fromStr}T00:00:00.000Z`)
+        .lte('date', `${toStr}T23:59:59.999Z`)
+        .neq('statut', 'annule')
+
+      const rdvsByDate: Record<string, { heure: string; duree: number }[]> = {}
+      for (const r of rdvs ?? []) {
+        const d = new Date(r.date)
+        const key = buildDateStr(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+        if (!rdvsByDate[key]) rdvsByDate[key] = []
+        rdvsByDate[key].push({
+          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+          duree: r.duree,
+        })
+      }
+
+      for (let i = 0; i <= 30; i++) {
+        const d = new Date(now)
+        d.setDate(d.getDate() + i)
+        const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
+
+        if (!isDayWorking(dateStr, pro.horaires)) continue
+
+        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [])
+        const available = daySlots.find(s => s.disponible)
+
+        if (available) {
+          setPremierCreneau({ date: dateStr, heure: available.heure })
+          break
+        }
+      }
+    } catch (e) {
+      console.error('[findPremierCreneau] Erreur:', e)
+    } finally {
+      setLoadingPremierCreneau(false)
     }
   }
 
@@ -1157,6 +1220,47 @@ export default function ReservationPage() {
             <BackBtn onClick={() => setStep(2)} />
             <h2 style={S.h2}>📅 Choisissez une date</h2>
             <p style={S.sub}>Sélectionnez un jour disponible.</p>
+
+            {/* Carte premier créneau disponible */}
+            {loadingPremierCreneau && (
+              <div style={{
+                background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
+                border: `1.5px solid ${PINK}`, textAlign: 'center',
+              }}>
+                <p style={{ fontSize: 14, color: PINK, fontWeight: 600, margin: 0 }}>Recherche du prochain créneau...</p>
+              </div>
+            )}
+            {premierCreneau && !loadingPremierCreneau && (
+              <div style={{
+                background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
+                border: `1.5px solid ${PINK}`,
+              }}>
+                <p style={{ fontSize: 13, color: PINK, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Prochain créneau disponible
+                </p>
+                <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 4px', textTransform: 'capitalize' }}>
+                  {formatDateLong(premierCreneau.date)}
+                </p>
+                <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 14px' }}>
+                  {premierCreneau.heure}
+                </p>
+                <button
+                  onClick={() => {
+                    setDate(premierCreneau.date)
+                    setHeure(premierCreneau.heure)
+                    setStep(5)
+                    setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100)
+                  }}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+                    background: PINK, color: '#fff', fontWeight: 700, fontSize: 15,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Prendre ce RDV →
+                </button>
+              </div>
+            )}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <button onClick={prevMonth} disabled={isAtCurrentMonth()} style={{ ...S.navBtn, opacity: isAtCurrentMonth() ? 0.3 : 1 }}>‹</button>
