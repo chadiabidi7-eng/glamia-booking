@@ -286,6 +286,17 @@ export default function ReservationPage() {
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
   const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null)
 
+  // ── Reprogrammer un RDV ─────────────────────
+  const [reprogRdvId, setReprogRdvId]       = useState<string | null>(null)
+  const [reprogDate, setReprogDate]         = useState('')
+  const [reprogHeure, setReprogHeure]       = useState('')
+  const [reprogSlots, setReprogSlots]       = useState<Slot[]>([])
+  const [reprogLoadingSlots, setReprogLoadingSlots] = useState(false)
+  const [reprogCalYear, setReprogCalYear]   = useState(todayJs.getFullYear())
+  const [reprogCalMonth, setReprogCalMonth] = useState(todayJs.getMonth())
+  const [reprogSaving, setReprogSaving]     = useState(false)
+  const [reprogDone, setReprogDone]         = useState<string | null>(null) // rdvId once done
+
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
@@ -502,6 +513,113 @@ export default function ReservationPage() {
     const heureLabel = formatRdvHeure(rdv.date)
     if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?`)) {
       handleAnnulerRdv(rdv.id)
+    }
+  }
+
+  // ── Reprogrammer : ouvrir le sélecteur ───────
+  function ouvrirReprog(rdvId: string) {
+    setReprogRdvId(rdvId)
+    setReprogDate('')
+    setReprogHeure('')
+    setReprogSlots([])
+    setReprogDone(null)
+    setReprogCalYear(todayJs.getFullYear())
+    setReprogCalMonth(todayJs.getMonth())
+  }
+
+  function fermerReprog() {
+    setReprogRdvId(null)
+    setReprogDate('')
+    setReprogHeure('')
+    setReprogSlots([])
+  }
+
+  function reprogPrevMonth() {
+    const isAtCurrent = reprogCalYear === todayJs.getFullYear() && reprogCalMonth === todayJs.getMonth()
+    if (isAtCurrent) return
+    if (reprogCalMonth === 0) { setReprogCalMonth(11); setReprogCalYear(y => y - 1) }
+    else setReprogCalMonth(m => m - 1)
+  }
+
+  function reprogNextMonth() {
+    if (reprogCalMonth === 11) { setReprogCalMonth(0); setReprogCalYear(y => y + 1) }
+    else setReprogCalMonth(m => m + 1)
+  }
+
+  async function reprogSelectDate(dateStr: string) {
+    setReprogDate(dateStr)
+    setReprogHeure('')
+    if (!pro || !reprogRdvId) return
+
+    const rdv = rdvsAVenir.find(r => r.id === reprogRdvId)
+    if (!rdv) return
+
+    setReprogLoadingSlots(true)
+    setReprogSlots([])
+    try {
+      const { data: rdvs } = await supabase
+        .from('rendez_vous')
+        .select('date, duree, statut')
+        .eq('pro_id', pro.id)
+        .gte('date', `${dateStr}T00:00:00.000Z`)
+        .lte('date', `${dateStr}T23:59:59.999Z`)
+        .neq('statut', 'annule')
+
+      const rdvExistants = (rdvs ?? []).map(r => {
+        const d = new Date(r.date)
+        return {
+          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+          duree: r.duree,
+        }
+      })
+
+      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants))
+    } catch (e) {
+      console.error('[reprogSelectDate] Erreur:', e)
+    } finally {
+      setReprogLoadingSlots(false)
+    }
+  }
+
+  async function handleReprogrammer() {
+    if (!pro || !reprogRdvId || !reprogDate || !reprogHeure) return
+    setReprogSaving(true)
+    try {
+      const newDateISO = `${reprogDate}T${reprogHeure}:00.000Z`
+
+      const { error } = await supabase
+        .from('rendez_vous')
+        .update({
+          date: newDateISO,
+          statut: 'en_attente',
+          rappel_envoye_count: 0,
+          rappel_envoye_at: null,
+        })
+        .eq('id', reprogRdvId)
+
+      if (error) throw error
+
+      // Push notification
+      envoyerPushNotif(
+        pro.id,
+        '📅 RDV reprogrammé',
+        `${clientePrenom} a reprogrammé son RDV au ${formatDateLong(reprogDate)} à ${reprogHeure}`
+      )
+
+      // Mettre à jour la liste locale
+      setRdvsAVenir(prev => prev.map(r =>
+        r.id === reprogRdvId
+          ? { ...r, date: newDateISO, statut: 'en_attente' }
+          : r
+      ))
+
+      setReprogDone(reprogRdvId)
+      setReprogRdvId(null)
+    } catch (e) {
+      console.error('[handleReprogrammer] Erreur:', e)
+      alert('Impossible de reprogrammer ce rendez-vous.')
+    } finally {
+      setReprogSaving(false)
     }
   }
 
@@ -1040,33 +1158,176 @@ export default function ReservationPage() {
                     <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>Vos rendez-vous à venir</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {rdvsAVenir.map(rdv => (
-                        <div key={rdv.id} style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {EMOJI_MAP[rdv.specialite] ?? '✨'} {rdv.technique}
-                            </p>
-                            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                              {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
-                            </p>
-                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                              {rdv.prix && rdv.prix > 0 && (
-                                <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
-                              )}
+                        <div key={rdv.id} style={{ ...S.card }}>
+                          {/* Confirmation visuelle reprog */}
+                          {reprogDone === rdv.id && (
+                            <div style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14 }}>✓ RDV reprogrammé !</p>
+                              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                              </p>
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {EMOJI_MAP[rdv.specialite] ?? '✨'} {rdv.technique}
+                              </p>
+                              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                              </p>
+                              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                                {rdv.prix && rdv.prix > 0 && (
+                                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                              <button
+                                onClick={() => ouvrirReprog(rdv.id)}
+                                style={{
+                                  padding: '7px 12px', borderRadius: 10,
+                                  border: `1.5px solid ${PINK}`, background: '#fff',
+                                  color: PINK, fontSize: 13, fontWeight: 600,
+                                  cursor: 'pointer', transition: 'all 0.15s',
+                                }}
+                              >
+                                Reprogrammer
+                              </button>
+                              <button
+                                onClick={() => confirmerAnnulation(rdv)}
+                                disabled={annulationEnCours === rdv.id}
+                                style={{
+                                  padding: '7px 12px', borderRadius: 10,
+                                  border: '1.5px solid #fca5a5', background: '#fff',
+                                  color: '#ef4444', fontSize: 13, fontWeight: 600,
+                                  cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                              </button>
                             </div>
                           </div>
-                          <button
-                            onClick={() => confirmerAnnulation(rdv)}
-                            disabled={annulationEnCours === rdv.id}
-                            style={{
-                              flexShrink: 0, padding: '7px 12px', borderRadius: 10,
-                              border: '1.5px solid #fca5a5', background: '#fff',
-                              color: '#ef4444', fontSize: 13, fontWeight: 600,
-                              cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            {annulationEnCours === rdv.id ? '...' : 'Annuler'}
-                          </button>
+
+                          {/* ── Sélecteur reprogrammation ── */}
+                          {reprogRdvId === rdv.id && (
+                            <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0 }}>📅 Nouvelle date</p>
+                                <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>
+                                  ✕ Fermer
+                                </button>
+                              </div>
+
+                              {/* Calendrier reprog */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                <button
+                                  onClick={reprogPrevMonth}
+                                  disabled={reprogCalYear === todayJs.getFullYear() && reprogCalMonth === todayJs.getMonth()}
+                                  style={{ ...S.navBtn, opacity: (reprogCalYear === todayJs.getFullYear() && reprogCalMonth === todayJs.getMonth()) ? 0.3 : 1 }}
+                                >‹</button>
+                                <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15, textTransform: 'capitalize' }}>
+                                  {MOIS[reprogCalMonth]} {reprogCalYear}
+                                </span>
+                                <button onClick={reprogNextMonth} style={S.navBtn}>›</button>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+                                {JOURS_COURT.map(j => (
+                                  <div key={j} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: '#9ca3af', padding: '3px 0' }}>{j}</div>
+                                ))}
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+                                {Array.from({ length: getFirstDayOfWeek(reprogCalYear, reprogCalMonth) }).map((_, i) => (
+                                  <div key={`re-${i}`} />
+                                ))}
+                                {Array.from({ length: getDaysInMonth(reprogCalYear, reprogCalMonth) }).map((_, i) => {
+                                  const day = i + 1
+                                  const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
+                                  const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
+                                  const isPast = dayDate < today0
+                                  const isOff = !isDayWorking(dateStr, pro!.horaires)
+                                  const isDisabled = isPast || isOff
+                                  const isSelected = reprogDate === dateStr
+
+                                  return (
+                                    <button
+                                      key={day}
+                                      onClick={() => { if (!isDisabled) reprogSelectDate(dateStr) }}
+                                      disabled={isDisabled}
+                                      style={{
+                                        aspectRatio: '1', borderRadius: '50%', border: 'none',
+                                        background: isSelected ? PINK : isOff && !isPast ? '#E3F2FD' : 'transparent',
+                                        color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                                        fontWeight: 500, fontSize: 13,
+                                        cursor: isDisabled ? 'default' : 'pointer',
+                                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      }}
+                                    >
+                                      {day}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+
+                              {/* Créneaux reprog */}
+                              {reprogDate && (
+                                <div style={{ marginTop: 16 }}>
+                                  <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: '0 0 10px', textTransform: 'capitalize' }}>
+                                    🕐 {formatDateLong(reprogDate)}
+                                  </p>
+                                  {reprogLoadingSlots ? (
+                                    <p style={{ textAlign: 'center', color: PINK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+                                  ) : reprogSlots.filter(s => s.disponible).length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+                                      Aucun créneau de {formatDuree(rdv.duree)} disponible ce jour.
+                                    </p>
+                                  ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                                      {reprogSlots.map(s => (
+                                        <button
+                                          key={s.heure}
+                                          disabled={!s.disponible}
+                                          onClick={() => s.disponible && setReprogHeure(s.heure)}
+                                          style={{
+                                            padding: '10px 0', borderRadius: 10,
+                                            border: `1.5px solid ${!s.disponible ? '#e5e7eb' : reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
+                                            background: !s.disponible ? '#f9f9f9' : reprogHeure === s.heure ? PINK : '#fff',
+                                            color: !s.disponible ? '#d1d5db' : reprogHeure === s.heure ? '#fff' : '#374151',
+                                            fontWeight: 600, fontSize: 13,
+                                            cursor: s.disponible ? 'pointer' : 'default',
+                                            textDecoration: !s.disponible ? 'line-through' : 'none',
+                                            transition: 'all 0.15s',
+                                          }}
+                                        >
+                                          {s.heure}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Bouton confirmer reprog */}
+                              {reprogDate && reprogHeure && (
+                                <button
+                                  onClick={handleReprogrammer}
+                                  disabled={reprogSaving}
+                                  style={{
+                                    width: '100%', padding: 14, borderRadius: 12, border: 'none',
+                                    background: PINK, color: '#fff', fontWeight: 700, fontSize: 15,
+                                    cursor: 'pointer', marginTop: 16,
+                                    opacity: reprogSaving ? 0.7 : 1, transition: 'opacity 0.15s',
+                                  }}
+                                >
+                                  {reprogSaving ? 'Reprogrammation...' : `Reprogrammer au ${formatDateLong(reprogDate)} à ${reprogHeure}`}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
