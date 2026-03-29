@@ -20,9 +20,12 @@ type RdvInfo = {
   pro_pseudo: string | null
   pro_photo: string | null
   pro_adresse: string | null
+  pro_id: string
+  horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
+  duree: number
 }
 
-type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'error'
+type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
 
 // ─────────────────────────────────────────────
 // Constants
@@ -46,6 +49,47 @@ function formatDateFr(iso: string): string {
   return `${jour} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
 
+// ── Helpers décalage ────────────────────────
+type HorairesHebdo = Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }>
+type SlotInfo = { heure: string; disponible: boolean }
+
+function timeToMin(t: string) { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+function minToTime(m: number) { return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }
+function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
+  const h = horaires[new Date(dateStr + 'T00:00:00').getDay()]
+  return h?.actif === true || h?.active === true
+}
+function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
+function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
+function buildDateStr(y: number, m: number, d: number) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+function generateSlots(
+  date: string, duree: number, horaires: HorairesHebdo,
+  rdvExistants: { heure: string; duree: number }[],
+): SlotInfo[] {
+  const h = horaires[new Date(date + 'T00:00:00').getDay()]
+  if (!h?.actif && !h?.active) return []
+  const debut = timeToMin(h.debut), fin = timeToMin(h.fin)
+  const taken = rdvExistants.map(r => ({ start: timeToMin(r.heure), end: timeToMin(r.heure) + r.duree }))
+  const now = new Date()
+  const todayStr = buildDateStr(now.getFullYear(), now.getMonth(), now.getDate())
+  const limiteMin = date === todayStr ? (now.getHours() * 60 + now.getMinutes() + 30) : 0
+  const slots: SlotInfo[] = []
+  for (let t = debut; t + duree <= fin; t += 30) {
+    if (date === todayStr && t < limiteMin) continue
+    const isTaken = taken.some(r => t < r.end && (t + duree) > r.start)
+    slots.push({ heure: minToTime(t), disponible: !isTaken })
+  }
+  return slots
+}
+
+const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const MOIS_LONG = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+]
+
 // ─────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────
@@ -65,6 +109,15 @@ function ConfirmationPage() {
   const [state, setState] = useState<PageState>('loading')
   const [rdv, setRdv] = useState<RdvInfo | null>(null)
   const [acting, setActing] = useState(false)
+
+  // ── Décalage ──────────────────────────────
+  const [showDecaler, setShowDecaler] = useState(false)
+  const [decDate, setDecDate] = useState('')
+  const [decHeure, setDecHeure] = useState('')
+  const [decSlots, setDecSlots] = useState<SlotInfo[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [calYear, setCalYear] = useState(new Date().getFullYear())
+  const [calMonth, setCalMonth] = useState(new Date().getMonth())
 
   // ── Chargement initial ──────────────────────
   useEffect(() => {
@@ -152,6 +205,47 @@ function ConfirmationPage() {
     }
     setActing(false)
   }
+
+  // ── Décaler : charger créneaux ────────────────
+  const handlePickDate = async (dateStr: string) => {
+    if (!rdv) return
+    setDecDate(dateStr)
+    setDecHeure('')
+    setLoadingSlots(true)
+    try {
+      const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}`)
+      if (!res.ok) { setDecSlots([]); return }
+      const info = await res.json()
+      const horaires = rdv.horaires ?? {}
+      const slots = generateSlots(dateStr, rdv.duree, horaires as HorairesHebdo, info.rdvs_jour ?? [])
+      setDecSlots(slots)
+    } catch {
+      setDecSlots([])
+    } finally {
+      setLoadingSlots(false)
+    }
+  }
+
+  const handleDecaler = async () => {
+    if (!rdv || !decDate || !decHeure || acting) return
+    setActing(true)
+    try {
+      const newDateISO = `${decDate}T${decHeure}:00.000Z`
+      const res = await fetch(`/api/confirmation/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decaler', new_date: newDateISO }),
+      })
+      if (!res.ok) { setState('error'); setActing(false); return }
+      setState('rescheduled')
+    } catch {
+      setState('error')
+    }
+    setActing(false)
+  }
+
+  const today0 = new Date()
+  const isAtCurrentMonth = calYear === today0.getFullYear() && calMonth === today0.getMonth()
 
   // ── Rendu ───────────────────────────────────
   const proDisplayName = rdv?.pro_pseudo || `${rdv?.pro_prenom ?? ''} ${rdv?.pro_nom ?? ''}`.trim()
@@ -308,7 +402,116 @@ function ConfirmationPage() {
               >
                 {acting ? 'Annulation...' : 'Annuler mon RDV'}
               </button>
+              <button
+                className="glamia-btn-cancel"
+                onClick={() => setShowDecaler(!showDecaler)}
+                disabled={acting}
+                style={{ borderColor: PINK, color: PINK }}
+              >
+                📅 Décaler mon RDV
+              </button>
             </div>
+
+            {/* ── Interface de décalage ── */}
+            {showDecaler && rdv.horaires && (
+              <div style={{ marginTop: 24 }}>
+                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>Choisissez une nouvelle date</p>
+
+                {/* Navigation mois */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <button
+                    onClick={() => { if (!isAtCurrentMonth) { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) } else setCalMonth(m => m - 1) } }}
+                    disabled={isAtCurrentMonth}
+                    style={{ width: 32, height: 32, borderRadius: 16, border: '1px solid #e5e7eb', background: '#fff', cursor: isAtCurrentMonth ? 'default' : 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isAtCurrentMonth ? 0.3 : 1 }}
+                  >‹</button>
+                  <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15 }}>
+                    {MOIS_LONG[calMonth]} {calYear}
+                  </span>
+                  <button
+                    onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
+                    style={{ width: 32, height: 32, borderRadius: 16, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >›</button>
+                </div>
+
+                {/* Jours de la semaine */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+                  {JOURS_COURT.map(j => (
+                    <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>{j}</div>
+                  ))}
+                </div>
+
+                {/* Grille du mois */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+                  {Array.from({ length: getFirstDayOfWeek(calYear, calMonth) }).map((_, i) => <div key={`e-${i}`} />)}
+                  {Array.from({ length: getDaysInMonth(calYear, calMonth) }).map((_, i) => {
+                    const day = i + 1
+                    const dateStr = buildDateStr(calYear, calMonth, day)
+                    const dayDate = new Date(calYear, calMonth, day)
+                    const today0Date = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate())
+                    const isPast = dayDate < today0Date
+                    const isOff = !isDayWorking(dateStr, rdv.horaires as HorairesHebdo)
+                    const isDisabled = isPast || isOff
+                    const isSelected = decDate === dateStr
+                    return (
+                      <button
+                        key={day}
+                        disabled={isDisabled}
+                        onClick={() => { if (!isDisabled) handlePickDate(dateStr) }}
+                        style={{
+                          aspectRatio: '1', borderRadius: '50%', border: 'none',
+                          background: isSelected ? PINK : isPast ? 'transparent' : isOff ? '#E3F2FD' : 'transparent',
+                          color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                          fontWeight: 500, fontSize: 13, cursor: isDisabled ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >{day}</button>
+                    )
+                  })}
+                </div>
+
+                {/* Créneaux */}
+                {decDate && (
+                  <div style={{ marginTop: 16 }}>
+                    <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, marginBottom: 10, marginTop: 0, textTransform: 'capitalize' }}>
+                      {formatDateFr(decDate)}
+                    </p>
+                    {loadingSlots ? (
+                      <p style={{ color: PINK, fontSize: 14 }}>Chargement des créneaux...</p>
+                    ) : decSlots.filter(s => s.disponible).length === 0 ? (
+                      <p style={{ color: '#6b7280', fontSize: 14 }}>Aucun créneau disponible ce jour.</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        {decSlots.filter(s => s.disponible).map(s => (
+                          <button
+                            key={s.heure}
+                            onClick={() => setDecHeure(s.heure)}
+                            style={{
+                              padding: '10px 0', borderRadius: 10,
+                              border: `1.5px solid ${decHeure === s.heure ? PINK : '#e5e7eb'}`,
+                              background: decHeure === s.heure ? PINK : '#fff',
+                              color: decHeure === s.heure ? '#fff' : '#374151',
+                              fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                            }}
+                          >{s.heure}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bouton confirmer le décalage */}
+                {decDate && decHeure && (
+                  <button
+                    className="glamia-btn-confirm"
+                    onClick={handleDecaler}
+                    disabled={acting}
+                    style={{ marginTop: 16 }}
+                  >
+                    {acting ? 'Décalage en cours...' : `Décaler au ${formatDateFr(decDate)} à ${decHeure}`}
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -350,6 +553,26 @@ function ConfirmationPage() {
             </p>
             <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
               Vous pouvez fermer cette page.
+            </p>
+          </div>
+        )}
+
+        {/* Succès décalage */}
+        {state === 'rescheduled' && rdv && (
+          <div style={S.center}>
+            <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
+              <span style={{ fontSize: 44 }}>📅</span>
+            </div>
+            <h2 style={S.h2}>RDV décalé !</h2>
+            <p style={S.grayText}>
+              Votre rendez-vous a bien été décalé.
+            </p>
+            <div style={S.infoBox}>
+              <p style={S.infoLine}>{formatDateFr(decDate)} à {decHeure}</p>
+              <p style={S.infoLineSub}>{prestationLabel}</p>
+            </div>
+            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
+              Vous recevrez un nouvel email de confirmation.
             </p>
           </div>
         )}

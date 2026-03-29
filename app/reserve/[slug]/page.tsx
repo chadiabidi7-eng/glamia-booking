@@ -687,6 +687,7 @@ export default function ReservationPage() {
           prix:       prixTotal > 0 ? prixTotal : null,
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
+          demande_rappel: rappel,
         })
         .select('id')
         .single()

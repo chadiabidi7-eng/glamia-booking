@@ -19,14 +19,14 @@ const supabaseAdmin = createClient(
 
 // GET /api/confirmation/[token] — Charger les infos du RDV
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params
 
   const { data, error } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id, duree')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -48,12 +48,33 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires')
     .eq('id', data.pro_id)
     .maybeSingle()
 
   const dateStr = (data.date as string).slice(0, 10)
   const heureStr = (data.date as string).slice(11, 16)
+
+  // Créneaux existants pour une date spécifique (pour le décalage)
+  const slotsDate = req.nextUrl.searchParams.get('slots_date')
+  let rdvsJour: { heure: string; duree: number }[] = []
+  if (slotsDate) {
+    const { data: rdvs } = await supabaseAdmin
+      .from('rendez_vous')
+      .select('date, duree')
+      .eq('pro_id', data.pro_id)
+      .gte('date', `${slotsDate}T00:00:00.000Z`)
+      .lte('date', `${slotsDate}T23:59:59.999Z`)
+      .neq('statut', 'annule')
+
+    rdvsJour = (rdvs ?? []).map(r => {
+      const d = new Date(r.date)
+      return {
+        heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+        duree: r.duree,
+      }
+    })
+  }
 
   return NextResponse.json({
     id: data.id,
@@ -70,6 +91,10 @@ export async function GET(
     pro_pseudo: pro?.pseudo ?? null,
     pro_photo: pro?.avatar_url ?? null,
     pro_adresse: pro?.adresse ?? null,
+    pro_id: data.pro_id,
+    horaires: (pro as any)?.horaires ?? null,
+    duree: data.duree ?? 60,
+    rdvs_jour: rdvsJour,
   })
 }
 
@@ -82,7 +107,7 @@ export async function POST(
   const body = await req.json()
   const action = body.action as string
 
-  if (action !== 'confirmer' && action !== 'annuler') {
+  if (action !== 'confirmer' && action !== 'annuler' && action !== 'decaler') {
     return NextResponse.json({ error: 'invalid_action' }, { status: 400 })
   }
 
@@ -101,6 +126,69 @@ export async function POST(
     return NextResponse.json({ error: 'expired' }, { status: 410 })
   }
 
+  // ── Action : décaler ──────────────────────────────────────────────────
+  if (action === 'decaler') {
+    const newDate = body.new_date as string
+    if (!newDate) {
+      return NextResponse.json({ error: 'new_date_required' }, { status: 400 })
+    }
+
+    const oldDateStr = (rdv.date as string).slice(0, 10)
+    const oldHeureStr = (rdv.date as string).slice(11, 16)
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('rendez_vous')
+      .update({
+        date: newDate,
+        statut: 'en_attente',
+        rappel_envoye_count: 0,
+        rappel_envoye_at: null,
+        token_confirmation: null,
+        token_expiration: null,
+      })
+      .eq('id', rdv.id)
+
+    if (updateErr) {
+      console.error('[api/confirmation] Erreur decaler:', updateErr)
+      return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+    }
+
+    try {
+      const { data: proData } = await supabaseAdmin
+        .from('profiles')
+        .select('push_token')
+        .eq('id', rdv.pro_id)
+        .maybeSingle()
+
+      if (proData?.push_token) {
+        const { data: cliente } = await supabaseAdmin
+          .from('clientes')
+          .select('prenom')
+          .eq('id', rdv.cliente_id)
+          .maybeSingle()
+
+        const clientePrenom = cliente?.prenom ?? 'Une cliente'
+        const newDateStr = newDate.slice(0, 10)
+        const newHeureStr = newDate.slice(11, 16)
+
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: proData.push_token,
+            title: '📅 RDV décalé',
+            body: `${clientePrenom} a décalé son RDV du ${formatDateFr(oldDateStr)} au ${formatDateFr(newDateStr)} à ${newHeureStr}`,
+          }),
+        })
+      }
+    } catch (e) {
+      console.error('[api/confirmation] Erreur push decaler:', e)
+    }
+
+    return NextResponse.json({ success: true, statut: 'en_attente' })
+  }
+
+  // ── Action : confirmer / annuler ──────────────────────────────────────
   const newStatut = action === 'confirmer' ? 'confirme' : 'annule'
   const updateData: Record<string, string> = { statut: newStatut }
   if (action === 'confirmer') {
