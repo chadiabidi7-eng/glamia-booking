@@ -1338,9 +1338,15 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                <button onClick={() => setStep(2)} style={S.btn}>
-                  + Prendre un nouveau rendez-vous
-                </button>
+                {reprogRdvId ? (
+                  <button onClick={() => setStep(2)} style={S.btn}>
+                    Reprogrammer mon RDV →
+                  </button>
+                ) : (
+                  <button onClick={() => setStep(2)} style={S.btn}>
+                    + Prendre un nouveau rendez-vous
+                  </button>
+                )}
               </div>
             )}
 
