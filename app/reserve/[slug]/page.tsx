@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import SpecialiteIcon from '@/components/SpecialiteIcon'
 
 // ─────────────────────────────────────────────
 // Types
@@ -69,7 +70,7 @@ const EMOJI_MAP: Record<string, string> = {
   'Soin visage': '💆‍♀️',
   'Bronzage': '☀️',
   'Soin dentaire': '🦷',
-  'Injections esthétique': '💉',
+  'Autre': '🪄',
 }
 
 const MOIS = [
@@ -1171,8 +1172,8 @@ export default function ReservationPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {EMOJI_MAP[rdv.specialite] ?? '✨'} {rdv.technique}
+                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <SpecialiteIcon specialite={rdv.specialite} size={18} /> {rdv.technique}
                               </p>
                               <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
                                 {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
@@ -1414,7 +1415,7 @@ export default function ReservationPage() {
                           border: 'none', cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <span style={{ fontSize: 24, flexShrink: 0 }}>{s.emoji}</span>
+                        <SpecialiteIcon specialite={s.nom} size={24} />
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
                           {s.nom}
                         </span>
@@ -1736,6 +1737,19 @@ export default function ReservationPage() {
             >
               {submitting ? 'Enregistrement...' : '✓ Confirmer ma réservation'}
             </button>
+
+            <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
+              En confirmant, vous acceptez que vos données soient utilisées
+              uniquement dans le cadre de votre rendez-vous.{' '}
+              <a
+                href="https://booking.glamia.pro/confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: PINK, textDecoration: 'underline' }}
+              >
+                Politique de confidentialité
+              </a>
+            </p>
           </div>
         )}
       </div>
