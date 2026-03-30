@@ -9,6 +9,7 @@ const SVG_MAP: Record<string, string> = {
   'Soin visage': 'soin_visage.svg',
   'Bronzage': 'bronzage.svg',
   'Soin dentaire': 'soin_dentaire.svg',
+  'Autre': 'autre.svg',
 };
 
 type Props = {
