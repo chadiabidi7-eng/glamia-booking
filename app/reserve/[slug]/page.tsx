@@ -64,7 +64,7 @@ const EMOJI_MAP: Record<string, string> = {
   'Pédicure': '🦶',
   'Cils': '👁️',
   'Sourcils': '🪞',
-  'Épilation cire': '🪒',
+  'Épilation': '🪒',
   'Maquillage': '💄',
   'Maquillage semi-permanent': '✨',
   'Soin visage': '💆‍♀️',

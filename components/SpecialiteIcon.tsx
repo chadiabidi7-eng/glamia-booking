@@ -3,7 +3,7 @@ const SVG_MAP: Record<string, string> = {
   'Pédicure': 'pedicure.svg',
   'Cils': 'cils.svg',
   'Sourcils': 'sourcils.svg',
-  'Épilation cire': 'epilation.svg',
+  'Épilation': 'epilation.svg',
   'Maquillage': 'maquillage.svg',
   'Maquillage semi-permanent': 'maquillage_semi_permanent.svg',
   'Soin visage': 'soin_visage.svg',
