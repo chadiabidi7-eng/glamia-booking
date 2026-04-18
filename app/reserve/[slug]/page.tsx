@@ -604,6 +604,40 @@ export default function ReservationPage() {
           : r
       ))
 
+      // Email de confirmation reprogrammation
+      const rdvReprog = rdvsAVenir.find(r => r.id === reprogRdvId)
+      if (clienteEmail.trim() && rdvReprog) {
+        try {
+          const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
+          await fetch(
+            'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cliente_email: clienteEmail.trim(),
+                cliente_prenom: clientePrenom.trim(),
+                pro_nom: proNomComplet,
+                date: formatDateLong(reprogDate),
+                heure: reprogHeure,
+                duree: formatDuree(rdvReprog.duree),
+                prix_total: rdvReprog.prix ?? 0,
+                adresse: pro.adresse || '',
+                techniques: [{
+                  nom: rdvReprog.technique,
+                  specialite: rdvReprog.specialite,
+                  prix: rdvReprog.prix ?? 0,
+                  duree_minutes: rdvReprog.duree,
+                }],
+              }),
+            },
+          )
+          console.log('[handleReprogrammer] Email confirmation envoyé')
+        } catch (e) {
+          console.error('[handleReprogrammer] Erreur envoi email:', e)
+        }
+      }
+
       setReprogDone(reprogRdvId)
       setReprogRdvId(null)
     } catch (e) {
@@ -1043,6 +1077,9 @@ export default function ReservationPage() {
           <div style={{ background: PINK_LIGHT, borderRadius: 12, padding: 14, marginBottom: 16, textAlign: 'left' }}>
             <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
               Vous recevrez un email de confirmation 24h avant votre rendez-vous pour confirmer votre présence.
+            </p>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '8px 0 0', lineHeight: 1.5 }}>
+              Si vous ne recevez pas l'email, pensez à vérifier vos spams.
             </p>
           </div>
 

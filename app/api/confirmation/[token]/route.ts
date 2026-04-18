@@ -160,17 +160,18 @@ export async function POST(
         .eq('id', rdv.pro_id)
         .maybeSingle()
 
+      const { data: cliente } = await supabaseAdmin
+        .from('clientes')
+        .select('prenom, email')
+        .eq('id', rdv.cliente_id)
+        .maybeSingle()
+
+      const clientePrenom = cliente?.prenom ?? 'Une cliente'
+      const newDateStr = newDate.slice(0, 10)
+      const newHeureStr = newDate.slice(11, 16)
+
+      // Push notification à la pro
       if (proData?.push_token) {
-        const { data: cliente } = await supabaseAdmin
-          .from('clientes')
-          .select('prenom')
-          .eq('id', rdv.cliente_id)
-          .maybeSingle()
-
-        const clientePrenom = cliente?.prenom ?? 'Une cliente'
-        const newDateStr = newDate.slice(0, 10)
-        const newHeureStr = newDate.slice(11, 16)
-
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -181,8 +182,50 @@ export async function POST(
           }),
         })
       }
+
+      // Email de confirmation à la cliente
+      if (cliente?.email) {
+        const { data: proInfo } = await supabaseAdmin
+          .from('profiles')
+          .select('prenom, nom, pseudo, adresse')
+          .eq('id', rdv.pro_id)
+          .maybeSingle()
+
+        const proNom = proInfo?.pseudo || `${proInfo?.prenom ?? ''} ${proInfo?.nom ?? ''}`.trim()
+
+        const { data: rdvFull } = await supabaseAdmin
+          .from('rendez_vous')
+          .select('technique, specialite, duree, prix')
+          .eq('id', rdv.id)
+          .maybeSingle()
+
+        await fetch(
+          'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cliente_email: cliente.email,
+              cliente_prenom: clientePrenom,
+              pro_nom: proNom,
+              date: formatDateFr(newDateStr),
+              heure: newHeureStr,
+              duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
+              prix_total: rdvFull?.prix ?? 0,
+              adresse: proInfo?.adresse || '',
+              techniques: rdvFull ? [{
+                nom: rdvFull.technique ?? '',
+                specialite: rdvFull.specialite ?? '',
+                prix: rdvFull.prix ?? 0,
+                duree_minutes: rdvFull.duree ?? 60,
+              }] : [],
+            }),
+          },
+        )
+        console.log('[api/confirmation] Email confirmation décalage envoyé à', cliente.email)
+      }
     } catch (e) {
-      console.error('[api/confirmation] Erreur push decaler:', e)
+      console.error('[api/confirmation] Erreur push/email decaler:', e)
     }
 
     return NextResponse.json({ success: true, statut: 'en_attente' })
