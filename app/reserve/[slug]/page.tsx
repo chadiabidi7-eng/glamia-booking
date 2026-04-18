@@ -814,6 +814,32 @@ export default function ReservationPage() {
       if (rdvErr) throw rdvErr
       setPageState('confirmed')
 
+      // Email de confirmation à la cliente (non bloquant)
+      try {
+        const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
+        await supabase.functions.invoke('confirmation-booking', {
+          body: {
+            cliente_email: clienteEmail.trim(),
+            cliente_prenom: clientePrenom.trim(),
+            pro_nom: proNomComplet,
+            date: formatDateLong(date),
+            heure,
+            duree: formatDuree(dureeTotal),
+            prix_total: prixTotal,
+            adresse: pro.adresse || '',
+            techniques: techniquesSelectionnees.map(t => ({
+              nom: t.nom,
+              specialite: t.categorie,
+              prix: t.prix,
+              duree_minutes: t.duree,
+            })),
+          },
+        })
+        console.log('[handleConfirm] Email confirmation envoyé à', clienteEmail.trim())
+      } catch (e) {
+        console.error('[handleConfirm] Erreur envoi email confirmation:', e)
+      }
+
       // Envoi automatique rappel-confirmation si RDV < 24h
       if (nouveau?.id) {
         const heuresAvant = (new Date(dateRdvISO).getTime() - Date.now()) / (60 * 60 * 1000)
