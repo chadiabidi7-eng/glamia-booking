@@ -828,11 +828,17 @@ export default function ReservationPage() {
           }
           console.log('[handleConfirm] Données envoyées:', emailBody)
           console.log('[handleConfirm] Appel Edge Function confirmation-booking...')
-          const { data, error } = await supabase.functions.invoke('confirmation-booking', {
-            body: emailBody,
-          })
-          console.log('[handleConfirm] Résultat:', data, error)
-          if (error) console.error('[handleConfirm] Erreur Edge Function:', error)
+          const res = await fetch(
+            'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(emailBody),
+            },
+          )
+          const resData = await res.json()
+          console.log('[handleConfirm] Résultat:', res.status, resData)
+          if (!res.ok) console.error('[handleConfirm] Erreur Edge Function:', resData)
         } catch (e) {
           console.error('[handleConfirm] Erreur envoi email confirmation:', e)
         }
