@@ -425,7 +425,7 @@ export default function ReservationPage() {
     try {
       const { data: clientes, error } = await supabase
         .from('clientes')
-        .select('id, prenom, nom, telephone')
+        .select('id, prenom, nom, telephone, email')
         .eq('pro_id', pro.id)
 
       if (error) throw error
@@ -436,6 +436,7 @@ export default function ReservationPage() {
         setClienteId(found.id)
         setClientePrenom(found.prenom)
         setClienteNom(found.nom)
+        if (found.email) setClienteEmail(found.email)
         setPhoneStatus('known')
         chargerRdvsAVenir(found.id, pro.id)
       } else {
@@ -804,33 +805,37 @@ export default function ReservationPage() {
       setPageState('confirmed')
 
       // Email de confirmation à la cliente (non bloquant)
-      try {
-        const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
-        const emailBody = {
-          cliente_email: clienteEmail.trim(),
-          cliente_prenom: clientePrenom.trim(),
-          pro_nom: proNomComplet,
-          date: formatDateLong(date),
-          heure,
-          duree: formatDuree(dureeTotal),
-          prix_total: prixTotal,
-          adresse: pro.adresse || '',
-          techniques: techniquesSelectionnees.map(t => ({
-            nom: t.nom,
-            specialite: t.categorie,
-            prix: t.prix,
-            duree_minutes: t.duree,
-          })),
+      if (!clienteEmail.trim()) {
+        console.warn('[handleConfirm] Cliente sans email, confirmation non envoyée')
+      } else {
+        try {
+          const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
+          const emailBody = {
+            cliente_email: clienteEmail.trim(),
+            cliente_prenom: clientePrenom.trim(),
+            pro_nom: proNomComplet,
+            date: formatDateLong(date),
+            heure,
+            duree: formatDuree(dureeTotal),
+            prix_total: prixTotal,
+            adresse: pro.adresse || '',
+            techniques: techniquesSelectionnees.map(t => ({
+              nom: t.nom,
+              specialite: t.categorie,
+              prix: t.prix,
+              duree_minutes: t.duree,
+            })),
+          }
+          console.log('[handleConfirm] Données envoyées:', emailBody)
+          console.log('[handleConfirm] Appel Edge Function confirmation-booking...')
+          const { data, error } = await supabase.functions.invoke('confirmation-booking', {
+            body: emailBody,
+          })
+          console.log('[handleConfirm] Résultat:', data, error)
+          if (error) console.error('[handleConfirm] Erreur Edge Function:', error)
+        } catch (e) {
+          console.error('[handleConfirm] Erreur envoi email confirmation:', e)
         }
-        console.log('[handleConfirm] Données envoyées:', emailBody)
-        console.log('[handleConfirm] Appel Edge Function confirmation-booking...')
-        const { data, error } = await supabase.functions.invoke('confirmation-booking', {
-          body: emailBody,
-        })
-        console.log('[handleConfirm] Résultat:', data, error)
-        if (error) console.error('[handleConfirm] Erreur Edge Function:', error)
-      } catch (e) {
-        console.error('[handleConfirm] Erreur envoi email confirmation:', e)
       }
 
       // Envoi automatique rappel-confirmation si RDV < 24h
