@@ -817,25 +817,29 @@ export default function ReservationPage() {
       // Email de confirmation à la cliente (non bloquant)
       try {
         const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
-        await supabase.functions.invoke('confirmation-booking', {
-          body: {
-            cliente_email: clienteEmail.trim(),
-            cliente_prenom: clientePrenom.trim(),
-            pro_nom: proNomComplet,
-            date: formatDateLong(date),
-            heure,
-            duree: formatDuree(dureeTotal),
-            prix_total: prixTotal,
-            adresse: pro.adresse || '',
-            techniques: techniquesSelectionnees.map(t => ({
-              nom: t.nom,
-              specialite: t.categorie,
-              prix: t.prix,
-              duree_minutes: t.duree,
-            })),
-          },
+        const emailBody = {
+          cliente_email: clienteEmail.trim(),
+          cliente_prenom: clientePrenom.trim(),
+          pro_nom: proNomComplet,
+          date: formatDateLong(date),
+          heure,
+          duree: formatDuree(dureeTotal),
+          prix_total: prixTotal,
+          adresse: pro.adresse || '',
+          techniques: techniquesSelectionnees.map(t => ({
+            nom: t.nom,
+            specialite: t.categorie,
+            prix: t.prix,
+            duree_minutes: t.duree,
+          })),
+        }
+        console.log('[handleConfirm] Données envoyées:', emailBody)
+        console.log('[handleConfirm] Appel Edge Function confirmation-booking...')
+        const { data, error } = await supabase.functions.invoke('confirmation-booking', {
+          body: emailBody,
         })
-        console.log('[handleConfirm] Email confirmation envoyé à', clienteEmail.trim())
+        console.log('[handleConfirm] Résultat:', data, error)
+        if (error) console.error('[handleConfirm] Erreur Edge Function:', error)
       } catch (e) {
         console.error('[handleConfirm] Erreur envoi email confirmation:', e)
       }
