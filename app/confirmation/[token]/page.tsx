@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
+import { Calendar, Clock, Sparkles, CreditCard, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -32,6 +33,7 @@ type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelle
 // ─────────────────────────────────────────────
 const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
+const GLAMIA_PINK = '#D4537E'
 
 const MOIS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -320,7 +322,7 @@ function ConfirmationPage() {
         {state === 'already_confirmed' && rdv && (
           <div style={S.center}>
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
-              <span style={{ fontSize: 36 }}>✅</span>
+              <CheckCircle size={36} color={GLAMIA_PINK} />
             </div>
             <h2 style={S.h2}>RDV déjà confirmé</h2>
             <p style={S.grayText}>
@@ -337,7 +339,7 @@ function ConfirmationPage() {
         {state === 'already_cancelled' && rdv && (
           <div style={S.center}>
             <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
-              <span style={{ fontSize: 36 }}>❌</span>
+              <XCircle size={36} color="#ef4444" />
             </div>
             <h2 style={S.h2}>RDV annulé</h2>
             <p style={S.grayText}>
@@ -367,20 +369,20 @@ function ConfirmationPage() {
             <div style={S.card}>
               <p style={S.cardLabel}>Votre rendez-vous</p>
               <div style={S.cardRow}>
-                <span style={S.cardIcon}>📅</span>
+                <span style={S.cardIcon}><Calendar size={18} color={GLAMIA_PINK} /></span>
                 <span style={S.cardValue}>{formatDateFr(rdv.date)}</span>
               </div>
               <div style={S.cardRow}>
-                <span style={S.cardIcon}>🕐</span>
+                <span style={S.cardIcon}><Clock size={18} color={GLAMIA_PINK} /></span>
                 <span style={S.cardValue}>{rdv.heure}</span>
               </div>
               <div style={S.cardRow}>
-                <span style={S.cardIcon}>✨</span>
+                <span style={S.cardIcon}><Sparkles size={18} color={GLAMIA_PINK} /></span>
                 <span style={S.cardValue}>{prestationLabel}</span>
               </div>
               {rdv.prix != null && rdv.prix > 0 && (
                 <div style={S.cardRow}>
-                  <span style={S.cardIcon}>💰</span>
+                  <span style={S.cardIcon}><CreditCard size={18} color={GLAMIA_PINK} /></span>
                   <span style={S.cardValue}>{rdv.prix} €</span>
                 </div>
               )}
@@ -408,7 +410,7 @@ function ConfirmationPage() {
                 disabled={acting}
                 style={{ borderColor: PINK, color: PINK }}
               >
-                📅 Décaler mon RDV
+                <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Décaler mon RDV
               </button>
             </div>
 
@@ -519,7 +521,7 @@ function ConfirmationPage() {
         {state === 'confirmed' && rdv && (
           <div style={S.center}>
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
-              <span style={{ fontSize: 44 }}>✅</span>
+              <CheckCircle size={44} color={GLAMIA_PINK} />
             </div>
             <h2 style={S.h2}>RDV confirmé !</h2>
             <p style={S.grayText}>
@@ -529,10 +531,10 @@ function ConfirmationPage() {
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.prix != null && rdv.prix > 0 && (
-                <p style={{ ...S.infoLineSub, marginTop: 8 }}>💰 {rdv.prix} €</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{rdv.prix} €</p>
               )}
               {rdv.pro_adresse && (
-                <p style={{ ...S.infoLineSub, marginTop: 8 }}>📍 {rdv.pro_adresse}</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
               )}
             </div>
             <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
@@ -545,7 +547,7 @@ function ConfirmationPage() {
         {state === 'cancelled' && rdv && (
           <div style={S.center}>
             <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
-              <span style={{ fontSize: 44 }}>❌</span>
+              <XCircle size={44} color="#ef4444" />
             </div>
             <h2 style={S.h2}>RDV annulé</h2>
             <p style={S.grayText}>
@@ -561,7 +563,7 @@ function ConfirmationPage() {
         {state === 'rescheduled' && rdv && (
           <div style={S.center}>
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
-              <span style={{ fontSize: 44 }}>📅</span>
+              <Calendar size={44} color={GLAMIA_PINK} />
             </div>
             <h2 style={S.h2}>RDV décalé !</h2>
             <p style={S.grayText}>
@@ -581,7 +583,7 @@ function ConfirmationPage() {
         {state === 'error' && (
           <div style={S.center}>
             <div style={S.iconCircle}>
-              <span style={{ fontSize: 36 }}>⚠️</span>
+              <AlertCircle size={36} color="#854F0B" />
             </div>
             <h2 style={S.h2}>Erreur</h2>
             <p style={S.grayText}>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Sparkles, Search } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -59,19 +60,7 @@ const DEFAULT_HORAIRES: HorairesHebdo = {
   6: { actif: true,  debut: '09:00', fin: '14:00' },
 }
 
-const EMOJI_MAP: Record<string, string> = {
-  'Manucure': '💅',
-  'Pédicure': '🦶',
-  'Cils': '👁️',
-  'Sourcils': '🪞',
-  'Épilation': '🪒',
-  'Maquillage': '💄',
-  'Maquillage semi-permanent': '✨',
-  'Soin visage': '💆‍♀️',
-  'Bronzage': '☀️',
-  'Soin dentaire': '🦷',
-  'Autre': '🪄',
-}
+const GLAMIA_PINK = '#D4537E'
 
 const MOIS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -890,7 +879,6 @@ export default function ReservationPage() {
     .filter(([, techs]) => techs.some(t => t.active))
     .map(([nom, techs]) => ({
       nom,
-      emoji:      EMOJI_MAP[nom] ?? '✨',
       techniques: techs.filter(t => t.active),
     }))
 
@@ -920,7 +908,7 @@ export default function ReservationPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
+          <Sparkles size={48} color={GLAMIA_PINK} style={{ marginBottom: 16 }} />
           <p style={{ color: PINK, fontWeight: 600, fontSize: 16 }}>Chargement...</p>
         </div>
       </div>
@@ -931,7 +919,7 @@ export default function ReservationPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#fff' }}>
         <div style={{ textAlign: 'center', maxWidth: 320 }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🔍</div>
+          <Search size={56} color="#9ca3af" style={{ marginBottom: 16 }} />
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Page introuvable</h1>
           <p style={{ color: '#6b7280', fontSize: 15 }}>Ce lien de réservation n'existe pas ou a été désactivé.</p>
         </div>
@@ -942,9 +930,9 @@ export default function ReservationPage() {
   if (pageState === 'blocked') {
     const nomAffiche = pro?.pseudo || pro?.prenom || ''
     const socials = [
-      pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: '📸' },
-      pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: '🎵' },
-      pro?.snapchat  && { label: 'Snapchat',  href: `https://snapchat.com/add/${pro.snapchat}`, icon: '👻' },
+      pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: 'Instagram' },
+      pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: 'TikTok' },
+      pro?.snapchat  && { label: 'Snapchat',  href: `https://snapchat.com/add/${pro.snapchat}`, icon: 'Snapchat' },
     ].filter(Boolean) as { label: string; href: string; icon: string }[]
 
     return (
@@ -988,21 +976,21 @@ export default function ReservationPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: PINK_LIGHT }}>
         <div style={{ textAlign: 'center', maxWidth: 380, width: '100%', background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-          <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>
-            ✅
+          <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <CheckCircle size={40} color={GLAMIA_PINK} />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est bien enregistré ✓</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est bien enregistré</h1>
 
           {/* Infos générales */}
           <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
             {[
-              { emoji: '👤', label: `${clientePrenom} ${clienteNom}` },
-              { emoji: '📅', label: formatDateLong(date) },
-              { emoji: '🕐', label: `${heure} · ${formatDuree(dureeTotal)}` },
-              ...(prixTotal > 0 ? [{ emoji: '💶', label: `${prixTotal} €` }] : []),
+              { icon: <User size={18} color={GLAMIA_PINK} />, label: `${clientePrenom} ${clienteNom}` },
+              { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
+              { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeTotal)}` },
+              ...(prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: `${prixTotal} €` }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 18, width: 24 }}>{row.emoji}</span>
+                <span style={{ width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
                 <span style={{ fontSize: 14, color: '#374151' }}>{row.label}</span>
               </div>
             ))}
@@ -1016,7 +1004,7 @@ export default function ReservationPage() {
             {techniquesSelectionnees.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{EMOJI_MAP[t.categorie] ?? '✨'} {t.nom}</p>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><SpecialiteIcon specialite={t.categorie} size={16} />{t.nom}</p>
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
@@ -1035,8 +1023,8 @@ export default function ReservationPage() {
 
           {/* Adresse — uniquement sur la page de confirmation, style discret */}
           {pro?.adresse && (
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5 }}>
-              📍 {pro.adresse}
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <MapPin size={14} color={GLAMIA_PINK} />{pro.adresse}
             </p>
           )}
 
@@ -1143,7 +1131,7 @@ export default function ReservationPage() {
         ──────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h2 style={S.h2}>Bonjour ! 👋</h2>
+            <h2 style={S.h2}>Bonjour !</h2>
             <p style={S.sub}>Entrez votre numéro pour commencer.</p>
 
             <label style={S.label}>Téléphone</label>
@@ -1173,7 +1161,7 @@ export default function ReservationPage() {
             {phoneStatus === 'known' && (
               <div>
                 <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 28 }}>👋</span>
+                  <User size={28} color={GLAMIA_PINK} />
                   <div>
                     <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
                     <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
@@ -1193,7 +1181,7 @@ export default function ReservationPage() {
                           {/* Confirmation visuelle reprog */}
                           {reprogDone === rdv.id && (
                             <div style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center' }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14 }}>✓ RDV reprogrammé !</p>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />RDV reprogrammé !</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
                                 {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
                               </p>
@@ -1246,7 +1234,7 @@ export default function ReservationPage() {
                           {reprogRdvId === rdv.id && (
                             <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0 }}>📅 Nouvelle date</p>
+                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={18} color={GLAMIA_PINK} />Nouvelle date</p>
                                 <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>
                                   ✕ Fermer
                                 </button>
@@ -1308,7 +1296,7 @@ export default function ReservationPage() {
                               {reprogDate && (
                                 <div style={{ marginTop: 16 }}>
                                   <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: '0 0 10px', textTransform: 'capitalize' }}>
-                                    🕐 {formatDateLong(reprogDate)}
+                                    <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{formatDateLong(reprogDate)}
                                   </p>
                                   {reprogLoadingSlots ? (
                                     <p style={{ textAlign: 'center', color: PINK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
@@ -1385,7 +1373,7 @@ export default function ReservationPage() {
               <div>
                 <div style={{ ...S.card, marginBottom: 16 }}>
                   <p style={{ fontWeight: 600, color: '#374151', marginBottom: 16, fontSize: 15 }}>
-                    Première visite ? Enchanté(e) ! 🌸
+                    Première visite ? Enchanté(e) !
                   </p>
                   <div style={{ display: 'flex', gap: 12 }}>
                     <div style={{ flex: 1 }}>
@@ -1488,7 +1476,7 @@ export default function ReservationPage() {
                                   background: selected ? PINK : 'transparent',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}>
-                                  {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                                  {selected && <CheckCircle size={14} color="#fff" />}
                                 </div>
                                 <div style={{ flex: 1 }}>
                                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
@@ -1517,7 +1505,7 @@ export default function ReservationPage() {
         {step === 3 && (
           <div>
             <BackBtn onClick={() => setStep(2)} />
-            <h2 style={S.h2}>📅 Choisissez une date</h2>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={20} color={GLAMIA_PINK} />Choisissez une date</h2>
             <p style={S.sub}>Sélectionnez un jour disponible.</p>
 
             {/* Carte premier créneau disponible */}
@@ -1625,7 +1613,7 @@ export default function ReservationPage() {
         {step === 4 && (
           <div>
             <BackBtn onClick={() => setStep(3)} />
-            <h2 style={S.h2}>🕐 Choisissez une heure</h2>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color={GLAMIA_PINK} />Choisissez une heure</h2>
             <p style={{ ...S.sub, textTransform: 'capitalize' }}>{formatDateLong(date)}</p>
             <p style={{ fontSize: 13, color: '#9ca3af', marginTop: -16, marginBottom: 20 }}>
               Durée totale : {formatDuree(dureeTotal)}
@@ -1637,7 +1625,7 @@ export default function ReservationPage() {
               </div>
             ) : slots.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>😔</div>
+                <Clock size={40} color="#9ca3af" style={{ marginBottom: 12 }} />
                 <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
                 <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
                   ← Choisir une autre date
@@ -1677,7 +1665,7 @@ export default function ReservationPage() {
         {step === 5 && (
           <div ref={step5Ref}>
             <BackBtn onClick={() => setStep(4)} />
-            <h2 style={S.h2}>Confirmation 🌸</h2>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle size={20} color={GLAMIA_PINK} />Confirmation</h2>
             <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
 
             <div style={{ ...S.card, marginBottom: 16 }}>
@@ -1685,14 +1673,14 @@ export default function ReservationPage() {
 
               {/* Infos principales */}
               {[
-                { emoji: '👤', label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
-                { emoji: '📅', label: 'Date',     value: formatDateLong(date) },
-                { emoji: '🕐', label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
-                ...(prixTotal > 0 ? [{ emoji: '💶', label: 'Total', value: `${prixTotal} €` }] : []),
+                { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
+                { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
+                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
+                ...(prixTotal > 0 ? [{ icon: <CreditCard size={20} color={GLAMIA_PINK} />, label: 'Total', value: `${prixTotal} €` }] : []),
               ].map((row, i) => (
                 <div key={i}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0' }}>
-                    <span style={{ fontSize: 20, width: 26, flexShrink: 0 }}>{row.emoji}</span>
+                    <span style={{ width: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
                     <div>
                       <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{row.label}</p>
                       <p style={{ fontSize: 15, color: '#1f2937', fontWeight: 500, margin: '2px 0 0' }}>{row.value}</p>
@@ -1705,7 +1693,7 @@ export default function ReservationPage() {
               {/* Techniques sélectionnées */}
               <div style={{ padding: '10px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <span style={{ fontSize: 20, width: 26, flexShrink: 0 }}>✨</span>
+                  <span style={{ width: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles size={20} color={GLAMIA_PINK} /></span>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>Prestations</p>
                     {techniquesSelectionnees.map((t, i) => (
@@ -1753,7 +1741,7 @@ export default function ReservationPage() {
                 background: rappel ? PINK : 'transparent', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s',
               }}>
-                {rappel && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
+                {rappel && <CheckCircle size={14} color="#fff" />}
               </div>
               <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.4 }}>
                 Souhaitez-vous être rappelée avant votre rendez-vous ?
@@ -1765,7 +1753,7 @@ export default function ReservationPage() {
               disabled={submitting}
               style={{ ...S.btn, opacity: submitting ? 0.7 : 1, boxShadow: `0 4px 20px ${PINK}55` }}
             >
-              {submitting ? 'Enregistrement...' : '✓ Confirmer ma réservation'}
+              {submitting ? 'Enregistrement...' : 'Confirmer ma réservation'}
             </button>
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
