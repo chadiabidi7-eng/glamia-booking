@@ -178,12 +178,13 @@ function generateSlots(
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const limite = date === todayStr ? new Date(Date.now() + 60 * 60 * 1000) : null
-  const limiteMin = limite ? limite.getHours() * 60 + limite.getMinutes() : 0
+  // Limite = maintenant + 1h, en minutes depuis minuit du jour courant
+  // Calcul direct depuis now pour éviter le bug de dépassement minuit (ex: 23h13 + 1h = 00h13 le lendemain → getHours()=0)
+  const limiteMin = date === todayStr ? now.getHours() * 60 + now.getMinutes() + 60 : 0
 
   const slots: Slot[] = []
   for (let t = debut; t + duree <= fin; t += INTERVAL) {
-    if (limite && t < limiteMin) continue
+    if (limiteMin > 0 && t < limiteMin) continue
     const end = t + duree
     const isTaken = taken.some(r => t < r.end && end > r.start)
     slots.push({ heure: minToTime(t), disponible: !isTaken })
@@ -747,6 +748,7 @@ export default function ReservationPage() {
 
         const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [])
         const available = daySlots.find(s => s.disponible)
+        console.log('[firstAvailable] now:', new Date().toISOString(), 'day:', dateStr, 'slots dispo:', daySlots.filter(s => s.disponible).map(s => s.heure), 'candidate:', available?.heure ?? 'none')
 
         if (available) {
           setPremierCreneau({ date: dateStr, heure: available.heure })
