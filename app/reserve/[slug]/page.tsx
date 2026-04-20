@@ -338,50 +338,38 @@ export default function ReservationPage() {
 
   async function loadPro() {
     setPageState('loading')
-    console.log('[loadPro] slug reçu depuis URL:', JSON.stringify(slug))
     try {
-      // 1. Chercher par colonne slug directement
-      const { data: bySlug, error: errSlug } = await supabase
+      // 1. Chercher par colonne slug (order by created_at pour prendre le profil original si doublons)
+      const { data: bySlugArr, error: errSlug } = await supabase
         .from('profiles')
         .select('*')
         .eq('slug', slug)
-        .maybeSingle()
+        .order('created_at', { ascending: true })
+        .limit(1)
 
-      console.log('[loadPro] requête .eq("slug") →', { found: !!bySlug, data: bySlug, error: errSlug })
-
-      let found: any = bySlug
+      if (errSlug) throw errSlug
+      let found: any = bySlugArr?.[0] ?? null
 
       // 2. Fallback : matching par slug normalisé (prenom-nom ou pseudo-nom)
       if (!found) {
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select('*')
+          .order('created_at', { ascending: true })
 
-        console.log('[loadPro] fallback — tous les profils récupérés:', profiles?.length ?? 0, '| erreur:', error)
         if (error) throw error
 
         const normalized = normalizeStr(slug)
-        console.log('[loadPro] fallback — slug normalisé à matcher:', normalized)
-        profiles?.forEach(p => {
-          const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
-          const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
-          console.log(`  profil id=${p.id} slug_db=${JSON.stringify(p.slug)} → fromPrenom="${fromPrenom}" fromPseudo="${fromPseudo}"`)
-        })
-
         found = profiles?.find(p => {
           const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
           const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
           return fromPrenom === normalized || fromPseudo === normalized
         })
-        console.log('[loadPro] fallback — profil trouvé:', !!found, found ? `id=${found.id}` : '')
       }
 
       if (!found) {
-        console.warn('[loadPro] NOTFOUND — aucun profil ne correspond au slug:', JSON.stringify(slug))
         setPageState('notfound'); return
       }
-
-      console.log('[DEBUG] profiles.horaires brut:', JSON.stringify(found.horaires))
 
       setPro({
         id:              found.id,
