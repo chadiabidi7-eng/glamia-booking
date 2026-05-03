@@ -13,20 +13,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Glamia — Réservation en ligne",
-  description: "Prenez rendez-vous chez votre professionnelle de beauté en quelques clics.",
+  metadataBase: new URL('https://booking.glamia.pro'),
+  title: "Glamia",
+  description: "Réservation en ligne chez votre professionnelle de beauté",
   applicationName: "Glamia",
   openGraph: {
     type: "website",
     siteName: "Glamia",
-    title: "Glamia — Réservation en ligne",
-    description: "Prenez rendez-vous chez votre professionnelle de beauté en quelques clics.",
+    title: "Glamia",
+    description: "Réservation en ligne chez votre professionnelle de beauté",
+    url: "https://booking.glamia.pro",
     locale: "fr_FR",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1024,
+        height: 1024,
+        alt: "Glamia",
+      },
+    ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Glamia — Réservation en ligne",
-    description: "Prenez rendez-vous chez votre professionnelle de beauté en quelques clics.",
+    card: "summary",
+    title: "Glamia",
+    description: "Réservation en ligne chez votre professionnelle de beauté",
+    images: ["/og-image.png"],
   },
 };
 

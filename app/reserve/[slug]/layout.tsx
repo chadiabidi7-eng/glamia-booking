@@ -12,8 +12,8 @@ export async function generateMetadata(
   const { slug } = await params
 
   const fallback: Metadata = {
-    title: 'Glamia — Réservation en ligne',
-    description: 'Prenez rendez-vous chez votre professionnelle de beauté en quelques clics.',
+    title: 'Glamia',
+    description: 'Réservation en ligne chez votre professionnelle de beauté',
   }
 
   try {
@@ -28,8 +28,8 @@ export async function generateMetadata(
     const pro = data?.[0]
     if (!pro) return fallback
 
-    const title = `Réservez chez ${pro.prenom} ${pro.nom} | Glamia`
-    const description = `Prenez rendez-vous en ligne avec ${pro.prenom} ${pro.nom} sur Glamia.`
+    const title = `${pro.prenom} ${pro.nom} — Glamia`
+    const description = `Réservez votre rendez-vous beauté en ligne`
 
     return {
       title,
@@ -40,11 +40,20 @@ export async function generateMetadata(
         title,
         description,
         locale: 'fr_FR',
+        images: [
+          {
+            url: '/og-image.png',
+            width: 1024,
+            height: 1024,
+            alt: 'Glamia',
+          },
+        ],
       },
       twitter: {
-        card: 'summary_large_image',
+        card: 'summary',
         title,
         description,
+        images: ['/og-image.png'],
       },
     }
   } catch {
