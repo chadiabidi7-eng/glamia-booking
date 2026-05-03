@@ -17,6 +17,14 @@ type CataloguePrestations = Record<string, Technique[]>
 // Technique sélectionnée avec catégorie embarquée
 type TechSelec = { categorie: string; nom: string; prix: number; duree: number }
 
+type CreneauBloque = {
+  id: string
+  date: string            // YYYY-MM-DD
+  touteLaJournee: boolean
+  debut?: string          // "HH:mm"
+  fin?: string            // "HH:mm"
+}
+
 type ProInfo = {
   id: string
   prenom: string
@@ -24,6 +32,7 @@ type ProInfo = {
   pseudo?: string
   photo_url?: string
   horaires: HorairesHebdo
+  creneaux_bloques: CreneauBloque[]
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -157,15 +166,21 @@ function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
   return h?.actif === true || h?.active === true
 }
 
+function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
+  return bloques.some(b => b.date === dateStr && b.touteLaJournee)
+}
+
 function generateSlots(
   date: string,
   duree: number,
   horaires: HorairesHebdo,
   rdvExistants: { heure: string; duree: number }[],
+  bloques: CreneauBloque[] = [],
 ): Slot[] {
   const jour = new Date(date + 'T00:00:00').getDay()
   const h = horaires[jour]
   if (!h?.actif && !h?.active) return []
+  if (bloques.some(b => b.date === date && b.touteLaJournee)) return []
 
   const debut = timeToMin(h.debut)
   const fin   = timeToMin(h.fin)
@@ -175,6 +190,10 @@ function generateSlots(
     start: timeToMin(r.heure),
     end:   timeToMin(r.heure) + r.duree,
   }))
+
+  const blockedRanges = bloques
+    .filter(b => b.date === date && !b.touteLaJournee && b.debut && b.fin)
+    .map(b => ({ start: timeToMin(b.debut!), end: timeToMin(b.fin!) }))
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -187,7 +206,8 @@ function generateSlots(
     if (limiteMin > 0 && t < limiteMin) continue
     const end = t + duree
     const isTaken = taken.some(r => t < r.end && end > r.start)
-    slots.push({ heure: minToTime(t), disponible: !isTaken })
+    const isBlocked = blockedRanges.some(r => t < r.end && end > r.start)
+    slots.push({ heure: minToTime(t), disponible: !isTaken && !isBlocked })
   }
   return slots
 }
@@ -327,9 +347,16 @@ export default function ReservationPage() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${pro.id}` },
         (payload) => {
-          if (payload.new?.horaires) {
-            console.log('[Realtime] horaires mis à jour:', JSON.stringify(payload.new.horaires))
-            setPro(prev => prev ? { ...prev, horaires: payload.new.horaires } : prev)
+          if (payload.new?.horaires || payload.new?.creneaux_bloques !== undefined) {
+            console.log('[Realtime] profil mis à jour')
+            setPro(prev => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                ...(payload.new?.horaires ? { horaires: payload.new.horaires } : {}),
+                creneaux_bloques: Array.isArray(payload.new?.creneaux_bloques) ? payload.new.creneaux_bloques : prev.creneaux_bloques,
+              }
+            })
           }
         }
       )
@@ -373,18 +400,19 @@ export default function ReservationPage() {
       }
 
       setPro({
-        id:              found.id,
-        prenom:          found.prenom,
-        nom:             found.nom,
-        pseudo:          found.pseudo ?? undefined,
-        photo_url:       found.avatar_url ?? found.photo_url ?? undefined,
-        horaires:        found.horaires ?? DEFAULT_HORAIRES,
-        instagram:       found.instagram ?? undefined,
-        tiktok:          found.tiktok ?? undefined,
-        snapchat:        found.snapchat ?? undefined,
-        message_accueil: found.message_accueil ?? undefined,
-        adresse:         found.adresse ?? undefined,
-        is_pro:          found.is_pro ?? false,
+        id:               found.id,
+        prenom:           found.prenom,
+        nom:              found.nom,
+        pseudo:           found.pseudo ?? undefined,
+        photo_url:        found.avatar_url ?? found.photo_url ?? undefined,
+        horaires:         found.horaires ?? DEFAULT_HORAIRES,
+        creneaux_bloques: Array.isArray(found.creneaux_bloques) ? found.creneaux_bloques : [],
+        instagram:        found.instagram ?? undefined,
+        tiktok:           found.tiktok ?? undefined,
+        snapchat:         found.snapchat ?? undefined,
+        message_accueil:  found.message_accueil ?? undefined,
+        adresse:          found.adresse ?? undefined,
+        is_pro:           found.is_pro ?? false,
       })
 
       if (!found.is_pro) { setPageState('blocked'); return }
@@ -553,7 +581,7 @@ export default function ReservationPage() {
         }
       })
 
-      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants))
+      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants, pro.creneaux_bloques))
     } catch (e) {
       console.error('[reprogSelectDate] Erreur:', e)
     } finally {
@@ -694,7 +722,7 @@ export default function ReservationPage() {
         }
       })
 
-      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants))
+      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants, pro.creneaux_bloques))
     } catch (e) {
       console.error(e)
     } finally {
@@ -745,8 +773,9 @@ export default function ReservationPage() {
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
 
         if (!isDayWorking(dateStr, pro.horaires)) continue
+        if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
 
-        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [])
+        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [], pro.creneaux_bloques)
         const available = daySlots.find(s => s.disponible)
         console.log('[firstAvailable] now:', new Date().toISOString(), 'day:', dateStr, 'slots dispo:', daySlots.filter(s => s.disponible).map(s => s.heure), 'candidate:', available?.heure ?? 'none')
 
@@ -1306,7 +1335,7 @@ export default function ReservationPage() {
                                   const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
                                   const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
                                   const isPast = dayDate < today0
-                                  const isOff = !isDayWorking(dateStr, pro!.horaires)
+                                  const isOff = !isDayWorking(dateStr, pro!.horaires) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                                   const isDisabled = isPast || isOff
                                   const isSelected = reprogDate === dateStr
 
@@ -1610,7 +1639,7 @@ export default function ReservationPage() {
                 const dateStr = buildDateStr(calYear, calMonth, day)
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
-                const isOff   = !isDayWorking(dateStr, pro!.horaires)
+                const isOff   = !isDayWorking(dateStr, pro!.horaires) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                 const isDisabled = isPast || isOff
                 const isSelected = date === dateStr
 
