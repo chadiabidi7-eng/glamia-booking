@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Sparkles, Search } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Sparkles, Search, Info } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
 type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string }
 type HorairesHebdo = Record<number, HorairesJour>
-type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number }
+type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; prix_type?: 'fixe' | 'a_partir_de' }
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée
@@ -311,6 +311,7 @@ export default function ReservationPage() {
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
+  const [descriptionPopup, setDescriptionPopup] = useState<{ nom: string; description: string } | null>(null)
 
   // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
@@ -1546,11 +1547,19 @@ export default function ReservationPage() {
                                   {selected && <CheckCircle size={14} color="#fff" />}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
+                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
                                     {t.nom}
+                                    {t.description && (
+                                      <span
+                                        onClick={(e) => { e.stopPropagation(); setDescriptionPopup({ nom: t.nom, description: t.description! }) }}
+                                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                                      >
+                                        <Info size={15} color={PINK} />
+                                      </span>
+                                    )}
                                   </p>
                                   <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
-                                    {t.prix > 0 ? `${t.prix} €` : 'Gratuit'} · {formatDuree(t.duree)}
+                                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}
                                   </p>
                                 </div>
                               </button>
@@ -1879,6 +1888,43 @@ export default function ReservationPage() {
                 Continuer →
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup description technique */}
+      {descriptionPopup && (
+        <div
+          onClick={() => setDescriptionPopup(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 20, padding: 24,
+              maxWidth: 380, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+          >
+            <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 12px' }}>
+              {descriptionPopup.nom}
+            </p>
+            <p style={{ fontSize: 14, color: '#4b5563', margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {descriptionPopup.description}
+            </p>
+            <button
+              onClick={() => setDescriptionPopup(null)}
+              style={{
+                width: '100%', padding: 12, borderRadius: 12, border: 'none',
+                background: PINK_LIGHT, color: PINK, fontWeight: 600, fontSize: 14,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Fermer
+            </button>
           </div>
         </div>
       )}
