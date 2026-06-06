@@ -15,7 +15,7 @@ type Technique = { id: string; nom: string; active: boolean; prix: number; duree
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée
-type TechSelec = { categorie: string; nom: string; prix: number; duree: number }
+type TechSelec = { categorie: string; nom: string; prix: number; duree: number; prix_type?: 'fixe' | 'a_partir_de' }
 
 type CreneauBloque = {
   id: string
@@ -689,7 +689,7 @@ export default function ReservationPage() {
     setTechniquesSelectionnees(prev => {
       const exists = prev.find(s => s.nom === t.nom && s.categorie === cat)
       if (exists) return prev.filter(s => !(s.nom === t.nom && s.categorie === cat))
-      return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat }]
+      return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat, prix_type: t.prix_type }]
     })
     // Réinitialiser date/heure si on change les techniques
     setDate('')
@@ -1073,7 +1073,7 @@ export default function ReservationPage() {
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
-                  {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                  {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : '—')} · {formatDuree(t.duree)}
                 </span>
               </div>
             ))}
@@ -1868,7 +1868,7 @@ export default function ReservationPage() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{t.categorie}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : '—')} · {formatDuree(t.duree)}
                   </span>
                 </div>
               ))}
