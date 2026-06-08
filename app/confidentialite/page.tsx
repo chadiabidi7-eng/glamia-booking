@@ -2,7 +2,7 @@ export default function ConfidentialitePage() {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }}>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Politique de confidentialité</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 32 }}>Dernière mise à jour : 29 mars 2026</p>
+      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 32 }}>Dernière mise à jour : 3 juin 2026</p>
 
       <Section title="1. Responsable du traitement">
         <p>Glamia, application de gestion de rendez-vous pour professionnels de la beauté.</p>
@@ -12,6 +12,7 @@ export default function ConfidentialitePage() {
         <p>Lors de la prise de rendez-vous en ligne, nous collectons :</p>
         <ul>
           <li>Prénom et nom</li>
+          <li>Adresse email</li>
           <li>Numéro de téléphone</li>
           <li>Prestations choisies, date et heure du rendez-vous</li>
           <li>Commentaires optionnels laissés par la cliente</li>
@@ -22,7 +23,7 @@ export default function ConfidentialitePage() {
         <p>Vos données sont utilisées exclusivement pour :</p>
         <ul>
           <li>La gestion et le suivi de vos rendez-vous</li>
-          <li>L&apos;envoi de rappels et notifications liés à vos rendez-vous</li>
+          <li>L&apos;envoi de confirmations, rappels et notifications par email liés à vos rendez-vous</li>
           <li>La communication entre vous et votre praticienne</li>
         </ul>
       </Section>
