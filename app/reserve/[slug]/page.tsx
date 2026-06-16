@@ -294,6 +294,129 @@ function SocialLink({ reseau, pseudo, size = 18 }: { reseau: 'instagram' | 'tikt
 }
 
 // ─────────────────────────────────────────────
+// Offres Section
+// ─────────────────────────────────────────────
+
+function getTechInfo(pid: string, catalogue: CataloguePrestations): { nom: string; categorie: string; duree: number; prix: number } | null {
+  for (const [cat, techs] of Object.entries(catalogue)) {
+    const t = techs.find(x => x.id === pid)
+    if (t) return { nom: t.nom, categorie: cat, duree: t.duree, prix: t.prix }
+  }
+  return null
+}
+
+function OffresSection({
+  offres, offreAppliquee, catalogue, techniquesSelectionnees, onApply, onRemove,
+}: {
+  offres: Offre[]
+  offreAppliquee: Offre | null
+  catalogue: CataloguePrestations
+  techniquesSelectionnees: TechSelec[]
+  onApply: (o: Offre) => void
+  onRemove: (o: Offre) => void
+}) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? offres : offres.slice(0, 3)
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, border: `1.5px solid ${PINK}` }}>
+        <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Sparkles size={16} color={PINK} /> Offres en cours
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {visible.map(o => {
+            const isApplied = offreAppliquee?.id === o.id
+            const techInfos = o.prestations_ids.map(pid => getTechInfo(pid, catalogue)).filter(Boolean) as { nom: string; categorie: string; duree: number; prix: number }[]
+            const prixOrig = techInfos.reduce((s, t) => s + t.prix, 0)
+            const dureeTotal = techInfos.reduce((s, t) => s + t.duree, 0)
+
+            return (
+              <button
+                key={o.id}
+                onClick={() => isApplied ? onRemove(o) : onApply(o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12,
+                  padding: '12px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                  border: isApplied ? `2px solid ${PINK}` : '1.5px solid #e5e7eb',
+                  background: isApplied ? PINK_LIGHT : '#fff',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: 5, flexShrink: 0, marginTop: 2,
+                  border: `2px solid ${isApplied ? PINK : '#d1d5db'}`,
+                  background: isApplied ? PINK : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isApplied && <CheckCircle size={14} color="#fff" />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span style={{
+                      background: o.type === 'prix_fixe' ? PINK : '#7B1FA2',
+                      color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700,
+                      padding: '1px 5px', flexShrink: 0,
+                    }}>
+                      {o.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
+                  </div>
+                  {/* Prestations — une par ligne avec icône spécialité */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {techInfos.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <SpecialiteIcon specialite={t.categorie} size={14} />
+                        <span style={{ fontSize: 12, color: '#6b7280' }}>{t.nom}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Durée totale */}
+                  {dureeTotal > 0 && (
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>
+                      {dureeTotal} min au total
+                    </p>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  {prixOrig > 0 && prixOrig !== o.prix_promo && (
+                    <div style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>{prixOrig} €</div>
+                  )}
+                  <div style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{o.prix_promo} €</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        {offres.length > 3 && !showAll && (
+          <button
+            onClick={() => setShowAll(true)}
+            style={{
+              width: '100%', marginTop: 8, padding: '8px 0',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, color: PINK,
+            }}
+          >
+            Voir les {offres.length - 3} autres offres
+          </button>
+        )}
+        {showAll && offres.length > 3 && (
+          <button
+            onClick={() => setShowAll(false)}
+            style={{
+              width: '100%', marginTop: 8, padding: '8px 0',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, color: PINK,
+            }}
+          >
+            Voir moins
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
 export default function ReservationPage() {
@@ -1557,121 +1680,52 @@ export default function ReservationPage() {
 
             {/* Offres en cours */}
             {offresEligibles.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, border: `1.5px solid ${PINK}` }}>
-                  <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Sparkles size={16} color={PINK} /> Offres en cours
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {offresEligibles.map(o => {
-                      const isApplied = offreAppliquee?.id === o.id
-                      // Trouver les noms des prestations concernées
-                      const techNoms = o.prestations_ids.map(pid => {
-                        for (const techs of Object.values(catalogue)) {
-                          const t = techs.find(x => x.id === pid)
-                          if (t) return t.nom
+              <OffresSection
+                offres={offresEligibles}
+                offreAppliquee={offreAppliquee}
+                catalogue={catalogue}
+                techniquesSelectionnees={techniquesSelectionnees}
+                onApply={(o) => {
+                  setOffreAppliquee(o)
+                  if (o.type === 'pack') {
+                    const newTechs: TechSelec[] = []
+                    for (const [cat, techs] of Object.entries(catalogue)) {
+                      for (const t of techs) {
+                        if (o.prestations_ids.includes(t.id)) {
+                          newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
                         }
-                        return ''
-                      }).filter(Boolean)
-                      // Prix original
-                      const prixOrig = o.prestations_ids.reduce((sum, pid) => {
-                        for (const techs of Object.values(catalogue)) {
-                          const t = techs.find(x => x.id === pid)
-                          if (t) return sum + t.prix
+                      }
+                    }
+                    setTechniquesSelectionnees(newTechs)
+                  }
+                  if (o.type === 'prix_fixe') {
+                    for (const [cat, techs] of Object.entries(catalogue)) {
+                      for (const t of techs) {
+                        if (o.prestations_ids.includes(t.id)) {
+                          const already = techniquesSelectionnees.some(s => s.nom === t.nom && s.categorie === cat)
+                          if (!already) {
+                            setTechniquesSelectionnees(prev => [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
+                          }
                         }
-                        return sum
-                      }, 0)
-
-                      return (
-                        <button
-                          key={o.id}
-                          onClick={() => {
-                            if (isApplied) {
-                              setOffreAppliquee(null)
-                              // Désélectionner les techniques du pack
-                              if (o.type === 'pack') {
-                                setTechniquesSelectionnees(prev => prev.filter(t => {
-                                  // Trouver la tech par nom+cat pour retirer celles du pack
-                                  for (const [cat, techs] of Object.entries(catalogue)) {
-                                    const match = techs.find(x => o.prestations_ids.includes(x.id) && x.nom === t.nom && cat === t.categorie)
-                                    if (match) return false
-                                  }
-                                  return true
-                                }))
-                              }
-                            } else {
-                              setOffreAppliquee(o)
-                              // Pour les packs : sélectionner automatiquement les prestations
-                              if (o.type === 'pack') {
-                                const newTechs: TechSelec[] = []
-                                for (const [cat, techs] of Object.entries(catalogue)) {
-                                  for (const t of techs) {
-                                    if (o.prestations_ids.includes(t.id)) {
-                                      newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
-                                    }
-                                  }
-                                }
-                                setTechniquesSelectionnees(newTechs)
-                              }
-                              // Pour prix_fixe : sélectionner la prestation si pas déjà sélectionnée
-                              if (o.type === 'prix_fixe') {
-                                for (const [cat, techs] of Object.entries(catalogue)) {
-                                  for (const t of techs) {
-                                    if (o.prestations_ids.includes(t.id)) {
-                                      const already = techniquesSelectionnees.some(s => s.nom === t.nom && s.categorie === cat)
-                                      if (!already) {
-                                        setTechniquesSelectionnees(prev => [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                              setDate('')
-                              setHeure('')
-                            }
-                          }}
-                          style={{
-                            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                            padding: '12px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                            border: isApplied ? `2px solid ${PINK}` : '1.5px solid #e5e7eb',
-                            background: isApplied ? PINK_LIGHT : '#fff',
-                          }}
-                        >
-                          <div style={{
-                            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                            border: `2px solid ${isApplied ? PINK : '#d1d5db'}`,
-                            background: isApplied ? PINK : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {isApplied && <CheckCircle size={14} color="#fff" />}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{
-                                background: o.type === 'prix_fixe' ? PINK : '#7B1FA2',
-                                color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700,
-                                padding: '1px 5px',
-                              }}>
-                                {o.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
-                              </span>
-                              <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
-                            </div>
-                            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280' }}>
-                              {techNoms.join(' + ')}
-                            </p>
-                          </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            {prixOrig > 0 && prixOrig !== o.prix_promo && (
-                              <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through', marginRight: 4 }}>{prixOrig} €</span>
-                            )}
-                            <span style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{o.prix_promo} €</span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
+                      }
+                    }
+                  }
+                  setDate('')
+                  setHeure('')
+                }}
+                onRemove={(o) => {
+                  setOffreAppliquee(null)
+                  if (o.type === 'pack') {
+                    setTechniquesSelectionnees(prev => prev.filter(t => {
+                      for (const [cat, techs] of Object.entries(catalogue)) {
+                        const match = techs.find(x => o.prestations_ids.includes(x.id) && x.nom === t.nom && cat === t.categorie)
+                        if (match) return false
+                      }
+                      return true
+                    }))
+                  }
+                }}
+              />
             )}
 
             <h2 style={S.h2}>Quelles prestations ?</h2>
