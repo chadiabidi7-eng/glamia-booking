@@ -27,6 +27,23 @@ type CreneauBloque = {
   motif?: string
 }
 
+type Offre = {
+  id: string
+  pro_id: string
+  type: 'prix_fixe' | 'pack'
+  nom: string
+  prestations_ids: string[]
+  prix_promo: number
+  cible: 'toutes' | 'nouvelles' | 'existantes'
+  date_debut?: string | null
+  date_fin?: string | null
+  utilisations_max?: number | null
+  utilisations_actuelles: number
+  active: boolean
+  archived_at?: string | null
+  created_at: string
+}
+
 type ProInfo = {
   id: string
   prenom: string
@@ -315,6 +332,10 @@ export default function ReservationPage() {
   const [reprogSaving, setReprogSaving]     = useState(false)
   const [reprogDone, setReprogDone]         = useState<string | null>(null) // rdvId once done
 
+  // ── Offres ──────────────────────────────────
+  const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
+  const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
+
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
@@ -341,7 +362,8 @@ export default function ReservationPage() {
 
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
-  const prixTotal  = techniquesSelectionnees.reduce((s, t) => s + t.prix,  0)
+  const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix, 0)
+  const prixTotal = offreAppliquee ? offreAppliquee.prix_promo : prixTotalBrut
 
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
@@ -467,9 +489,30 @@ export default function ReservationPage() {
       } else {
         setPhoneStatus('unknown')
       }
+
+      // Charger les offres éligibles pour ce téléphone
+      chargerOffresEligibles(pro.id, normalized)
+
     } catch (e) {
       console.error('[handleCheckPhone] Erreur:', e)
       setPhoneStatus('unknown')
+    }
+  }
+
+  // ── Offres éligibles ────────────────────────
+  async function chargerOffresEligibles(proId: string, tel: string) {
+    try {
+      const { data, error } = await supabase.rpc('get_eligible_offers', {
+        p_pro_id: proId,
+        p_telephone: tel,
+      })
+      if (error) { console.error('[chargerOffresEligibles]', error); return }
+      setOffresEligibles((data ?? []).map((o: any) => ({
+        ...o,
+        prestations_ids: Array.isArray(o.prestations_ids) ? o.prestations_ids : [],
+      })))
+    } catch (e) {
+      console.error('[chargerOffresEligibles]', e)
     }
   }
 
@@ -698,9 +741,10 @@ export default function ReservationPage() {
       if (exists) return prev.filter(s => !(s.nom === t.nom && s.categorie === cat))
       return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat, prix_type: t.prix_type }]
     })
-    // Réinitialiser date/heure si on change les techniques
+    // Réinitialiser date/heure + offre si on change les techniques manuellement
     setDate('')
     setHeure('')
+    setOffreAppliquee(null)
   }
 
   // ── Step 4 : Load slots ───────────────────────
@@ -863,6 +907,31 @@ export default function ReservationPage() {
         .single()
 
       if (rdvErr) throw rdvErr
+
+      // Appliquer l'offre si sélectionnée
+      if (nouveau?.id && offreAppliquee) {
+        try {
+          const result = await supabase.rpc('apply_offer_to_rdv', {
+            p_offre_id: offreAppliquee.id,
+            p_rdv_id: nouveau.id,
+            p_telephone: telNormalized,
+          })
+          if (result.error) {
+            console.error('[handleConfirm] Erreur application offre:', result.error)
+          } else {
+            const res = result.data as { success: boolean; error?: string }
+            if (!res.success) {
+              console.warn('[handleConfirm] Offre non appliquée:', res.error)
+              // Recalculer le prix sans offre
+              const prixSansOffre = prixTotalBrut > 0 ? prixTotalBrut : null
+              await supabase.from('rendez_vous').update({ prix: prixSansOffre, offre_id: null }).eq('id', nouveau.id)
+            }
+          }
+        } catch (e) {
+          console.error('[handleConfirm] Exception application offre:', e)
+        }
+      }
+
       setPageState('confirmed')
 
       // Email de confirmation à la cliente (non bloquant)
@@ -1485,6 +1554,126 @@ export default function ReservationPage() {
         {step === 2 && (
           <div>
             <BackBtn onClick={() => setStep(1)} />
+
+            {/* Offres en cours */}
+            {offresEligibles.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, border: `1.5px solid ${PINK}` }}>
+                  <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Sparkles size={16} color={PINK} /> Offres en cours
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {offresEligibles.map(o => {
+                      const isApplied = offreAppliquee?.id === o.id
+                      // Trouver les noms des prestations concernées
+                      const techNoms = o.prestations_ids.map(pid => {
+                        for (const techs of Object.values(catalogue)) {
+                          const t = techs.find(x => x.id === pid)
+                          if (t) return t.nom
+                        }
+                        return ''
+                      }).filter(Boolean)
+                      // Prix original
+                      const prixOrig = o.prestations_ids.reduce((sum, pid) => {
+                        for (const techs of Object.values(catalogue)) {
+                          const t = techs.find(x => x.id === pid)
+                          if (t) return sum + t.prix
+                        }
+                        return sum
+                      }, 0)
+
+                      return (
+                        <button
+                          key={o.id}
+                          onClick={() => {
+                            if (isApplied) {
+                              setOffreAppliquee(null)
+                              // Désélectionner les techniques du pack
+                              if (o.type === 'pack') {
+                                setTechniquesSelectionnees(prev => prev.filter(t => {
+                                  // Trouver la tech par nom+cat pour retirer celles du pack
+                                  for (const [cat, techs] of Object.entries(catalogue)) {
+                                    const match = techs.find(x => o.prestations_ids.includes(x.id) && x.nom === t.nom && cat === t.categorie)
+                                    if (match) return false
+                                  }
+                                  return true
+                                }))
+                              }
+                            } else {
+                              setOffreAppliquee(o)
+                              // Pour les packs : sélectionner automatiquement les prestations
+                              if (o.type === 'pack') {
+                                const newTechs: TechSelec[] = []
+                                for (const [cat, techs] of Object.entries(catalogue)) {
+                                  for (const t of techs) {
+                                    if (o.prestations_ids.includes(t.id)) {
+                                      newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
+                                    }
+                                  }
+                                }
+                                setTechniquesSelectionnees(newTechs)
+                              }
+                              // Pour prix_fixe : sélectionner la prestation si pas déjà sélectionnée
+                              if (o.type === 'prix_fixe') {
+                                for (const [cat, techs] of Object.entries(catalogue)) {
+                                  for (const t of techs) {
+                                    if (o.prestations_ids.includes(t.id)) {
+                                      const already = techniquesSelectionnees.some(s => s.nom === t.nom && s.categorie === cat)
+                                      if (!already) {
+                                        setTechniquesSelectionnees(prev => [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                              setDate('')
+                              setHeure('')
+                            }
+                          }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '12px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                            border: isApplied ? `2px solid ${PINK}` : '1.5px solid #e5e7eb',
+                            background: isApplied ? PINK_LIGHT : '#fff',
+                          }}
+                        >
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                            border: `2px solid ${isApplied ? PINK : '#d1d5db'}`,
+                            background: isApplied ? PINK : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {isApplied && <CheckCircle size={14} color="#fff" />}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{
+                                background: o.type === 'prix_fixe' ? PINK : '#7B1FA2',
+                                color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700,
+                                padding: '1px 5px',
+                              }}>
+                                {o.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
+                              </span>
+                              <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
+                            </div>
+                            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280' }}>
+                              {techNoms.join(' + ')}
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            {prixOrig > 0 && prixOrig !== o.prix_promo && (
+                              <span style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through', marginRight: 4 }}>{prixOrig} €</span>
+                            )}
+                            <span style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{o.prix_promo} €</span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <h2 style={S.h2}>Quelles prestations ?</h2>
             <p style={S.sub}>Sélectionnez une ou plusieurs techniques.</p>
 
@@ -1566,7 +1755,20 @@ export default function ReservationPage() {
                                     )}
                                   </p>
                                   <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
-                                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}
+                                    {(() => {
+                                      // Vérifier si une offre prix_fixe couvre cette technique
+                                      const promoOffre = offresEligibles.find(o => o.type === 'prix_fixe' && o.prestations_ids.includes(t.id))
+                                      if (promoOffre) {
+                                        return (
+                                          <>
+                                            <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{t.prix} €</span>
+                                            <span style={{ color: PINK, fontWeight: 600 }}>{promoOffre.prix_promo} €</span>
+                                            {' · '}{formatDuree(t.duree)}
+                                          </>
+                                        )
+                                      }
+                                      return <>{t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}</>
+                                    })()}
                                   </p>
                                 </div>
                               </button>
@@ -1759,7 +1961,13 @@ export default function ReservationPage() {
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
                 { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
-                ...(prixTotal > 0 ? [{ icon: <CreditCard size={20} color={GLAMIA_PINK} />, label: 'Total', value: `${prixTotal} €` }] : []),
+                ...(prixTotal > 0 ? [{
+                  icon: <CreditCard size={20} color={GLAMIA_PINK} />,
+                  label: 'Total',
+                  value: offreAppliquee && prixTotalBrut !== prixTotal
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
+                    : `${prixTotal} €`
+                }] : []),
               ].map((row, i) => (
                 <div key={i}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0' }}>
@@ -1790,11 +1998,24 @@ export default function ReservationPage() {
                         </span>
                       </div>
                     ))}
+                    {/* Offre appliquée */}
+                    {offreAppliquee && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ background: offreAppliquee.type === 'prix_fixe' ? PINK : '#7B1FA2', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>
+                          {offreAppliquee.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
+                        </span>
+                        <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{offreAppliquee.nom}</span>
+                      </div>
+                    )}
                     {/* Ligne total */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                        {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                        {offreAppliquee && prixTotalBrut !== prixTotal ? (
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotalBrut} €</span>{prixTotal} € · {formatDuree(dureeTotal)}</>
+                        ) : (
+                          <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
+                        )}
                       </span>
                     </div>
                   </div>
