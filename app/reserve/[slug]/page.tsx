@@ -19,10 +19,12 @@ type TechSelec = { categorie: string; nom: string; prix: number; duree: number; 
 
 type CreneauBloque = {
   id: string
-  date: string            // YYYY-MM-DD
+  date: string            // YYYY-MM-DD (ou date début pour période)
+  date_fin?: string       // YYYY-MM-DD (date fin pour période multi-jours)
   touteLaJournee: boolean
-  debut?: string          // "HH:mm"
-  fin?: string            // "HH:mm"
+  debut?: string          // "HH:mm" (créneau horaire uniquement)
+  fin?: string            // "HH:mm" (créneau horaire uniquement)
+  motif?: string
 }
 
 type ProInfo = {
@@ -166,8 +168,13 @@ function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
   return h?.actif === true || h?.active === true
 }
 
+function isDateInPeriod(dateStr: string, b: CreneauBloque): boolean {
+  if (b.date_fin) return dateStr >= b.date && dateStr <= b.date_fin
+  return dateStr === b.date
+}
+
 function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
-  return bloques.some(b => b.date === dateStr && b.touteLaJournee)
+  return bloques.some(b => b.touteLaJournee && isDateInPeriod(dateStr, b))
 }
 
 function generateSlots(
@@ -180,7 +187,7 @@ function generateSlots(
   const jour = new Date(date + 'T00:00:00').getDay()
   const h = horaires[jour]
   if (!h?.actif && !h?.active) return []
-  if (bloques.some(b => b.date === date && b.touteLaJournee)) return []
+  if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
   const debut = timeToMin(h.debut)
   const fin   = timeToMin(h.fin)
