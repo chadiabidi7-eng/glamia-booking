@@ -365,7 +365,7 @@ function OffresSection({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {techInfos.map((t, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <SpecialiteIcon specialite={t.categorie} size={14} />
+                        <SpecialiteIcon specialite={t.categorie} size={18} />
                         <span style={{ fontSize: 12, color: '#6b7280' }}>{t.nom}</span>
                       </div>
                     ))}
