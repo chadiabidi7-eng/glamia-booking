@@ -610,6 +610,10 @@ export default function ReservationPage() {
         setPhoneStatus('known')
         chargerRdvsAVenir(found.id, pro.id)
       } else {
+        setClienteId(null)
+        setClientePrenom('')
+        setClienteNom('')
+        setClienteEmail('')
         setPhoneStatus('unknown')
       }
 
@@ -1063,6 +1067,8 @@ export default function ReservationPage() {
       } else {
         try {
           const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
+          const rdvDateTime = new Date(`${date}T${heure}:00`)
+          const dansMotins24h = (rdvDateTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000
           const emailBody = {
             cliente_email: clienteEmail.trim(),
             cliente_prenom: clientePrenom.trim(),
@@ -1072,6 +1078,7 @@ export default function ReservationPage() {
             duree: formatDuree(dureeTotal),
             prix_total: prixTotal,
             adresse: pro.adresse || '',
+            skip_rappel_notice: dansMotins24h,
             techniques: techniquesSelectionnees.map(t => ({
               nom: t.nom,
               specialite: t.categorie,
