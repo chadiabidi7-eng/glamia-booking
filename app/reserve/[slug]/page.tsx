@@ -185,9 +185,11 @@ function buildDateStr(year: number, month: number, day: number) {
 }
 
 function isDayWorking(dateStr: string, horaires: HorairesHebdo, horairesSpec?: HorairesSpecifiques, planningVar?: boolean) {
-  const spec = horairesSpec?.[dateStr]
-  if (spec) return spec.actif
-  if (planningVar) return false // mode variable sans config = pas dispo
+  if (planningVar) {
+    const spec = horairesSpec?.[dateStr]
+    // En mode variable : dispo uniquement si des plages existent
+    return !!(spec?.plages && spec.plages.length > 0)
+  }
   const jour = new Date(dateStr + 'T00:00:00').getDay()
   const h = horaires[jour]
   return h?.actif === true || h?.active === true
@@ -213,14 +215,12 @@ function generateSlots(
 ): Slot[] {
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
-  const spec = horairesSpec?.[date]
   let plages: { start: number; end: number }[]
 
-  if (spec) {
-    if (!spec.actif) return []
+  if (planningVar) {
+    const spec = horairesSpec?.[date]
+    if (!spec?.plages || spec.plages.length === 0) return []
     plages = spec.plages.map(p => ({ start: timeToMin(p.debut), end: timeToMin(p.fin) }))
-  } else if (planningVar) {
-    return [] // mode variable sans config = pas dispo
   } else {
     const jour = new Date(date + 'T00:00:00').getDay()
     const h = horaires[jour]
