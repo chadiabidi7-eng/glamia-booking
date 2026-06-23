@@ -1944,7 +1944,7 @@ export default function ReservationPage() {
                 const dateStr = buildDateStr(calYear, calMonth, day)
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
-                const isOff   = !isDayWorking(dateStr, pro!.horaires) || isDayBlocked(dateStr, pro!.creneaux_bloques)
+                const isOff   = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                 const isDisabled = isPast || isOff
                 const isSelected = date === dateStr
 
