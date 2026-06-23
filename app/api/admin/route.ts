@@ -49,12 +49,10 @@ export async function GET(req: NextRequest) {
 
   // Exclude test accounts
   const TEST_EMAILS = [
-    'tiraboschi.nina@gmail.com',
     'chadi.abidi7@gmail.com',
     'review@glamia.app',
     'eden.tiraboschi@gmail.com',
-    'roocioalvarezz1978@gmail.com',
-    'jeremietalleux1@gmail.com',
+    'aureliiie.c@gmail.com',
   ]
 
   const users = (profiles ?? [])
