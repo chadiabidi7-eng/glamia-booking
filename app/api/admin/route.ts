@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   // Fetch all profiles with auth data
   const { data: profiles } = await supabaseAdmin
     .from('profiles')
-    .select('id, prenom, nom, email, pseudo, is_pro, trial_ends_at, created_at, specialites, telephone, slug, adresse')
+    .select('id, prenom, nom, email, pseudo, is_pro, trial_ends_at, created_at, specialites, telephone, slug, adresse, instagram, tiktok')
     .order('created_at', { ascending: false })
 
   // Fetch auth users for last_sign_in_at
@@ -78,6 +78,8 @@ export async function GET(req: NextRequest) {
         telephone: p.telephone,
         slug: p.slug,
         adresse: p.adresse,
+        instagram: p.instagram,
+        tiktok: p.tiktok,
         is_pro: p.is_pro,
         trial_ends_at: p.trial_ends_at,
         created_at: p.created_at,

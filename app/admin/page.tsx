@@ -11,6 +11,8 @@ type User = {
   telephone: string | null
   slug: string | null
   adresse: string | null
+  instagram: string | null
+  tiktok: string | null
   is_pro: boolean
   trial_ends_at: string | null
   created_at: string
@@ -292,15 +294,37 @@ function StatutBadge({ statut }: { statut: User['statut'] }) {
   )
 }
 
+function TrialBadge({ days, endDate }: { days: number; endDate: string | null }) {
+  let bg: string, color: string, label: string
+  if (days <= 0) {
+    bg = '#ffebee'; color = '#c62828'; label = 'Expire auj.'
+  } else if (days <= 2) {
+    bg = '#ffebee'; color = '#c62828'; label = `${days}j restant${days > 1 ? 's' : ''}`
+  } else if (days <= 3) {
+    bg = '#fff3e0'; color = '#e65100'; label = `${days}j restants`
+  } else {
+    bg = '#e3f2fd'; color = '#1565c0'; label = `${days}j — ${endDate ? formatDateShort(endDate) : ''}`
+  }
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 8px', borderRadius: 12,
+      fontSize: 10, fontWeight: 700, background: bg, color,
+    }}>
+      {label}
+    </span>
+  )
+}
+
 function UserRow({ user, onClick }: { user: User; onClick: () => void }) {
   const days = daysLeft(user.trial_ends_at)
-  const trialWarning = user.statut === 'essai' && days !== null && days <= 3
+  const urgent = user.statut === 'essai' && days !== null && days <= 2
+  const warning = user.statut === 'essai' && days !== null && days <= 3 && !urgent
 
   return (
     <div onClick={onClick} style={{
       background: '#fff', borderRadius: 12, padding: '14px 20px', cursor: 'pointer',
       boxShadow: '0 1px 4px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 16,
-      border: trialWarning ? '1.5px solid #FF9800' : '1px solid transparent',
+      border: urgent ? '1.5px solid #e53935' : warning ? '1.5px solid #FF9800' : '1px solid transparent',
       transition: 'box-shadow 0.15s',
     }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.1)')}
@@ -322,10 +346,8 @@ function UserRow({ user, onClick }: { user: User; onClick: () => void }) {
             {user.pseudo || `${user.prenom ?? ''} ${user.nom ?? ''}`}
           </span>
           <StatutBadge statut={user.statut} />
-          {trialWarning && (
-            <span style={{ fontSize: 11, color: '#e65100', fontWeight: 600 }}>
-              {days! <= 0 ? 'Expire auj.' : `${days}j restant${days! > 1 ? 's' : ''}`}
-            </span>
+          {user.statut === 'essai' && days !== null && (
+            <TrialBadge days={days} endDate={user.trial_ends_at} />
           )}
         </div>
         <p style={{ fontSize: 12, color: '#888', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -392,6 +414,8 @@ function UserDetail({ user, onClose }: { user: User; onClose: () => void }) {
               : 'Aucun'
           } />
           <DetailItem label="Adresse" value={user.adresse} />
+          <DetailItem label="Instagram" value={user.instagram} link={user.instagram ? `https://instagram.com/${user.instagram.replace('@', '')}` : undefined} />
+          <DetailItem label="TikTok" value={user.tiktok} link={user.tiktok ? `https://tiktok.com/@${user.tiktok.replace('@', '')}` : undefined} />
         </div>
 
         {/* Metrics */}
@@ -441,11 +465,15 @@ function UserDetail({ user, onClose }: { user: User; onClose: () => void }) {
   )
 }
 
-function DetailItem({ label, value }: { label: string; value: string | null | undefined }) {
+function DetailItem({ label, value, link }: { label: string; value: string | null | undefined; link?: string }) {
   return (
     <div>
       <p style={{ fontSize: 10, fontWeight: 600, color: '#888', margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</p>
-      <p style={{ fontSize: 14, color: '#1a1a1a', margin: '2px 0 0', wordBreak: 'break-all' }}>{value || '-'}</p>
+      {link && value ? (
+        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: PINK, margin: '2px 0 0', wordBreak: 'break-all', textDecoration: 'none' }}>{value}</a>
+      ) : (
+        <p style={{ fontSize: 14, color: '#1a1a1a', margin: '2px 0 0', wordBreak: 'break-all' }}>{value || '-'}</p>
+      )}
     </div>
   )
 }
