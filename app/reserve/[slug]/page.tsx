@@ -27,6 +27,10 @@ type CreneauBloque = {
   motif?: string
 }
 
+type PlageHoraire = { debut: string; fin: string }
+type JourSpecifique = { actif: boolean; plages: PlageHoraire[] }
+type HorairesSpecifiques = Record<string, JourSpecifique>
+
 type Offre = {
   id: string
   pro_id: string
@@ -52,6 +56,8 @@ type ProInfo = {
   photo_url?: string
   horaires: HorairesHebdo
   creneaux_bloques: CreneauBloque[]
+  horaires_specifiques: HorairesSpecifiques
+  planning_variable: boolean
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -178,10 +184,12 @@ function buildDateStr(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
+function isDayWorking(dateStr: string, horaires: HorairesHebdo, horairesSpec?: HorairesSpecifiques, planningVar?: boolean) {
+  const spec = horairesSpec?.[dateStr]
+  if (spec) return spec.actif
+  if (planningVar) return false // mode variable sans config = pas dispo
   const jour = new Date(dateStr + 'T00:00:00').getDay()
   const h = horaires[jour]
-  // Supporte les deux conventions : `actif` (français, app mobile) et `active` (anglais, Supabase)
   return h?.actif === true || h?.active === true
 }
 
@@ -200,14 +208,28 @@ function generateSlots(
   horaires: HorairesHebdo,
   rdvExistants: { heure: string; duree: number }[],
   bloques: CreneauBloque[] = [],
+  horairesSpec?: HorairesSpecifiques,
+  planningVar?: boolean,
 ): Slot[] {
-  const jour = new Date(date + 'T00:00:00').getDay()
-  const h = horaires[jour]
-  if (!h?.actif && !h?.active) return []
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
-  const debut = timeToMin(h.debut)
-  const fin   = timeToMin(h.fin)
+  const spec = horairesSpec?.[date]
+  let plages: { start: number; end: number }[]
+
+  if (spec) {
+    if (!spec.actif) return []
+    plages = spec.plages.map(p => ({ start: timeToMin(p.debut), end: timeToMin(p.fin) }))
+  } else if (planningVar) {
+    return [] // mode variable sans config = pas dispo
+  } else {
+    const jour = new Date(date + 'T00:00:00').getDay()
+    const h = horaires[jour]
+    if (!h?.actif && !h?.active) return []
+    plages = [{ start: timeToMin(h.debut), end: timeToMin(h.fin) }]
+  }
+
+  if (plages.length === 0) return []
+
   const INTERVAL = 30
 
   const taken = rdvExistants.map(r => ({
@@ -221,17 +243,17 @@ function generateSlots(
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  // Limite = maintenant + 1h, en minutes depuis minuit du jour courant
-  // Calcul direct depuis now pour éviter le bug de dépassement minuit (ex: 23h13 + 1h = 00h13 le lendemain → getHours()=0)
   const limiteMin = date === todayStr ? now.getHours() * 60 + now.getMinutes() + 60 : 0
 
   const slots: Slot[] = []
-  for (let t = debut; t + duree <= fin; t += INTERVAL) {
-    if (limiteMin > 0 && t < limiteMin) continue
-    const end = t + duree
-    const isTaken = taken.some(r => t < r.end && end > r.start)
-    const isBlocked = blockedRanges.some(r => t < r.end && end > r.start)
-    slots.push({ heure: minToTime(t), disponible: !isTaken && !isBlocked })
+  for (const plage of plages) {
+    for (let t = plage.start; t + duree <= plage.end; t += INTERVAL) {
+      if (limiteMin > 0 && t < limiteMin) continue
+      const end = t + duree
+      const isTaken = taken.some(r => t < r.end && end > r.start)
+      const isBlocked = blockedRanges.some(r => t < r.end && end > r.start)
+      slots.push({ heure: minToTime(t), disponible: !isTaken && !isBlocked })
+    }
   }
   return slots
 }
@@ -500,7 +522,7 @@ export default function ReservationPage() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${pro.id}` },
         (payload) => {
-          if (payload.new?.horaires || payload.new?.creneaux_bloques !== undefined) {
+          if (payload.new?.horaires || payload.new?.creneaux_bloques !== undefined || payload.new?.horaires_specifiques !== undefined || payload.new?.planning_variable !== undefined) {
             console.log('[Realtime] profil mis à jour')
             setPro(prev => {
               if (!prev) return prev
@@ -508,6 +530,8 @@ export default function ReservationPage() {
                 ...prev,
                 ...(payload.new?.horaires ? { horaires: payload.new.horaires } : {}),
                 creneaux_bloques: Array.isArray(payload.new?.creneaux_bloques) ? payload.new.creneaux_bloques : prev.creneaux_bloques,
+                ...(payload.new?.horaires_specifiques !== undefined ? { horaires_specifiques: payload.new.horaires_specifiques ?? {} } : {}),
+                ...(payload.new?.planning_variable !== undefined ? { planning_variable: payload.new.planning_variable === true } : {}),
               }
             })
           }
@@ -558,9 +582,11 @@ export default function ReservationPage() {
         nom:              found.nom,
         pseudo:           found.pseudo ?? undefined,
         photo_url:        found.avatar_url ?? found.photo_url ?? undefined,
-        horaires:         found.horaires ?? DEFAULT_HORAIRES,
-        creneaux_bloques: Array.isArray(found.creneaux_bloques) ? found.creneaux_bloques : [],
-        instagram:        found.instagram ?? undefined,
+        horaires:              found.horaires ?? DEFAULT_HORAIRES,
+        creneaux_bloques:      Array.isArray(found.creneaux_bloques) ? found.creneaux_bloques : [],
+        horaires_specifiques:  (found.horaires_specifiques && typeof found.horaires_specifiques === 'object') ? found.horaires_specifiques : {},
+        planning_variable:     found.planning_variable === true,
+        instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
         snapchat:         found.snapchat ?? undefined,
         message_accueil:  found.message_accueil ?? undefined,
@@ -759,7 +785,7 @@ export default function ReservationPage() {
         }
       })
 
-      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants, pro.creneaux_bloques))
+      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
     } catch (e) {
       console.error('[reprogSelectDate] Erreur:', e)
     } finally {
@@ -901,7 +927,7 @@ export default function ReservationPage() {
         }
       })
 
-      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants, pro.creneaux_bloques))
+      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
     } catch (e) {
       console.error(e)
     } finally {
@@ -951,10 +977,10 @@ export default function ReservationPage() {
         d.setDate(d.getDate() + i)
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
 
-        if (!isDayWorking(dateStr, pro.horaires)) continue
+        if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
         if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
 
-        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [], pro.creneaux_bloques)
+        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [], pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable)
         const available = daySlots.find(s => s.disponible)
         console.log('[firstAvailable] now:', new Date().toISOString(), 'day:', dateStr, 'slots dispo:', daySlots.filter(s => s.disponible).map(s => s.heure), 'candidate:', available?.heure ?? 'none')
 
@@ -1542,7 +1568,7 @@ export default function ReservationPage() {
                                   const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
                                   const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
                                   const isPast = dayDate < today0
-                                  const isOff = !isDayWorking(dateStr, pro!.horaires) || isDayBlocked(dateStr, pro!.creneaux_bloques)
+                                  const isOff = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                                   const isDisabled = isPast || isOff
                                   const isSelected = reprogDate === dateStr
 
