@@ -9,7 +9,7 @@ import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Sp
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string }
+type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
 type HorairesHebdo = Record<number, HorairesJour>
 type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; prix_type?: 'fixe' | 'a_partir_de' }
 type CataloguePrestations = Record<string, Technique[]>
@@ -225,7 +225,14 @@ function generateSlots(
     const jour = new Date(date + 'T00:00:00').getDay()
     const h = horaires[jour]
     if (!h?.actif && !h?.active) return []
-    plages = [{ start: timeToMin(h.debut), end: timeToMin(h.fin) }]
+    if (h.pause) {
+      plages = [
+        { start: timeToMin(h.debut), end: timeToMin(h.pause.debut) },
+        { start: timeToMin(h.pause.fin), end: timeToMin(h.fin) },
+      ]
+    } else {
+      plages = [{ start: timeToMin(h.debut), end: timeToMin(h.fin) }]
+    }
   }
 
   if (plages.length === 0) return []
