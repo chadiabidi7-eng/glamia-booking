@@ -31,6 +31,7 @@ type Stats = {
   expirees: number
   totalRdv: number
   totalClientes: number
+  activesToday: number
 }
 
 type Filter = 'all' | 'pro' | 'essai' | 'expire'
