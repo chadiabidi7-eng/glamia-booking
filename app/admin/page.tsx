@@ -16,7 +16,7 @@ type User = {
   is_pro: boolean
   trial_ends_at: string | null
   created_at: string
-  last_sign_in_at: string | null
+  last_active_at: string | null
   nb_clientes: number
   nb_rdv: number
   statut: 'pro' | 'essai' | 'expire'
@@ -131,7 +131,7 @@ export default function AdminPage() {
     .sort((a, b) => {
       if (sortBy === 'rdv') return b.nb_rdv - a.nb_rdv
       if (sortBy === 'clientes') return b.nb_clientes - a.nb_clientes
-      if (sortBy === 'last_active') return new Date(b.last_sign_in_at ?? 0).getTime() - new Date(a.last_sign_in_at ?? 0).getTime()
+      if (sortBy === 'last_active') return new Date(b.last_active_at ?? 0).getTime() - new Date(a.last_active_at ?? 0).getTime()
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
@@ -180,12 +180,17 @@ export default function AdminPage() {
           <span style={{ color: PINK }}>Glamia</span> Admin
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => fetchData(password)} style={{
+          <button onClick={() => fetchData(password)} disabled={loading} style={{
             padding: '8px 16px', borderRadius: 8, border: `1.5px solid ${PINK}`,
-            background: 'transparent', color: PINK, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: loading ? PINK : 'transparent', color: loading ? '#fff' : PINK,
+            fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+            transition: 'all 0.2s ease', opacity: loading ? 0.8 : 1,
+            display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            Actualiser
+            {loading && <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />}
+            {loading ? 'Chargement...' : 'Actualiser'}
           </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
 
@@ -199,6 +204,7 @@ export default function AdminPage() {
             <StatCard label="Abonnees Pro" value={stats.abonnees} color={PINK} />
             <StatCard label="En essai" value={stats.enEssai} color="#FF9800" />
             <StatCard label="Essai expire" value={stats.expirees} color="#e53935" />
+            <StatCard label="Actives aujourd'hui" value={stats.activesToday} color="#43A047" />
             <StatCard label="Total RDV" value={stats.totalRdv} color="#7C4DFF" />
             <StatCard label="Total clientes" value={stats.totalClientes} color="#00BCD4" />
           </div>
@@ -239,7 +245,7 @@ export default function AdminPage() {
             }}
           >
             <option value="recent">Plus recentes</option>
-            <option value="last_active">Derniere connexion</option>
+            <option value="last_active">Dernière activité</option>
             <option value="rdv">Plus de RDV</option>
             <option value="clientes">Plus de clientes</option>
           </select>
@@ -369,7 +375,7 @@ function UserRow({ user, onClick }: { user: User; onClick: () => void }) {
 
       {/* Last active */}
       <div style={{ flexShrink: 0, textAlign: 'right', minWidth: 90 }}>
-        <p style={{ fontSize: 12, color: '#888', margin: 0 }}>{timeAgo(user.last_sign_in_at)}</p>
+        <p style={{ fontSize: 12, color: '#888', margin: 0 }}>{timeAgo(user.last_active_at)}</p>
         <p style={{ fontSize: 10, color: '#aaa', margin: '2px 0 0' }}>Inscrite le {formatDateShort(user.created_at)}</p>
       </div>
     </div>
@@ -407,7 +413,7 @@ function UserDetail({ user, onClose }: { user: User; onClose: () => void }) {
           <DetailItem label="Email" value={user.email} />
           <DetailItem label="Telephone" value={user.telephone} />
           <DetailItem label="Inscrite le" value={formatDate(user.created_at)} />
-          <DetailItem label="Derniere connexion" value={timeAgo(user.last_sign_in_at)} />
+          <DetailItem label="Dernière activité" value={timeAgo(user.last_active_at)} />
           <DetailItem label="Fin d'essai" value={
             user.trial_ends_at
               ? `${formatDate(user.trial_ends_at)}${days !== null ? ` (${days > 0 ? `${days}j restants` : 'expiré'})` : ''}`

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   // Fetch all profiles with auth data
   const { data: profiles } = await supabaseAdmin
     .from('profiles')
-    .select('id, prenom, nom, email, pseudo, is_pro, trial_ends_at, created_at, specialites, telephone, slug, adresse, instagram, tiktok')
+    .select('id, prenom, nom, email, pseudo, is_pro, trial_ends_at, created_at, specialites, telephone, slug, adresse, instagram, tiktok, last_active_at')
     .order('created_at', { ascending: false })
 
   // Fetch auth users for last_sign_in_at
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
         is_pro: p.is_pro,
         trial_ends_at: p.trial_ends_at,
         created_at: p.created_at,
-        last_sign_in_at: auth?.last_sign_in_at ?? null,
+        last_active_at: p.last_active_at ?? auth?.last_sign_in_at ?? null,
         nb_clientes: clienteMap.get(p.id) ?? 0,
         nb_rdv: rdvMap.get(p.id) ?? 0,
         statut,
@@ -99,9 +99,10 @@ export async function GET(req: NextRequest) {
   const expirees = users.filter(u => u.statut === 'expire').length
   const totalRdv = users.reduce((s, u) => s + u.nb_rdv, 0)
   const totalClientes = users.reduce((s, u) => s + u.nb_clientes, 0)
+  const activesToday = users.filter(u => u.last_active_at && u.last_active_at >= todayStart.toISOString()).length
 
   return NextResponse.json({
-    stats: { total, newToday, newThisWeek, abonnees, enEssai, expirees, totalRdv, totalClientes },
+    stats: { total, newToday, newThisWeek, abonnees, enEssai, expirees, totalRdv, totalClientes, activesToday },
     users,
   })
 }
