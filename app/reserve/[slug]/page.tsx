@@ -2030,7 +2030,7 @@ export default function ReservationPage() {
                       textDecoration: !s.disponible ? 'line-through' : 'none',
                     }}
                   >
-                    {(() => { const [h, m] = s.heure.split('h'); return <>{h}h{m && m !== '00' ? <sup style={{ fontSize: '0.7em', verticalAlign: 'super', lineHeight: 0 }}>{m}</sup> : null}</>; })()}
+                    {s.heure}
                   </button>
                 ))}
               </div>
