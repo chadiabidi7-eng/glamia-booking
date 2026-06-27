@@ -86,12 +86,12 @@ const PINK_LIGHT = '#F9EEF4'
 
 const DEFAULT_HORAIRES: HorairesHebdo = {
   0: { actif: false, debut: '09:00', fin: '18:00' },
-  1: { actif: true,  debut: '09:00', fin: '18:00' },
-  2: { actif: true,  debut: '09:00', fin: '18:00' },
-  3: { actif: true,  debut: '09:00', fin: '18:00' },
-  4: { actif: true,  debut: '09:00', fin: '18:00' },
-  5: { actif: true,  debut: '09:00', fin: '18:00' },
-  6: { actif: true,  debut: '09:00', fin: '14:00' },
+  1: { actif: false, debut: '09:00', fin: '18:00' },
+  2: { actif: false, debut: '09:00', fin: '18:00' },
+  3: { actif: false, debut: '09:00', fin: '18:00' },
+  4: { actif: false, debut: '09:00', fin: '18:00' },
+  5: { actif: false, debut: '09:00', fin: '18:00' },
+  6: { actif: false, debut: '09:00', fin: '18:00' },
 }
 
 const GLAMIA_PINK = '#D4537E'
