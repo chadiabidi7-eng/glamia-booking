@@ -515,7 +515,15 @@ export default function ReservationPage() {
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
   const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix, 0)
-  const prixTotal = offreAppliquee ? offreAppliquee.prix_promo : prixTotalBrut
+  const prixTotal = offreAppliquee
+    ? offreAppliquee.prix_promo + techniquesSelectionnees.reduce((s, t) => {
+        // Trouver si cette technique fait partie de l'offre
+        const estDansOffre = Object.entries(catalogue).some(([cat, techs]) =>
+          cat === t.categorie && techs.some(x => offreAppliquee.prestations_ids.includes(x.id) && x.nom === t.nom)
+        )
+        return s + (estDansOffre ? 0 : t.prix)
+      }, 0)
+    : prixTotalBrut
 
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
@@ -901,10 +909,14 @@ export default function ReservationPage() {
       if (exists) return prev.filter(s => !(s.nom === t.nom && s.categorie === cat))
       return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat, prix_type: t.prix_type }]
     })
-    // Réinitialiser date/heure + offre si on change les techniques manuellement
+    // Réinitialiser date/heure (la durée change → les créneaux doivent être recalculés)
     setDate('')
     setHeure('')
-    setOffreAppliquee(null)
+    // Si on décoche une prestation incluse dans l'offre, retirer l'offre
+    if (offreAppliquee && offreAppliquee.prestations_ids.includes(t.id)) {
+      const exists = techniquesSelectionnees.find(s => s.nom === t.nom && s.categorie === cat)
+      if (exists) setOffreAppliquee(null) // on décoche → retirer l'offre
+    }
   }
 
   // ── Step 4 : Load slots ───────────────────────
