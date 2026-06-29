@@ -488,10 +488,6 @@ export default function ReservationPage() {
   const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
   const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
 
-  // ── Fidélité ─────────────────────────────────
-  const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
-  const [fideliteFiche, setFideliteFiche] = useState<{ tampons: number; cartes_completees: number; recompense_disponible: { type: string; valeur: number } | null } | null>(null)
-
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
@@ -654,15 +650,12 @@ export default function ReservationPage() {
         if (found.email) setClienteEmail(found.email)
         setPhoneStatus('known')
         chargerRdvsAVenir(found.id, pro.id)
-        chargerFidelite(pro.id, found.id)
       } else {
         setClienteId(null)
         setClientePrenom('')
         setClienteNom('')
         setClienteEmail('')
         setPhoneStatus('unknown')
-        setFideliteFiche(null)
-        chargerFideliteConfig(pro.id)
       }
 
       // Charger les offres éligibles pour ce téléphone
@@ -688,47 +681,6 @@ export default function ReservationPage() {
       })))
     } catch (e) {
       console.error('[chargerOffresEligibles]', e)
-    }
-  }
-
-  // ── Fidélité ────────────────────────────────
-  async function chargerFideliteConfig(proId: string) {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('fidelite_config')
-        .eq('id', proId)
-        .single()
-      setFideliteConfig(profile?.fidelite_config as any ?? null)
-    } catch (e) {
-      console.error('[chargerFideliteConfig]', e)
-    }
-  }
-
-  async function chargerFidelite(proId: string, clienteId: string) {
-    try {
-      // Config pro
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('fidelite_config')
-        .eq('id', proId)
-        .single()
-      if (profile?.fidelite_config) {
-        setFideliteConfig(profile.fidelite_config as any)
-      } else {
-        setFideliteConfig(null)
-        return
-      }
-      // Fiche cliente
-      const { data: fiche } = await supabase
-        .from('fidelite_clientes')
-        .select('tampons, cartes_completees, recompense_disponible')
-        .eq('pro_id', proId)
-        .eq('cliente_id', clienteId)
-        .single()
-      setFideliteFiche(fiche as any ?? null)
-    } catch (e) {
-      console.error('[chargerFidelite]', e)
     }
   }
 
@@ -1535,72 +1487,6 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
-                {/* Carte de fidélité */}
-                {fideliteConfig?.active && (
-                  <div style={{
-                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
-                    padding: 16, marginBottom: 20,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
-                      {fideliteFiche?.recompense_disponible && (
-                        <span style={{
-                          background: PINK, color: '#fff', borderRadius: 10,
-                          padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
-                        }}>
-                          -{fideliteFiche.recompense_disponible.valeur}% disponible
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
-                        const pos = i + 1
-                        const tampons = fideliteFiche?.tampons ?? 0
-                        const estTamponné = pos <= tampons
-                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            <div style={{
-                              width: 32, height: 32, borderRadius: 16,
-                              border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
-                              background: estTamponné ? PINK : '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {estTamponné && (
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                              )}
-                              {!estTamponné && palier && (
-                                <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
-                              )}
-                            </div>
-                            {palier ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
-                            ) : (
-                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {(() => {
-                      const tampons = fideliteFiche?.tampons ?? 0
-                      const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
-                      if (!prochainPalier) return null
-                      return (
-                        <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          Encore {prochainPalier.position - tampons} RDV avant -{prochainPalier.valeur}%
-                        </p>
-                      )
-                    })()}
-                    {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
-                      <p style={{ fontSize: 10, color: '#c4b5a8', textAlign: 'center', marginTop: 4, marginBottom: 0 }}>
-                        {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
-                )}
-
                 {loadingRdvs ? (
                   <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 16 }}>
                     Chargement de vos rendez-vous...
@@ -1824,50 +1710,6 @@ export default function ReservationPage() {
                     <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Pour recevoir votre confirmation de RDV</p>
                   </div>
                 </div>
-
-                {/* Carte de fidélité vierge pour nouvelle cliente */}
-                {fideliteConfig?.active && (
-                  <div style={{
-                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
-                    padding: 16, marginBottom: 16,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
-                        const pos = i + 1
-                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            <div style={{
-                              width: 32, height: 32, borderRadius: 16,
-                              border: `${palier ? '2.5px' : '2px'} solid ${palier ? PINK : '#e0d6cf'}`,
-                              background: '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {palier && (
-                                <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
-                              )}
-                            </div>
-                            {palier ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
-                            ) : (
-                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {fideliteConfig.paliers.length > 0 && (
-                      <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                        Cumulez des tampons à chaque RDV et profitez de réductions !
-                      </p>
-                    )}
-                  </div>
-                )}
-
                 <button
                   onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(2) }}
                   disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
