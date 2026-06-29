@@ -529,8 +529,13 @@ export default function ReservationPage() {
       }, 0)
     : prixTotalBrut
 
-  // Prix final avec récompense fidélité
-  const recompenseFidelite = fideliteConfig?.active ? (fideliteFiche?.recompense_disponible ?? null) : null
+  // Récompense fidélité : existante OU proactive (palier atteint par ce RDV)
+  const recompenseExistante = fideliteFiche?.recompense_disponible ?? null
+  const prochainTampon = (fideliteFiche?.tampons ?? 0) + 1
+  const palierProchain = fideliteConfig?.active ? fideliteConfig.paliers.find((p: any) => p.position === prochainTampon) : null
+  const recompenseFidelite = fideliteConfig?.active
+    ? (recompenseExistante ?? (palierProchain ? { type: palierProchain.type, valeur: palierProchain.valeur } : null))
+    : null
   const prixFinal = recompenseFidelite
     ? recompenseFidelite.type === 'gratuit'
       ? 0
@@ -1165,7 +1170,7 @@ export default function ReservationPage() {
 
       if (rdvErr) throw rdvErr
 
-      // Ajouter tampon fidélité si active
+      // Fidélité : consommer récompense existante, ajouter tampon, consommer si palier proactif
       if (cId && fideliteConfig?.active) {
         try {
           const { data: ficheFraiche } = await supabase
@@ -1175,7 +1180,29 @@ export default function ReservationPage() {
             .eq('cliente_id', cId)
             .maybeSingle()
 
-          if (!ficheFraiche) {
+          // Consommer la récompense existante si elle a été appliquée au prix
+          if (ficheFraiche?.recompense_disponible && recompenseExistante) {
+            const consumeUpdate: Record<string, unknown> = {
+              recompense_disponible: null,
+              updated_at: new Date().toISOString(),
+            }
+            if (ficheFraiche.tampons >= fideliteConfig.nb_ronds) {
+              consumeUpdate.tampons = 0
+              consumeUpdate.cartes_completees = ficheFraiche.cartes_completees + 1
+            }
+            await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheFraiche.id)
+          }
+
+          // Re-lire la fiche après consommation éventuelle
+          const { data: ficheApres } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', cId)
+            .maybeSingle()
+
+          if (!ficheApres) {
+            // Créer la fiche
             const palierUn = fideliteConfig.paliers.find((p: any) => p.position === 1)
             const insertData: Record<string, unknown> = {
               pro_id: pro.id,
@@ -1186,8 +1213,20 @@ export default function ReservationPage() {
               insertData.recompense_disponible = { type: palierUn.type, valeur: palierUn.valeur }
             }
             await supabase.from('fidelite_clientes').insert(insertData)
+            // Si palier 1 atteint proactivement, consommer immédiatement
+            if (palierUn && !recompenseExistante) {
+              const { data: ficheNew } = await supabase
+                .from('fidelite_clientes')
+                .select('id')
+                .eq('pro_id', pro.id)
+                .eq('cliente_id', cId)
+                .maybeSingle()
+              if (ficheNew) {
+                await supabase.from('fidelite_clientes').update({ recompense_disponible: null, updated_at: new Date().toISOString() }).eq('id', ficheNew.id)
+              }
+            }
           } else {
-            const nouveauTampons = ficheFraiche.tampons + 1
+            const nouveauTampons = ficheApres.tampons + 1
             const palierAtteint = [...fideliteConfig.paliers]
               .sort((a: any, b: any) => b.position - a.position)
               .find((p: any) => p.position === nouveauTampons)
@@ -1199,10 +1238,15 @@ export default function ReservationPage() {
             if (palierAtteint) {
               update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
             }
-            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
+            await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
+
+            // Si palier atteint proactivement, consommer immédiatement
+            if (palierAtteint && !recompenseExistante) {
+              await supabase.from('fidelite_clientes').update({ recompense_disponible: null, updated_at: new Date().toISOString() }).eq('id', ficheApres.id)
+            }
           }
         } catch (e) {
-          console.error('[handleConfirm] Erreur ajout tampon fidélité:', e)
+          console.error('[handleConfirm] Erreur fidélité:', e)
         }
       }
 
