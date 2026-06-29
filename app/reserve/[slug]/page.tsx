@@ -1574,6 +1574,11 @@ export default function ReservationPage() {
                                 <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
                               )}
                             </div>
+                            {palier ? (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
+                            ) : (
+                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                            )}
                           </div>
                         )
                       })}
@@ -1846,6 +1851,11 @@ export default function ReservationPage() {
                                 <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
                               )}
                             </div>
+                            {palier ? (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
+                            ) : (
+                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                            )}
                           </div>
                         )
                       })}
