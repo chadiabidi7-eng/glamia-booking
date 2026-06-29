@@ -1128,6 +1128,47 @@ export default function ReservationPage() {
 
       if (rdvErr) throw rdvErr
 
+      // Ajouter tampon fidélité si active
+      if (cId && fideliteConfig?.active) {
+        try {
+          const { data: ficheFraiche } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', cId)
+            .maybeSingle()
+
+          if (!ficheFraiche) {
+            const palierUn = fideliteConfig.paliers.find((p: any) => p.position === 1)
+            const insertData: Record<string, unknown> = {
+              pro_id: pro.id,
+              cliente_id: cId,
+              tampons: 1,
+            }
+            if (palierUn) {
+              insertData.recompense_disponible = { type: palierUn.type, valeur: palierUn.valeur }
+            }
+            await supabase.from('fidelite_clientes').insert(insertData)
+          } else {
+            const nouveauTampons = ficheFraiche.tampons + 1
+            const palierAtteint = [...fideliteConfig.paliers]
+              .sort((a: any, b: any) => b.position - a.position)
+              .find((p: any) => p.position === nouveauTampons)
+
+            const update: Record<string, unknown> = {
+              tampons: nouveauTampons,
+              updated_at: new Date().toISOString(),
+            }
+            if (palierAtteint) {
+              update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
+            }
+            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
+          }
+        } catch (e) {
+          console.error('[handleConfirm] Erreur ajout tampon fidélité:', e)
+        }
+      }
+
       // Appliquer l'offre si sélectionnée
       if (nouveau?.id && offreAppliquee) {
         try {
