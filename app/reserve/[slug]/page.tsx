@@ -1218,12 +1218,17 @@ export default function ReservationPage() {
             if (palierUn && !recompenseExistante) {
               const { data: ficheNew } = await supabase
                 .from('fidelite_clientes')
-                .select('id')
+                .select('id, tampons, cartes_completees')
                 .eq('pro_id', pro.id)
                 .eq('cliente_id', cId)
                 .maybeSingle()
               if (ficheNew) {
-                await supabase.from('fidelite_clientes').update({ recompense_disponible: null, updated_at: new Date().toISOString() }).eq('id', ficheNew.id)
+                const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
+                if (ficheNew.tampons >= fideliteConfig.nb_ronds) {
+                  consumeUpdate.tampons = 0
+                  consumeUpdate.cartes_completees = ficheNew.cartes_completees + 1
+                }
+                await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheNew.id)
               }
             }
           } else {
@@ -1241,9 +1246,14 @@ export default function ReservationPage() {
             }
             await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
 
-            // Si palier atteint proactivement, consommer immédiatement
+            // Si palier atteint proactivement, consommer immédiatement + reset carte si pleine
             if (palierAtteint && !recompenseExistante) {
-              await supabase.from('fidelite_clientes').update({ recompense_disponible: null, updated_at: new Date().toISOString() }).eq('id', ficheApres.id)
+              const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
+              if (nouveauTampons >= fideliteConfig.nb_ronds) {
+                consumeUpdate.tampons = 0
+                consumeUpdate.cartes_completees = ficheApres.cartes_completees + 1
+              }
+              await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheApres.id)
             }
           }
         } catch (e) {
