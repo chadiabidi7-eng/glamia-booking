@@ -74,6 +74,7 @@ type RdvAVenir = {
   duree: number
   prix: number | null
   statut: string
+  fidelite_appliquee: { type: string; valeur: number } | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -754,7 +755,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -783,7 +784,7 @@ export default function ReservationPage() {
       if (error) throw error
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
-      // Retirer le tampon fidélité si active
+      // Restaurer la carte fidélité
       if (rdv && pro && clienteId && fideliteConfig?.active) {
         try {
           const { data: ficheFraiche } = await supabase
@@ -793,16 +794,31 @@ export default function ReservationPage() {
             .eq('cliente_id', clienteId)
             .maybeSingle()
 
-          if (ficheFraiche && ficheFraiche.tampons > 0) {
+          if (ficheFraiche) {
             const update: Record<string, unknown> = {
-              tampons: ficheFraiche.tampons - 1,
               updated_at: new Date().toISOString(),
             }
-            // Ne retirer la récompense que si elle correspond au palier actuel
-            const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
-            if (palierActuel && ficheFraiche.recompense_disponible) {
-              update.recompense_disponible = null
+
+            if (rdv.fidelite_appliquee) {
+              // Le RDV avait consommé une récompense → restaurer la carte
+              // Si la carte a été réinitialisée (tampons=0 après carte pleine), remettre les tampons au nb_ronds
+              const wasCardReset = ficheFraiche.tampons === 0 && ficheFraiche.cartes_completees > 0
+              if (wasCardReset) {
+                update.tampons = fideliteConfig.nb_ronds
+                update.cartes_completees = ficheFraiche.cartes_completees - 1
+              }
+              // Remettre la récompense disponible
+              update.recompense_disponible = rdv.fidelite_appliquee
+            } else if (ficheFraiche.tampons > 0) {
+              // RDV sans récompense → juste retirer un tampon
+              update.tampons = ficheFraiche.tampons - 1
+              // Ne retirer la récompense que si elle correspond au palier actuel
+              const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
+              if (palierActuel && ficheFraiche.recompense_disponible) {
+                update.recompense_disponible = null
+              }
             }
+
             await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
           }
         } catch (e) {
