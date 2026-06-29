@@ -1542,42 +1542,40 @@ export default function ReservationPage() {
                     padding: 16, marginBottom: 20,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
                       {fideliteFiche?.recompense_disponible && (
                         <span style={{
                           background: PINK, color: '#fff', borderRadius: 10,
                           padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
                         }}>
-                          -{fideliteFiche.recompense_disponible.valeur}% disponible
+                          {fideliteFiche.recompense_disponible.type === 'gratuit' ? 'Offert' : `-${fideliteFiche.recompense_disponible.valeur}${fideliteFiche.recompense_disponible.type === 'euros' ? '€' : '%'}`} disponible
                         </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                       {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
                         const pos = i + 1
                         const tampons = fideliteFiche?.tampons ?? 0
                         const estTamponné = pos <= tampons
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
                         return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
-                              width: 32, height: 32, borderRadius: 16,
+                              width: 36, height: 36, borderRadius: 18,
                               border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
                               background: estTamponné ? PINK : '#fff',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {estTamponné && (
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                              )}
-                              {!estTamponné && palier && (
-                                <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                               )}
                             </div>
                             {palier ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
                             ) : (
-                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
                             )}
                           </div>
                         )
@@ -1587,9 +1585,10 @@ export default function ReservationPage() {
                       const tampons = fideliteFiche?.tampons ?? 0
                       const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
                       if (!prochainPalier) return null
+                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${prochainPalier.valeur}€` : `-${prochainPalier.valeur}%`
                       return (
                         <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          Encore {prochainPalier.position - tampons} RDV avant -{prochainPalier.valeur}%
+                          Encore {prochainPalier.position - tampons} RDV avant {label}
                         </p>
                       )
                     })()}
@@ -1832,29 +1831,26 @@ export default function ReservationPage() {
                     padding: 16, marginBottom: 16,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                       {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
                         const pos = i + 1
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
                         return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
-                              width: 32, height: 32, borderRadius: 16,
+                              width: 36, height: 36, borderRadius: 18,
                               border: `${palier ? '2.5px' : '2px'} solid ${palier ? PINK : '#e0d6cf'}`,
                               background: '#fff',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {palier && (
-                                <span style={{ fontSize: 7, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
-                              )}
-                            </div>
+                            }} />
                             {palier ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: PINK }}>-{palier.valeur}%</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
                             ) : (
-                              <span style={{ fontSize: 9, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
                             )}
                           </div>
                         )
