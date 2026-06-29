@@ -1781,46 +1781,44 @@ export default function ReservationPage() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <SpecialiteIcon specialite={rdv.specialite} size={20} />
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <SpecialiteIcon specialite={rdv.specialite} size={18} /> {rdv.technique}
+                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {rdv.technique}
                               </p>
-                              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''}
                               </p>
-                              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                {rdv.prix && rdv.prix > 0 && (
-                                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
-                                )}
-                              </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                              <button
-                                onClick={() => ouvrirReprog(rdv.id)}
-                                style={{
-                                  padding: '7px 12px', borderRadius: 10,
-                                  border: `1.5px solid ${PINK}`, background: '#fff',
-                                  color: PINK, fontSize: 13, fontWeight: 600,
-                                  cursor: 'pointer', transition: 'all 0.15s',
-                                }}
-                              >
-                                Reprogrammer
-                              </button>
-                              <button
-                                onClick={() => confirmerAnnulation(rdv)}
-                                disabled={annulationEnCours === rdv.id}
-                                style={{
-                                  padding: '7px 12px', borderRadius: 10,
-                                  border: '1.5px solid #fca5a5', background: '#fff',
-                                  color: '#ef4444', fontSize: 13, fontWeight: 600,
-                                  cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
-                                  transition: 'all 0.15s',
-                                }}
-                              >
-                                {annulationEnCours === rdv.id ? '...' : 'Annuler'}
-                              </button>
-                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button
+                              onClick={() => ouvrirReprog(rdv.id)}
+                              style={{
+                                flex: 1, padding: '8px 0', borderRadius: 10,
+                                border: `1.5px solid ${PINK}`, background: '#fff',
+                                color: PINK, fontSize: 13, fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.15s',
+                              }}
+                            >
+                              Reprogrammer
+                            </button>
+                            <button
+                              onClick={() => confirmerAnnulation(rdv)}
+                              disabled={annulationEnCours === rdv.id}
+                              style={{
+                                flex: 1, padding: '8px 0', borderRadius: 10,
+                                border: '1.5px solid #fca5a5', background: '#fff',
+                                color: '#ef4444', fontSize: 13, fontWeight: 600,
+                                cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                            </button>
                           </div>
 
                           {/* ── Sélecteur reprogrammation ── */}
