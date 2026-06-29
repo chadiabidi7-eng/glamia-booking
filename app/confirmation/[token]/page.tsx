@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { Calendar, Clock, Sparkles, CreditCard, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Calendar, Clock, Sparkles, CreditCard, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -24,6 +24,7 @@ type RdvInfo = {
   pro_id: string
   horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
   duree: number
+  instructions: string | null
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -387,6 +388,17 @@ function ConfirmationPage() {
                 </div>
               )}
             </div>
+
+            {/* Instructions */}
+            {rdv.instructions && (
+              <div style={{ background: '#FFF8E1', borderRadius: 16, padding: 16, border: '1.5px solid #F5C27A', marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <FileText size={18} color="#E67E22" />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Instructions pour votre RDV</span>
+                </div>
+                <p style={{ fontSize: 14, color: '#1f2937', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>{rdv.instructions}</p>
+              </div>
+            )}
 
             {/* Boutons */}
             <div style={S.actions}>
