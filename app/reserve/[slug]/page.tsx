@@ -529,6 +529,16 @@ export default function ReservationPage() {
       }, 0)
     : prixTotalBrut
 
+  // Prix final avec récompense fidélité
+  const recompenseFidelite = fideliteConfig?.active ? (fideliteFiche?.recompense_disponible ?? null) : null
+  const prixFinal = recompenseFidelite
+    ? recompenseFidelite.type === 'gratuit'
+      ? 0
+      : recompenseFidelite.type === 'euros'
+        ? Math.max(0, prixTotal - recompenseFidelite.valeur)
+        : Math.round(prixTotal * (1 - recompenseFidelite.valeur / 100))
+    : prixTotal
+
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
@@ -1145,7 +1155,7 @@ export default function ReservationPage() {
           specialite: categoriesStr,
           technique:  techniquesStr,
           techniques: techniquesSelectionnees,
-          prix:       prixTotal > 0 ? prixTotal : null,
+          prix:       prixFinal > 0 ? prixFinal : null,
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
           demande_rappel: rappel,
@@ -1237,7 +1247,7 @@ export default function ReservationPage() {
             date: formatDateLong(date),
             heure,
             duree: formatDuree(dureeTotal),
-            prix_total: prixTotal,
+            prix_total: prixFinal,
             adresse: pro.adresse || '',
             skip_rappel_notice: dansMotins24h,
             techniques: techniquesSelectionnees.map(t => ({
@@ -1419,7 +1429,7 @@ export default function ReservationPage() {
               { icon: <User size={18} color={GLAMIA_PINK} />, label: `${clientePrenom} ${clienteNom}` },
               { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
               { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeTotal)}` },
-              ...(prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: `${prixTotal} €` }] : []),
+              ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? `${prixFinal} €` : `${prixTotal} €` }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
@@ -1444,11 +1454,24 @@ export default function ReservationPage() {
                 </span>
               </div>
             ))}
+            {/* Fidélité appliquée */}
+            {recompenseFidelite && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                  {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                </span>
+              </div>
+            )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                {prixFinal !== prixTotal ? (
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                ) : (
+                  <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
+                )}
               </span>
             </div>
           </div>
@@ -2289,12 +2312,14 @@ export default function ReservationPage() {
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
                 { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
-                ...(prixTotal > 0 ? [{
+                ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: 'Total',
-                  value: offreAppliquee && prixTotalBrut !== prixTotal
-                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
-                    : `${prixTotal} €`
+                  value: prixFinal !== prixTotal
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotal} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</span></>
+                    : offreAppliquee && prixTotalBrut !== prixTotal
+                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
+                      : `${prixTotal} €`
                 }] : []),
               ].map((row, i) => (
                 <div key={i}>
@@ -2335,11 +2360,22 @@ export default function ReservationPage() {
                         <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{offreAppliquee.nom}</span>
                       </div>
                     )}
+                    {/* Fidélité appliquée */}
+                    {recompenseFidelite && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                        <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                          {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                        </span>
+                      </div>
+                    )}
                     {/* Ligne total */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                        {offreAppliquee && prixTotalBrut !== prixTotal ? (
+                        {prixFinal !== prixTotal ? (
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                        ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
                           <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotalBrut} €</span>{prixTotal} € · {formatDuree(dureeTotal)}</>
                         ) : (
                           <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
@@ -2432,7 +2468,9 @@ export default function ReservationPage() {
             {/* Total + Continuer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
-                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                {prixFinal !== prixTotal ? (
+                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</>
+                ) : prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
               </span>
               <button
                 onClick={() => setStep(3)}
