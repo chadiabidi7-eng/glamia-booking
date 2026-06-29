@@ -800,15 +800,14 @@ export default function ReservationPage() {
             }
 
             if (rdv.fidelite_appliquee) {
-              // Le RDV avait consommé une récompense → restaurer la carte
-              // Si la carte a été réinitialisée (tampons=0 après carte pleine), remettre les tampons au nb_ronds
+              // Le RDV avait consommé une récompense → défaire le reset + retirer le tampon
               const wasCardReset = ficheFraiche.tampons === 0 && ficheFraiche.cartes_completees > 0
               if (wasCardReset) {
-                update.tampons = fideliteConfig.nb_ronds
+                update.tampons = fideliteConfig.nb_ronds - 1
                 update.cartes_completees = ficheFraiche.cartes_completees - 1
+              } else {
+                update.tampons = Math.max(0, ficheFraiche.tampons - 1)
               }
-              // Remettre la récompense disponible
-              update.recompense_disponible = rdv.fidelite_appliquee
             } else if (ficheFraiche.tampons > 0) {
               // RDV sans récompense → juste retirer un tampon
               update.tampons = ficheFraiche.tampons - 1
