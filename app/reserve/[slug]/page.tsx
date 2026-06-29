@@ -768,6 +768,33 @@ export default function ReservationPage() {
       if (error) throw error
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
+      // Retirer le tampon fidélité si active
+      if (rdv && pro && clienteId && fideliteConfig?.active) {
+        try {
+          const { data: ficheFraiche } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', clienteId)
+            .maybeSingle()
+
+          if (ficheFraiche && ficheFraiche.tampons > 0) {
+            const update: Record<string, unknown> = {
+              tampons: ficheFraiche.tampons - 1,
+              updated_at: new Date().toISOString(),
+            }
+            // Ne retirer la récompense que si elle correspond au palier actuel
+            const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
+            if (palierActuel && ficheFraiche.recompense_disponible) {
+              update.recompense_disponible = null
+            }
+            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
+          }
+        } catch (e) {
+          console.error('[handleAnnulerRdv] Erreur retrait tampon fidélité:', e)
+        }
+      }
+
       if (rdv && pro) {
         envoyerPushNotif(
           pro.id,
