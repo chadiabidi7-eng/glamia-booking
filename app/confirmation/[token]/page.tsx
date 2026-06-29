@@ -543,10 +543,10 @@ function ConfirmationPage() {
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.prix != null && rdv.prix > 0 && (
-                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{rdv.prix} €</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{rdv.prix} €</p>
               )}
               {rdv.pro_adresse && (
-                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
               )}
             </div>
             <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>

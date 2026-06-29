@@ -1154,6 +1154,7 @@ export default function ReservationPage() {
               nom:       clienteNom.trim(),
               telephone: telNormalized,
               email:     clienteEmail.trim() || null,
+              source:    'booking',
             })
             .select('id')
             .single()
@@ -1180,6 +1181,7 @@ export default function ReservationPage() {
           notes:      commentaire.trim() || null,
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
+          source:     'booking',
         })
         .select('id')
         .single()
