@@ -1164,6 +1164,7 @@ export default function ReservationPage() {
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
           demande_rappel: rappel,
+          fidelite_appliquee: recompenseFidelite ?? null,
         })
         .select('id')
         .single()
