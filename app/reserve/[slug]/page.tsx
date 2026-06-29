@@ -1754,7 +1754,7 @@ export default function ReservationPage() {
                       )
                     })()}
                     {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
-                      <p style={{ fontSize: 10, color: '#c4b5a8', textAlign: 'center', marginTop: 4, marginBottom: 0 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#C2779E', backgroundColor: '#FFF0F5', borderRadius: 10, padding: '2px 8px', textAlign: 'center', marginTop: 6, marginBottom: 0, display: 'inline-block' }}>
                         {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
                       </p>
                     )}
