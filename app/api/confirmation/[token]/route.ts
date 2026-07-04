@@ -204,7 +204,10 @@ export async function POST(
           'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            },
             body: JSON.stringify({
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,

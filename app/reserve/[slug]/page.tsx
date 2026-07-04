@@ -954,7 +954,12 @@ export default function ReservationPage() {
             'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              // Authorization requis : la gateway Supabase (verify_jwt) rejette
+              // les appels sans clé — l'email partait en 401 silencieux
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+              },
               body: JSON.stringify({
                 cliente_email: clienteEmail.trim(),
                 cliente_prenom: clientePrenom.trim(),
@@ -1335,7 +1340,10 @@ export default function ReservationPage() {
             'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+              },
               body: JSON.stringify(emailBody),
             },
           )
@@ -1356,7 +1364,10 @@ export default function ReservationPage() {
               'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rappel-confirmation',
               {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                },
                 body: JSON.stringify({ rdv_id: nouveau.id }),
               },
             )
