@@ -489,6 +489,10 @@ export default function ReservationPage() {
   const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
   const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
 
+  // ── Fidélité ─────────────────────────────────
+  const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
+  const [fideliteFiche, setFideliteFiche] = useState<{ tampons: number; cartes_completees: number; recompense_disponible: { type: string; valeur: number } | null } | null>(null)
+
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
@@ -666,12 +670,15 @@ export default function ReservationPage() {
         if (found.email) setClienteEmail(found.email)
         setPhoneStatus('known')
         chargerRdvsAVenir(found.id, pro.id)
+        chargerFidelite(pro.id, found.id)
       } else {
         setClienteId(null)
         setClientePrenom('')
         setClienteNom('')
         setClienteEmail('')
         setPhoneStatus('unknown')
+        setFideliteFiche(null)
+        chargerFideliteConfig(pro.id)
       }
 
       // Charger les offres éligibles pour ce téléphone
@@ -697,6 +704,47 @@ export default function ReservationPage() {
       })))
     } catch (e) {
       console.error('[chargerOffresEligibles]', e)
+    }
+  }
+
+  // ── Fidélité ────────────────────────────────
+  async function chargerFideliteConfig(proId: string) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('fidelite_config')
+        .eq('id', proId)
+        .single()
+      setFideliteConfig(profile?.fidelite_config as any ?? null)
+    } catch (e) {
+      console.error('[chargerFideliteConfig]', e)
+    }
+  }
+
+  async function chargerFidelite(proId: string, clienteId: string) {
+    try {
+      // Config pro
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('fidelite_config')
+        .eq('id', proId)
+        .single()
+      if (profile?.fidelite_config) {
+        setFideliteConfig(profile.fidelite_config as any)
+      } else {
+        setFideliteConfig(null)
+        return
+      }
+      // Fiche cliente
+      const { data: fiche } = await supabase
+        .from('fidelite_clientes')
+        .select('tampons, cartes_completees, recompense_disponible')
+        .eq('pro_id', proId)
+        .eq('cliente_id', clienteId)
+        .single()
+      setFideliteFiche(fiche as any ?? null)
+    } catch (e) {
+      console.error('[chargerFidelite]', e)
     }
   }
 
