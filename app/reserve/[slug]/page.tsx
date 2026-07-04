@@ -1356,9 +1356,11 @@ export default function ReservationPage() {
       }
 
       // Envoi automatique rappel-confirmation si RDV < 24h
+      // Sauf si le RDV est pris pour le jour même (même règle que le mobile)
       if (nouveau?.id) {
         const heuresAvant = (new Date(dateRdvISO).getTime() - Date.now()) / (60 * 60 * 1000)
-        if (heuresAvant > 0 && heuresAvant <= 24) {
+        const estAujourdhui = date === new Date().toISOString().slice(0, 10)
+        if (heuresAvant > 0 && heuresAvant <= 24 && !estAujourdhui) {
           try {
             await fetch(
               'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rappel-confirmation',
