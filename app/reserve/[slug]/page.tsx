@@ -74,6 +74,7 @@ type RdvAVenir = {
   duree: number
   prix: number | null
   statut: string
+  fidelite_appliquee: { type: string; valeur: number } | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -525,6 +526,21 @@ export default function ReservationPage() {
       }, 0)
     : prixTotalBrut
 
+  // Récompense fidélité : existante OU proactive (palier atteint par ce RDV)
+  const recompenseExistante = fideliteFiche?.recompense_disponible ?? null
+  const prochainTampon = (fideliteFiche?.tampons ?? 0) + 1
+  const palierProchain = fideliteConfig?.active ? fideliteConfig.paliers.find((p: any) => p.position === prochainTampon) : null
+  const recompenseFidelite = fideliteConfig?.active
+    ? (recompenseExistante ?? (palierProchain ? { type: palierProchain.type, valeur: palierProchain.valeur } : null))
+    : null
+  const prixFinal = recompenseFidelite
+    ? recompenseFidelite.type === 'gratuit'
+      ? 0
+      : recompenseFidelite.type === 'euros'
+        ? Math.max(0, prixTotal - recompenseFidelite.valeur)
+        : Math.round(prixTotal * (1 - recompenseFidelite.valeur / 100))
+    : prixTotal
+
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
@@ -691,7 +707,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -719,6 +735,47 @@ export default function ReservationPage() {
 
       if (error) throw error
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
+
+      // Restaurer la carte fidélité
+      if (rdv && pro && clienteId && fideliteConfig?.active) {
+        try {
+          const { data: ficheFraiche } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', clienteId)
+            .maybeSingle()
+
+          if (ficheFraiche) {
+            const update: Record<string, unknown> = {
+              updated_at: new Date().toISOString(),
+            }
+
+            if (rdv.fidelite_appliquee) {
+              // Le RDV avait consommé une récompense → défaire le reset + retirer le tampon
+              const wasCardReset = ficheFraiche.tampons === 0 && ficheFraiche.cartes_completees > 0
+              if (wasCardReset) {
+                update.tampons = fideliteConfig.nb_ronds - 1
+                update.cartes_completees = ficheFraiche.cartes_completees - 1
+              } else {
+                update.tampons = Math.max(0, ficheFraiche.tampons - 1)
+              }
+            } else if (ficheFraiche.tampons > 0) {
+              // RDV sans récompense → juste retirer un tampon
+              update.tampons = ficheFraiche.tampons - 1
+              // Ne retirer la récompense que si elle correspond au palier actuel
+              const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
+              if (palierActuel && ficheFraiche.recompense_disponible) {
+                update.recompense_disponible = null
+              }
+            }
+
+            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
+          }
+        } catch (e) {
+          console.error('[handleAnnulerRdv] Erreur retrait tampon fidélité:', e)
+        }
+      }
 
       if (rdv && pro) {
         envoyerPushNotif(
@@ -1049,6 +1106,7 @@ export default function ReservationPage() {
               nom:       clienteNom.trim(),
               telephone: telNormalized,
               email:     clienteEmail.trim() || null,
+              source:    'booking',
             })
             .select('id')
             .single()
@@ -1070,15 +1128,107 @@ export default function ReservationPage() {
           specialite: categoriesStr,
           technique:  techniquesStr,
           techniques: techniquesSelectionnees,
-          prix:       prixTotal > 0 ? prixTotal : null,
+          prix:       prixFinal > 0 ? prixFinal : null,
           statut:     'en_attente',
           notes:      commentaire.trim() || null,
           demande_rappel: rappel,
+          fidelite_appliquee: recompenseFidelite ?? null,
+          source:     'booking',
         })
         .select('id')
         .single()
 
       if (rdvErr) throw rdvErr
+
+      // Fidélité : consommer récompense existante, ajouter tampon, consommer si palier proactif
+      if (cId && fideliteConfig?.active) {
+        try {
+          const { data: ficheFraiche } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', cId)
+            .maybeSingle()
+
+          // Consommer la récompense existante si elle a été appliquée au prix
+          if (ficheFraiche?.recompense_disponible && recompenseExistante) {
+            const consumeUpdate: Record<string, unknown> = {
+              recompense_disponible: null,
+              updated_at: new Date().toISOString(),
+            }
+            if (ficheFraiche.tampons >= fideliteConfig.nb_ronds) {
+              consumeUpdate.tampons = 0
+              consumeUpdate.cartes_completees = ficheFraiche.cartes_completees + 1
+            }
+            await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheFraiche.id)
+          }
+
+          // Re-lire la fiche après consommation éventuelle
+          const { data: ficheApres } = await supabase
+            .from('fidelite_clientes')
+            .select('*')
+            .eq('pro_id', pro.id)
+            .eq('cliente_id', cId)
+            .maybeSingle()
+
+          if (!ficheApres) {
+            // Créer la fiche
+            const palierUn = fideliteConfig.paliers.find((p: any) => p.position === 1)
+            const insertData: Record<string, unknown> = {
+              pro_id: pro.id,
+              cliente_id: cId,
+              tampons: 1,
+            }
+            if (palierUn) {
+              insertData.recompense_disponible = { type: palierUn.type, valeur: palierUn.valeur }
+            }
+            await supabase.from('fidelite_clientes').insert(insertData)
+            // Si palier 1 atteint proactivement, consommer immédiatement
+            if (palierUn && !recompenseExistante) {
+              const { data: ficheNew } = await supabase
+                .from('fidelite_clientes')
+                .select('id, tampons, cartes_completees')
+                .eq('pro_id', pro.id)
+                .eq('cliente_id', cId)
+                .maybeSingle()
+              if (ficheNew) {
+                const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
+                if (ficheNew.tampons >= fideliteConfig.nb_ronds) {
+                  consumeUpdate.tampons = 0
+                  consumeUpdate.cartes_completees = ficheNew.cartes_completees + 1
+                }
+                await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheNew.id)
+              }
+            }
+          } else {
+            const nouveauTampons = ficheApres.tampons + 1
+            const palierAtteint = [...fideliteConfig.paliers]
+              .sort((a: any, b: any) => b.position - a.position)
+              .find((p: any) => p.position === nouveauTampons)
+
+            const update: Record<string, unknown> = {
+              tampons: nouveauTampons,
+              updated_at: new Date().toISOString(),
+            }
+            if (palierAtteint) {
+              update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
+            }
+            await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
+
+            // Si palier atteint proactivement, consommer immédiatement + reset carte si pleine
+            if (palierAtteint && !recompenseExistante) {
+              const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
+              if (nouveauTampons >= fideliteConfig.nb_ronds) {
+                consumeUpdate.tampons = 0
+                consumeUpdate.cartes_completees = ficheApres.cartes_completees + 1
+              }
+              await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheApres.id)
+            }
+          }
+        } catch (e) {
+          console.error('[handleConfirm] Erreur fidélité:', e)
+        }
+      }
 
       // Appliquer l'offre si sélectionnée
       if (nouveau?.id && offreAppliquee) {
@@ -1121,7 +1271,7 @@ export default function ReservationPage() {
             date: formatDateLong(date),
             heure,
             duree: formatDuree(dureeTotal),
-            prix_total: prixTotal,
+            prix_total: prixFinal,
             adresse: pro.adresse || '',
             skip_rappel_notice: dansMotins24h,
             techniques: techniquesSelectionnees.map(t => ({
@@ -1303,7 +1453,7 @@ export default function ReservationPage() {
               { icon: <User size={18} color={GLAMIA_PINK} />, label: `${clientePrenom} ${clienteNom}` },
               { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
               { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeTotal)}` },
-              ...(prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: `${prixTotal} €` }] : []),
+              ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? `${prixFinal} €` : `${prixTotal} €` }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
@@ -1328,11 +1478,24 @@ export default function ReservationPage() {
                 </span>
               </div>
             ))}
+            {/* Fidélité appliquée */}
+            {recompenseFidelite && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                  {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                </span>
+              </div>
+            )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                {prixFinal !== prixTotal ? (
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                ) : (
+                  <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
+                )}
               </span>
             </div>
           </div>
@@ -1487,6 +1650,71 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
+                {/* Carte de fidélité */}
+                {fideliteConfig?.active && (
+                  <div style={{
+                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
+                    padding: 16, marginBottom: 20,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      {fideliteFiche?.recompense_disponible && (
+                        <span style={{
+                          background: PINK, color: '#fff', borderRadius: 10,
+                          padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
+                        }}>
+                          {fideliteFiche.recompense_disponible.type === 'gratuit' ? 'Offert' : `-${fideliteFiche.recompense_disponible.valeur}${fideliteFiche.recompense_disponible.type === 'euros' ? '€' : '%'}`} disponible
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
+                        const pos = i + 1
+                        const tampons = fideliteFiche?.tampons ?? 0
+                        const estTamponné = pos <= tampons
+                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
+                        return (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: 18,
+                              border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
+                              background: estTamponné ? PINK : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {estTamponné && (
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                              )}
+                            </div>
+                            {palier ? (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
+                            ) : (
+                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {(() => {
+                      const tampons = fideliteFiche?.tampons ?? 0
+                      const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
+                      if (!prochainPalier) return null
+                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${prochainPalier.valeur}€` : `-${prochainPalier.valeur}%`
+                      return (
+                        <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
+                          Encore {prochainPalier.position - tampons} RDV avant {label}
+                        </p>
+                      )
+                    })()}
+                    {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#C2779E', backgroundColor: '#FFF0F5', borderRadius: 10, padding: '2px 8px', textAlign: 'center', marginTop: 6, marginBottom: 0, display: 'inline-block' }}>
+                        {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {loadingRdvs ? (
                   <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 16 }}>
                     Chargement de vos rendez-vous...
@@ -1507,46 +1735,44 @@ export default function ReservationPage() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <SpecialiteIcon specialite={rdv.specialite} size={20} />
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <SpecialiteIcon specialite={rdv.specialite} size={18} /> {rdv.technique}
+                              <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {rdv.technique}
                               </p>
-                              <p style={{ margin: '3px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
+                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''}
                               </p>
-                              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                {rdv.prix && rdv.prix > 0 && (
-                                  <span style={{ fontSize: 11, color: '#9ca3af' }}>{rdv.prix} €</span>
-                                )}
-                              </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                              <button
-                                onClick={() => ouvrirReprog(rdv.id)}
-                                style={{
-                                  padding: '7px 12px', borderRadius: 10,
-                                  border: `1.5px solid ${PINK}`, background: '#fff',
-                                  color: PINK, fontSize: 13, fontWeight: 600,
-                                  cursor: 'pointer', transition: 'all 0.15s',
-                                }}
-                              >
-                                Reprogrammer
-                              </button>
-                              <button
-                                onClick={() => confirmerAnnulation(rdv)}
-                                disabled={annulationEnCours === rdv.id}
-                                style={{
-                                  padding: '7px 12px', borderRadius: 10,
-                                  border: '1.5px solid #fca5a5', background: '#fff',
-                                  color: '#ef4444', fontSize: 13, fontWeight: 600,
-                                  cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
-                                  transition: 'all 0.15s',
-                                }}
-                              >
-                                {annulationEnCours === rdv.id ? '...' : 'Annuler'}
-                              </button>
-                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button
+                              onClick={() => ouvrirReprog(rdv.id)}
+                              style={{
+                                flex: 1, padding: '8px 0', borderRadius: 10,
+                                border: `1.5px solid ${PINK}`, background: '#fff',
+                                color: PINK, fontSize: 13, fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.15s',
+                              }}
+                            >
+                              Reprogrammer
+                            </button>
+                            <button
+                              onClick={() => confirmerAnnulation(rdv)}
+                              disabled={annulationEnCours === rdv.id}
+                              style={{
+                                flex: 1, padding: '8px 0', borderRadius: 10,
+                                border: '1.5px solid #fca5a5', background: '#fff',
+                                color: '#ef4444', fontSize: 13, fontWeight: 600,
+                                cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                            </button>
                           </div>
 
                           {/* ── Sélecteur reprogrammation ── */}
@@ -1710,6 +1936,47 @@ export default function ReservationPage() {
                     <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Pour recevoir votre confirmation de RDV</p>
                   </div>
                 </div>
+
+                {/* Carte de fidélité vierge pour nouvelle cliente */}
+                {fideliteConfig?.active && (
+                  <div style={{
+                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
+                    padding: 16, marginBottom: 16,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
+                        const pos = i + 1
+                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
+                        return (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: 18,
+                              border: `${palier ? '2.5px' : '2px'} solid ${palier ? PINK : '#e0d6cf'}`,
+                              background: '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }} />
+                            {palier ? (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
+                            ) : (
+                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {fideliteConfig.paliers.length > 0 && (
+                      <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
+                        Cumulez des tampons à chaque RDV et profitez de réductions !
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(2) }}
                   disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
@@ -2067,12 +2334,14 @@ export default function ReservationPage() {
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
                 { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
-                ...(prixTotal > 0 ? [{
+                ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: 'Total',
-                  value: offreAppliquee && prixTotalBrut !== prixTotal
-                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
-                    : `${prixTotal} €`
+                  value: prixFinal !== prixTotal
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotal} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</span></>
+                    : offreAppliquee && prixTotalBrut !== prixTotal
+                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
+                      : `${prixTotal} €`
                 }] : []),
               ].map((row, i) => (
                 <div key={i}>
@@ -2113,11 +2382,22 @@ export default function ReservationPage() {
                         <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{offreAppliquee.nom}</span>
                       </div>
                     )}
+                    {/* Fidélité appliquée */}
+                    {recompenseFidelite && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                        <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                          {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                        </span>
+                      </div>
+                    )}
                     {/* Ligne total */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                        {offreAppliquee && prixTotalBrut !== prixTotal ? (
+                        {prixFinal !== prixTotal ? (
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                        ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
                           <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotalBrut} €</span>{prixTotal} € · {formatDuree(dureeTotal)}</>
                         ) : (
                           <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
@@ -2210,7 +2490,9 @@ export default function ReservationPage() {
             {/* Total + Continuer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
-                {prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                {prixFinal !== prixTotal ? (
+                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</>
+                ) : prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
               </span>
               <button
                 onClick={() => setStep(3)}

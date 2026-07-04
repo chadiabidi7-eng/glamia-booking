@@ -26,7 +26,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id, duree')
+    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id, duree, instructions')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -94,6 +94,7 @@ export async function GET(
     pro_id: data.pro_id,
     horaires: (pro as any)?.horaires ?? null,
     duree: data.duree ?? 60,
+    instructions: data.instructions ?? null,
     rdvs_jour: rdvsJour,
   })
 }
