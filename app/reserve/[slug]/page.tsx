@@ -1298,14 +1298,13 @@ export default function ReservationPage() {
         }
       }
 
-      // Réduction limitée : décompter une utilisation, désactiver à zéro
+      // Réduction limitée : décompter une utilisation via la RPC sécurisée
+      // (les RLS interdisent — à raison — l'update direct de clientes en anonyme)
       if (cId && reductionCliente && reductionCliente.restants != null) {
         try {
+          const { error: reducError } = await supabase.rpc('consommer_reduction_cliente', { p_cliente_id: cId })
+          if (reducError) throw reducError
           const restants = reductionCliente.restants - 1
-          await supabase.from('clientes').update(restants <= 0
-            ? { reduction_type: null, reduction_valeur: null, reduction_rdv_restants: null }
-            : { reduction_rdv_restants: restants }
-          ).eq('id', cId)
           setReductionCliente(restants <= 0 ? null : { ...reductionCliente, restants })
         } catch (e) {
           console.error('[handleConfirm] Erreur décompte réduction:', e)
