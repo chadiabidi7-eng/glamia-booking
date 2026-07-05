@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Sparkles, Search, Info } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Info } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -1724,6 +1724,32 @@ export default function ReservationPage() {
                     <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
                   </div>
                 </div>
+
+                {/* Réduction personnelle accordée par la pro */}
+                {reductionCliente && pro && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #FFF0F6 0%, #FFF9FB 100%)',
+                    border: '1.5px solid #F3D5E4', borderRadius: 16,
+                    padding: '14px 16px', marginBottom: 20,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                  }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 19, background: '#fff',
+                      border: `1.5px solid ${PINK}`, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      <Gift size={19} color={PINK} />
+                    </div>
+                    <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.5 }}>
+                      <strong>{pro.pseudo || `${pro.prenom} ${pro.nom}`}</strong> vous fait bénéficier
+                      d'une réduction personnelle de{' '}
+                      <strong style={{ color: PINK }}>
+                        −{reductionCliente.valeur}{reductionCliente.type === 'euros' ? ' €' : ' %'}
+                      </strong>
+                      , appliquée automatiquement à tous vos rendez-vous.
+                    </p>
+                  </div>
+                )}
 
                 {/* Carte de fidélité */}
                 {fideliteConfig?.active && (
