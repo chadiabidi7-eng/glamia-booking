@@ -75,6 +75,7 @@ type RdvAVenir = {
   prix: number | null
   statut: string
   fidelite_appliquee: { type: string; valeur: number } | null
+  reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -770,7 +771,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -837,6 +838,23 @@ export default function ReservationPage() {
           }
         } catch (e) {
           console.error('[handleAnnulerRdv] Erreur retrait tampon fidélité:', e)
+        }
+      }
+
+      // Rendre son utilisation de réduction limitée à la cliente
+      if (rdv?.reduction_appliquee?.limitee && clienteId) {
+        try {
+          const { error: reducError } = await supabase.rpc('restaurer_reduction_cliente', {
+            p_cliente_id: clienteId,
+            p_type: rdv.reduction_appliquee.type,
+            p_valeur: rdv.reduction_appliquee.valeur,
+          })
+          if (reducError) throw reducError
+          setReductionCliente(prev => prev
+            ? { ...prev, restants: prev.restants != null ? prev.restants + 1 : null }
+            : { type: rdv.reduction_appliquee!.type, valeur: rdv.reduction_appliquee!.valeur, restants: 1 })
+        } catch (e) {
+          console.error('[handleAnnulerRdv] Erreur restauration réduction:', e)
         }
       }
 
@@ -1201,6 +1219,9 @@ export default function ReservationPage() {
           notes:      commentaire.trim() || null,
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
+          reduction_appliquee: reductionCliente
+            ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
+            : null,
           source:     'booking',
         })
         .select('id')
