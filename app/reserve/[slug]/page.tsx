@@ -492,7 +492,8 @@ export default function ReservationPage() {
   // ── Fidélité ─────────────────────────────────
   const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
   // Réduction personnelle de la cliente (cumulable avec la fidélité)
-  const [reductionCliente, setReductionCliente] = useState<{ type: string; valeur: number } | null>(null)
+  // restants : null = illimitée, sinon nombre de RDV restants (0 = épuisée, non chargée)
+  const [reductionCliente, setReductionCliente] = useState<{ type: string; valeur: number; restants: number | null } | null>(null)
   const [fideliteFiche, setFideliteFiche] = useState<{ tampons: number; cartes_completees: number; recompense_disponible: { type: string; valeur: number } | null } | null>(null)
 
   // ── Step 2 : Multi-select techniques ─────────
@@ -664,7 +665,7 @@ export default function ReservationPage() {
     try {
       const { data: clientes, error } = await supabase
         .from('clientes')
-        .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur')
+        .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur, reduction_rdv_restants')
         .eq('pro_id', pro.id)
 
       if (error) throw error
@@ -677,8 +678,8 @@ export default function ReservationPage() {
         setClienteNom(found.nom)
         if (found.email) setClienteEmail(found.email)
         setReductionCliente(
-          found.reduction_type && found.reduction_valeur
-            ? { type: found.reduction_type, valeur: Number(found.reduction_valeur) }
+          found.reduction_type && found.reduction_valeur && found.reduction_rdv_restants !== 0
+            ? { type: found.reduction_type, valeur: Number(found.reduction_valeur), restants: found.reduction_rdv_restants ?? null }
             : null
         )
         setPhoneStatus('known')
@@ -1297,6 +1298,20 @@ export default function ReservationPage() {
         }
       }
 
+      // Réduction limitée : décompter une utilisation, désactiver à zéro
+      if (cId && reductionCliente && reductionCliente.restants != null) {
+        try {
+          const restants = reductionCliente.restants - 1
+          await supabase.from('clientes').update(restants <= 0
+            ? { reduction_type: null, reduction_valeur: null, reduction_rdv_restants: null }
+            : { reduction_rdv_restants: restants }
+          ).eq('id', cId)
+          setReductionCliente(restants <= 0 ? null : { ...reductionCliente, restants })
+        } catch (e) {
+          console.error('[handleConfirm] Erreur décompte réduction:', e)
+        }
+      }
+
       // Appliquer l'offre si sélectionnée
       if (nouveau?.id && offreAppliquee) {
         try {
@@ -1746,7 +1761,11 @@ export default function ReservationPage() {
                       <strong style={{ color: PINK }}>
                         −{reductionCliente.valeur}{reductionCliente.type === 'euros' ? ' €' : ' %'}
                       </strong>
-                      , appliquée automatiquement à tous vos rendez-vous.
+                      {reductionCliente.restants == null
+                        ? ', appliquée automatiquement à tous vos rendez-vous.'
+                        : reductionCliente.restants === 1
+                          ? ', appliquée automatiquement à votre prochain rendez-vous.'
+                          : `, appliquée automatiquement à vos ${reductionCliente.restants} prochains rendez-vous.`}
                     </p>
                   </div>
                 )}
