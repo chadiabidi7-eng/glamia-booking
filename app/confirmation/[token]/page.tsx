@@ -29,6 +29,21 @@ type RdvInfo = {
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
 
+// Bloc instructions de la pro — affiché avant ET après confirmation
+// (c'est surtout après avoir confirmé que la cliente doit les lire)
+function InstructionsBox({ instructions }: { instructions: string | null }) {
+  if (!instructions) return null
+  return (
+    <div style={{ background: '#FFF8E1', borderRadius: 16, padding: 16, border: '1.5px solid #F5C27A', marginBottom: 24, textAlign: 'left', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <FileText size={18} color="#E67E22" />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Instructions pour votre RDV</span>
+      </div>
+      <p style={{ fontSize: 14, color: '#1f2937', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>{instructions}</p>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
@@ -333,6 +348,7 @@ function ConfirmationPage() {
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
             </div>
+            <InstructionsBox instructions={rdv.instructions} />
           </div>
         )}
 
@@ -390,15 +406,7 @@ function ConfirmationPage() {
             </div>
 
             {/* Instructions */}
-            {rdv.instructions && (
-              <div style={{ background: '#FFF8E1', borderRadius: 16, padding: 16, border: '1.5px solid #F5C27A', marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <FileText size={18} color="#E67E22" />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Instructions pour votre RDV</span>
-                </div>
-                <p style={{ fontSize: 14, color: '#1f2937', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>{rdv.instructions}</p>
-              </div>
-            )}
+            <InstructionsBox instructions={rdv.instructions} />
 
             {/* Boutons */}
             <div style={S.actions}>
@@ -549,7 +557,10 @@ function ConfirmationPage() {
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
               )}
             </div>
-            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
+            <div style={{ marginTop: 16, width: '100%' }}>
+              <InstructionsBox instructions={rdv.instructions} />
+            </div>
+            <p style={{ ...S.grayText, fontSize: 13 }}>
               Vous pouvez fermer cette page.
             </p>
           </div>
