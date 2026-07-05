@@ -491,6 +491,8 @@ export default function ReservationPage() {
 
   // ── Fidélité ─────────────────────────────────
   const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
+  // Réduction personnelle de la cliente (cumulable avec la fidélité)
+  const [reductionCliente, setReductionCliente] = useState<{ type: string; valeur: number } | null>(null)
   const [fideliteFiche, setFideliteFiche] = useState<{ tampons: number; cartes_completees: number; recompense_disponible: { type: string; valeur: number } | null } | null>(null)
 
   // ── Step 2 : Multi-select techniques ─────────
@@ -537,13 +539,19 @@ export default function ReservationPage() {
   const recompenseFidelite = fideliteConfig?.active
     ? (recompenseExistante ?? (palierProchain ? { type: palierProchain.type, valeur: palierProchain.valeur } : null))
     : null
-  const prixFinal = recompenseFidelite
+  const prixApresFidelite = recompenseFidelite
     ? recompenseFidelite.type === 'gratuit'
       ? 0
       : recompenseFidelite.type === 'euros'
         ? Math.max(0, prixTotal - recompenseFidelite.valeur)
         : Math.round(prixTotal * (1 - recompenseFidelite.valeur / 100))
     : prixTotal
+  // Réduction personnelle : appliquée après la fidélité (cumul)
+  const prixFinal = reductionCliente && prixApresFidelite > 0
+    ? reductionCliente.type === 'euros'
+      ? Math.max(0, prixApresFidelite - reductionCliente.valeur)
+      : Math.round(prixApresFidelite * (1 - reductionCliente.valeur / 100))
+    : prixApresFidelite
 
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
@@ -656,7 +664,7 @@ export default function ReservationPage() {
     try {
       const { data: clientes, error } = await supabase
         .from('clientes')
-        .select('id, prenom, nom, telephone, email')
+        .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur')
         .eq('pro_id', pro.id)
 
       if (error) throw error
@@ -668,6 +676,11 @@ export default function ReservationPage() {
         setClientePrenom(found.prenom)
         setClienteNom(found.nom)
         if (found.email) setClienteEmail(found.email)
+        setReductionCliente(
+          found.reduction_type && found.reduction_valeur
+            ? { type: found.reduction_type, valeur: Number(found.reduction_valeur) }
+            : null
+        )
         setPhoneStatus('known')
         chargerRdvsAVenir(found.id, pro.id)
         chargerFidelite(pro.id, found.id)
@@ -676,6 +689,7 @@ export default function ReservationPage() {
         setClientePrenom('')
         setClienteNom('')
         setClienteEmail('')
+        setReductionCliente(null)
         setPhoneStatus('unknown')
         setFideliteFiche(null)
         chargerFideliteConfig(pro.id)
@@ -1720,14 +1734,24 @@ export default function ReservationPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
-                      {fideliteFiche?.recompense_disponible && (
-                        <span style={{
-                          background: PINK, color: '#fff', borderRadius: 10,
-                          padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
-                        }}>
-                          {fideliteFiche.recompense_disponible.type === 'gratuit' ? 'Offert' : `-${fideliteFiche.recompense_disponible.valeur}${fideliteFiche.recompense_disponible.type === 'euros' ? '€' : '%'}`} disponible
-                        </span>
-                      )}
+                      {/* Récompense du prochain RDV : existante ou palier atteint
+                          par le prochain passage — même logique que le prix */}
+                      {(() => {
+                        const tampons = fideliteFiche?.tampons ?? 0
+                        const prochaine = fideliteFiche?.recompense_disponible
+                          ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
+                          ?? null
+                        if (!prochaine) return null
+                        const label = prochaine.type === 'gratuit' ? 'Offert' : `-${prochaine.valeur}${prochaine.type === 'euros' ? '€' : '%'}`
+                        return (
+                          <span style={{
+                            background: PINK, color: '#fff', borderRadius: 10,
+                            padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
+                          }}>
+                            {label} au prochain RDV
+                          </span>
+                        )
+                      })()}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                       {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
