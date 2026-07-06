@@ -1164,7 +1164,9 @@ export default function ReservationPage() {
         : rdv.duree
 
       setReprogSlots(generateSlots(dateStr, dureeEffective, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
-      scrollVers(reprogSlotsRef, 'center')
+      // 'start' et non 'center' : sur petit iPhone la grille dépasse l'écran,
+      // un centrage couperait la date et le haut des créneaux
+      scrollVers(reprogSlotsRef, 'start')
     } catch (e) {
       console.error('[reprogSelectDate] Erreur:', e)
     } finally {
