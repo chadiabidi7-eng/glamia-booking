@@ -466,6 +466,11 @@ export default function ReservationPage() {
   // ── Navigation ───────────────────────────────
   const [step, setStep] = useState(1)
 
+  // Changement d'étape → remonter en haut (l'étape 5 gère son propre scroll vers le récap)
+  useEffect(() => {
+    if (step !== 5) window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step])
+
   // ── Step 1 : Identification ──────────────────
   const [telephone,     setTelephone]     = useState('')
   const [clientePrenom, setClientePrenom] = useState('')
@@ -527,6 +532,17 @@ export default function ReservationPage() {
   const [commentaire, setCommentaire] = useState('')
   const [rappel,      setRappel]      = useState(false)
   const step5Ref = useRef<HTMLDivElement>(null)
+
+  // ── Glissements d'écran automatiques (fluidité du parcours) ──
+  const modifPanelRef = useRef<HTMLDivElement>(null)
+  const reprogPanelRef = useRef<HTMLDivElement>(null)
+  const reprogSlotsRef = useRef<HTMLDivElement>(null)
+  const reprogConfirmRef = useRef<HTMLButtonElement>(null)
+  const confirmationRef = useRef<HTMLDivElement>(null)
+
+  const scrollVers = (ref: React.RefObject<HTMLElement | null>, block: ScrollLogicalPosition = 'start') => {
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block }), 90)
+  }
 
   // ── Premier créneau disponible ─────────────
   const [premierCreneau, setPremierCreneau] = useState<{ date: string; heure: string } | null>(null)
@@ -903,6 +919,7 @@ export default function ReservationPage() {
     setReprogCalMonth(todayJs.getMonth())
     // Une reprogrammation classique annule toute modification de prestations en attente
     setModifPendingTechs(null)
+    scrollVers(reprogPanelRef)
   }
 
   function fermerReprog() {
@@ -947,6 +964,7 @@ export default function ReservationPage() {
     // Cartes repliées à l'ouverture — les spécialités déjà choisies restent
     // repérables grâce à l'en-tête rose + badge ✓ n
     setModifSections(new Set())
+    scrollVers(modifPanelRef)
   }
 
   function toggleModifSection(nom: string) {
@@ -1052,6 +1070,7 @@ export default function ReservationPage() {
     fermerModifPresta()
     setModifPendingTechs(null)
     setReprogRdvId(null)
+    scrollVers(confirmationRef, 'center')
   }
 
   // Confirmer depuis le panneau prestations : vérifie que la nouvelle
@@ -1145,6 +1164,7 @@ export default function ReservationPage() {
         : rdv.duree
 
       setReprogSlots(generateSlots(dateStr, dureeEffective, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
+      scrollVers(reprogSlotsRef, 'center')
     } catch (e) {
       console.error('[reprogSelectDate] Erreur:', e)
     } finally {
@@ -1237,6 +1257,7 @@ export default function ReservationPage() {
 
       setReprogDone(reprogRdvId)
       setReprogRdvId(null)
+      scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
       alert('Impossible de reprogrammer ce rendez-vous.')
@@ -2095,7 +2116,7 @@ export default function ReservationPage() {
                         <div key={rdv.id} style={{ ...S.card }}>
                           {/* Confirmation visuelle reprog */}
                           {reprogDone === rdv.id && (
-                            <div style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center' }}>
+                            <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />RDV reprogrammé !</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
                                 {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
@@ -2105,7 +2126,7 @@ export default function ReservationPage() {
 
                           {/* Confirmation visuelle modification des prestations */}
                           {modifDone === rdv.id && (
-                            <div style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center' }}>
+                            <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />Prestations modifiées !</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
                                 {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''} — un email de confirmation à jour vous a été envoyé
@@ -2171,7 +2192,7 @@ export default function ReservationPage() {
 
                           {/* ── Panneau modification des prestations ── */}
                           {modifRdvId === rdv.id && (
-                            <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+                            <div ref={modifPanelRef} style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16, scrollMarginTop: 12 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <Sparkles size={18} color={GLAMIA_PINK} />Vos prestations
@@ -2277,7 +2298,7 @@ export default function ReservationPage() {
 
                           {/* ── Sélecteur reprogrammation ── */}
                           {reprogRdvId === rdv.id && (
-                            <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+                            <div ref={reprogPanelRef} style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16, scrollMarginTop: 12 }}>
                               {modifPendingTechs && (
                                 <div style={{ background: '#FFF8E1', border: '1.5px solid #F5C27A', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
                                   <p style={{ margin: 0, fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
@@ -2347,7 +2368,7 @@ export default function ReservationPage() {
 
                               {/* Créneaux reprog */}
                               {reprogDate && (
-                                <div style={{ marginTop: 16 }}>
+                                <div ref={reprogSlotsRef} style={{ marginTop: 16, scrollMarginTop: 12 }}>
                                   <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: '0 0 10px', textTransform: 'capitalize' }}>
                                     <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{formatDateLong(reprogDate)}
                                   </p>
@@ -2363,7 +2384,7 @@ export default function ReservationPage() {
                                         <button
                                           key={s.heure}
                                           disabled={!s.disponible}
-                                          onClick={() => s.disponible && setReprogHeure(s.heure)}
+                                          onClick={() => { if (s.disponible) { setReprogHeure(s.heure); scrollVers(reprogConfirmRef, 'center') } }}
                                           style={{
                                             padding: '10px 0', borderRadius: 10,
                                             border: `1.5px solid ${!s.disponible ? '#e5e7eb' : reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
@@ -2386,6 +2407,7 @@ export default function ReservationPage() {
                               {/* Bouton confirmer reprog */}
                               {reprogDate && reprogHeure && (
                                 <button
+                                  ref={reprogConfirmRef}
                                   onClick={handleReprogrammer}
                                   disabled={reprogSaving}
                                   style={{
@@ -2395,7 +2417,7 @@ export default function ReservationPage() {
                                     opacity: reprogSaving ? 0.7 : 1, transition: 'opacity 0.15s',
                                   }}
                                 >
-                                  {reprogSaving ? 'Reprogrammation...' : `Reprogrammer au ${formatDateLong(reprogDate)} à ${reprogHeure}`}
+                                  {reprogSaving ? (modifPendingTechs ? 'Modification...' : 'Reprogrammation...') : `${modifPendingTechs ? 'Confirmer pour le' : 'Reprogrammer au'} ${formatDateLong(reprogDate)} à ${reprogHeure}`}
                                 </button>
                               )}
                             </div>
