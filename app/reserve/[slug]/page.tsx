@@ -76,6 +76,8 @@ type RdvAVenir = {
   statut: string
   fidelite_appliquee: { type: string; valeur: number } | null
   reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
+  techniques: { nom: string; prix: number; duree: number; categorie?: string }[] | null
+  offre_id: string | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -480,6 +482,14 @@ export default function ReservationPage() {
   const [reprogDate, setReprogDate]         = useState('')
   const [reprogHeure, setReprogHeure]       = useState('')
   const [reprogSlots, setReprogSlots]       = useState<Slot[]>([])
+
+  // ── Modification des prestations d'un RDV à venir ──
+  const [modifRdvId, setModifRdvId]           = useState<string | null>(null)
+  const [modifSelection, setModifSelection]   = useState<TechSelec[]>([])
+  const [modifSaving, setModifSaving]         = useState(false)
+  const [modifDone, setModifDone]             = useState<string | null>(null)
+  // Prestations en attente quand la nouvelle durée impose un autre créneau
+  const [modifPendingTechs, setModifPendingTechs] = useState<TechSelec[] | null>(null)
   const [reprogLoadingSlots, setReprogLoadingSlots] = useState(false)
   const [reprogCalYear, setReprogCalYear]   = useState(todayJs.getFullYear())
   const [reprogCalMonth, setReprogCalMonth] = useState(todayJs.getMonth())
@@ -771,7 +781,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -890,6 +900,8 @@ export default function ReservationPage() {
     setReprogDone(null)
     setReprogCalYear(todayJs.getFullYear())
     setReprogCalMonth(todayJs.getMonth())
+    // Une reprogrammation classique annule toute modification de prestations en attente
+    setModifPendingTechs(null)
   }
 
   function fermerReprog() {
@@ -897,6 +909,181 @@ export default function ReservationPage() {
     setReprogDate('')
     setReprogHeure('')
     setReprogSlots([])
+    setModifPendingTechs(null)
+  }
+
+  // ── Modification des prestations d'un RDV à venir ─────────────────
+  // (indisponible sur les RDV liés à une offre : le prix promo est
+  // attaché à une composition précise de prestations)
+
+  // Ré-appliquer au nouveau total les réductions déjà accordées à ce RDV
+  function prixApresReducsRdv(base: number, rdv: RdvAVenir) {
+    let p = base
+    const f = rdv.fidelite_appliquee
+    if (f) {
+      p = f.type === 'gratuit' ? 0
+        : f.type === 'euros' ? Math.max(0, p - f.valeur)
+        : Math.round(p * (1 - f.valeur / 100))
+    }
+    const r = rdv.reduction_appliquee
+    if (r && p > 0) {
+      p = r.type === 'euros' ? Math.max(0, p - r.valeur)
+        : Math.round(p * (1 - r.valeur / 100))
+    }
+    return p
+  }
+
+  function ouvrirModifPresta(rdv: RdvAVenir) {
+    fermerReprog()
+    setModifDone(null)
+    setModifRdvId(rdv.id)
+    setModifSelection((rdv.techniques ?? []).map(t => ({
+      categorie: t.categorie ?? rdv.specialite,
+      nom: t.nom,
+      prix: t.prix,
+      duree: t.duree,
+    })))
+  }
+
+  function fermerModifPresta() {
+    setModifRdvId(null)
+    setModifSelection([])
+  }
+
+  function toggleModifTech(t: { id?: string; nom: string; prix: number; duree: number }, categorie: string) {
+    setModifSelection(prev => {
+      const dedans = prev.some(s => s.nom === t.nom && s.categorie === categorie)
+      return dedans
+        ? prev.filter(s => !(s.nom === t.nom && s.categorie === categorie))
+        : [...prev, { categorie, nom: t.nom, prix: t.prix, duree: t.duree }]
+    })
+  }
+
+  // Applique la modification (et éventuellement une nouvelle date/heure)
+  async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null) {
+    if (!pro) return
+    const duree = techs.reduce((s, t) => s + t.duree, 0)
+    const base = techs.reduce((s, t) => s + t.prix, 0)
+    const prix = prixApresReducsRdv(base, rdv)
+    const labels = techs.map(t => t.nom).join(', ')
+    const specs = [...new Set(techs.map(t => t.categorie))].join(', ')
+    const dateISO = newDate && newHeure ? `${newDate}T${newHeure}:00.000Z` : rdv.date
+    const dateAffichee = newDate ? formatDateLong(newDate) : formatRdvDate(rdv.date)
+    const heureAffichee = newHeure ?? formatRdvHeure(rdv.date)
+
+    const patch: Record<string, unknown> = {
+      techniques: techs,
+      technique: labels,
+      specialite: specs,
+      duree,
+      prix: prix > 0 ? prix : null,
+    }
+    if (newDate && newHeure) {
+      patch.date = dateISO
+      patch.statut = 'en_attente'
+      patch.rappel_envoye_count = 0
+      patch.rappel_envoye_at = null
+    }
+
+    const { error } = await supabase.from('rendez_vous').update(patch).eq('id', rdv.id)
+    if (error) throw error
+
+    // Push à la pro
+    envoyerPushNotif(
+      pro.id,
+      '🌸 RDV modifié',
+      `${clientePrenom} a modifié ses prestations du ${dateAffichee} à ${heureAffichee} : ${labels}`
+    )
+
+    // Email de confirmation à jour pour la cliente
+    if (clienteEmail.trim()) {
+      try {
+        await fetch(
+          'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              cliente_email: clienteEmail.trim(),
+              cliente_prenom: clientePrenom.trim(),
+              pro_nom: pro.pseudo || `${pro.prenom} ${pro.nom}`,
+              date: dateAffichee,
+              heure: heureAffichee,
+              duree: formatDuree(duree),
+              prix_total: prix,
+              adresse: pro.adresse || '',
+              techniques: techs.map(t => ({
+                nom: t.nom,
+                specialite: t.categorie,
+                prix: t.prix,
+                duree_minutes: t.duree,
+              })),
+            }),
+          },
+        )
+      } catch (e) {
+        console.error('[appliquerModifPresta] Erreur envoi email:', e)
+      }
+    }
+
+    // Mise à jour locale
+    setRdvsAVenir(prev => prev.map(r =>
+      r.id === rdv.id
+        ? { ...r, date: dateISO, technique: labels, specialite: specs, duree, prix: prix > 0 ? prix : null, techniques: techs, ...(newDate ? { statut: 'en_attente' } : {}) }
+        : r
+    ))
+    setModifDone(rdv.id)
+    fermerModifPresta()
+    setModifPendingTechs(null)
+    setReprogRdvId(null)
+  }
+
+  // Confirmer depuis le panneau prestations : vérifie que la nouvelle
+  // durée tient dans le créneau actuel, sinon bascule sur le choix d'horaire
+  async function confirmerModifPresta(rdv: RdvAVenir) {
+    if (!pro || modifSelection.length === 0) return
+    setModifSaving(true)
+    try {
+      const nouvelleDuree = modifSelection.reduce((s, t) => s + t.duree, 0)
+      if (nouvelleDuree > rdv.duree) {
+        const dateStr = (rdv.date as string).slice(0, 10)
+        const heureActuelle = formatRdvHeure(rdv.date)
+        const { data: rdvs } = await supabase
+          .from('rendez_vous')
+          .select('id, date, duree, statut')
+          .eq('pro_id', pro.id)
+          .gte('date', `${dateStr}T00:00:00.000Z`)
+          .lte('date', `${dateStr}T23:59:59.999Z`)
+          .neq('statut', 'annule')
+        const autres = (rdvs ?? []).filter(r => r.id !== rdv.id).map(r => {
+          const d = new Date(r.date)
+          return {
+            heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+            duree: r.duree,
+          }
+        })
+        const slots = generateSlots(dateStr, nouvelleDuree, pro.horaires, autres, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable)
+        const tient = slots.some(s => s.heure === heureActuelle && s.disponible)
+        if (!tient) {
+          // Le créneau actuel ne suffit plus → choix d'un nouvel horaire
+          // (ouvrirReprog d'abord : il réinitialise modifPendingTechs)
+          const enAttente = modifSelection
+          fermerModifPresta()
+          ouvrirReprog(rdv.id)
+          setModifPendingTechs(enAttente)
+          return
+        }
+      }
+      await appliquerModifPresta(rdv, modifSelection, null, null)
+    } catch (e) {
+      console.error('[confirmerModifPresta] Erreur:', e)
+      alert('Impossible de modifier ce rendez-vous.')
+    } finally {
+      setModifSaving(false)
+    }
   }
 
   function reprogPrevMonth() {
@@ -924,13 +1111,14 @@ export default function ReservationPage() {
     try {
       const { data: rdvs } = await supabase
         .from('rendez_vous')
-        .select('date, duree, statut')
+        .select('id, date, duree, statut')
         .eq('pro_id', pro.id)
         .gte('date', `${dateStr}T00:00:00.000Z`)
         .lte('date', `${dateStr}T23:59:59.999Z`)
         .neq('statut', 'annule')
 
-      const rdvExistants = (rdvs ?? []).map(r => {
+      // Exclure le RDV en cours de modification : son propre créneau ne doit pas le bloquer
+      const rdvExistants = (rdvs ?? []).filter(r => r.id !== reprogRdvId).map(r => {
         const d = new Date(r.date)
         return {
           heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
@@ -938,7 +1126,12 @@ export default function ReservationPage() {
         }
       })
 
-      setReprogSlots(generateSlots(dateStr, rdv.duree, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
+      // Durée effective : celle des nouvelles prestations si une modification est en cours
+      const dureeEffective = modifPendingTechs
+        ? modifPendingTechs.reduce((s, t) => s + t.duree, 0)
+        : rdv.duree
+
+      setReprogSlots(generateSlots(dateStr, dureeEffective, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
     } catch (e) {
       console.error('[reprogSelectDate] Erreur:', e)
     } finally {
@@ -950,6 +1143,18 @@ export default function ReservationPage() {
     if (!pro || !reprogRdvId || !reprogDate || !reprogHeure) return
     setReprogSaving(true)
     try {
+      // Modification de prestations en attente → tout appliquer d'un coup
+      if (modifPendingTechs) {
+        const rdvCible = rdvsAVenir.find(r => r.id === reprogRdvId)
+        if (rdvCible) {
+          await appliquerModifPresta(rdvCible, modifPendingTechs, reprogDate, reprogHeure)
+          setReprogDate('')
+          setReprogHeure('')
+          setReprogSlots([])
+          return
+        }
+      }
+
       const newDateISO = `${reprogDate}T${reprogHeure}:00.000Z`
 
       const { error } = await supabase
@@ -1885,6 +2090,16 @@ export default function ReservationPage() {
                             </div>
                           )}
 
+                          {/* Confirmation visuelle modification des prestations */}
+                          {modifDone === rdv.id && (
+                            <div style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />Prestations modifiées !</p>
+                              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
+                                {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''} — un email de confirmation à jour vous a été envoyé
+                              </p>
+                            </div>
+                          )}
+
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 40, height: 40, borderRadius: 12, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <SpecialiteIcon specialite={rdv.specialite} size={20} />
@@ -1898,6 +2113,22 @@ export default function ReservationPage() {
                               </p>
                             </div>
                           </div>
+                          {/* Modifier les prestations — indisponible sur les RDV liés à une offre */}
+                          {!rdv.offre_id && (
+                            <button
+                              onClick={() => modifRdvId === rdv.id ? fermerModifPresta() : ouvrirModifPresta(rdv)}
+                              style={{
+                                width: '100%', marginTop: 10, padding: '8px 0', borderRadius: 10,
+                                border: `1.5px solid ${PINK}`, background: modifRdvId === rdv.id ? PINK_LIGHT : '#fff',
+                                color: PINK, fontSize: 13, fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.15s',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                              }}
+                            >
+                              <Sparkles size={14} color={PINK} />
+                              Modifier les prestations
+                            </button>
+                          )}
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                             <button
                               onClick={() => ouvrirReprog(rdv.id)}
@@ -1925,9 +2156,96 @@ export default function ReservationPage() {
                             </button>
                           </div>
 
+                          {/* ── Panneau modification des prestations ── */}
+                          {modifRdvId === rdv.id && (
+                            <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <Sparkles size={18} color={GLAMIA_PINK} />Vos prestations
+                                </p>
+                                <button onClick={fermerModifPresta} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>
+                                  ✕ Fermer
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {specialitesActives.map(s => (
+                                  <div key={s.nom}>
+                                    <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 700, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <SpecialiteIcon specialite={s.nom} size={16} />{s.nom}
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      {s.techniques.map(t => {
+                                        const selected = modifSelection.some(sel => sel.nom === t.nom && sel.categorie === s.nom)
+                                        return (
+                                          <button
+                                            key={t.id ?? t.nom}
+                                            onClick={() => toggleModifTech(t, s.nom)}
+                                            style={{
+                                              display: 'flex', alignItems: 'center', gap: 10,
+                                              padding: '9px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                                              border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
+                                              background: selected ? PINK_LIGHT : '#fff',
+                                            }}>
+                                            <span style={{
+                                              width: 18, height: 18, borderRadius: 9, flexShrink: 0,
+                                              border: `1.5px solid ${selected ? PINK : '#d1d5db'}`,
+                                              background: selected ? PINK : '#fff',
+                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                              color: '#fff', fontSize: 11, fontWeight: 700,
+                                            }}>{selected ? '✓' : ''}</span>
+                                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}</span>
+                                            <span style={{ fontSize: 12, color: '#6b7280' }}>
+                                              {t.prix > 0 ? `${t.prix} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree)}
+                                            </span>
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {/* Récap + confirmation */}
+                              {(() => {
+                                const base = modifSelection.reduce((s, t) => s + t.prix, 0)
+                                const total = prixApresReducsRdv(base, rdv)
+                                const duree = modifSelection.reduce((s, t) => s + t.duree, 0)
+                                return (
+                                  <div style={{ marginTop: 14 }}>
+                                    <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#1f2937', textAlign: 'center' }}>
+                                      {modifSelection.length === 0 ? 'Sélectionnez au moins une prestation' : (
+                                        <>
+                                          {total !== base && <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 6 }}>{base} €</span>}
+                                          {total > 0 ? `${total} €` : 'Offert'} · {formatDuree(duree)}
+                                        </>
+                                      )}
+                                    </p>
+                                    <button
+                                      onClick={() => confirmerModifPresta(rdv)}
+                                      disabled={modifSaving || modifSelection.length === 0}
+                                      style={{
+                                        width: '100%', padding: '11px 0', borderRadius: 12, border: 'none',
+                                        background: PINK, color: '#fff', fontSize: 14, fontWeight: 700,
+                                        cursor: 'pointer', opacity: (modifSaving || modifSelection.length === 0) ? 0.5 : 1,
+                                      }}>
+                                      {modifSaving ? 'Modification...' : 'Confirmer la modification'}
+                                    </button>
+                                  </div>
+                                )
+                              })()}
+                            </div>
+                          )}
+
                           {/* ── Sélecteur reprogrammation ── */}
                           {reprogRdvId === rdv.id && (
                             <div style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+                              {modifPendingTechs && (
+                                <div style={{ background: '#FFF8E1', border: '1.5px solid #F5C27A', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+                                  <p style={{ margin: 0, fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>
+                                    Vos nouvelles prestations durent plus longtemps ({formatDuree(modifPendingTechs.reduce((s, t) => s + t.duree, 0))})
+                                    et ne rentrent plus dans votre créneau actuel. Choisissez un nouvel horaire :
+                                  </p>
+                                </div>
+                              )}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={18} color={GLAMIA_PINK} />Nouvelle date</p>
                                 <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>
