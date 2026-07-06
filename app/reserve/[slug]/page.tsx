@@ -1670,17 +1670,19 @@ export default function ReservationPage() {
         }
       }
 
+      // Demande d'appel : mention bien visible dans la notification
+      const mentionAppel = rappel ? `\n📞 ${clientePrenom} souhaite être rappelée !` : ''
       if (nouvelleCliente) {
         envoyerPushNotif(
           pro.id,
-          '🌸 Nouvelle cliente !',
-          `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
+          rappel ? '🌸 Nouvelle cliente · 📞 À rappeler' : '🌸 Nouvelle cliente !',
+          `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       } else {
         envoyerPushNotif(
           pro.id,
-          '🌸 Nouveau RDV',
-          `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}`
+          rappel ? '🌸 Nouveau RDV · 📞 À rappeler' : '🌸 Nouveau RDV',
+          `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       }
     } catch (e) {
