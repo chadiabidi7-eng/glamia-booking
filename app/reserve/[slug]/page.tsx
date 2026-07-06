@@ -944,8 +944,9 @@ export default function ReservationPage() {
       prix: t.prix,
       duree: t.duree,
     })))
-    // Toutes les spécialités dépliées à l'ouverture
-    setModifSections(new Set(specialitesActives.map(s => s.nom)))
+    // Cartes repliées à l'ouverture — les spécialités déjà choisies restent
+    // repérables grâce à l'en-tête rose + badge ✓ n
+    setModifSections(new Set())
   }
 
   function toggleModifSection(nom: string) {
