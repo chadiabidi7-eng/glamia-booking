@@ -2410,11 +2410,9 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                {reprogRdvId ? (
-                  <button onClick={() => setStep(2)} style={S.btn}>
-                    Reprogrammer mon RDV →
-                  </button>
-                ) : (
+                {/* Masqué pendant une reprogrammation ou une modification de
+                    prestations : ces panneaux ont leur propre bouton de confirmation */}
+                {!reprogRdvId && !modifRdvId && (
                   <button onClick={() => setStep(2)} style={S.btn}>
                     + Prendre un nouveau rendez-vous
                   </button>
