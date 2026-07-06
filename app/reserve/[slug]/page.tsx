@@ -486,6 +486,7 @@ export default function ReservationPage() {
   // ── Modification des prestations d'un RDV à venir ──
   const [modifRdvId, setModifRdvId]           = useState<string | null>(null)
   const [modifSelection, setModifSelection]   = useState<TechSelec[]>([])
+  const [modifSections, setModifSections]     = useState<Set<string>>(new Set())
   const [modifSaving, setModifSaving]         = useState(false)
   const [modifDone, setModifDone]             = useState<string | null>(null)
   // Prestations en attente quand la nouvelle durée impose un autre créneau
@@ -943,6 +944,17 @@ export default function ReservationPage() {
       prix: t.prix,
       duree: t.duree,
     })))
+    // Toutes les spécialités dépliées à l'ouverture
+    setModifSections(new Set(specialitesActives.map(s => s.nom)))
+  }
+
+  function toggleModifSection(nom: string) {
+    setModifSections(prev => {
+      const next = new Set(prev)
+      if (next.has(nom)) next.delete(nom)
+      else next.add(nom)
+      return next
+    })
   }
 
   function fermerModifPresta() {
@@ -2167,42 +2179,69 @@ export default function ReservationPage() {
                                   ✕ Fermer
                                 </button>
                               </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                {specialitesActives.map(s => (
-                                  <div key={s.nom}>
-                                    <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 700, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      <SpecialiteIcon specialite={s.nom} size={16} />{s.nom}
-                                    </p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      {s.techniques.map(t => {
-                                        const selected = modifSelection.some(sel => sel.nom === t.nom && sel.categorie === s.nom)
-                                        return (
-                                          <button
-                                            key={t.id ?? t.nom}
-                                            onClick={() => toggleModifTech(t, s.nom)}
-                                            style={{
-                                              display: 'flex', alignItems: 'center', gap: 10,
-                                              padding: '9px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                                              border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
-                                              background: selected ? PINK_LIGHT : '#fff',
-                                            }}>
-                                            <span style={{
-                                              width: 18, height: 18, borderRadius: 9, flexShrink: 0,
-                                              border: `1.5px solid ${selected ? PINK : '#d1d5db'}`,
-                                              background: selected ? PINK : '#fff',
-                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                              color: '#fff', fontSize: 11, fontWeight: 700,
-                                            }}>{selected ? '✓' : ''}</span>
-                                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}</span>
-                                            <span style={{ fontSize: 12, color: '#6b7280' }}>
-                                              {t.prix > 0 ? `${t.prix} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree)}
-                                            </span>
-                                          </button>
-                                        )
-                                      })}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {specialitesActives.map(s => {
+                                  const ouvert = modifSections.has(s.nom)
+                                  const nbSelec = modifSelection.filter(sel => sel.categorie === s.nom).length
+                                  return (
+                                    <div key={s.nom} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${nbSelec > 0 ? PINK : '#e5e7eb'}`, background: '#fff' }}>
+                                      {/* En-tête spécialité — rose + badge ✓ si des techniques y sont choisies */}
+                                      <button
+                                        onClick={() => toggleModifSection(s.nom)}
+                                        style={{
+                                          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                                          padding: '11px 12px', background: nbSelec > 0 ? PINK_LIGHT : '#fff',
+                                          border: 'none', cursor: 'pointer', textAlign: 'left',
+                                        }}>
+                                        <SpecialiteIcon specialite={s.nom} size={20} />
+                                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK : '#1f2937' }}>
+                                          {s.nom}
+                                        </span>
+                                        {nbSelec > 0 && (
+                                          <span style={{
+                                            background: PINK, color: '#fff', borderRadius: 12,
+                                            fontSize: 11, fontWeight: 700, padding: '2px 8px', flexShrink: 0,
+                                          }}>
+                                            ✓ {nbSelec}
+                                          </span>
+                                        )}
+                                        <span style={{ fontSize: 16, color: nbSelec > 0 ? PINK : '#9ca3af', flexShrink: 0 }}>
+                                          {ouvert ? '▾' : '›'}
+                                        </span>
+                                      </button>
+                                      {ouvert && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px 10px', borderTop: '1px solid #f3f4f6' }}>
+                                          {s.techniques.map(t => {
+                                            const selected = modifSelection.some(sel => sel.nom === t.nom && sel.categorie === s.nom)
+                                            return (
+                                              <button
+                                                key={t.id ?? t.nom}
+                                                onClick={() => toggleModifTech(t, s.nom)}
+                                                style={{
+                                                  display: 'flex', alignItems: 'center', gap: 10,
+                                                  padding: '9px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                                                  border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
+                                                  background: selected ? PINK_LIGHT : '#fff',
+                                                }}>
+                                                <span style={{
+                                                  width: 18, height: 18, borderRadius: 9, flexShrink: 0,
+                                                  border: `1.5px solid ${selected ? PINK : '#d1d5db'}`,
+                                                  background: selected ? PINK : '#fff',
+                                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                  color: '#fff', fontSize: 11, fontWeight: 700,
+                                                }}>{selected ? '✓' : ''}</span>
+                                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}</span>
+                                                <span style={{ fontSize: 12, color: '#6b7280' }}>
+                                                  {t.prix > 0 ? `${t.prix} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree)}
+                                                </span>
+                                              </button>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                               {/* Récap + confirmation */}
                               {(() => {
