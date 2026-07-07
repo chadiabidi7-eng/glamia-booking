@@ -821,7 +821,9 @@ export default function ReservationPage() {
 
       const { error } = await supabase
         .from('rendez_vous')
-        .update({ statut: 'annule' })
+        // notif_annulation_vue: annulation par la CLIENTE → notification
+        // in-app sur l'écran Accueil de la pro
+        .update({ statut: 'annule', notif_annulation_vue: false })
         .eq('id', rdvId)
 
       if (error) throw error

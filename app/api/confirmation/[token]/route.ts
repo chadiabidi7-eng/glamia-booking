@@ -237,9 +237,13 @@ export async function POST(
 
   // ── Action : confirmer / annuler ──────────────────────────────────────
   const newStatut = action === 'confirmer' ? 'confirme' : 'annule'
-  const updateData: Record<string, string> = { statut: newStatut }
+  const updateData: Record<string, string | boolean> = { statut: newStatut }
   if (action === 'confirmer') {
     updateData.rappel_confirme_at = new Date().toISOString()
+  }
+  if (action === 'annuler') {
+    // Annulation par la cliente → notification in-app pour la pro
+    updateData.notif_annulation_vue = false
   }
 
   const { error: updateErr } = await supabaseAdmin
