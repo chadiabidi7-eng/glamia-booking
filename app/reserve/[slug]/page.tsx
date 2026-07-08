@@ -666,7 +666,12 @@ export default function ReservationPage() {
         is_pro:           found.is_pro ?? false,
       })
 
-      if (!found.is_pro) { setPageState('blocked'); return }
+      // Accès temps réel : abonnement actif OU essai en cours. Ne jamais se
+      // fier à is_pro seul — il n'est synchronisé qu'au lancement de l'app,
+      // les expirées jamais revenues le gardent à true (page ouverte à tort).
+      const accesActif = found.abonnement_actif === true
+        || (found.trial_ends_at && new Date(found.trial_ends_at) > new Date())
+      if (!accesActif) { setPageState('blocked'); return }
 
       const { data: prestData } = await supabase
         .from('prestations')
