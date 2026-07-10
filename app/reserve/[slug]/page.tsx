@@ -527,6 +527,8 @@ export default function ReservationPage() {
   const [slots,        setSlots]        = useState<Slot[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [heure,        setHeure]        = useState('')
+  // Incrémenté par le realtime quand l'agenda de la pro change → recharge les créneaux
+  const [rdvVersion,   setRdvVersion]   = useState(0)
 
   // ── Step 5 : Confirmation ────────────────────
   const [commentaire, setCommentaire] = useState('')
@@ -607,6 +609,14 @@ export default function ReservationPage() {
               }
             })
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rendez_vous', filter: `pro_id=eq.${pro.id}` },
+        () => {
+          console.log('[Realtime] agenda mis à jour')
+          setRdvVersion(v => v + 1)
         }
       )
       .subscribe()
@@ -1314,20 +1324,27 @@ export default function ReservationPage() {
   // Dépend du step + date (dureeTotal est stable quand on arrive à step 4)
   useEffect(() => {
     if (step === 4 && date && dureeTotal > 0 && pro) loadSlots()
-  }, [step, date])
+  }, [step, date, rdvVersion])
 
   async function loadSlots() {
     if (!pro || dureeTotal === 0 || !date) return
     setLoadingSlots(true)
     setSlots([])
     try {
-      const { data: rdvs } = await supabase
+      const { data: rdvs, error: rdvsErr } = await supabase
         .from('rendez_vous')
         .select('date, duree, statut')
         .eq('pro_id', pro.id)
         .gte('date', `${date}T00:00:00.000Z`)
         .lte('date', `${date}T23:59:59.999Z`)
         .neq('statut', 'annule')
+
+      // Lecture impossible → on ne propose RIEN plutôt que d'afficher
+      // tous les créneaux libres (risque de double réservation)
+      if (rdvsErr) {
+        console.error('[loadSlots] Lecture RDV impossible:', rdvsErr)
+        return
+      }
 
       const rdvExistants = (rdvs ?? []).map(r => {
         const d = new Date(r.date)
@@ -1416,6 +1433,34 @@ export default function ReservationPage() {
     const techniquesStr = techniquesSelectionnees.map(t => t.nom).join(', ')
 
     try {
+      // Re-vérification de dernière seconde : le créneau choisi est-il
+      // toujours libre ? (la grille peut dater de plusieurs minutes)
+      const { data: rdvsJour, error: verifErr } = await supabase
+        .from('rendez_vous')
+        .select('date, duree')
+        .eq('pro_id', pro.id)
+        .gte('date', `${date}T00:00:00.000Z`)
+        .lte('date', `${date}T23:59:59.999Z`)
+        .neq('statut', 'annule')
+      if (verifErr) {
+        alert('Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.')
+        return
+      }
+      const debutMin = timeToMin(heure)
+      const finMin = debutMin + dureeTotal
+      const conflit = (rdvsJour ?? []).some(r => {
+        const d = new Date(r.date)
+        const debutR = d.getUTCHours() * 60 + d.getUTCMinutes()
+        return debutMin < debutR + (r.duree ?? 0) && finMin > debutR
+      })
+      if (conflit) {
+        alert('Ce créneau vient d\'être réservé 😔 Choisis-en un autre.')
+        setHeure('')
+        setStep(4)
+        setRdvVersion(v => v + 1)
+        return
+      }
+
       let cId = clienteId
       let nouvelleCliente = false
       const telNormalized = normalizePhone(telephone)
