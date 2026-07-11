@@ -79,3 +79,39 @@ export function joursLongsLoc(langue: Langue): string[] {
 export function localeTag(langue: Langue): 'fr-FR' | 'en-GB' {
   return langue === 'en' ? 'en-GB' : 'fr-FR'
 }
+
+/**
+ * Formate un montant dans la devise de la PRO (profiles.devise, ISO 4217).
+ * 30 → « 30 € » (fr) / « £30 » / « $30 » — symbole placé selon la locale.
+ * Affichage uniquement : AUCUNE conversion de montant.
+ */
+export function formatPrix(montant: number, devise: string, langue: Langue): string {
+  try {
+    return new Intl.NumberFormat(localeTag(langue), {
+      style: 'currency',
+      currency: devise || 'EUR',
+      minimumFractionDigits: Number.isInteger(montant) ? 0 : 2,
+      maximumFractionDigits: 2,
+    }).format(montant)
+  } catch {
+    return `${montant} €`
+  }
+}
+
+/**
+ * Formate une heure "HH:mm" selon la locale du NAVIGATEUR de la cliente :
+ * "14:30" → "14:30" (fr-FR) ou "2:30 PM" (en-US).
+ * ⚠️ Côté serveur (navigator absent) : repli fr-FR → "14:30". À n'utiliser
+ * que dans des rendus effectués après hydratation (données chargées en
+ * useEffect) pour éviter tout hydration mismatch.
+ */
+export function formatHeure(hhmm: string): string {
+  try {
+    const [h, m] = hhmm.split(':').map(Number)
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm
+    const locale = typeof navigator !== 'undefined' ? navigator.language : 'fr-FR'
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+  } catch {
+    return hhmm
+  }
+}

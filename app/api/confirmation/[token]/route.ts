@@ -43,7 +43,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, langue')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, langue, devise')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -89,6 +89,7 @@ export async function GET(
     pro_id: data.pro_id,
     horaires: (pro as any)?.horaires ?? null,
     langue: (pro as any)?.langue === 'en' ? 'en' : 'fr',
+    devise: (pro as any)?.devise ?? 'EUR',
     duree: data.duree ?? 60,
     instructions: data.instructions ?? null,
     rdvs_jour: rdvsJour,
@@ -153,7 +154,7 @@ export async function POST(
     try {
       const { data: proData } = await supabaseAdmin
         .from('profiles')
-        .select('push_token, langue')
+        .select('push_token, langue, devise')
         .eq('id', rdv.pro_id)
         .maybeSingle()
 
@@ -207,6 +208,7 @@ export async function POST(
             },
             body: JSON.stringify({
               langue,
+              devise: (proData as any)?.devise ?? 'EUR',
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,

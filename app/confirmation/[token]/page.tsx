@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Clock, Sparkles, CreditCard, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
-import { creerTr, joursCourtLoc, joursLongsLoc, moisLoc, moisMinLoc, tr, type Langue } from '@/lib/i18n'
+import { creerTr, formatHeure, formatPrix, joursCourtLoc, joursLongsLoc, moisLoc, moisMinLoc, tr, type Langue } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────
 // Types
@@ -27,6 +27,7 @@ type RdvInfo = {
   duree: number
   instructions: string | null
   langue?: 'fr' | 'en'
+  devise?: string
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -125,6 +126,7 @@ function ConfirmationPage() {
   const MOIS_LONG_LOC = moisLoc(langue)
   const JOURS_COURT_LOC = joursCourtLoc(langue)
   const fmtDate = (iso: string) => formatDateFr(iso, langue)
+  const fmtPrix = (montant: number) => formatPrix(montant, rdv?.devise ?? 'EUR', langue)
 
   // ── Décalage ──────────────────────────────
   const [showDecaler, setShowDecaler] = useState(false)
@@ -343,7 +345,7 @@ function ConfirmationPage() {
               {trad('confirmation.dejaConfirme.avant')}<strong>{proDisplayName}</strong>{trad('confirmation.dejaConfirme.apres')}
             </p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(rdv.date), heure: rdv.heure })}</p>
+              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(rdv.date), heure: formatHeure(rdv.heure) })}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
             </div>
             <InstructionsBox instructions={rdv.instructions} titre={trad('confirmation.instructions')} />
@@ -389,7 +391,7 @@ function ConfirmationPage() {
               </div>
               <div style={S.cardRow}>
                 <span style={S.cardIcon}><Clock size={18} color={GLAMIA_PINK} /></span>
-                <span style={S.cardValue}>{rdv.heure}</span>
+                <span style={S.cardValue}>{formatHeure(rdv.heure)}</span>
               </div>
               <div style={S.cardRow}>
                 <span style={S.cardIcon}><Sparkles size={18} color={GLAMIA_PINK} /></span>
@@ -398,7 +400,7 @@ function ConfirmationPage() {
               {rdv.prix != null && rdv.prix > 0 && (
                 <div style={S.cardRow}>
                   <span style={S.cardIcon}><CreditCard size={18} color={GLAMIA_PINK} /></span>
-                  <span style={S.cardValue}>{rdv.prix} €</span>
+                  <span style={S.cardValue}>{fmtPrix(rdv.prix)}</span>
                 </div>
               )}
             </div>
@@ -512,7 +514,7 @@ function ConfirmationPage() {
                               color: decHeure === s.heure ? '#fff' : '#374151',
                               fontWeight: 600, fontSize: 14, cursor: 'pointer',
                             }}
-                          >{s.heure}</button>
+                          >{formatHeure(s.heure)}</button>
                         ))}
                       </div>
                     )}
@@ -527,7 +529,7 @@ function ConfirmationPage() {
                     disabled={acting}
                     style={{ marginTop: 16 }}
                   >
-                    {acting ? trad('confirmation.decalageEnCours') : trad('confirmation.decalerAu', { date: fmtDate(decDate), heure: decHeure })}
+                    {acting ? trad('confirmation.decalageEnCours') : trad('confirmation.decalerAu', { date: fmtDate(decDate), heure: formatHeure(decHeure) })}
                   </button>
                 )}
               </div>
@@ -546,10 +548,10 @@ function ConfirmationPage() {
               {trad('confirmation.confirme.avant')}<strong>{proDisplayName}</strong>{trad('confirmation.confirme.apres')}
             </p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(rdv.date), heure: rdv.heure })}</p>
+              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(rdv.date), heure: formatHeure(rdv.heure) })}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.prix != null && rdv.prix > 0 && (
-                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{rdv.prix} €</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{fmtPrix(rdv.prix)}</p>
               )}
               {rdv.pro_adresse && (
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
@@ -591,7 +593,7 @@ function ConfirmationPage() {
               {trad('confirmation.decale.texte')}
             </p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(decDate), heure: decHeure })}</p>
+              <p style={S.infoLine}>{trad('confirmation.dateAHeure', { date: fmtDate(decDate), heure: formatHeure(decHeure) })}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
             </div>
             <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
