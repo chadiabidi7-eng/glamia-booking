@@ -3054,7 +3054,7 @@ export default function ReservationPage() {
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
               {trad('resa.s5.rgpd')}{' '}
               <a
-                href="https://booking.glamia.pro/confidentialite"
+                href={pro?.langue === 'en' ? '/privacy' : '/confidentialite'}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: PINK, textDecoration: 'underline' }}
