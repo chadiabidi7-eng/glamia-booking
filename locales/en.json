@@ -1,0 +1,290 @@
+{
+  "commun": {
+    "chargement": "Loading...",
+    "continuer": "Continue →",
+    "retour": "← Back",
+    "fermer": "Close",
+    "offert": "Free",
+    "total": "Total"
+  },
+  "meta": {
+    "description": "Book your beauty appointment online"
+  },
+  "calendrier": {
+    "mois": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "moisMin": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "joursCourt": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "joursLongs": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ]
+  },
+  "resa": {
+    "steps": {
+      "identification": "Your details",
+      "techniques": "Services",
+      "date": "Date",
+      "heure": "Time",
+      "confirmation": "Confirmation"
+    },
+    "header": {
+      "reservationEnLigne": "Online booking",
+      "etape": "Step {{step}}/{{total}} — {{label}}"
+    },
+    "introuvable": {
+      "titre": "Page not found",
+      "texte": "This booking link doesn't exist or has been deactivated."
+    },
+    "bloquee": {
+      "titre": "Online booking isn't available right now.",
+      "contactAvant": "Reach out to ",
+      "contactApres": " on social media."
+    },
+    "confirmee": {
+      "titre": "Your appointment is booked",
+      "noteEmail": "You'll receive a confirmation email 24h before your appointment to confirm you're coming.",
+      "noteSpams": "If you don't see the email, remember to check your spam folder.",
+      "aBientot": "See you soon!",
+      "slogan": "The app for solo beauty professionals"
+    },
+    "prestations": "Services",
+    "aPartirDe": "From {{prix}} €",
+    "fidelite": "LOYALTY",
+    "reseaux": "Find me on social media",
+    "s1": {
+      "bonjour": "Hi there!",
+      "entrezNumero": "Enter your phone number to get started.",
+      "telephone": "Phone",
+      "telPlaceholder": "07123 456789",
+      "verification": "Checking...",
+      "bonjourPrenom": "Hi {{prenom}}!",
+      "reconnue": "You've been recognised.",
+      "reductionIntro": " is treating you to a personal discount of ",
+      "reductionTous": ", applied automatically to all your appointments.",
+      "reductionProchain": ", applied automatically to your next appointment.",
+      "reductionProchains": ", applied automatically to your next {{count}} appointments.",
+      "carteFidelite": "Loyalty card",
+      "auProchainRdv": "{{label}} on your next appt",
+      "offertMin": "free",
+      "encoreAvant": {
+        "one": "{{count}} more appt until {{label}}",
+        "other": "{{count}} more appts until {{label}}"
+      },
+      "cartesCompletees": {
+        "one": "{{count}} card completed",
+        "other": "{{count}} cards completed"
+      },
+      "chargementRdvs": "Loading your appointments...",
+      "rdvsAVenir": "Your upcoming appointments",
+      "reprogFait": "Appointment rescheduled!",
+      "modifFait": "Services updated!",
+      "modifEmail": " — an updated confirmation email has been sent to you",
+      "modifierPrestations": "Edit services",
+      "reprogrammer": "Reschedule",
+      "annuler": "Cancel",
+      "vosPrestations": "Your services",
+      "fermer": "✕ Close",
+      "selectionnezUne": "Select at least one service",
+      "modification": "Updating...",
+      "confirmerModif": "Confirm changes",
+      "dureePlusLongue": "Your new services take longer ({{duree}}) and no longer fit your current slot. Pick a new time:",
+      "nouvelleDate": "New date",
+      "aucunCreneauDuree": "No {{duree}} slot available that day.",
+      "reprogrammation": "Rescheduling...",
+      "confirmerPourLe": "Confirm for {{date}} at {{heure}}",
+      "reprogrammerAu": "Reschedule to {{date}} at {{heure}}",
+      "aucunRdv": "No upcoming appointments.",
+      "nouveauRdv": "+ Book a new appointment",
+      "premiereVisite": "First visit? Lovely to meet you!",
+      "prenom": "First name",
+      "prenomPlaceholder": "Sophie",
+      "nom": "Last name",
+      "nomPlaceholder": "Smith",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "emailAide": "To receive your appointment confirmation",
+      "cumulezTampons": "Collect stamps with every appointment and enjoy discounts!",
+      "confirmAnnulation": "Cancel your appointment on {{date}} at {{heure}} ({{prestation}})?"
+    },
+    "s2": {
+      "titre": "Which services?",
+      "sousTitre": "Select one or more treatments.",
+      "aucunePrestation": "No services available at the moment.",
+      "gratuit": "Free"
+    },
+    "offres": {
+      "enCours": "Current offers",
+      "promo": "PROMO",
+      "pack": "BUNDLE",
+      "minAuTotal": "{{duree}} min total",
+      "voirAutres": {
+        "one": "See {{count}} more offer",
+        "other": "See {{count}} more offers"
+      },
+      "voirMoins": "See less"
+    },
+    "s3": {
+      "titre": "Pick a date",
+      "sousTitre": "Select an available day.",
+      "rechercheCreneau": "Finding the next available slot...",
+      "prochainCreneau": "Next available slot",
+      "prendreCeRdv": "Book this slot →",
+      "selectionne": "Selected",
+      "jourOff": "Day off",
+      "passe": "Past",
+      "jourRepos": "Day off"
+    },
+    "s4": {
+      "titre": "Pick a time",
+      "dureeTotale": "Total duration: {{duree}}",
+      "chargementCreneaux": "Loading slots...",
+      "autreDate": "← Pick another date"
+    },
+    "s5": {
+      "titre": "Confirmation",
+      "sousTitre": "Check your appointment details.",
+      "recap": "Summary",
+      "cliente": "Client",
+      "date": "Date",
+      "heure": "Time",
+      "commentaire": "Comment (optional)",
+      "commentairePlaceholder": "Anything your beauty pro should know...",
+      "rappel": "Would you like a call back before your appointment?",
+      "enregistrement": "Saving...",
+      "confirmerResa": "Confirm my booking",
+      "rgpd": "By confirming, you agree that your details will only be used for your appointment.",
+      "politique": "Privacy policy"
+    },
+    "alertes": {
+      "annulationImpossible": "Could not cancel this appointment.",
+      "modifImpossible": "Could not update this appointment.",
+      "reprogImpossible": "Could not reschedule this appointment.",
+      "verifCreneauImpossible": "Could not check the slot availability. Try again in a moment.",
+      "creneauPris": "This slot was just booked 😔 Pick another one.",
+      "erreurGlobale": "Something went wrong. Open the console (F12) for details."
+    }
+  },
+  "confirmation": {
+    "chargement": "Loading...",
+    "lienExpire": {
+      "titre": "Link expired",
+      "ligne1": "This confirmation link is no longer valid.",
+      "ligne2": "Contact your beauty pro for a new link."
+    },
+    "dejaConfirme": {
+      "titre": "Appointment already confirmed",
+      "avant": "Your appointment with ",
+      "apres": " is already confirmed."
+    },
+    "dejaAnnule": {
+      "titre": "Appointment cancelled",
+      "texte": "This appointment has been cancelled."
+    },
+    "votreRdv": "Your appointment",
+    "dateAHeure": "{{date}} at {{heure}}",
+    "confirmer": "Confirm my appointment",
+    "confirmationEnCours": "Confirming...",
+    "annuler": "Cancel my appointment",
+    "annulationEnCours": "Cancelling...",
+    "decaler": "Move my appointment",
+    "nouvelleDate": "Pick a new date",
+    "chargementCreneaux": "Loading slots...",
+    "aucunCreneau": "No slots available that day.",
+    "decalageEnCours": "Moving your appointment...",
+    "decalerAu": "Move to {{date}} at {{heure}}",
+    "confirme": {
+      "titre": "Appointment confirmed!",
+      "avant": "Your appointment with ",
+      "apres": " is confirmed."
+    },
+    "fermerPage": "You can close this page.",
+    "annule": {
+      "titre": "Appointment cancelled",
+      "texte": "Your appointment has been cancelled."
+    },
+    "decale": {
+      "titre": "Appointment moved!",
+      "texte": "Your appointment has been moved.",
+      "nouvelEmail": "You'll receive a new confirmation email."
+    },
+    "erreur": {
+      "titre": "Error",
+      "texte": "Something went wrong. Please try again or contact your beauty pro."
+    },
+    "instructions": "Instructions for your appointment"
+  },
+  "push": {
+    "rdvAnnule": {
+      "titre": "❌ Appt cancelled",
+      "corps": "{{prenom}} cancelled their appt on {{date}} at {{heure}}"
+    },
+    "rdvModifie": {
+      "titre": "🌸 Appt updated",
+      "corps": "{{prenom}} changed their services for {{date}} at {{heure}}: {{prestations}}"
+    },
+    "rdvReprogramme": {
+      "titre": "📅 Appt rescheduled",
+      "corps": "{{prenom}} rescheduled their appt to {{date}} at {{heure}}"
+    },
+    "rdvDecale": {
+      "titre": "📅 Appt moved",
+      "corps": "{{prenom}} moved their appt from {{ancienneDate}} to {{nouvelleDate}} at {{heure}}"
+    },
+    "rdvConfirme": {
+      "titre": "✅ Appt confirmed",
+      "corps": "{{prenom}} confirmed their appt on {{date}} at {{heure}}"
+    },
+    "mentionRappel": "\n📞 {{prenom}} would like a call back!",
+    "nouvelleCliente": {
+      "titre": "🌸 New client!",
+      "titreRappel": "🌸 New client · 📞 Call back",
+      "corps": "{{prenom}} {{nom}} booked {{prestations}} on {{date}} at {{heure}}{{mention}}"
+    },
+    "nouveauRdv": {
+      "titre": "🌸 New appt",
+      "titreRappel": "🌸 New appt · 📞 Call back",
+      "corps": "{{prenom}} booked {{prestations}} on {{date}} at {{heure}}{{mention}}"
+    },
+    "uneCliente": "A client",
+    "uneClienteMin": "a client"
+  }
+}

@@ -1,15 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { joursLongsLoc, moisMinLoc, tr, type Langue } from '@/lib/i18n'
 
-const MOIS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
-const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
-
-function formatDateFr(iso: string): string {
+function formatDateLoc(iso: string, langue: Langue): string {
   const d = new Date(iso + 'T00:00:00')
-  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+  return `${joursLongsLoc(langue)[d.getDay()]} ${d.getDate()} ${moisMinLoc(langue)[d.getMonth()]} ${d.getFullYear()}`
 }
 
 const supabaseAdmin = createClient(
@@ -48,7 +43,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, langue')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -93,6 +88,7 @@ export async function GET(
     pro_adresse: pro?.adresse ?? null,
     pro_id: data.pro_id,
     horaires: (pro as any)?.horaires ?? null,
+    langue: (pro as any)?.langue === 'en' ? 'en' : 'fr',
     duree: data.duree ?? 60,
     instructions: data.instructions ?? null,
     rdvs_jour: rdvsJour,
@@ -157,7 +153,7 @@ export async function POST(
     try {
       const { data: proData } = await supabaseAdmin
         .from('profiles')
-        .select('push_token')
+        .select('push_token, langue')
         .eq('id', rdv.pro_id)
         .maybeSingle()
 
@@ -167,7 +163,8 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'Une cliente'
+      const langue: Langue = (proData as any)?.langue === 'en' ? 'en' : 'fr'
+      const clientePrenom = cliente?.prenom ?? tr(langue, 'push.uneCliente')
       const newDateStr = newDate.slice(0, 10)
       const newHeureStr = newDate.slice(11, 16)
 
@@ -178,8 +175,8 @@ export async function POST(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: proData.push_token,
-            title: '📅 RDV décalé',
-            body: `${clientePrenom} a décalé son RDV du ${formatDateFr(oldDateStr)} au ${formatDateFr(newDateStr)} à ${newHeureStr}`,
+            title: tr(langue, 'push.rdvDecale.titre'),
+            body: tr(langue, 'push.rdvDecale.corps', { prenom: clientePrenom, ancienneDate: formatDateLoc(oldDateStr, langue), nouvelleDate: formatDateLoc(newDateStr, langue), heure: newHeureStr }),
           }),
         })
       }
@@ -209,10 +206,11 @@ export async function POST(
               Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({
+              langue,
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
-              date: formatDateFr(newDateStr),
+              date: formatDateLoc(newDateStr, langue),
               heure: newHeureStr,
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
               prix_total: rdvFull?.prix ?? 0,
@@ -260,7 +258,7 @@ export async function POST(
   try {
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('push_token')
+      .select('push_token, langue')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -274,15 +272,16 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'une cliente'
+      const langue: Langue = (pro as any)?.langue === 'en' ? 'en' : 'fr'
+      const clientePrenom = cliente?.prenom ?? tr(langue, 'push.uneClienteMin')
       const dateStr = (rdv.date as string).slice(0, 10)
       const heureStr = (rdv.date as string).slice(11, 16)
-      const dateFr = formatDateFr(dateStr)
+      const dateFr = formatDateLoc(dateStr, langue)
 
-      const title = action === 'confirmer' ? '✅ RDV confirmé' : '❌ RDV annulé'
+      const title = action === 'confirmer' ? tr(langue, 'push.rdvConfirme.titre') : tr(langue, 'push.rdvAnnule.titre')
       const body = action === 'confirmer'
-        ? `${clientePrenom} a confirmé son RDV du ${dateFr} à ${heureStr}`
-        : `${clientePrenom} a annulé son RDV du ${dateFr} à ${heureStr}`
+        ? tr(langue, 'push.rdvConfirme.corps', { prenom: clientePrenom, date: dateFr, heure: heureStr })
+        : tr(langue, 'push.rdvAnnule.corps', { prenom: clientePrenom, date: dateFr, heure: heureStr })
 
       const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
