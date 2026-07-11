@@ -11,6 +11,19 @@ const SVG_MAP: Record<string, string> = {
   'Bronzage': 'bronzage.svg',
   'Soin dentaire': 'soin_dentaire.svg',
   'Autre': 'autre.svg',
+  // Alias anglais → mêmes SVG (pros dont le compte est en anglais)
+  'Manicure': 'manicure.svg',
+  'Pedicure': 'pedicure.svg',
+  'Lashes': 'cils.svg',
+  'Hair': 'coiffure.svg',
+  'Brows': 'sourcils.svg',
+  'Waxing': 'epilation.svg',
+  'Makeup': 'maquillage.svg',
+  'Permanent makeup': 'maquillage_semi_permanent.svg',
+  'Facials': 'soin_visage.svg',
+  'Tanning': 'bronzage.svg',
+  'Teeth': 'soin_dentaire.svg',
+  'Other': 'autre.svg',
 };
 
 type Props = {
