@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Info } from 'lucide-react'
-import { creerTr, formatHeure, formatPrix, joursCourtLoc, localeTag, moisLoc, type Langue } from '@/lib/i18n'
+import { creerTr, formatHeure, formatPrix, joursCourtLoc, localeTag, moisLoc, type Langue, telPlaceholder } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────
 // Types
@@ -2046,7 +2046,7 @@ export default function ReservationPage() {
               type="tel"
               value={telephone}
               onChange={e => { setTelephone(e.target.value); setPhoneStatus('idle') }}
-              placeholder={trad('resa.s1.telPlaceholder')}
+              placeholder={telPlaceholder(pro?.devise ?? 'EUR', pro?.langue ?? 'fr')}
               style={S.input}
               onKeyDown={e => e.key === 'Enter' && handleCheckPhone()}
             />

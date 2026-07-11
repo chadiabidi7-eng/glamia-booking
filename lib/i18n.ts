@@ -115,3 +115,17 @@ export function formatHeure(hhmm: string): string {
     return hhmm
   }
 }
+
+// Exemple de numéro de téléphone crédible selon le pays de la pro (déduit de
+// sa devise) — ses clientes sont dans son pays. Repli : format par langue.
+export function telPlaceholder(devise: string, langue: Langue): string {
+  switch (devise) {
+    case 'GBP': return '07123 456789';      // Royaume-Uni
+    case 'USD':
+    case 'CAD': return '(555) 123-4567';    // États-Unis / Canada
+    case 'AUD': return '0412 345 678';      // Australie
+    case 'NZD': return '021 123 4567';      // Nouvelle-Zélande
+    case 'EUR': return langue === 'en' ? '087 123 4567' : '06 12 34 56 78'; // Irlande / France
+    default: return langue === 'en' ? '07123 456789' : '06 12 34 56 78';
+  }
+}
