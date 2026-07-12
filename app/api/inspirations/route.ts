@@ -10,12 +10,29 @@ const MAX_PHOTOS = 3
 const MAX_OCTETS = 4 * 1024 * 1024      // 4 Mo max par photo (décodée)
 const DELAI_MAX_MS = 15 * 60 * 1000     // le RDV doit avoir été créé il y a moins de 15 min (anti-abus)
 
+function normalizePhone(tel: string): string {
+  let n = tel.replace(/[\s\-\.\(\)]/g, '')
+  if (n.startsWith('+33')) n = '0' + n.slice(3)
+  if (n.startsWith('0033')) n = '0' + n.slice(4)
+  return n
+}
+
+// « mercredi 15 juillet à 14:30 » (les dates RDV sont stockées en heure murale, lues en UTC)
+function formatRdvFr(iso: string): string {
+  const d = new Date(iso)
+  const jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+  const heure = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+  return `${jour} à ${heure}`
+}
+
 // POST /api/inspirations — Photos d'inspiration de la cliente pour un RDV
-// Body : { rdv_id: string, photos: string[] }  → juste après la création (fenêtre 15 min)
-//   ou : { token: string, photos: string[] }   → plus tard, via le lien de gestion du RDV
+// Body : { rdv_id, photos }                       → juste après la création (fenêtre 15 min)
+//   ou : { token, photos }                        → via le lien de gestion du RDV
+//   ou : { rdv_id, pro_id, telephone, photos }    → via « Ajouter mes inspirations » (page de résa)
 // (data URLs base64 image/jpeg ; 3 photos max au total, ajouts cumulés)
+// Les deux derniers cas déclenchent une push à la pro.
 export async function POST(req: NextRequest) {
-  let body: { rdv_id?: unknown; token?: unknown; photos?: unknown }
+  let body: { rdv_id?: unknown; token?: unknown; pro_id?: unknown; telephone?: unknown; photos?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -24,11 +41,17 @@ export async function POST(req: NextRequest) {
 
   const rdvId = body.rdv_id
   const token = body.token
+  const proId = body.pro_id
+  const telephone = body.telephone
   const photos = body.photos
 
-  const parRdvId = typeof rdvId === 'string' && /^[0-9a-f-]{36}$/i.test(rdvId)
+  const rdvIdValide = typeof rdvId === 'string' && /^[0-9a-f-]{36}$/i.test(rdvId)
   const parToken = typeof token === 'string' && token.length >= 16 && token.length <= 128
-  if (!parRdvId && !parToken) {
+  const parTelephone = rdvIdValide
+    && typeof proId === 'string' && /^[0-9a-f-]{36}$/i.test(proId)
+    && typeof telephone === 'string' && telephone.replace(/\s/g, '').length >= 8
+  const parRdvId = rdvIdValide && !parTelephone
+  if (!parRdvId && !parToken && !parTelephone) {
     return NextResponse.json({ error: 'invalid_rdv_id' }, { status: 400 })
   }
   if (!Array.isArray(photos) || photos.length === 0 || photos.length > MAX_PHOTOS) {
@@ -61,12 +84,13 @@ export async function POST(req: NextRequest) {
   // Vérifier le RDV : existe, non annulé, dans le futur.
   // Par rdv_id (juste après création) : fenêtre anti-abus de 15 min.
   // Par token (lien de gestion) : le token authentifie, ajout possible jusqu'au RDV.
+  // Par téléphone (page de résa) : le numéro doit correspondre à la cliente du RDV.
   const requete = supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, created_at, inspirations, token_expiration')
-  const { data: rdv, error: rdvErr } = parRdvId
-    ? await requete.eq('id', rdvId as string).maybeSingle()
-    : await requete.eq('token_confirmation', token as string).maybeSingle()
+    .select('id, date, statut, created_at, inspirations, token_expiration, pro_id, cliente_id')
+  const { data: rdv, error: rdvErr } = parToken
+    ? await requete.eq('token_confirmation', token as string).maybeSingle()
+    : await requete.eq('id', rdvId as string).maybeSingle()
 
   if (rdvErr || !rdv) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
@@ -82,6 +106,19 @@ export async function POST(req: NextRequest) {
   }
   if (parToken && rdv.token_expiration && new Date(rdv.token_expiration) < new Date()) {
     return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+  if (parTelephone) {
+    if (rdv.pro_id !== proId) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+    const { data: cliente } = await supabaseAdmin
+      .from('clientes')
+      .select('telephone')
+      .eq('id', rdv.cliente_id)
+      .maybeSingle()
+    if (!cliente?.telephone || normalizePhone(cliente.telephone) !== normalizePhone(telephone as string)) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    }
   }
 
   // 3 photos max au total (existantes + nouvelles)
@@ -118,6 +155,31 @@ export async function POST(req: NextRequest) {
   if (updateErr) {
     console.error('[api/inspirations] Erreur update rendez_vous:', updateErr)
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  }
+
+  // Ajout après coup (token ou téléphone) → prévenir la pro par push.
+  // Échec non bloquant : les photos sont déjà enregistrées.
+  if (parToken || parTelephone) {
+    try {
+      const [{ data: pro }, { data: cli }] = await Promise.all([
+        supabaseAdmin.from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle(),
+        supabaseAdmin.from('clientes').select('prenom, nom').eq('id', rdv.cliente_id).maybeSingle(),
+      ])
+      if (pro?.push_token) {
+        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || 'Ta cliente'
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: pro.push_token,
+            title: 'Nouvelles inspirations 💅',
+            body: `${nomCliente} a ajouté ${urls.length > 1 ? `${urls.length} photos` : 'une photo'} d'inspiration pour son RDV du ${formatRdvFr(rdv.date)}.`,
+          }),
+        })
+      }
+    } catch (e) {
+      console.error('[api/inspirations] Push pro non envoyée:', e)
+    }
   }
 
   return NextResponse.json({ success: true, urls, inspirations: toutes })

@@ -78,6 +78,7 @@ type RdvAVenir = {
   reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
   techniques: { nom: string; prix: number; duree: number; categorie?: string }[] | null
   offre_id: string | null
+  inspirations: string[] | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -509,6 +510,13 @@ export default function ReservationPage() {
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
+
+  // ── Inspirations sur un RDV existant (bouton « Mes inspirations ») ──
+  const [inspiRdvId,        setInspiRdvId]        = useState<string | null>(null)
+  const [inspiNouvelles,    setInspiNouvelles]    = useState<string[]>([])   // data URLs en attente d'envoi
+  const [inspiCompression,  setInspiCompression]  = useState(false)
+  const [inspiEnvoi,        setInspiEnvoi]        = useState(false)
+  const [inspiDone,         setInspiDone]         = useState<string | null>(null)
   const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null)
 
   // ── Reprogrammer un RDV ─────────────────────
@@ -850,7 +858,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -863,6 +871,58 @@ export default function ReservationPage() {
       console.error('[chargerRdvsAVenir] Erreur:', e)
     } finally {
       setLoadingRdvs(false)
+    }
+  }
+
+  // ── Inspirations sur un RDV existant ─────────
+  function toggleInspis(rdvId: string) {
+    setInspiNouvelles([])
+    setInspiDone(null)
+    setInspiRdvId(prev => (prev === rdvId ? null : rdvId))
+  }
+
+  async function ajouterInspiFichiers(e: React.ChangeEvent<HTMLInputElement>, rdv: RdvAVenir) {
+    const fichiers = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    const restant = 3 - (rdv.inspirations?.length ?? 0) - inspiNouvelles.length
+    if (fichiers.length === 0 || restant <= 0 || inspiCompression) return
+    const aTraiter = fichiers.slice(0, restant)
+    if (fichiers.length > restant) {
+      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+    }
+    setInspiCompression(true)
+    try {
+      for (const f of aTraiter) {
+        const dataUrl = await compresserImage(f)
+        setInspiNouvelles(prev => [...prev, dataUrl])
+      }
+    } catch (err) {
+      console.error('[inspirations] Erreur compression:', err)
+      alert("Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.")
+    } finally {
+      setInspiCompression(false)
+    }
+  }
+
+  async function validerInspis(rdv: RdvAVenir) {
+    if (!pro || inspiNouvelles.length === 0 || inspiEnvoi) return
+    setInspiEnvoi(true)
+    try {
+      const res = await fetch('/api/inspirations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rdv_id: rdv.id, pro_id: pro.id, telephone, photos: inspiNouvelles }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.inspirations) throw new Error(json.error ?? 'upload_failed')
+      setRdvsAVenir(prev => prev.map(r => (r.id === rdv.id ? { ...r, inspirations: json.inspirations } : r)))
+      setInspiNouvelles([])
+      setInspiDone(rdv.id)
+    } catch (err) {
+      console.error('[inspirations] Erreur envoi:', err)
+      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+    } finally {
+      setInspiEnvoi(false)
     }
   }
 
@@ -2318,6 +2378,114 @@ export default function ReservationPage() {
                               <Sparkles size={14} color={PINK} />
                               Modifier les prestations
                             </button>
+                          )}
+
+                          {/* Ajouter / voir ses inspirations */}
+                          <button
+                            onClick={() => toggleInspis(rdv.id)}
+                            style={{
+                              width: '100%', marginTop: 10, padding: '8px 0', borderRadius: 10,
+                              border: `1.5px solid ${PINK}`, background: inspiRdvId === rdv.id ? PINK_LIGHT : '#fff',
+                              color: PINK, fontSize: 13, fontWeight: 600,
+                              cursor: 'pointer', transition: 'all 0.15s',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                          >
+                            <Camera size={14} color={PINK} />
+                            {(rdv.inspirations?.length ?? 0) >= 3
+                              ? 'Mes inspirations (3/3)'
+                              : 'Ajouter mes inspirations'}
+                          </button>
+
+                          {/* ── Panneau inspirations ── */}
+                          {inspiRdvId === rdv.id && (
+                            <div style={{
+                              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+                              border: `1.5px solid ${PINK}55`, borderRadius: 12,
+                              padding: 12, marginTop: 10,
+                            }}>
+                              {inspiDone === rdv.id ? (
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <CheckCircle size={15} color="#059669" />
+                                  Inspirations envoyées ! {pro?.prenom || 'Ta praticienne'} a été prévenue 💅
+                                </p>
+                              ) : (
+                                <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6b7280', lineHeight: 1.4 }}>
+                                  {(rdv.inspirations?.length ?? 0) >= 3
+                                    ? 'Tes 3 photos ont bien été transmises 💅'
+                                    : `Montre à ${pro?.prenom || 'ta praticienne'} ce que tu as en tête — elle recevra une notification.`}
+                                </p>
+                              )}
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: inspiDone === rdv.id ? 10 : 0 }}>
+                                {(rdv.inspirations ?? []).map((src, i) => (
+                                  <img
+                                    key={`e${i}`}
+                                    src={src}
+                                    alt={`Inspiration ${i + 1}`}
+                                    style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block', flexShrink: 0 }}
+                                  />
+                                ))}
+                                {inspiNouvelles.map((src, i) => (
+                                  <div key={`n${i}`} style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
+                                    <img
+                                      src={src}
+                                      alt="Nouvelle inspiration"
+                                      style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', border: `1.5px solid ${PINK}`, display: 'block' }}
+                                    />
+                                    <button
+                                      onClick={() => setInspiNouvelles(prev => prev.filter((_, j) => j !== i))}
+                                      aria-label="Retirer cette photo"
+                                      style={{
+                                        position: 'absolute', top: -6, right: -6, width: 20, height: 20,
+                                        borderRadius: 10, border: '2px solid #fff', background: '#1f2937',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', padding: 0,
+                                      }}
+                                    >
+                                      <X size={11} color="#fff" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {(rdv.inspirations?.length ?? 0) + inspiNouvelles.length < 3 && (
+                                  <>
+                                    <label style={{
+                                      width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
+                                      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                      justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
+                                      flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
+                                    }}>
+                                      <Camera size={16} color={PINK} />
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>Prendre</span>
+                                      <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
+                                    </label>
+                                    <label style={{
+                                      width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
+                                      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                      justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
+                                      flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
+                                    }}>
+                                      <ImagePlus size={16} color={PINK} />
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? 'Un instant…' : 'Importer'}</span>
+                                      <input type="file" accept="image/*" multiple onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
+                                    </label>
+                                  </>
+                                )}
+                              </div>
+                              {inspiNouvelles.length > 0 && (
+                                <button
+                                  onClick={() => validerInspis(rdv)}
+                                  disabled={inspiEnvoi}
+                                  style={{
+                                    width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 10,
+                                    border: 'none', background: PINK, color: '#fff',
+                                    fontSize: 13.5, fontWeight: 700, cursor: 'pointer',
+                                    opacity: inspiEnvoi ? 0.6 : 1,
+                                  }}
+                                >
+                                  {inspiEnvoi ? 'Envoi en cours…' : `Valider ${inspiNouvelles.length > 1 ? `mes ${inspiNouvelles.length} photos` : 'ma photo'}`}
+                                </button>
+                              )}
+                            </div>
                           )}
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                             <button
