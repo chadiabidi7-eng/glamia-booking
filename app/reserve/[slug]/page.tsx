@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Info } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, X } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
 type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
 type HorairesHebdo = Record<number, HorairesJour>
-type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; prix_type?: 'fixe' | 'a_partir_de' }
+type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; photos?: string[]; prix_type?: 'fixe' | 'a_partir_de' }
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée
@@ -113,6 +113,33 @@ const STEP_LABELS = ['Identification', 'Techniques', 'Date', 'Heure', 'Confirmat
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+// Compression d'image côté navigateur : max 1280 px, JPEG qualité 0.8 → data URL
+async function compresserImage(file: File): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'))
+    reader.readAsDataURL(file)
+  })
+  const img: HTMLImageElement = await new Promise((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => resolve(i)
+    i.onerror = () => reject(new Error('Image illisible'))
+    i.src = dataUrl
+  })
+  const MAX = 1280
+  const ratio = Math.min(1, MAX / Math.max(img.width, img.height))
+  const w = Math.max(1, Math.round(img.width * ratio))
+  const h = Math.max(1, Math.round(img.height * ratio))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas indisponible')
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.8)
+}
+
 function normalizeStr(str: string) {
   return str
     .toLowerCase()
@@ -516,7 +543,9 @@ export default function ReservationPage() {
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
-  const [descriptionPopup, setDescriptionPopup] = useState<{ nom: string; description: string } | null>(null)
+  // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
+  const [techniqueDepliee, setTechniqueDepliee] = useState<string | null>(null)
+  const [photoOverlay, setPhotoOverlay] = useState<string | null>(null)
 
   // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
@@ -533,6 +562,10 @@ export default function ReservationPage() {
   // ── Step 5 : Confirmation ────────────────────
   const [commentaire, setCommentaire] = useState('')
   const [rappel,      setRappel]      = useState(false)
+  // Photos d'inspiration de la cliente (data URLs compressées, max 3)
+  const [inspirations, setInspirations] = useState<string[]>([])
+  const [inspirationsStatut, setInspirationsStatut] = useState<'aucune' | 'envoyees' | 'echec'>('aucune')
+  const [compressionEnCours, setCompressionEnCours] = useState(false)
   const step5Ref = useRef<HTMLDivElement>(null)
 
   // ── Glissements d'écran automatiques (fluidité du parcours) ──
@@ -1424,6 +1457,23 @@ export default function ReservationPage() {
   }
 
   // ── Step 5 : Confirm ──────────────────────────
+  // ── Step 5 : ajout d'une photo d'inspiration ──
+  async function handleAjoutInspiration(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permet de re-sélectionner la même photo après suppression
+    if (!file || inspirations.length >= 3) return
+    setCompressionEnCours(true)
+    try {
+      const dataUrl = await compresserImage(file)
+      setInspirations(prev => (prev.length >= 3 ? prev : [...prev, dataUrl]))
+    } catch (err) {
+      console.error('[inspirations] Erreur compression:', err)
+      alert("Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.")
+    } finally {
+      setCompressionEnCours(false)
+    }
+  }
+
   async function handleConfirm() {
     if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
     setSubmitting(true)
@@ -1650,6 +1700,22 @@ export default function ReservationPage() {
       }
 
       setPageState('confirmed')
+
+      // Photos d'inspiration → upload via l'API (un échec ne bloque JAMAIS la réservation)
+      if (nouveau?.id && inspirations.length > 0) {
+        try {
+          const res = await fetch('/api/inspirations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rdv_id: nouveau.id, photos: inspirations }),
+          })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          setInspirationsStatut('envoyees')
+        } catch (e) {
+          console.error('[handleConfirm] Erreur envoi inspirations (non bloquante):', e)
+          setInspirationsStatut('echec')
+        }
+      }
 
       // Email de confirmation à la cliente (non bloquant)
       if (!clienteEmail.trim()) {
@@ -1909,6 +1975,21 @@ export default function ReservationPage() {
           {pro?.adresse && (
             <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}>
               <MapPin size={14} color={GLAMIA_PINK} />{pro.adresse}
+            </p>
+          )}
+
+          {/* Statut d'envoi des photos d'inspiration */}
+          {inspirationsStatut === 'envoyees' && (
+            <p style={{ fontSize: 13, color: PINK, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <CheckCircle size={15} color={PINK} />
+              {inspirations.length > 1
+                ? `Tes ${inspirations.length} photos d'inspiration ont été transmises`
+                : "Ta photo d'inspiration a été transmise"}
+            </p>
+          )}
+          {inspirationsStatut === 'echec' && (
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>
+              Tes photos d'inspiration n'ont pas pu être envoyées.
             </p>
           )}
 
@@ -2678,57 +2759,98 @@ export default function ReservationPage() {
                             const selected = techniquesSelectionnees.some(
                               sel => sel.nom === t.nom && sel.categorie === s.nom
                             )
+                            // Détails optionnels configurés par la pro (photos / description)
+                            const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 3)
+                            const descTech = (t.description ?? '').trim()
+                            const aDetails = photosTech.length > 0 || descTech !== ''
+                            const depliee = aDetails && techniqueDepliee === t.id
                             return (
-                              <button
-                                key={t.id}
-                                onClick={() => toggleTechnique(t, s.nom)}
-                                style={{
-                                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                                  padding: '11px 12px', borderRadius: 12, marginBottom: 6,
-                                  border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
-                                  background: selected ? PINK_LIGHT : '#fafafa',
-                                  cursor: 'pointer', textAlign: 'left',
-                                }}
-                              >
-                                {/* Checkbox */}
-                                <div style={{
-                                  width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                                  border: `2px solid ${selected ? PINK : '#d1d5db'}`,
-                                  background: selected ? PINK : 'transparent',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                  {selected && <CheckCircle size={14} color="#fff" />}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    {t.nom}
-                                    {t.description && (
-                                      <span
-                                        onClick={(e) => { e.stopPropagation(); setDescriptionPopup({ nom: t.nom, description: t.description! }) }}
-                                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                                      >
-                                        <Info size={15} color={PINK} />
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
-                                    {(() => {
-                                      // Vérifier si une offre prix_fixe couvre cette technique
-                                      const promoOffre = offresEligibles.find(o => o.type === 'prix_fixe' && o.prestations_ids.includes(t.id))
-                                      if (promoOffre) {
-                                        return (
-                                          <>
-                                            <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{t.prix} €</span>
-                                            <span style={{ color: PINK, fontWeight: 600 }}>{promoOffre.prix_promo} €</span>
-                                            {' · '}{formatDuree(t.duree)}
-                                          </>
-                                        )
-                                      }
-                                      return <>{t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}</>
-                                    })()}
-                                  </p>
-                                </div>
-                              </button>
+                              <div key={t.id} style={{ marginBottom: 6 }}>
+                                <button
+                                  onClick={() => toggleTechnique(t, s.nom)}
+                                  style={{
+                                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '11px 12px', borderRadius: 12,
+                                    border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
+                                    background: selected ? PINK_LIGHT : '#fafafa',
+                                    cursor: 'pointer', textAlign: 'left',
+                                  }}
+                                >
+                                  {/* Checkbox */}
+                                  <div style={{
+                                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                                    border: `2px solid ${selected ? PINK : '#d1d5db'}`,
+                                    background: selected ? PINK : 'transparent',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}>
+                                    {selected && <CheckCircle size={14} color="#fff" />}
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
+                                      {t.nom}
+                                    </p>
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
+                                      {(() => {
+                                        // Vérifier si une offre prix_fixe couvre cette technique
+                                        const promoOffre = offresEligibles.find(o => o.type === 'prix_fixe' && o.prestations_ids.includes(t.id))
+                                        if (promoOffre) {
+                                          return (
+                                            <>
+                                              <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{t.prix} €</span>
+                                              <span style={{ color: PINK, fontWeight: 600 }}>{promoOffre.prix_promo} €</span>
+                                              {' · '}{formatDuree(t.duree)}
+                                            </>
+                                          )
+                                        }
+                                        return <>{t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}</>
+                                      })()}
+                                    </p>
+                                  </div>
+                                  {/* Indicateur détails — tap séparé de la sélection */}
+                                  {aDetails && (
+                                    <span
+                                      onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
+                                      aria-label={depliee ? 'Masquer les détails' : 'Voir les détails'}
+                                      style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: 8, margin: -8, cursor: 'pointer' }}
+                                    >
+                                      <ChevronDown
+                                        size={18}
+                                        color={selected ? PINK : '#9ca3af'}
+                                        style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
+                                      />
+                                    </span>
+                                  )}
+                                </button>
+                                {/* Détails dépliables : photos + description */}
+                                {aDetails && (
+                                  <div style={{
+                                    maxHeight: depliee ? 420 : 0, opacity: depliee ? 1 : 0,
+                                    overflow: 'hidden', transition: 'max-height 0.3s ease, opacity 0.25s ease',
+                                  }}>
+                                    <div style={{ margin: '4px 0 2px', padding: 12, borderRadius: 12, background: '#fff', border: '1px solid #f3f4f6' }}>
+                                      {photosTech.length > 0 && (
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: descTech !== '' ? 10 : 0 }}>
+                                          {photosTech.map((url, pi) => (
+                                            <img
+                                              key={pi}
+                                              src={url}
+                                              alt={`${t.nom} — photo ${pi + 1}`}
+                                              loading="lazy"
+                                              onClick={() => setPhotoOverlay(url)}
+                                              style={{ width: 88, height: 88, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
+                                            />
+                                          ))}
+                                        </div>
+                                      )}
+                                      {descTech !== '' && (
+                                        <p style={{ margin: 0, fontSize: 13, color: '#555555', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                          {descTech}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )
                           })}
                         </div>
@@ -2993,6 +3115,55 @@ export default function ReservationPage() {
               </div>
             </div>
 
+            {/* Photos d'inspiration (optionnel) */}
+            <label style={S.label}>Tes inspirations 💅 (3 photos max)</label>
+            <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
+              Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — c'est optionnel.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              {inspirations.map((src, i) => (
+                <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
+                  <img
+                    src={src}
+                    alt={`Inspiration ${i + 1}`}
+                    style={{ width: 88, height: 88, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block' }}
+                  />
+                  <button
+                    onClick={() => setInspirations(prev => prev.filter((_, j) => j !== i))}
+                    aria-label="Supprimer cette photo"
+                    style={{
+                      position: 'absolute', top: -7, right: -7, width: 22, height: 22,
+                      borderRadius: 11, border: '2px solid #fff', background: '#1f2937',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    <X size={12} color="#fff" />
+                  </button>
+                </div>
+              ))}
+              {inspirations.length < 3 && (
+                <label style={{
+                  width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                  background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                  flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                }}>
+                  <Camera size={20} color={PINK} />
+                  <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                    {compressionEnCours ? 'Un instant…' : 'Ajouter'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAjoutInspiration}
+                    disabled={compressionEnCours}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              )}
+            </div>
+
             <label style={S.label}>Commentaire (optionnel)</label>
             <textarea
               value={commentaire}
@@ -3092,40 +3263,21 @@ export default function ReservationPage() {
         </div>
       )}
 
-      {/* Popup description technique */}
-      {descriptionPopup && (
+      {/* Visionneuse photo plein écran (tap n'importe où pour fermer) */}
+      {photoOverlay && (
         <div
-          onClick={() => setDescriptionPopup(null)}
+          onClick={() => setPhotoOverlay(null)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: 24,
+            zIndex: 9999, padding: 20, cursor: 'zoom-out',
           }}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#fff', borderRadius: 20, padding: 24,
-              maxWidth: 380, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            }}
-          >
-            <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 12px' }}>
-              {descriptionPopup.nom}
-            </p>
-            <p style={{ fontSize: 14, color: '#4b5563', margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {descriptionPopup.description}
-            </p>
-            <button
-              onClick={() => setDescriptionPopup(null)}
-              style={{
-                width: '100%', padding: 12, borderRadius: 12, border: 'none',
-                background: PINK_LIGHT, color: PINK, fontWeight: 600, fontSize: 14,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Fermer
-            </button>
-          </div>
+          <img
+            src={photoOverlay}
+            alt="Photo de la prestation"
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
+          />
         </div>
       )}
     </div>
