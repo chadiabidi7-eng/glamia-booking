@@ -2805,21 +2805,47 @@ export default function ReservationPage() {
                                         return <>{t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}</>
                                       })()}
                                     </p>
+                                    {/* Pastille détails — affordance explicite, tap séparé de la sélection */}
+                                    {aDetails && (
+                                      <span
+                                        onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
+                                        aria-label={depliee ? 'Masquer les détails' : 'Voir les détails'}
+                                        style={{
+                                          display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+                                          padding: photosTech.length > 0 ? '3px 10px 3px 4px' : '3px 10px',
+                                          borderRadius: 999,
+                                          background: depliee ? PINK_LIGHT : '#fff',
+                                          border: `1px solid ${depliee ? PINK : '#e8dce3'}`,
+                                          fontSize: 12, fontWeight: 600, color: PINK, cursor: 'pointer',
+                                          width: 'fit-content',
+                                        }}
+                                      >
+                                        {photosTech.length > 0 && (
+                                          <span style={{ display: 'inline-flex' }}>
+                                            {photosTech.map((url, pi) => (
+                                              <img
+                                                key={pi}
+                                                src={url}
+                                                alt=""
+                                                loading="lazy"
+                                                style={{
+                                                  width: 22, height: 22, borderRadius: '50%', objectFit: 'cover',
+                                                  border: '1.5px solid #fff', marginLeft: pi === 0 ? 0 : -8,
+                                                  position: 'relative', zIndex: photosTech.length - pi,
+                                                  background: '#f3f4f6',
+                                                }}
+                                              />
+                                            ))}
+                                          </span>
+                                        )}
+                                        {photosTech.length > 0 ? 'Photos & infos' : 'En savoir plus'}
+                                        <ChevronDown
+                                          size={13}
+                                          style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
+                                        />
+                                      </span>
+                                    )}
                                   </div>
-                                  {/* Indicateur détails — tap séparé de la sélection */}
-                                  {aDetails && (
-                                    <span
-                                      onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
-                                      aria-label={depliee ? 'Masquer les détails' : 'Voir les détails'}
-                                      style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: 8, margin: -8, cursor: 'pointer' }}
-                                    >
-                                      <ChevronDown
-                                        size={18}
-                                        color={selected ? PINK : '#9ca3af'}
-                                        style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
-                                      />
-                                    </span>
-                                  )}
                                 </button>
                                 {/* Détails dépliables : photos + description */}
                                 {aDetails && (
@@ -2837,7 +2863,7 @@ export default function ReservationPage() {
                                               alt={`${t.nom} — photo ${pi + 1}`}
                                               loading="lazy"
                                               onClick={() => setPhotoOverlay(url)}
-                                              style={{ width: 88, height: 88, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
+                                              style={{ width: 92, height: 115, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
                                             />
                                           ))}
                                         </div>
