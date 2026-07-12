@@ -1457,21 +1457,25 @@ export default function ReservationPage() {
   }
 
   // ── Step 5 : Confirm ──────────────────────────
-  // ── Step 5 : ajout d'une photo d'inspiration ──
+  // ── Step 5 : ajout de photos d'inspiration (sélection multiple, 3 max) ──
   async function handleAjoutInspiration(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+    const fichiers = Array.from(e.target.files ?? [])
     e.target.value = '' // permet de re-sélectionner la même photo après suppression
-    if (!file || inspirations.length >= 3) return
+    if (fichiers.length === 0 || inspirations.length >= 3) return
+    const aTraiter = fichiers.slice(0, 3 - inspirations.length)
     setCompressionEnCours(true)
-    try {
-      const dataUrl = await compresserImage(file)
-      setInspirations(prev => (prev.length >= 3 ? prev : [...prev, dataUrl]))
-    } catch (err) {
-      console.error('[inspirations] Erreur compression:', err)
-      alert("Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.")
-    } finally {
-      setCompressionEnCours(false)
+    let echecs = 0
+    for (const fichier of aTraiter) {
+      try {
+        const dataUrl = await compresserImage(fichier)
+        setInspirations(prev => (prev.length >= 3 ? prev : [...prev, dataUrl]))
+      } catch (err) {
+        echecs++
+        console.error('[inspirations] Erreur compression:', err)
+      }
     }
+    setCompressionEnCours(false)
+    if (echecs > 0) alert(echecs === 1 ? "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image." : `${echecs} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images.`)
   }
 
   async function handleConfirm() {
@@ -3141,12 +3145,25 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            {/* Photos d'inspiration (optionnel) */}
-            <label style={S.label}>Tes inspirations 💅 (3 photos max)</label>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-              Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — c'est optionnel.
-            </p>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
+            <div style={{
+              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+              border: `1.5px solid ${PINK}55`,
+              borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span style={{
+                  width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles size={15} color="#fff" />
+                </span>
+                <label style={{ ...S.label, marginBottom: 0 }}>Tes inspirations 💅</label>
+              </div>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
+                Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
               {inspirations.map((src, i) => (
                 <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
                   <img
@@ -3182,12 +3199,14 @@ export default function ReservationPage() {
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleAjoutInspiration}
                     disabled={compressionEnCours}
                     style={{ display: 'none' }}
                   />
                 </label>
               )}
+              </div>
             </div>
 
             <label style={S.label}>Commentaire (optionnel)</label>
