@@ -545,7 +545,8 @@ export default function ReservationPage() {
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
   // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
   const [techniqueDepliee, setTechniqueDepliee] = useState<string | null>(null)
-  const [photoOverlay, setPhotoOverlay] = useState<string | null>(null)
+  // Visionneuse plein écran : toutes les photos de la technique + index affiché
+  const [photoOverlay, setPhotoOverlay] = useState<{ photos: string[]; index: number } | null>(null)
 
   // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
@@ -2866,7 +2867,7 @@ export default function ReservationPage() {
                                               src={url}
                                               alt={`${t.nom} — photo ${pi + 1}`}
                                               loading="lazy"
-                                              onClick={() => setPhotoOverlay(url)}
+                                              onClick={() => setPhotoOverlay({ photos: photosTech, index: pi })}
                                               style={{ width: 92, height: 138, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
                                             />
                                           ))}
@@ -3308,21 +3309,79 @@ export default function ReservationPage() {
         </div>
       )}
 
-      {/* Visionneuse photo plein écran (tap n'importe où pour fermer) */}
+      {/* Visionneuse plein écran — carrousel (glisser pour défiler, tap pour fermer) */}
       {photoOverlay && (
         <div
           onClick={() => setPhotoOverlay(null)}
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: 20, cursor: 'zoom-out',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            zIndex: 9999, cursor: 'zoom-out',
           }}
         >
-          <img
-            src={photoOverlay}
-            alt="Photo de la prestation"
-            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
-          />
+          <style>{`.carrousel-photos::-webkit-scrollbar{display:none}`}</style>
+          {photoOverlay.photos.length > 1 && (
+            <p style={{
+              position: 'absolute', top: 24, left: 0, right: 0, textAlign: 'center',
+              color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 600, margin: 0,
+            }}>
+              {photoOverlay.index + 1} / {photoOverlay.photos.length}
+            </p>
+          )}
+          <div
+            className="carrousel-photos"
+            ref={el => {
+              // Positionner le carrousel sur la photo tapée, une seule fois à l'ouverture
+              if (el && !el.dataset.init) {
+                el.dataset.init = '1'
+                el.scrollLeft = photoOverlay.index * el.clientWidth
+              }
+            }}
+            onScroll={e => {
+              const el = e.currentTarget
+              const i = Math.round(el.scrollLeft / el.clientWidth)
+              setPhotoOverlay(prev => (prev && i !== prev.index ? { ...prev, index: i } : prev))
+            }}
+            style={{
+              display: 'flex', overflowX: 'auto', width: '100%',
+              scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
+            }}
+          >
+            {photoOverlay.photos.map(url => (
+              <div
+                key={url}
+                style={{
+                  flex: '0 0 100%', scrollSnapAlign: 'center', boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 20, height: '78vh',
+                }}
+              >
+                <img
+                  src={url}
+                  alt="Photo de la prestation"
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {photoOverlay.photos.length > 1 && (
+              <div style={{ display: 'flex', gap: 7 }}>
+                {photoOverlay.photos.map((_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: i === photoOverlay.index ? '#fff' : 'rgba(255,255,255,0.35)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, margin: 0 }}>
+              {photoOverlay.photos.length > 1 ? 'Glisse pour défiler · touche pour fermer' : 'Touche pour fermer'}
+            </p>
+          </div>
         </div>
       )}
     </div>
