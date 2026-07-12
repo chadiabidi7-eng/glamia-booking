@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, X } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -1463,7 +1463,11 @@ export default function ReservationPage() {
     const fichiers = Array.from(e.target.files ?? [])
     e.target.value = '' // permet de re-sélectionner la même photo après suppression
     if (fichiers.length === 0 || inspirations.length >= 3) return
-    const aTraiter = fichiers.slice(0, 3 - inspirations.length)
+    const restant = 3 - inspirations.length
+    const aTraiter = fichiers.slice(0, restant)
+    if (fichiers.length > restant) {
+      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+    }
     setCompressionEnCours(true)
     let echecs = 0
     for (const fichier of aTraiter) {
@@ -3164,7 +3168,7 @@ export default function ReservationPage() {
               <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
                 Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
               </p>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {inspirations.map((src, i) => (
                 <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
                   <img
@@ -3187,25 +3191,48 @@ export default function ReservationPage() {
                 </div>
               ))}
               {inspirations.length < 3 && (
-                <label style={{
-                  width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
-                  background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
-                  flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
-                }}>
-                  <Camera size={20} color={PINK} />
-                  <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                    {compressionEnCours ? 'Un instant…' : 'Ajouter'}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleAjoutInspiration}
-                    disabled={compressionEnCours}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <>
+                  {/* Prendre une photo — ouvre directement l'appareil photo */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <Camera size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? 'Un instant…' : 'Prendre'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  {/* Importer depuis la galerie (sélection multiple) */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <ImagePlus size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? 'Un instant…' : 'Importer'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </>
               )}
               </div>
             </div>
