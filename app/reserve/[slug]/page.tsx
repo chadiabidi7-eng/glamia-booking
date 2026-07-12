@@ -487,6 +487,8 @@ export default function ReservationPage() {
   // ── Pro & catalogue ──────────────────────────
   const [pro,        setPro]        = useState<ProInfo | null>(null)
   const [catalogue,  setCatalogue]  = useState<CataloguePrestations>({})
+  // Ordre des spécialités choisi par la pro dans l'app (tri via « Trier »)
+  const [ordreCategories, setOrdreCategories] = useState<string[]>([])
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
 
@@ -719,11 +721,12 @@ export default function ReservationPage() {
 
       const { data: prestData } = await supabase
         .from('prestations')
-        .select('data')
+        .select('data, ordre_categories')
         .eq('pro_id', found.id)
         .single()
 
       if (prestData?.data) setCatalogue(prestData.data as CataloguePrestations)
+      if (prestData?.ordre_categories) setOrdreCategories(prestData.ordre_categories as string[])
       setPageState('ready')
     } catch (e) {
       console.error(e)
@@ -1821,12 +1824,19 @@ export default function ReservationPage() {
   }
 
   // ── Derived ───────────────────────────────────
+  // Spécialités dans l'ordre choisi par la pro (celles hors ordre_categories en fin,
+  // ordre JSONB conservé entre elles — sort stable)
+  const rangCategorie = (nom: string) => {
+    const i = ordreCategories.indexOf(nom)
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i
+  }
   const specialitesActives = Object.entries(catalogue)
     .filter(([, techs]) => techs.some(t => t.active))
     .map(([nom, techs]) => ({
       nom,
       techniques: techs.filter(t => t.active),
     }))
+    .sort((a, b) => rangCategorie(a.nom) - rangCategorie(b.nom))
 
   const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
 
@@ -3167,6 +3177,7 @@ export default function ReservationPage() {
               </div>
               <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
                 Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
+                Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.
               </p>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {inspirations.map((src, i) => (

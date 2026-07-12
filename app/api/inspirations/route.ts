@@ -11,9 +11,11 @@ const MAX_OCTETS = 4 * 1024 * 1024      // 4 Mo max par photo (décodée)
 const DELAI_MAX_MS = 15 * 60 * 1000     // le RDV doit avoir été créé il y a moins de 15 min (anti-abus)
 
 // POST /api/inspirations — Photos d'inspiration de la cliente pour un RDV
-// Body : { rdv_id: string, photos: string[] } (data URLs base64 image/jpeg, max 3)
+// Body : { rdv_id: string, photos: string[] }  → juste après la création (fenêtre 15 min)
+//   ou : { token: string, photos: string[] }   → plus tard, via le lien de gestion du RDV
+// (data URLs base64 image/jpeg ; 3 photos max au total, ajouts cumulés)
 export async function POST(req: NextRequest) {
-  let body: { rdv_id?: unknown; photos?: unknown }
+  let body: { rdv_id?: unknown; token?: unknown; photos?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -21,9 +23,12 @@ export async function POST(req: NextRequest) {
   }
 
   const rdvId = body.rdv_id
+  const token = body.token
   const photos = body.photos
 
-  if (typeof rdvId !== 'string' || !/^[0-9a-f-]{36}$/i.test(rdvId)) {
+  const parRdvId = typeof rdvId === 'string' && /^[0-9a-f-]{36}$/i.test(rdvId)
+  const parToken = typeof token === 'string' && token.length >= 16 && token.length <= 128
+  if (!parRdvId && !parToken) {
     return NextResponse.json({ error: 'invalid_rdv_id' }, { status: 400 })
   }
   if (!Array.isArray(photos) || photos.length === 0 || photos.length > MAX_PHOTOS) {
@@ -53,12 +58,15 @@ export async function POST(req: NextRequest) {
     buffers.push(buf)
   }
 
-  // Vérifier le RDV : existe, non annulé, dans le futur, créé il y a moins de 15 min
-  const { data: rdv, error: rdvErr } = await supabaseAdmin
+  // Vérifier le RDV : existe, non annulé, dans le futur.
+  // Par rdv_id (juste après création) : fenêtre anti-abus de 15 min.
+  // Par token (lien de gestion) : le token authentifie, ajout possible jusqu'au RDV.
+  const requete = supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, created_at')
-    .eq('id', rdvId)
-    .maybeSingle()
+    .select('id, date, statut, created_at, inspirations, token_expiration')
+  const { data: rdv, error: rdvErr } = parRdvId
+    ? await requete.eq('id', rdvId as string).maybeSingle()
+    : await requete.eq('token_confirmation', token as string).maybeSingle()
 
   if (rdvErr || !rdv) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
@@ -69,14 +77,27 @@ export async function POST(req: NextRequest) {
   if (new Date(rdv.date) <= new Date()) {
     return NextResponse.json({ error: 'rdv_passe' }, { status: 403 })
   }
-  if (!rdv.created_at || Date.now() - new Date(rdv.created_at).getTime() > DELAI_MAX_MS) {
+  if (parRdvId && (!rdv.created_at || Date.now() - new Date(rdv.created_at).getTime() > DELAI_MAX_MS)) {
     return NextResponse.json({ error: 'too_late' }, { status: 403 })
+  }
+  if (parToken && rdv.token_expiration && new Date(rdv.token_expiration) < new Date()) {
+    return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+
+  // 3 photos max au total (existantes + nouvelles)
+  const existantes: string[] = Array.isArray(rdv.inspirations) ? rdv.inspirations : []
+  if (existantes.length + buffers.length > MAX_PHOTOS) {
+    return NextResponse.json(
+      { error: 'limit_reached', restant: Math.max(0, MAX_PHOTOS - existantes.length) },
+      { status: 400 },
+    )
   }
 
   // Upload dans le bucket public : inspirations/{rdv_id}/{1..3}.jpg
+  // (numérotation continue après les photos déjà en place)
   const urls: string[] = []
   for (let i = 0; i < buffers.length; i++) {
-    const path = `${rdvId}/${i + 1}.jpg`
+    const path = `${rdv.id}/${existantes.length + i + 1}.jpg`
     const { error: upErr } = await supabaseAdmin.storage
       .from('inspirations')
       .upload(path, buffers[i], { contentType: 'image/jpeg', upsert: true })
@@ -88,15 +109,16 @@ export async function POST(req: NextRequest) {
     urls.push(supabaseAdmin.storage.from('inspirations').getPublicUrl(path).data.publicUrl)
   }
 
+  const toutes = [...existantes, ...urls]
   const { error: updateErr } = await supabaseAdmin
     .from('rendez_vous')
-    .update({ inspirations: urls })
-    .eq('id', rdvId)
+    .update({ inspirations: toutes })
+    .eq('id', rdv.id)
 
   if (updateErr) {
     console.error('[api/inspirations] Erreur update rendez_vous:', updateErr)
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, urls })
+  return NextResponse.json({ success: true, urls, inspirations: toutes })
 }
