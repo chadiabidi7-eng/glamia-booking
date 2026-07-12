@@ -2842,7 +2842,7 @@ export default function ReservationPage() {
                                             ))}
                                           </span>
                                         )}
-                                        {photosTech.length > 0 ? 'Photos & infos' : 'En savoir plus'}
+                                        En savoir plus
                                         <ChevronDown
                                           size={13}
                                           style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
@@ -2867,7 +2867,7 @@ export default function ReservationPage() {
                                               alt={`${t.nom} — photo ${pi + 1}`}
                                               loading="lazy"
                                               onClick={() => setPhotoOverlay(url)}
-                                              style={{ width: 92, height: 115, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
+                                              style={{ width: 92, height: 138, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
                                             />
                                           ))}
                                         </div>
