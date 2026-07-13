@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     if (intentId.startsWith('seti_')) {
       // ── Empreinte : SetupIntent réussi ──
-      const setup = await stripe.setupIntents.retrieve(intentId, { stripeAccount })
+      const setup = await stripe.setupIntents.retrieve(intentId, {}, { stripeAccount })
       if (setup.status !== 'succeeded' || setup.metadata?.glamia_pro_id !== proId) {
         return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
       }
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Acompte réel : PaymentIntent réussi ──
-    const paiement = await stripe.paymentIntents.retrieve(intentId, { stripeAccount })
+    const paiement = await stripe.paymentIntents.retrieve(intentId, {}, { stripeAccount })
     if (paiement.status !== 'succeeded' || paiement.metadata?.glamia_pro_id !== proId) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
