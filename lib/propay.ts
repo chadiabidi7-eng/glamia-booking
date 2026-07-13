@@ -113,8 +113,9 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     // ── Acompte réel ou prestation payée ──
     if (!tardive) {
       if (!paiement.stripe_payment_intent_id) return { resultat: 'paiement_stripe_manquant' }
+      // refund_application_fee : Glamia rend sa commission sur tout remboursement
       await stripe.refunds.create(
-        { payment_intent: paiement.stripe_payment_intent_id },
+        { payment_intent: paiement.stripe_payment_intent_id, refund_application_fee: true },
         { stripeAccount },
       )
       await supabaseAdmin.from('paiements').update({
