@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
+import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 
 // ─────────────────────────────────────────────
 // Types
@@ -88,6 +90,31 @@ type Slot = { heure: string; disponible: boolean }
 // ─────────────────────────────────────────────
 const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
+
+// ─── Glamia Pay (acomptes / empreintes à la résa) ────────────────────────────
+type PropayInfo = {
+  actif: boolean
+  mode?: 'empreinte' | 'acompte'
+  acompte?: number        // centimes
+  frais?: number          // centimes (frais de réservation, mode acompte)
+  total_cliente?: number  // centimes
+  client_secret?: string
+  stripe_account?: string
+  intent_id?: string
+}
+
+type PropayHandle = { confirmer: () => Promise<{ ok: boolean; intentId?: string; erreur?: string }> }
+
+const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+// Une promesse Stripe par compte connecté (le Payment Element vit sur le
+// compte de la PRO, pas sur la plateforme)
+const stripePromises: Record<string, Promise<StripeJs | null>> = {}
+function getStripePromise(compte: string) {
+  if (!stripePromises[compte]) stripePromises[compte] = loadStripe(STRIPE_PK, { stripeAccount: compte })
+  return stripePromises[compte]
+}
+
+const fmtCentimes = (c: number) => `${(c / 100).toFixed(2).replace('.', ',').replace(',00', '')} €`
 
 const DEFAULT_HORAIRES: HorairesHebdo = {
   0: { actif: false, debut: '09:00', fin: '18:00' },
@@ -492,6 +519,11 @@ export default function ReservationPage() {
   const [ordreCategories, setOrdreCategories] = useState<string[]>([])
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
+
+  // ── Glamia Pay : empreinte/acompte à la confirmation ──
+  const [propay, setPropay] = useState<PropayInfo | null>(null)
+  const [propayConsent, setPropayConsent] = useState(false)
+  const propayRef = useRef<PropayHandle>(null)
 
   // ── Navigation ───────────────────────────────
   const [step, setStep] = useState(1)
@@ -1546,6 +1578,23 @@ export default function ReservationPage() {
     if (echecs > 0) alert(echecs === 1 ? "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image." : `${echecs} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images.`)
   }
 
+  // ── Glamia Pay : préparer l'empreinte/acompte en arrivant à la confirmation ──
+  useEffect(() => {
+    if (step !== 5 || !pro) { setPropay(null); setPropayConsent(false); return }
+    setPropay(null)
+    setPropayConsent(false)
+    const total = prixFinal > 0 ? prixFinal : prixTotal
+    fetch('/api/propay/intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pro_id: pro.id, total }),
+    })
+      .then(r => r.json())
+      .then((d: PropayInfo) => setPropay(d))
+      .catch(() => setPropay({ actif: false }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
   async function handleConfirm() {
     if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
     setSubmitting(true)
@@ -1581,6 +1630,23 @@ export default function ReservationPage() {
         setStep(4)
         setRdvVersion(v => v + 1)
         return
+      }
+
+      // ── Glamia Pay : valider la carte AVANT de créer quoi que ce soit ──
+      let propayIntentId: string | null = null
+      if (propay?.actif) {
+        if (!propayConsent) {
+          alert(propay.mode === 'acompte'
+            ? "Coche la case d'acceptation de l'acompte pour réserver."
+            : "Coche la case d'autorisation d'empreinte bancaire pour réserver.")
+          return
+        }
+        const resultat = await propayRef.current?.confirmer()
+        if (!resultat?.ok) {
+          if (resultat?.erreur) alert(resultat.erreur)
+          return
+        }
+        propayIntentId = resultat.intentId ?? null
       }
 
       let cId = clienteId
@@ -1643,6 +1709,19 @@ export default function ReservationPage() {
         .single()
 
       if (rdvErr) throw rdvErr
+
+      // ── Glamia Pay : lier l'empreinte/acompte validé au RDV (journal paiements) ──
+      if (propayIntentId && nouveau?.id) {
+        try {
+          await fetch('/api/propay/lier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pro_id: pro.id, rdv_id: nouveau.id, intent_id: propayIntentId }),
+          })
+        } catch (e) {
+          console.error('[glamia-pay] liaison au RDV:', e)
+        }
+      }
 
       // Fidélité : consommer récompense existante, ajouter tampon, consommer si palier proactif
       if (cId && fideliteConfig?.active) {
@@ -3328,6 +3407,57 @@ export default function ReservationPage() {
               </div>
             </div>
 
+            {/* ── Glamia Pay : empreinte bancaire / acompte ── */}
+            {propay?.actif && propay.client_secret && propay.stripe_account && (
+              <div style={{
+                background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 60%)',
+                border: `1.5px solid ${PINK}`,
+                borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{
+                    width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <CreditCard size={15} color="#fff" />
+                  </span>
+                  <label style={{ ...S.label, marginBottom: 0 }}>
+                    {propay.mode === 'acompte' ? 'Acompte de réservation' : 'Empreinte bancaire'}
+                  </label>
+                  <span style={{
+                    background: PINK, color: '#fff', borderRadius: 8,
+                    padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                  }}>
+                    GLAMIA PAY
+                  </span>
+                </div>
+                <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 12px', lineHeight: 1.5 }}>
+                  {propay.mode === 'acompte'
+                    ? <>Pour garantir ton rendez-vous, un acompte de <strong style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</strong> est réglé maintenant (+ {fmtCentimes(propay.frais ?? 0)} de frais de réservation) et <strong>déduit de ta prestation</strong>. Remboursé automatiquement si tu annules plus de 24 h avant.</>
+                    : <>Aucun paiement aujourd&apos;hui : ta carte est simplement enregistrée pour garantir ton rendez-vous. <strong style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</strong> ne seraient prélevés qu&apos;en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
+                </p>
+                <Elements
+                  stripe={getStripePromise(propay.stripe_account)}
+                  options={{ clientSecret: propay.client_secret, locale: 'fr' }}
+                >
+                  <BlocGlamiaPay ref={propayRef} mode={propay.mode ?? 'empreinte'} />
+                </Elements>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 12, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={propayConsent}
+                    onChange={e => setPropayConsent(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: PINK }}
+                  />
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                    {propay.mode === 'acompte'
+                      ? <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant (acompte + frais), déduits de ma prestation, et je comprends que l&apos;acompte est conservé en cas d&apos;absence ou d&apos;annulation à moins de 24 h du rendez-vous.</>
+                      : <>J&apos;autorise {pro?.pseudo || pro?.prenom || 'ma praticienne'} à prélever {fmtCentimes(propay.acompte ?? 0)} sur cette carte en cas d&apos;absence ou d&apos;annulation à moins de 24 h du rendez-vous.</>}
+                  </span>
+                </label>
+              </div>
+            )}
+
             {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
             <div style={{
               background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
@@ -3597,6 +3727,34 @@ export default function ReservationPage() {
 // ─────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────
+// ─── Glamia Pay : Payment Element + confirmation exposée au parent ───────────
+// Doit vivre SOUS le provider <Elements> ; le parent déclenche confirmer()
+// depuis le bouton Réserver (la carte est validée AVANT la création du RDV).
+const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' }>(
+  function BlocGlamiaPay({ mode }, ref) {
+    const stripeJs = useStripe()
+    const elements = useElements()
+
+    useImperativeHandle(ref, () => ({
+      async confirmer() {
+        if (!stripeJs || !elements) {
+          return { ok: false, erreur: "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie." }
+        }
+        if (mode === 'empreinte') {
+          const { error, setupIntent } = await stripeJs.confirmSetup({ elements, redirect: 'if_required' })
+          if (error || !setupIntent) return { ok: false, erreur: error?.message ?? "La carte n'a pas pu être validée." }
+          return { ok: true, intentId: setupIntent.id }
+        }
+        const { error, paymentIntent } = await stripeJs.confirmPayment({ elements, redirect: 'if_required' })
+        if (error || !paymentIntent) return { ok: false, erreur: error?.message ?? "Le paiement n'a pas abouti." }
+        return { ok: true, intentId: paymentIntent.id }
+      },
+    }), [stripeJs, elements, mode])
+
+    return <PaymentElement options={{ layout: 'tabs' }} />
+  },
+)
+
 function BackBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
