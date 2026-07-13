@@ -3422,15 +3422,14 @@ export default function ReservationPage() {
                 border: `1.5px solid ${PINK}`,
                 borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{
-                    width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <CreditCard size={15} color="#fff" />
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <CreditCard size={16} color={PINK} />
                   <label style={{ ...S.label, marginBottom: 0 }}>
-                    {propay.mode === 'total' ? 'Paiement de la prestation' : propay.mode === 'acompte' ? 'Acompte de réservation' : 'Empreinte bancaire'}
+                    {propay.mode === 'total'
+                      ? <>Prestation · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                      : propay.mode === 'acompte'
+                        ? <>Acompte · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                        : <>Empreinte bancaire · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
                   </label>
                   <span style={{
                     background: PINK, color: '#fff', borderRadius: 8,
@@ -3439,12 +3438,12 @@ export default function ReservationPage() {
                     GLAMIA PAY
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 12px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
                   {propay.mode === 'total'
-                    ? <>Ta prestation de <strong style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</strong> est réglée maintenant (+ {fmtCentimes(propay.frais ?? 0)} de frais de réservation) — <strong>rien à payer sur place</strong>. Remboursée automatiquement si tu annules plus de 24 h avant.</>
+                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais), rien à payer sur place. Remboursée si tu annules plus de 24 h avant.</>
                     : propay.mode === 'acompte'
-                      ? <>Pour garantir ton rendez-vous, un acompte de <strong style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</strong> est réglé maintenant (+ {fmtCentimes(propay.frais ?? 0)} de frais de réservation) et <strong>déduit de ta prestation</strong>. Remboursé automatiquement si tu annules plus de 24 h avant.</>
-                      : <>Aucun paiement aujourd&apos;hui : ta carte est simplement enregistrée pour garantir ton rendez-vous. <strong style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</strong> ne seraient prélevés qu&apos;en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
+                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais), déduit de ta prestation. Remboursé si tu annules plus de 24 h avant.</>
+                      : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
                 </p>
                 <Elements
                   stripe={getStripePromise(propay.stripe_account)}
@@ -3459,12 +3458,10 @@ export default function ReservationPage() {
                     onChange={e => setPropayConsent(e.target.checked)}
                     style={{ marginTop: 2, width: 16, height: 16, accentColor: PINK }}
                   />
-                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
-                    {propay.mode === 'total'
-                      ? <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant (prestation + frais), et je comprends que la somme est conservée en cas d&apos;absence ou d&apos;annulation à moins de 24 h du rendez-vous.</>
-                      : propay.mode === 'acompte'
-                        ? <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant (acompte + frais), déduits de ma prestation, et je comprends que l&apos;acompte est conservé en cas d&apos;absence ou d&apos;annulation à moins de 24 h du rendez-vous.</>
-                        : <>J&apos;autorise {pro?.pseudo || pro?.prenom || 'ma praticienne'} à prélever {fmtCentimes(propay.acompte ?? 0)} sur cette carte en cas d&apos;absence ou d&apos;annulation à moins de 24 h du rendez-vous.</>}
+                  <span style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.4 }}>
+                    {propay.mode === 'empreinte'
+                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0)} en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>
+                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant, conservés si absence ou annulation à moins de 24 h.</>}
                   </span>
                 </label>
               </div>
