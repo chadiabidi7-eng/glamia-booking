@@ -146,7 +146,12 @@
       "titre": "Quelles prestations ?",
       "sousTitre": "Sélectionnez une ou plusieurs techniques.",
       "aucunePrestation": "Aucune prestation disponible pour le moment.",
-      "gratuit": "Gratuit"
+      "gratuit": "Gratuit",
+      "enSavoirPlus": "En savoir plus",
+      "voirDetails": "Voir les détails",
+      "masquerDetails": "Masquer les détails",
+      "photoN": "photo {{n}}",
+      "altPhotoPresta": "Photo de la prestation"
     },
     "offres": {
       "enCours": "Offres en cours",
@@ -280,5 +285,56 @@
     },
     "uneCliente": "Une cliente",
     "uneClienteMin": "une cliente"
+  },
+  "inspi": {
+    "titre": "Tes inspirations 💅",
+    "intro": "Montre à {{prenom}} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel). Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.",
+    "confIntro": {
+      "one": "Montre ce que tu as en tête — ajoute jusqu'à 1 photo (optionnel).",
+      "other": "Montre ce que tu as en tête — ajoute jusqu'à {{count}} photos (optionnel)."
+    },
+    "introCourte": "Montre à {{prenom}} ce que tu as en tête — elle recevra une notification.",
+    "taPraticienne": "ta praticienne",
+    "taPraticienneMaj": "Ta praticienne",
+    "taCliente": "Ta cliente",
+    "alt": "Inspiration {{n}}",
+    "altNouvelle": "Nouvelle inspiration",
+    "supprimerPhoto": "Supprimer cette photo",
+    "retirerPhoto": "Retirer cette photo",
+    "unInstant": "Un instant…",
+    "envoi": "Envoi…",
+    "envoiEnCours": "Envoi en cours…",
+    "prendre": "Prendre",
+    "importer": "Importer",
+    "max3": {
+      "one": "3 photos maximum : seule la première a été gardée.",
+      "other": "3 photos maximum : seules les {{count}} premières ont été gardées."
+    },
+    "erreurAjout": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "erreurAjoutMultiple": {
+      "one": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+      "other": "{{count}} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images."
+    },
+    "erreurEnvoi": "Tes photos n'ont pas pu être envoyées. Réessaie.",
+    "bouton": "Ajouter mes inspirations",
+    "bouton33": "Mes inspirations (3/3)",
+    "envoyees": "Inspirations envoyées ! {{prenom}} a été prévenue 💅",
+    "transmises": "Tes 3 photos ont bien été transmises 💅",
+    "valider": {
+      "one": "Valider ma photo",
+      "other": "Valider mes {{count}} photos"
+    },
+    "statutTransmises": {
+      "one": "Ta photo d'inspiration a été transmise",
+      "other": "Tes {{count}} photos d'inspiration ont été transmises"
+    },
+    "statutEchec": "Tes photos d'inspiration n'ont pas pu être envoyées.",
+    "carrouselHint": "Glisse pour défiler · touche pour fermer",
+    "fermerHint": "Touche pour fermer",
+    "pushTitre": "Nouvelles inspirations 💅",
+    "pushCorps": {
+      "one": "{{nom}} a ajouté une photo d'inspiration pour son RDV du {{date}} à {{heure}}.",
+      "other": "{{nom}} a ajouté {{count}} photos d'inspiration pour son RDV du {{date}} à {{heure}}."
+    }
   }
 }

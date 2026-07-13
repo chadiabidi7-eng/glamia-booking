@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Info } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
 import { creerTr, formatHeure, formatPrix, joursCourtLoc, localeTag, moisLoc, type Langue, telPlaceholder } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────
@@ -12,7 +12,7 @@ import { creerTr, formatHeure, formatPrix, joursCourtLoc, localeTag, moisLoc, ty
 // ─────────────────────────────────────────────
 type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
 type HorairesHebdo = Record<number, HorairesJour>
-type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; prix_type?: 'fixe' | 'a_partir_de' }
+type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; photos?: string[]; prix_type?: 'fixe' | 'a_partir_de' }
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée
@@ -81,6 +81,7 @@ type RdvAVenir = {
   reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
   techniques: { nom: string; prix: number; duree: number; categorie?: string }[] | null
   offre_id: string | null
+  inspirations: string[] | null
 }
 
 type Slot = { heure: string; disponible: boolean }
@@ -110,6 +111,33 @@ const GLAMIA_PINK = '#D4537E'
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+// Compression d'image côté navigateur : max 1280 px, JPEG qualité 0.8 → data URL
+async function compresserImage(file: File): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'))
+    reader.readAsDataURL(file)
+  })
+  const img: HTMLImageElement = await new Promise((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => resolve(i)
+    i.onerror = () => reject(new Error('Image illisible'))
+    i.src = dataUrl
+  })
+  const MAX = 1280
+  const ratio = Math.min(1, MAX / Math.max(img.width, img.height))
+  const w = Math.max(1, Math.round(img.width * ratio))
+  const h = Math.max(1, Math.round(img.height * ratio))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas indisponible')
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.8)
+}
+
 function normalizeStr(str: string) {
   return str
     .toLowerCase()
@@ -459,6 +487,8 @@ export default function ReservationPage() {
   // ── Pro & catalogue ──────────────────────────
   const [pro,        setPro]        = useState<ProInfo | null>(null)
   const [catalogue,  setCatalogue]  = useState<CataloguePrestations>({})
+  // Ordre des spécialités choisi par la pro dans l'app (tri via « Trier »)
+  const [ordreCategories, setOrdreCategories] = useState<string[]>([])
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
 
@@ -492,6 +522,13 @@ export default function ReservationPage() {
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
+
+  // ── Inspirations sur un RDV existant (bouton « Mes inspirations ») ──
+  const [inspiRdvId,        setInspiRdvId]        = useState<string | null>(null)
+  const [inspiNouvelles,    setInspiNouvelles]    = useState<string[]>([])   // data URLs en attente d'envoi
+  const [inspiCompression,  setInspiCompression]  = useState(false)
+  const [inspiEnvoi,        setInspiEnvoi]        = useState(false)
+  const [inspiDone,         setInspiDone]         = useState<string | null>(null)
   const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null)
 
   // ── Reprogrammer un RDV ─────────────────────
@@ -528,7 +565,10 @@ export default function ReservationPage() {
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
-  const [descriptionPopup, setDescriptionPopup] = useState<{ nom: string; description: string } | null>(null)
+  // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
+  const [techniqueDepliee, setTechniqueDepliee] = useState<string | null>(null)
+  // Visionneuse plein écran : toutes les photos de la technique + index affiché
+  const [photoOverlay, setPhotoOverlay] = useState<{ photos: string[]; index: number } | null>(null)
 
   // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
@@ -545,6 +585,10 @@ export default function ReservationPage() {
   // ── Step 5 : Confirmation ────────────────────
   const [commentaire, setCommentaire] = useState('')
   const [rappel,      setRappel]      = useState(false)
+  // Photos d'inspiration de la cliente (data URLs compressées, max 3)
+  const [inspirations, setInspirations] = useState<string[]>([])
+  const [inspirationsStatut, setInspirationsStatut] = useState<'aucune' | 'envoyees' | 'echec'>('aucune')
+  const [compressionEnCours, setCompressionEnCours] = useState(false)
   const step5Ref = useRef<HTMLDivElement>(null)
 
   // ── Glissements d'écran automatiques (fluidité du parcours) ──
@@ -699,11 +743,12 @@ export default function ReservationPage() {
 
       const { data: prestData } = await supabase
         .from('prestations')
-        .select('data')
+        .select('data, ordre_categories')
         .eq('pro_id', found.id)
         .single()
 
       if (prestData?.data) setCatalogue(prestData.data as CataloguePrestations)
+      if (prestData?.ordre_categories) setOrdreCategories(prestData.ordre_categories as string[])
       setPageState('ready')
     } catch (e) {
       console.error(e)
@@ -827,7 +872,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -840,6 +885,58 @@ export default function ReservationPage() {
       console.error('[chargerRdvsAVenir] Erreur:', e)
     } finally {
       setLoadingRdvs(false)
+    }
+  }
+
+  // ── Inspirations sur un RDV existant ─────────
+  function toggleInspis(rdvId: string) {
+    setInspiNouvelles([])
+    setInspiDone(null)
+    setInspiRdvId(prev => (prev === rdvId ? null : rdvId))
+  }
+
+  async function ajouterInspiFichiers(e: React.ChangeEvent<HTMLInputElement>, rdv: RdvAVenir) {
+    const fichiers = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    const restant = 3 - (rdv.inspirations?.length ?? 0) - inspiNouvelles.length
+    if (fichiers.length === 0 || restant <= 0 || inspiCompression) return
+    const aTraiter = fichiers.slice(0, restant)
+    if (fichiers.length > restant) {
+      alert(trad('inspi.max3', { count: restant }))
+    }
+    setInspiCompression(true)
+    try {
+      for (const f of aTraiter) {
+        const dataUrl = await compresserImage(f)
+        setInspiNouvelles(prev => [...prev, dataUrl])
+      }
+    } catch (err) {
+      console.error('[inspirations] Erreur compression:', err)
+      alert(trad('inspi.erreurAjout'))
+    } finally {
+      setInspiCompression(false)
+    }
+  }
+
+  async function validerInspis(rdv: RdvAVenir) {
+    if (!pro || inspiNouvelles.length === 0 || inspiEnvoi) return
+    setInspiEnvoi(true)
+    try {
+      const res = await fetch('/api/inspirations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rdv_id: rdv.id, pro_id: pro.id, telephone, photos: inspiNouvelles }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.inspirations) throw new Error(json.error ?? 'upload_failed')
+      setRdvsAVenir(prev => prev.map(r => (r.id === rdv.id ? { ...r, inspirations: json.inspirations } : r)))
+      setInspiNouvelles([])
+      setInspiDone(rdv.id)
+    } catch (err) {
+      console.error('[inspirations] Erreur envoi:', err)
+      alert(trad('inspi.erreurEnvoi'))
+    } finally {
+      setInspiEnvoi(false)
     }
   }
 
@@ -1442,6 +1539,31 @@ export default function ReservationPage() {
   }
 
   // ── Step 5 : Confirm ──────────────────────────
+  // ── Step 5 : ajout de photos d'inspiration (sélection multiple, 3 max) ──
+  async function handleAjoutInspiration(e: React.ChangeEvent<HTMLInputElement>) {
+    const fichiers = Array.from(e.target.files ?? [])
+    e.target.value = '' // permet de re-sélectionner la même photo après suppression
+    if (fichiers.length === 0 || inspirations.length >= 3) return
+    const restant = 3 - inspirations.length
+    const aTraiter = fichiers.slice(0, restant)
+    if (fichiers.length > restant) {
+      alert(trad('inspi.max3', { count: restant }))
+    }
+    setCompressionEnCours(true)
+    let echecs = 0
+    for (const fichier of aTraiter) {
+      try {
+        const dataUrl = await compresserImage(fichier)
+        setInspirations(prev => (prev.length >= 3 ? prev : [...prev, dataUrl]))
+      } catch (err) {
+        echecs++
+        console.error('[inspirations] Erreur compression:', err)
+      }
+    }
+    setCompressionEnCours(false)
+    if (echecs > 0) alert(trad('inspi.erreurAjoutMultiple', { count: echecs }))
+  }
+
   async function handleConfirm() {
     if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
     setSubmitting(true)
@@ -1669,6 +1791,22 @@ export default function ReservationPage() {
 
       setPageState('confirmed')
 
+      // Photos d'inspiration → upload via l'API (un échec ne bloque JAMAIS la réservation)
+      if (nouveau?.id && inspirations.length > 0) {
+        try {
+          const res = await fetch('/api/inspirations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rdv_id: nouveau.id, photos: inspirations }),
+          })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          setInspirationsStatut('envoyees')
+        } catch (e) {
+          console.error('[handleConfirm] Erreur envoi inspirations (non bloquante):', e)
+          setInspirationsStatut('echec')
+        }
+      }
+
       // Email de confirmation à la cliente (non bloquant)
       if (!clienteEmail.trim()) {
         console.warn('[handleConfirm] Cliente sans email, confirmation non envoyée')
@@ -1766,12 +1904,19 @@ export default function ReservationPage() {
   }
 
   // ── Derived ───────────────────────────────────
+  // Spécialités dans l'ordre choisi par la pro (celles hors ordre_categories en fin,
+  // ordre JSONB conservé entre elles — sort stable)
+  const rangCategorie = (nom: string) => {
+    const i = ordreCategories.indexOf(nom)
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i
+  }
   const specialitesActives = Object.entries(catalogue)
     .filter(([, techs]) => techs.some(t => t.active))
     .map(([nom, techs]) => ({
       nom,
       techniques: techs.filter(t => t.active),
     }))
+    .sort((a, b) => rangCategorie(a.nom) - rangCategorie(b.nom))
 
   const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
 
@@ -1929,6 +2074,19 @@ export default function ReservationPage() {
           {pro?.adresse && (
             <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}>
               <MapPin size={14} color={GLAMIA_PINK} />{pro.adresse}
+            </p>
+          )}
+
+          {/* Statut d'envoi des photos d'inspiration */}
+          {inspirationsStatut === 'envoyees' && (
+            <p style={{ fontSize: 13, color: PINK, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <CheckCircle size={15} color={PINK} />
+              {trad('inspi.statutTransmises', { count: inspirations.length })}
+            </p>
+          )}
+          {inspirationsStatut === 'echec' && (
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>
+              {trad('inspi.statutEchec')}
             </p>
           )}
 
@@ -2237,6 +2395,114 @@ export default function ReservationPage() {
                               <Sparkles size={14} color={PINK} />
                               {trad('resa.s1.modifierPrestations')}
                             </button>
+                          )}
+
+                          {/* Ajouter / voir ses inspirations */}
+                          <button
+                            onClick={() => toggleInspis(rdv.id)}
+                            style={{
+                              width: '100%', marginTop: 10, padding: '8px 0', borderRadius: 10,
+                              border: `1.5px solid ${PINK}`, background: inspiRdvId === rdv.id ? PINK_LIGHT : '#fff',
+                              color: PINK, fontSize: 13, fontWeight: 600,
+                              cursor: 'pointer', transition: 'all 0.15s',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            }}
+                          >
+                            <Camera size={14} color={PINK} />
+                            {(rdv.inspirations?.length ?? 0) >= 3
+                              ? trad('inspi.bouton33')
+                              : trad('inspi.bouton')}
+                          </button>
+
+                          {/* ── Panneau inspirations ── */}
+                          {inspiRdvId === rdv.id && (
+                            <div style={{
+                              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+                              border: `1.5px solid ${PINK}55`, borderRadius: 12,
+                              padding: 12, marginTop: 10,
+                            }}>
+                              {inspiDone === rdv.id ? (
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <CheckCircle size={15} color="#059669" />
+                                  {trad('inspi.envoyees', { prenom: pro?.prenom || trad('inspi.taPraticienneMaj') })}
+                                </p>
+                              ) : (
+                                <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6b7280', lineHeight: 1.4 }}>
+                                  {(rdv.inspirations?.length ?? 0) >= 3
+                                    ? trad('inspi.transmises')
+                                    : trad('inspi.introCourte', { prenom: pro?.prenom || trad('inspi.taPraticienne') })}
+                                </p>
+                              )}
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: inspiDone === rdv.id ? 10 : 0 }}>
+                                {(rdv.inspirations ?? []).map((src, i) => (
+                                  <img
+                                    key={`e${i}`}
+                                    src={src}
+                                    alt={trad('inspi.alt', { n: i + 1 })}
+                                    style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block', flexShrink: 0 }}
+                                  />
+                                ))}
+                                {inspiNouvelles.map((src, i) => (
+                                  <div key={`n${i}`} style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
+                                    <img
+                                      src={src}
+                                      alt={trad('inspi.altNouvelle')}
+                                      style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', border: `1.5px solid ${PINK}`, display: 'block' }}
+                                    />
+                                    <button
+                                      onClick={() => setInspiNouvelles(prev => prev.filter((_, j) => j !== i))}
+                                      aria-label={trad('inspi.retirerPhoto')}
+                                      style={{
+                                        position: 'absolute', top: -6, right: -6, width: 20, height: 20,
+                                        borderRadius: 10, border: '2px solid #fff', background: '#1f2937',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', padding: 0,
+                                      }}
+                                    >
+                                      <X size={11} color="#fff" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {(rdv.inspirations?.length ?? 0) + inspiNouvelles.length < 3 && (
+                                  <>
+                                    <label style={{
+                                      width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
+                                      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                      justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
+                                      flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
+                                    }}>
+                                      <Camera size={16} color={PINK} />
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{trad('inspi.prendre')}</span>
+                                      <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
+                                    </label>
+                                    <label style={{
+                                      width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
+                                      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                      justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
+                                      flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
+                                    }}>
+                                      <ImagePlus size={16} color={PINK} />
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? trad('inspi.unInstant') : trad('inspi.importer')}</span>
+                                      <input type="file" accept="image/*" multiple onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
+                                    </label>
+                                  </>
+                                )}
+                              </div>
+                              {inspiNouvelles.length > 0 && (
+                                <button
+                                  onClick={() => validerInspis(rdv)}
+                                  disabled={inspiEnvoi}
+                                  style={{
+                                    width: '100%', marginTop: 12, padding: '10px 0', borderRadius: 10,
+                                    border: 'none', background: PINK, color: '#fff',
+                                    fontSize: 13.5, fontWeight: 700, cursor: 'pointer',
+                                    opacity: inspiEnvoi ? 0.6 : 1,
+                                  }}
+                                >
+                                  {inspiEnvoi ? trad('inspi.envoiEnCours') : trad('inspi.valider', { count: inspiNouvelles.length })}
+                                </button>
+                              )}
+                            </div>
                           )}
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                             <button
@@ -2698,57 +2964,124 @@ export default function ReservationPage() {
                             const selected = techniquesSelectionnees.some(
                               sel => sel.nom === t.nom && sel.categorie === s.nom
                             )
+                            // Détails optionnels configurés par la pro (photos / description)
+                            const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 3)
+                            const descTech = (t.description ?? '').trim()
+                            const aDetails = photosTech.length > 0 || descTech !== ''
+                            const depliee = aDetails && techniqueDepliee === t.id
                             return (
-                              <button
-                                key={t.id}
-                                onClick={() => toggleTechnique(t, s.nom)}
-                                style={{
-                                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                                  padding: '11px 12px', borderRadius: 12, marginBottom: 6,
-                                  border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
-                                  background: selected ? PINK_LIGHT : '#fafafa',
-                                  cursor: 'pointer', textAlign: 'left',
-                                }}
-                              >
-                                {/* Checkbox */}
-                                <div style={{
-                                  width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                                  border: `2px solid ${selected ? PINK : '#d1d5db'}`,
-                                  background: selected ? PINK : 'transparent',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                  {selected && <CheckCircle size={14} color="#fff" />}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    {t.nom}
-                                    {t.description && (
+                              <div key={t.id} style={{ marginBottom: 6 }}>
+                                <button
+                                  onClick={() => toggleTechnique(t, s.nom)}
+                                  style={{
+                                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '11px 12px', borderRadius: 12,
+                                    border: `1.5px solid ${selected ? PINK : '#e5e7eb'}`,
+                                    background: selected ? PINK_LIGHT : '#fafafa',
+                                    cursor: 'pointer', textAlign: 'left',
+                                  }}
+                                >
+                                  {/* Checkbox */}
+                                  <div style={{
+                                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                                    border: `2px solid ${selected ? PINK : '#d1d5db'}`,
+                                    background: selected ? PINK : 'transparent',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}>
+                                    {selected && <CheckCircle size={14} color="#fff" />}
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
+                                      {t.nom}
+                                    </p>
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
+                                      {(() => {
+                                        // Vérifier si une offre prix_fixe couvre cette technique
+                                        const promoOffre = offresEligibles.find(o => o.type === 'prix_fixe' && o.prestations_ids.includes(t.id))
+                                        if (promoOffre) {
+                                          return (
+                                            <>
+                                              <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{fmtPrix(t.prix)}</span>
+                                              <span style={{ color: PINK, fontWeight: 600 }}>{fmtPrix(promoOffre.prix_promo)}</span>
+                                              {' · '}{formatDuree(t.duree)}
+                                            </>
+                                          )
+                                        }
+                                        return <>{t.prix_type === 'a_partir_de' ? trad('resa.aPartirDe', { prix: fmtPrix(t.prix) }) : (t.prix > 0 ? fmtPrix(t.prix) : trad('resa.s2.gratuit'))} · {formatDuree(t.duree)}</>
+                                      })()}
+                                    </p>
+                                    {/* Pastille détails — affordance explicite, tap séparé de la sélection */}
+                                    {aDetails && (
                                       <span
-                                        onClick={(e) => { e.stopPropagation(); setDescriptionPopup({ nom: t.nom, description: t.description! }) }}
-                                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                                        onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
+                                        aria-label={depliee ? trad('resa.s2.masquerDetails') : trad('resa.s2.voirDetails')}
+                                        style={{
+                                          display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+                                          padding: photosTech.length > 0 ? '3px 10px 3px 4px' : '3px 10px',
+                                          borderRadius: 999,
+                                          background: depliee ? PINK_LIGHT : '#fff',
+                                          border: `1px solid ${depliee ? PINK : '#e8dce3'}`,
+                                          fontSize: 12, fontWeight: 600, color: PINK, cursor: 'pointer',
+                                          width: 'fit-content',
+                                        }}
                                       >
-                                        <Info size={15} color={PINK} />
+                                        {photosTech.length > 0 && (
+                                          <span style={{ display: 'inline-flex' }}>
+                                            {photosTech.map((url, pi) => (
+                                              <img
+                                                key={pi}
+                                                src={url}
+                                                alt=""
+                                                loading="lazy"
+                                                style={{
+                                                  width: 22, height: 22, borderRadius: '50%', objectFit: 'cover',
+                                                  border: '1.5px solid #fff', marginLeft: pi === 0 ? 0 : -8,
+                                                  position: 'relative', zIndex: photosTech.length - pi,
+                                                  background: '#f3f4f6',
+                                                }}
+                                              />
+                                            ))}
+                                          </span>
+                                        )}
+                                        {trad('resa.s2.enSavoirPlus')}
+                                        <ChevronDown
+                                          size={13}
+                                          style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
+                                        />
                                       </span>
                                     )}
-                                  </p>
-                                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
-                                    {(() => {
-                                      // Vérifier si une offre prix_fixe couvre cette technique
-                                      const promoOffre = offresEligibles.find(o => o.type === 'prix_fixe' && o.prestations_ids.includes(t.id))
-                                      if (promoOffre) {
-                                        return (
-                                          <>
-                                            <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{fmtPrix(t.prix)}</span>
-                                            <span style={{ color: PINK, fontWeight: 600 }}>{fmtPrix(promoOffre.prix_promo)}</span>
-                                            {' · '}{formatDuree(t.duree)}
-                                          </>
-                                        )
-                                      }
-                                      return <>{t.prix_type === 'a_partir_de' ? trad('resa.aPartirDe', { prix: fmtPrix(t.prix) }) : (t.prix > 0 ? fmtPrix(t.prix) : trad('resa.s2.gratuit'))} · {formatDuree(t.duree)}</>
-                                    })()}
-                                  </p>
-                                </div>
-                              </button>
+                                  </div>
+                                </button>
+                                {/* Détails dépliables : photos + description */}
+                                {aDetails && (
+                                  <div style={{
+                                    maxHeight: depliee ? 420 : 0, opacity: depliee ? 1 : 0,
+                                    overflow: 'hidden', transition: 'max-height 0.3s ease, opacity 0.25s ease',
+                                  }}>
+                                    <div style={{ margin: '4px 0 2px', padding: 12, borderRadius: 12, background: '#fff', border: '1px solid #f3f4f6' }}>
+                                      {photosTech.length > 0 && (
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: descTech !== '' ? 10 : 0 }}>
+                                          {photosTech.map((url, pi) => (
+                                            <img
+                                              key={pi}
+                                              src={url}
+                                              alt={`${t.nom} — ${trad('resa.s2.photoN', { n: pi + 1 })}`}
+                                              loading="lazy"
+                                              onClick={() => setPhotoOverlay({ photos: photosTech, index: pi })}
+                                              style={{ width: 92, height: 138, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
+                                            />
+                                          ))}
+                                        </div>
+                                      )}
+                                      {descTech !== '' && (
+                                        <p style={{ margin: 0, fontSize: 13, color: '#555555', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                          {descTech}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )
                           })}
                         </div>
@@ -3014,7 +3347,94 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            <label style={S.label}>{trad('resa.s5.commentaire')}</label>
+            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
+            <div style={{
+              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+              border: `1.5px solid ${PINK}55`,
+              borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span style={{
+                  width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles size={15} color="#fff" />
+                </span>
+                <label style={{ ...S.label, marginBottom: 0 }}>{trad('inspi.titre')}</label>
+              </div>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
+                {trad('inspi.intro', { prenom: pro?.prenom || trad('inspi.taPraticienne') })}
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {inspirations.map((src, i) => (
+                <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
+                  <img
+                    src={src}
+                    alt={trad('inspi.alt', { n: i + 1 })}
+                    style={{ width: 88, height: 88, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block' }}
+                  />
+                  <button
+                    onClick={() => setInspirations(prev => prev.filter((_, j) => j !== i))}
+                    aria-label={trad('inspi.supprimerPhoto')}
+                    style={{
+                      position: 'absolute', top: -7, right: -7, width: 22, height: 22,
+                      borderRadius: 11, border: '2px solid #fff', background: '#1f2937',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    <X size={12} color="#fff" />
+                  </button>
+                </div>
+              ))}
+              {inspirations.length < 3 && (
+                <>
+                  {/* Prendre une photo — ouvre directement l'appareil photo */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <Camera size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? trad('inspi.unInstant') : trad('inspi.prendre')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  {/* Importer depuis la galerie (sélection multiple) */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <ImagePlus size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? trad('inspi.unInstant') : trad('inspi.importer')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </>
+              )}
+              </div>
+            </div>
+
+            <label style={S.label}>Commentaire (optionnel)</label>
             <textarea
               value={commentaire}
               onChange={e => setCommentaire(e.target.value)}
@@ -3112,39 +3532,78 @@ export default function ReservationPage() {
         </div>
       )}
 
-      {/* Popup description technique */}
-      {descriptionPopup && (
+      {/* Visionneuse plein écran — carrousel (glisser pour défiler, tap pour fermer) */}
+      {photoOverlay && (
         <div
-          onClick={() => setDescriptionPopup(null)}
+          onClick={() => setPhotoOverlay(null)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: 24,
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            zIndex: 9999, cursor: 'zoom-out',
           }}
         >
+          <style>{`.carrousel-photos::-webkit-scrollbar{display:none}`}</style>
+          {photoOverlay.photos.length > 1 && (
+            <p style={{
+              position: 'absolute', top: 24, left: 0, right: 0, textAlign: 'center',
+              color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 600, margin: 0,
+            }}>
+              {photoOverlay.index + 1} / {photoOverlay.photos.length}
+            </p>
+          )}
           <div
-            onClick={(e) => e.stopPropagation()}
+            className="carrousel-photos"
+            ref={el => {
+              // Positionner le carrousel sur la photo tapée, une seule fois à l'ouverture
+              if (el && !el.dataset.init) {
+                el.dataset.init = '1'
+                el.scrollLeft = photoOverlay.index * el.clientWidth
+              }
+            }}
+            onScroll={e => {
+              const el = e.currentTarget
+              const i = Math.round(el.scrollLeft / el.clientWidth)
+              setPhotoOverlay(prev => (prev && i !== prev.index ? { ...prev, index: i } : prev))
+            }}
             style={{
-              background: '#fff', borderRadius: 20, padding: 24,
-              maxWidth: 380, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              display: 'flex', overflowX: 'auto', width: '100%',
+              scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
             }}
           >
-            <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 12px' }}>
-              {descriptionPopup.nom}
+            {photoOverlay.photos.map(url => (
+              <div
+                key={url}
+                style={{
+                  flex: '0 0 100%', scrollSnapAlign: 'center', boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 20, height: '78vh',
+                }}
+              >
+                <img
+                  src={url}
+                  alt={trad('resa.s2.altPhotoPresta')}
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {photoOverlay.photos.length > 1 && (
+              <div style={{ display: 'flex', gap: 7 }}>
+                {photoOverlay.photos.map((_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: i === photoOverlay.index ? '#fff' : 'rgba(255,255,255,0.35)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, margin: 0 }}>
+              {photoOverlay.photos.length > 1 ? trad('inspi.carrouselHint') : trad('inspi.fermerHint')}
             </p>
-            <p style={{ fontSize: 14, color: '#4b5563', margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {descriptionPopup.description}
-            </p>
-            <button
-              onClick={() => setDescriptionPopup(null)}
-              style={{
-                width: '100%', padding: 12, borderRadius: 12, border: 'none',
-                background: PINK_LIGHT, color: PINK, fontWeight: 600, fontSize: 14,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              {trad('commun.fermer')}
-            </button>
           </div>
         </div>
       )}

@@ -149,7 +149,12 @@
       "titre": "Which services?",
       "sousTitre": "Select one or more treatments.",
       "aucunePrestation": "No services available at the moment.",
-      "gratuit": "Free"
+      "gratuit": "Free",
+      "enSavoirPlus": "Learn more",
+      "voirDetails": "Show details",
+      "masquerDetails": "Hide details",
+      "photoN": "photo {{n}}",
+      "altPhotoPresta": "Treatment photo"
     },
     "offres": {
       "enCours": "Current offers",
@@ -286,5 +291,56 @@
     },
     "uneCliente": "A client",
     "uneClienteMin": "a client"
+  },
+  "inspi": {
+    "titre": "Your inspo photos 💅",
+    "intro": "Show {{prenom}} what you have in mind — add up to 3 photos (optional). No inspo on hand? You can also add them later from your booking management link.",
+    "confIntro": {
+      "one": "Show what you have in mind — add up to 1 photo (optional).",
+      "other": "Show what you have in mind — add up to {{count}} photos (optional)."
+    },
+    "introCourte": "Show {{prenom}} what you have in mind — she'll get a notification.",
+    "taPraticienne": "your beauty pro",
+    "taPraticienneMaj": "Your beauty pro",
+    "taCliente": "Your client",
+    "alt": "Inspiration {{n}}",
+    "altNouvelle": "New inspiration",
+    "supprimerPhoto": "Remove this photo",
+    "retirerPhoto": "Remove this photo",
+    "unInstant": "One moment…",
+    "envoi": "Sending…",
+    "envoiEnCours": "Sending…",
+    "prendre": "Camera",
+    "importer": "Upload",
+    "max3": {
+      "one": "3 photos max: only the first one was kept.",
+      "other": "3 photos max: only the first {{count}} were kept."
+    },
+    "erreurAjout": "This photo couldn't be added. Try another image.",
+    "erreurAjoutMultiple": {
+      "one": "One photo couldn't be added. Try another image.",
+      "other": "{{count}} photos couldn't be added. Try other images."
+    },
+    "erreurEnvoi": "Your photos couldn't be sent. Please try again.",
+    "bouton": "Add my inspo photos",
+    "bouton33": "My inspo photos (3/3)",
+    "envoyees": "Inspo sent! {{prenom}} has been notified 💅",
+    "transmises": "Your 3 photos have been sent 💅",
+    "valider": {
+      "one": "Send my photo",
+      "other": "Send my {{count}} photos"
+    },
+    "statutTransmises": {
+      "one": "Your inspo photo has been sent",
+      "other": "Your {{count}} inspo photos have been sent"
+    },
+    "statutEchec": "Your inspo photos couldn't be sent.",
+    "carrouselHint": "Swipe to browse · tap to close",
+    "fermerHint": "Tap to close",
+    "pushTitre": "New inspo photos 💅",
+    "pushCorps": {
+      "one": "{{nom}} added an inspo photo for her appointment on {{date}} at {{heure}}.",
+      "other": "{{nom}} added {{count}} inspo photos for her appointment on {{date}} at {{heure}}."
+    }
   }
 }
