@@ -257,6 +257,17 @@ export async function POST(
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
+  // ── Glamia Pay : traitement automatique du paiement lié (annulation) ──
+  if (action === 'annuler') {
+    try {
+      const { traiterAnnulationPropay } = await import('@/lib/propay')
+      const { resultat } = await traiterAnnulationPropay(rdv.id)
+      console.log('[api/confirmation] Glamia Pay annulation:', rdv.id, resultat)
+    } catch (e) {
+      console.error('[api/confirmation] Glamia Pay annulation:', e)
+    }
+  }
+
   // ── Envoi push notification à la pro ────────────────────────────────────
   try {
     const { data: pro } = await supabaseAdmin

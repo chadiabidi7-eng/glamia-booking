@@ -33,7 +33,7 @@ const COMMISSION_GLAMIA_PCT = 0.015
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
-type Config = { actif?: boolean; mode?: 'empreinte' | 'acompte'; type?: 'pourcent' | 'fixe'; valeur?: number }
+type Config = { actif?: boolean; mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
 
 // Acompte plafonné, en centimes
 export function calculerAcompte(totalCentimes: number, config: Config): number {
@@ -77,14 +77,16 @@ export async function POST(req: NextRequest) {
   }
 
   const totalCentimes = Math.round(totalEuros * 100)
-  const acompte = calculerAcompte(totalCentimes, config)
+  const mode: 'empreinte' | 'acompte' | 'total' =
+    config.mode === 'acompte' ? 'acompte' : config.mode === 'total' ? 'total' : 'empreinte'
+  // Paiement total : la base est le prix complet ; sinon l'acompte plafonné
+  const acompte = mode === 'total' ? totalCentimes : calculerAcompte(totalCentimes, config)
   if (acompte < 100) {
-    // Moins d'1 € d'acompte (prestation gratuite/quasi) : pas de carte exigée
+    // Moins d'1 € (prestation gratuite/quasi) : pas de carte exigée
     return NextResponse.json({ actif: false })
   }
 
   const stripeAccount = compte.account_id
-  const mode = config.mode === 'acompte' ? 'acompte' : 'empreinte'
 
   try {
     if (mode === 'empreinte') {
@@ -97,6 +99,9 @@ export async function POST(req: NextRequest) {
         {
           customer: customer.id,
           usage: 'off_session',
+          // Carte uniquement (Apple Pay/Google Pay passent par 'card' en wallet)
+          // — pas de Bancontact/Klarna/iDEAL
+          payment_method_types: ['card'],
           metadata: { glamia_pro_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte) },
         },
         { stripeAccount },
@@ -107,7 +112,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Acompte réel : la cliente paie acompte + frais de réservation
+    // Acompte réel OU prestation complète : payé maintenant + frais de résa
     const { commission, totalCliente, frais } = calculerTotalCliente(acompte)
     const customer = await stripe.customers.create(
       { metadata: { glamia_pro_id: proId } },
@@ -119,8 +124,10 @@ export async function POST(req: NextRequest) {
         currency: 'eur',
         customer: customer.id,
         setup_future_usage: 'off_session',
+        // Carte uniquement (Apple Pay/Google Pay inclus via wallet 'card')
+        payment_method_types: ['card'],
         application_fee_amount: commission,
-        metadata: { glamia_pro_id: proId, glamia_type: 'acompte', glamia_acompte: String(acompte), glamia_frais: String(frais) },
+        metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais) },
       },
       { stripeAccount },
     )

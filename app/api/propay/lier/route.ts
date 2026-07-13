@@ -83,12 +83,13 @@ export async function POST(req: NextRequest) {
     if (paiement.status !== 'succeeded' || paiement.metadata?.glamia_pro_id !== proId) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
+    const estTotal = paiement.metadata?.glamia_type === 'total'
     const { error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
       pro_id: proId,
-      type: 'acompte',
-      mode: 'acompte',
-      statut: 'acompte_paye',
+      type: estTotal ? 'total' : 'acompte',
+      mode: estTotal ? 'total' : 'acompte',
+      statut: estTotal ? 'paye' : 'acompte_paye',
       montant: parseInt(String(paiement.metadata?.glamia_acompte ?? '0'), 10),
       frais_reservation: parseInt(String(paiement.metadata?.glamia_frais ?? '0'), 10),
       commission_glamia: paiement.application_fee_amount ?? 0,
