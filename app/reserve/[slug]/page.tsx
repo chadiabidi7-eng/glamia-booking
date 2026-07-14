@@ -1601,7 +1601,11 @@ export default function ReservationPage() {
     if (step !== 5 || !pro) { setPropay(null); setPropayConsent(false); return }
     setPropay(null)
     setPropayConsent(false)
-    const total = prixFinal > 0 ? prixFinal : prixTotal
+    // prixFinal = prix APRÈS fidélité et réduction : un 10e RDV offert
+    // (prixFinal = 0) ne demande AUCUNE carte (l'API renvoie actif:false
+    // sous 1 €) — l'ancien repli sur prixTotal exigeait une empreinte au
+    // prix plein sur un RDV gratuit (fix 15 juil. 2026)
+    const total = Math.max(0, prixFinal)
     fetch('/api/propay/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
