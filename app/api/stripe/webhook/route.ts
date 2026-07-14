@@ -64,6 +64,46 @@ export async function POST(req: NextRequest) {
         break
       }
 
+      case 'payment_intent.succeeded': {
+        // Paiement par lien (page maison) réglé → on crédite + on notifie la pro.
+        const intent = event.data.object as Stripe.PaymentIntent
+        const { data: paiement } = await supabaseAdmin
+          .from('paiements')
+          .select('id, pro_id, montant, statut, historique, rdv:rendez_vous(cliente:clientes(prenom, nom))')
+          .eq('stripe_payment_intent_id', intent.id)
+          .eq('mode', 'lien')
+          .maybeSingle()
+        if (!paiement || paiement.statut !== 'en_attente') break
+        const historique = Array.isArray(paiement.historique) ? paiement.historique : []
+        // Bascule conditionnelle : une seule notif même si le polling app passe aussi.
+        const { data: maj } = await supabaseAdmin
+          .from('paiements')
+          .update({
+            statut: 'paye',
+            historique: [...historique, { quand: new Date().toISOString(), evenement: 'paye', detail: 'lien réglé (webhook)' }],
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', paiement.id)
+          .eq('statut', 'en_attente')
+          .select('id')
+        if (maj && maj.length) {
+          const cli = (paiement as { rdv?: { cliente?: { prenom?: string; nom?: string } } }).rdv?.cliente
+          const nom = cli ? [cli.prenom, cli.nom].filter(Boolean).join(' ') : null
+          await pousserNotifPro(
+            paiement.pro_id,
+            'Paiement reçu 💸',
+            `${(paiement.montant / 100).toFixed(2).replace('.', ',')} €${nom ? ` de ${nom}` : ''} — ta caisse est créditée`,
+          )
+          // Facture rose à la cliente (edge fn qui a la clé Resend)
+          fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
+            body: JSON.stringify({ paiement_id: paiement.id }),
+          }).catch(e => console.error('[webhook] facture:', e))
+        }
+        break
+      }
+
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge
         const intentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
