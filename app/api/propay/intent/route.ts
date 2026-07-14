@@ -67,14 +67,19 @@ export async function POST(req: NextRequest) {
 
   // Config + compte Stripe de la pro
   const [{ data: profil }, { data: compte }] = await Promise.all([
-    supabaseAdmin.from('profiles').select('acompte_config, pro_pay_actif').eq('id', proId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('acompte_config, pro_pay_actif, trial_ends_at, abonnement_actif').eq('id', proId).maybeSingle(),
     supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled').eq('pro_id', proId).maybeSingle(),
   ])
 
-  // Glamia Pay = abonnement Glamia Pro Pay : sans lui, résa classique
+  // Glamia Pay = abonnement Glamia Pro Pay OU essai gratuit en cours (l'essai
+  // 14 jours donne l'expérience Pro Pay complète — décision 14 juil. 2026).
+  // Une abonnée payante Pro 14,99 (abonnement_actif sans pro_pay_actif) reste
+  // en résa classique : son trial_ends_at resynchronisé ne vaut pas essai.
   // (verrou serveur — l'app ne suffit pas si l'abonnement expire)
+  const essaiActif = !profil?.abonnement_actif
+    && !!profil?.trial_ends_at && new Date(profil.trial_ends_at) > new Date()
   const config = (profil?.acompte_config ?? {}) as Config
-  if (!profil?.pro_pay_actif || !config.actif || !compte?.charges_enabled) {
+  if ((!profil?.pro_pay_actif && !essaiActif) || !config.actif || !compte?.charges_enabled) {
     return NextResponse.json({ actif: false })
   }
 
