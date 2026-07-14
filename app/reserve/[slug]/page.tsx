@@ -1054,12 +1054,22 @@ export default function ReservationPage() {
     }
   }
 
+  // Confirmation intégrée au bouton (deux taps) : window.confirm est
+  // silencieusement ignoré sur iOS dans certains contextes (page en plein
+  // écran, dialogues bloqués) → le bouton semblait mort (fix 14 juil. 2026)
+  const [annulationAConfirmer, setAnnulationAConfirmer] = useState<string | null>(null)
+  const annulationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   function confirmerAnnulation(rdv: RdvAVenir) {
-    const dateLabel  = formatRdvDate(rdv.date)
-    const heureLabel = formatRdvHeure(rdv.date)
-    if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?`)) {
+    if (annulationAConfirmer === rdv.id) {
+      if (annulationTimerRef.current) clearTimeout(annulationTimerRef.current)
+      setAnnulationAConfirmer(null)
       handleAnnulerRdv(rdv.id)
+      return
     }
+    setAnnulationAConfirmer(rdv.id)
+    if (annulationTimerRef.current) clearTimeout(annulationTimerRef.current)
+    // Sans second tap sous 5 s, le bouton redevient « Annuler »
+    annulationTimerRef.current = setTimeout(() => setAnnulationAConfirmer(null), 5000)
   }
 
   // ── Reprogrammer : ouvrir le sélecteur ───────
@@ -2582,13 +2592,15 @@ export default function ReservationPage() {
                               disabled={annulationEnCours === rdv.id}
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
-                                border: '1.5px solid #fca5a5', background: '#fff',
-                                color: '#ef4444', fontSize: 13, fontWeight: 600,
+                                border: '1.5px solid #fca5a5',
+                                background: annulationAConfirmer === rdv.id ? '#ef4444' : '#fff',
+                                color: annulationAConfirmer === rdv.id ? '#fff' : '#ef4444',
+                                fontSize: 13, fontWeight: 600,
                                 cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
                                 transition: 'all 0.15s',
                               }}
                             >
-                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                              {annulationEnCours === rdv.id ? '...' : annulationAConfirmer === rdv.id ? 'Confirmer ?' : 'Annuler'}
                             </button>
                           </div>
 
