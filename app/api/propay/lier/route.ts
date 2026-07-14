@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { calculerAcompte } from '../intent/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — lie un intent Stripe confirmé au RDV créé.
@@ -38,11 +39,33 @@ export async function POST(req: NextRequest) {
   // Le RDV doit exister et appartenir à cette pro
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, pro_id')
+    .select('id, pro_id, prix, statut')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv || rdv.pro_id !== proId) {
     return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
+  }
+  if (rdv.statut === 'annule') {
+    return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
+  }
+
+  // ── Anti-fraude montant (audit 14 juil.) : l'intent a été créé sur un
+  // `total` déclaré par le NAVIGATEUR. On recalcule ici le montant attendu
+  // depuis le prix réel du RDV et la config de la pro : un intent « payé
+  // 1 centime » pour une prestation à 200 € est refusé.
+  const { data: profilPro } = await supabaseAdmin
+    .from('profiles')
+    .select('acompte_config')
+    .eq('id', proId)
+    .maybeSingle()
+  const configPro = (profilPro?.acompte_config ?? {}) as Parameters<typeof calculerAcompte>[1]
+  const prixCentimes = Math.round(Number(rdv.prix ?? 0) * 100)
+  const montantAttendu = (type: string) =>
+    type === 'total' ? prixCentimes : calculerAcompte(prixCentimes, configPro)
+  const verifierMontant = (declare: number, type: string) => {
+    // tolérance 2 c (arrondis) ; un montant SUPÉRIEUR à l'attendu n'est pas
+    // une fraude contre la pro
+    return declare >= montantAttendu(type) - 2
   }
 
   const { data: compte } = await supabaseAdmin
@@ -60,6 +83,11 @@ export async function POST(req: NextRequest) {
       if (setup.status !== 'succeeded' || setup.metadata?.glamia_pro_id !== proId) {
         return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
       }
+      const acompteEmpreinte = parseInt(String(setup.metadata?.glamia_acompte ?? '0'), 10)
+      if (!verifierMontant(acompteEmpreinte, 'acompte')) {
+        console.warn('[api/propay/lier] montant empreinte incohérent', { rdvId, acompteEmpreinte, attendu: montantAttendu('acompte') })
+        return NextResponse.json({ error: 'montant_incoherent' }, { status: 409 })
+      }
       const { error } = await supabaseAdmin.from('paiements').insert({
         rdv_id: rdvId,
         pro_id: proId,
@@ -74,7 +102,14 @@ export async function POST(req: NextRequest) {
         stripe_setup_intent_id: setup.id,
         historique: [{ quand: new Date().toISOString(), evenement: 'empreinte_posee', detail: 'consentement à la résa' }],
       })
-      if (error) throw error
+      if (error) {
+        // 23505 = index unique stripe_setup_intent_id : intent déjà consommé
+        // pour un autre RDV (audit 14 juil. — anti-réutilisation)
+        if ((error as { code?: string }).code === '23505') {
+          return NextResponse.json({ error: 'intent_deja_utilise' }, { status: 409 })
+        }
+        throw error
+      }
       return NextResponse.json({ success: true, statut: 'empreinte_posee' })
     }
 
@@ -84,6 +119,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
     const estTotal = paiement.metadata?.glamia_type === 'total'
+    const montantDeclare = parseInt(String(paiement.metadata?.glamia_acompte ?? '0'), 10)
+    if (!verifierMontant(montantDeclare, estTotal ? 'total' : 'acompte')) {
+      console.warn('[api/propay/lier] montant incohérent', { rdvId, montantDeclare, attendu: montantAttendu(estTotal ? 'total' : 'acompte') })
+      return NextResponse.json({ error: 'montant_incoherent' }, { status: 409 })
+    }
     const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
       pro_id: proId,
@@ -98,7 +138,14 @@ export async function POST(req: NextRequest) {
       stripe_payment_intent_id: paiement.id,
       historique: [{ quand: new Date().toISOString(), evenement: 'acompte_paye', detail: `total cliente ${paiement.amount} c` }],
     }).select('id').single()
-    if (error) throw error
+    if (error) {
+      // 23505 = index unique stripe_payment_intent_id : intent déjà consommé
+      // pour un autre RDV (audit 14 juil. — anti-réutilisation)
+      if ((error as { code?: string }).code === '23505') {
+        return NextResponse.json({ error: 'intent_deja_utilise' }, { status: 409 })
+      }
+      throw error
+    }
 
     // Facture rose à la cliente (acompte ou prestation réglée à la résa)
     if (ligne?.id) {

@@ -237,6 +237,11 @@ export async function POST(
   }
 
   // ── Action : confirmer / annuler ──────────────────────────────────────
+  // Court-circuit si déjà annulé (audit 14 juil.) : un rejeu du même token
+  // relançait traiterAnnulationPropay (risque de double traitement paiement)
+  if (action === 'annuler' && rdv.statut === 'annule') {
+    return NextResponse.json({ success: true, statut: 'annule', deja: true })
+  }
   const newStatut = action === 'confirmer' ? 'confirme' : 'annule'
   const updateData: Record<string, string | boolean> = { statut: newStatut }
   if (action === 'confirmer') {

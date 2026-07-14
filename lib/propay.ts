@@ -57,6 +57,17 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     const historique = Array.isArray(paiement.historique) ? paiement.historique : []
     const maintenant = new Date().toISOString()
 
+    // ── Claim atomique (audit 14 juil.) : deux appels concurrents (route
+    // annulation + lien de gestion, ou simple rejeu) liraient tous deux le
+    // même statut et rembourseraient/prélèveraient DEUX fois. Seul l'appel
+    // qui bascule réellement la ligne continue.
+    const { data: claim } = await supabaseAdmin.from('paiements')
+      .update({ statut: 'annulation_en_cours', updated_at: maintenant })
+      .eq('id', paiement.id)
+      .eq('statut', paiement.statut)
+      .select('id')
+    if (!claim || claim.length === 0) return { resultat: 'deja_traite' }
+
     // ── Empreinte ──
     if (paiement.statut === 'empreinte_posee') {
       if (!tardive) {
@@ -69,6 +80,8 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       }
       // Annulation tardive → prélèvement automatique (gross-up)
       if (!paiement.stripe_customer_id || !paiement.stripe_payment_method_id) {
+        // rendre la ligne réutilisable (pas d'action d'argent effectuée)
+        await supabaseAdmin.from('paiements').update({ statut: paiement.statut, updated_at: maintenant }).eq('id', paiement.id)
         return { resultat: 'carte_manquante' }
       }
       const acompte = paiement.montant
@@ -86,7 +99,8 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
             application_fee_amount: commission,
             metadata: { glamia_type: 'prelevement_annulation_tardive', glamia_paiement_id: paiement.id },
           },
-          { stripeAccount },
+          // idempotencyKey : un rejeu identique ne crée pas un 2e débit
+          { stripeAccount, idempotencyKey: `annul_prelev_${paiement.id}` },
         )
         await supabaseAdmin.from('paiements').update({
           statut: 'preleve',
@@ -112,11 +126,15 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
 
     // ── Acompte réel ou prestation payée ──
     if (!tardive) {
-      if (!paiement.stripe_payment_intent_id) return { resultat: 'paiement_stripe_manquant' }
+      if (!paiement.stripe_payment_intent_id) {
+        await supabaseAdmin.from('paiements').update({ statut: paiement.statut, updated_at: maintenant }).eq('id', paiement.id)
+        return { resultat: 'paiement_stripe_manquant' }
+      }
       // refund_application_fee : Glamia rend sa commission sur tout remboursement
+      // idempotencyKey : un rejeu identique ne crée pas un 2e remboursement
       await stripe.refunds.create(
         { payment_intent: paiement.stripe_payment_intent_id, refund_application_fee: true },
-        { stripeAccount },
+        { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}` },
       )
       await supabaseAdmin.from('paiements').update({
         statut: 'rembourse',
@@ -125,8 +143,10 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       }).eq('id', paiement.id)
       return { resultat: 'rembourse' }
     }
-    // Tardive : la pro conserve la somme — simple trace
+    // Tardive : la pro conserve la somme — simple trace (statut d'origine
+    // restauré : le claim l'avait basculé en annulation_en_cours)
     await supabaseAdmin.from('paiements').update({
+      statut: paiement.statut,
       motif_prelevement: 'annulation_tardive',
       historique: [...historique, { quand: maintenant, evenement: 'conserve', detail: 'annulation < 24 h — somme conservée' }],
       updated_at: maintenant,
