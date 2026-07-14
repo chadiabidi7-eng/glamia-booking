@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
     const estTotal = paiement.metadata?.glamia_type === 'total'
-    const { error } = await supabaseAdmin.from('paiements').insert({
+    const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
       pro_id: proId,
       type: estTotal ? 'total' : 'acompte',
@@ -97,8 +97,17 @@ export async function POST(req: NextRequest) {
       stripe_payment_method_id: typeof paiement.payment_method === 'string' ? paiement.payment_method : paiement.payment_method?.id ?? null,
       stripe_payment_intent_id: paiement.id,
       historique: [{ quand: new Date().toISOString(), evenement: 'acompte_paye', detail: `total cliente ${paiement.amount} c` }],
-    })
+    }).select('id').single()
     if (error) throw error
+
+    // Facture rose à la cliente (acompte ou prestation réglée à la résa)
+    if (ligne?.id) {
+      fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ paiement_id: ligne.id }),
+      }).catch(e => console.error('[api/propay/lier] facture:', e))
+    }
     return NextResponse.json({ success: true, statut: 'acompte_paye' })
   } catch (e) {
     console.error('[api/propay/lier]', e)
