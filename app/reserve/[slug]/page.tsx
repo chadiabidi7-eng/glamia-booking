@@ -3417,14 +3417,15 @@ export default function ReservationPage() {
                   <CreditCard size={16} color={PINK} />
                   <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36' }}>
                     {propay.mode === 'total'
-                      ? <>Prestation · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                      ? <>Prestation · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
                       : propay.mode === 'acompte'
-                        ? <>Acompte · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
-                        : <>Empreinte bancaire · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
+                        ? <>Acompte · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                        : <>Empreinte bancaire · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
                   </label>
                   <span style={{
                     background: PINK, color: '#fff', borderRadius: 8,
                     padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                    whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     GLAMIA PAY
                   </span>
