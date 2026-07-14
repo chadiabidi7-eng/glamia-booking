@@ -67,12 +67,14 @@ export async function POST(req: NextRequest) {
 
   // Config + compte Stripe de la pro
   const [{ data: profil }, { data: compte }] = await Promise.all([
-    supabaseAdmin.from('profiles').select('acompte_config').eq('id', proId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('acompte_config, pro_pay_actif').eq('id', proId).maybeSingle(),
     supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled').eq('pro_id', proId).maybeSingle(),
   ])
 
+  // Glamia Pay = abonnement Glamia Pro Pay : sans lui, résa classique
+  // (verrou serveur — l'app ne suffit pas si l'abonnement expire)
   const config = (profil?.acompte_config ?? {}) as Config
-  if (!config.actif || !compte?.charges_enabled) {
+  if (!profil?.pro_pay_actif || !config.actif || !compte?.charges_enabled) {
     return NextResponse.json({ actif: false })
   }
 
