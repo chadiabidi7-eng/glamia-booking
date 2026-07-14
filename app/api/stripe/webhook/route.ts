@@ -20,6 +20,24 @@ const supabaseAdmin = createClient(
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
+// Prestation entièrement réglée → l'empreinte posée à la résa n'a plus lieu
+// d'être : libération automatique, trace conservée (« Empreinte libérée »).
+// Sans ça, la pro pourrait encaisser PUIS prélever = cliente payée deux fois.
+export async function libererEmpreintesRdv(rdvId: string) {
+  const { data: empreintes } = await supabaseAdmin.from('paiements')
+    .select('id, historique')
+    .eq('rdv_id', rdvId)
+    .eq('statut', 'empreinte_posee')
+  for (const e of empreintes ?? []) {
+    const hist = Array.isArray(e.historique) ? e.historique : []
+    await supabaseAdmin.from('paiements').update({
+      statut: 'libere',
+      historique: [...hist, { quand: new Date().toISOString(), evenement: 'libere', detail: 'prestation payée — libération automatique' }],
+      updated_at: new Date().toISOString(),
+    }).eq('id', e.id).eq('statut', 'empreinte_posee')
+  }
+}
+
 async function pousserNotifPro(proId: string, title: string, body: string) {
   const { data: pro } = await supabaseAdmin.from('profiles').select('push_token').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
@@ -69,7 +87,7 @@ export async function POST(req: NextRequest) {
         const intent = event.data.object as Stripe.PaymentIntent
         const { data: paiement } = await supabaseAdmin
           .from('paiements')
-          .select('id, pro_id, montant, statut, historique, rdv:rendez_vous(cliente:clientes(prenom, nom))')
+          .select('id, pro_id, rdv_id, montant, statut, historique, rdv:rendez_vous(cliente:clientes(prenom, nom))')
           .eq('stripe_payment_intent_id', intent.id)
           .eq('mode', 'lien')
           .maybeSingle()
@@ -87,6 +105,11 @@ export async function POST(req: NextRequest) {
           .eq('statut', 'en_attente')
           .select('id')
         if (maj && maj.length) {
+          // Prestation réglée → libérer l'empreinte du même RDV (évite un
+          // double encaissement de la cliente — 14 juil. 2026)
+          if ((paiement as { rdv_id?: string }).rdv_id) {
+            await libererEmpreintesRdv((paiement as { rdv_id: string }).rdv_id)
+          }
           const cli = (paiement as { rdv?: { cliente?: { prenom?: string; nom?: string } } }).rdv?.cliente
           const nom = cli ? [cli.prenom, cli.nom].filter(Boolean).join(' ') : null
           await pousserNotifPro(

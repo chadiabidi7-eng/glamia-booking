@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { libererEmpreintesRdv } from '../../stripe/webhook/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (lien d'encaissement de la fiche RDV).
@@ -25,6 +26,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 type Paiement = {
   id: string
   pro_id: string
+  rdv_id: string | null
   type: string
   montant: number
   frais_reservation: number | null
@@ -36,7 +38,7 @@ type Paiement = {
 async function chargerContexte(token: string) {
   const { data: paiement } = await supabaseAdmin
     .from('paiements')
-    .select('id, pro_id, type, montant, frais_reservation, statut, stripe_payment_intent_id, rdv:rendez_vous(technique, cliente:clientes(prenom, nom, email))')
+    .select('id, pro_id, rdv_id, type, montant, frais_reservation, statut, stripe_payment_intent_id, rdv:rendez_vous(technique, cliente:clientes(prenom, nom, email))')
     .eq('id', token)
     .maybeSingle()
   if (!paiement) return null
@@ -147,6 +149,9 @@ export async function POST(req: NextRequest) {
       .select('id')
 
     if (maj && maj.length) {
+      // Prestation réglée → libérer l'empreinte du même RDV (évite un double
+      // encaissement de la cliente — 14 juil. 2026)
+      if (p.rdv_id) await libererEmpreintesRdv(p.rdv_id)
       const prenom = p.rdv?.cliente?.prenom ?? null
       await notifierPro(
         p.pro_id,
