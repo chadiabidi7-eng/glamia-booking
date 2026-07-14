@@ -3413,14 +3413,10 @@ export default function ReservationPage() {
                 border: `1.5px solid ${PINK}`,
                 borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CreditCard size={16} color={PINK} />
-                  <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36' }}>
-                    {propay.mode === 'total'
-                      ? <>Prestation · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
-                      : propay.mode === 'acompte'
-                        ? <>Acompte · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
-                        : <>Empreinte bancaire · <span style={{ color: PINK, fontSize: 17, fontWeight: 800, whiteSpace: 'nowrap' }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
+                  <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36', flex: 1 }}>
+                    {propay.mode === 'total' ? 'Prestation' : propay.mode === 'acompte' ? 'Acompte' : 'Empreinte bancaire'}
                   </label>
                   <span style={{
                     background: PINK, color: '#fff', borderRadius: 8,
@@ -3428,6 +3424,12 @@ export default function ReservationPage() {
                     whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     GLAMIA PAY
+                  </span>
+                </div>
+                {/* Montant centré sous le titre — jamais coupé */}
+                <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
+                  <span style={{ color: PINK, fontSize: 22, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    {fmtCentimes(propay.acompte ?? 0)}
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
@@ -3447,7 +3449,7 @@ export default function ReservationPage() {
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     <strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong>
                     {propay.mode === 'empreinte'
-                      ? <> — passé ce délai ou en cas d&apos;absence, une empreinte de {fmtCentimes(propay.acompte ?? 0)} pourra être prélevée.</>
+                      ? <> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
                       : <> — {propay.mode === 'total' ? 'le paiement' : 'l’acompte'} est intégralement remboursé. Passé ce délai, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>

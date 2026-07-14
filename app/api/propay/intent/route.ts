@@ -113,8 +113,13 @@ export async function POST(req: NextRequest) {
         },
         { stripeAccount },
       )
+      // frais = frais PROJETÉS du prélèvement (lapin/annulation tardive) — rien
+      // n'est débité aujourd'hui, mais la cliente doit savoir que l'empreinte
+      // serait prélevée majorée de ces frais (transparence, même formule que
+      // stripe-acompte action prelever). total_cliente reste 0 : rien maintenant.
+      const { frais: fraisPrelevement } = calculerTotalCliente(acompte)
       return NextResponse.json({
-        actif: true, mode, acompte, frais: 0, total_cliente: 0,
+        actif: true, mode, acompte, frais: fraisPrelevement, total_cliente: 0,
         client_secret: setup.client_secret, stripe_account: stripeAccount, intent_id: setup.id,
       })
     }
