@@ -2535,16 +2535,7 @@ export default function ReservationPage() {
                                 ))}
                                 {(rdv.inspirations?.length ?? 0) + inspiNouvelles.length < 3 && (
                                   <>
-                                    <label style={{
-                                      width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
-                                      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                      justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
-                                      flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
-                                    }}>
-                                      <Camera size={16} color={PINK} />
-                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>Prendre</span>
-                                      <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
-                                    </label>
+                                    {/* Importer (le sélecteur mobile propose aussi l'appareil photo) */}
                                     <label style={{
                                       width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #d1d5db',
                                       background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -3424,12 +3415,12 @@ export default function ReservationPage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <CreditCard size={16} color={PINK} />
-                  <label style={{ ...S.label, marginBottom: 0 }}>
+                  <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36' }}>
                     {propay.mode === 'total'
-                      ? <>Prestation · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                      ? <>Prestation · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
                       : propay.mode === 'acompte'
-                        ? <>Acompte · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
-                        : <>Empreinte bancaire · <span style={{ color: PINK }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
+                        ? <>Acompte · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>
+                        : <>Empreinte bancaire · <span style={{ color: PINK, fontSize: 17, fontWeight: 800 }}>{fmtCentimes(propay.acompte ?? 0)}</span></>}
                   </label>
                   <span style={{
                     background: PINK, color: '#fff', borderRadius: 8,
@@ -3440,25 +3431,47 @@ export default function ReservationPage() {
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
                   {propay.mode === 'total'
-                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais), rien à payer sur place. Remboursée si tu annules plus de 24 h avant.</>
+                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), rien à payer sur place. Remboursée si tu annules plus de 24 h avant.</>
                     : propay.mode === 'acompte'
-                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais), déduit de ta prestation. Remboursé si tu annules plus de 24 h avant.</>
+                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), déduit de ta prestation. Remboursé si tu annules plus de 24 h avant.</>
                       : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
+                </p>
+                {/* Politique d'annulation mise en avant */}
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  background: '#FDF3F8', border: `1px solid ${PINK}44`, borderRadius: 12,
+                  padding: '10px 12px', margin: '0 0 12px',
+                }}>
+                  <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                    <strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong>
+                    {propay.mode === 'empreinte'
+                      ? <> — passé ce délai ou en cas d&apos;absence, une empreinte de {fmtCentimes(propay.acompte ?? 0)} pourra être prélevée.</>
+                      : <> — {propay.mode === 'total' ? 'le paiement' : 'l’acompte'} est intégralement remboursé. Passé ce délai, la somme est conservée par la praticienne.</>}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
+                  Les cartes émises hors zone euro peuvent entraîner des frais plus élevés.
                 </p>
                 <Elements
                   stripe={getStripePromise(propay.stripe_account)}
                   options={{ clientSecret: propay.client_secret, locale: 'fr' }}
                 >
-                  <BlocGlamiaPay ref={propayRef} mode={propay.mode ?? 'empreinte'} />
+                  <BlocGlamiaPay
+                    ref={propayRef}
+                    mode={propay.mode ?? 'empreinte'}
+                    nom={`${clientePrenom.trim()} ${clienteNom.trim()}`.trim()}
+                    email={clienteEmail.trim()}
+                  />
                 </Elements>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 12, cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={propayConsent}
                     onChange={e => setPropayConsent(e.target.checked)}
-                    style={{ marginTop: 2, width: 16, height: 16, accentColor: PINK }}
+                    style={{ marginTop: 1, width: 22, height: 22, flexShrink: 0, accentColor: PINK }}
                   />
-                  <span style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.4 }}>
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
                       ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0)} en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>
                       : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant, conservés si absence ou annulation à moins de 24 h.</>}
@@ -3510,27 +3523,7 @@ export default function ReservationPage() {
               ))}
               {inspirations.length < 3 && (
                 <>
-                  {/* Prendre une photo — ouvre directement l'appareil photo */}
-                  <label style={{
-                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
-                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
-                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
-                  }}>
-                    <Camera size={20} color={PINK} />
-                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Prendre'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleAjoutInspiration}
-                      disabled={compressionEnCours}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                  {/* Importer depuis la galerie (sélection multiple) */}
+                  {/* Importer depuis la galerie (le sélecteur mobile propose aussi l'appareil photo) */}
                   <label style={{
                     width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
                     background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -3739,8 +3732,8 @@ export default function ReservationPage() {
 // ─── Glamia Pay : Payment Element + confirmation exposée au parent ───────────
 // Doit vivre SOUS le provider <Elements> ; le parent déclenche confirmer()
 // depuis le bouton Réserver (la carte est validée AVANT la création du RDV).
-const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' | 'total' }>(
-  function BlocGlamiaPay({ mode }, ref) {
+const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' | 'total'; nom: string; email: string }>(
+  function BlocGlamiaPay({ mode, nom, email }, ref) {
     const stripeJs = useStripe()
     const elements = useElements()
 
@@ -3749,18 +3742,32 @@ const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' |
         if (!stripeJs || !elements) {
           return { ok: false, erreur: "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie." }
         }
+        // Nom + email fournis ici (on ne les collecte pas dans le Payment Element,
+        // ce qui retire l'invite Link « enregistre tes infos »).
+        const billing_details = { name: nom || undefined, email: email || undefined }
         if (mode === 'empreinte') {
-          const { error, setupIntent } = await stripeJs.confirmSetup({ elements, redirect: 'if_required' })
+          const { error, setupIntent } = await stripeJs.confirmSetup({
+            elements, redirect: 'if_required',
+            confirmParams: { payment_method_data: { billing_details } },
+          })
           if (error || !setupIntent) return { ok: false, erreur: error?.message ?? "La carte n'a pas pu être validée." }
           return { ok: true, intentId: setupIntent.id }
         }
-        const { error, paymentIntent } = await stripeJs.confirmPayment({ elements, redirect: 'if_required' })
+        const { error, paymentIntent } = await stripeJs.confirmPayment({
+          elements, redirect: 'if_required',
+          confirmParams: { payment_method_data: { billing_details } },
+        })
         if (error || !paymentIntent) return { ok: false, erreur: error?.message ?? "Le paiement n'a pas abouti." }
         return { ok: true, intentId: paymentIntent.id }
       },
-    }), [stripeJs, elements, mode])
+    }), [stripeJs, elements, mode, nom, email])
 
-    return <PaymentElement options={{ layout: 'tabs' }} />
+    return <PaymentElement options={{
+      layout: 'tabs',
+      // On ne collecte pas nom/email dans l'UI (fournis au confirm) → supprime
+      // l'invite Link « enregistre tes infos pour tes prochains paiements ».
+      fields: { billingDetails: { name: 'never', email: 'never' } },
+    }} />
   },
 )
 
