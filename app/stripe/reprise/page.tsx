@@ -25,7 +25,7 @@ export default function StripeReprise() {
       <a
         href="glamia://pro-pay"
         style={{
-          marginTop: 10, background: '#7C4DFF', color: '#fff', textDecoration: 'none',
+          marginTop: 10, background: '#C2779E', color: '#fff', textDecoration: 'none',
           padding: '14px 32px', borderRadius: 50, fontWeight: 700, fontSize: 15,
         }}
       >
