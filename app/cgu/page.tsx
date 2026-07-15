@@ -27,7 +27,7 @@ export default function CGUPage() {
 
       <Section title="6. Paiements — Glamia Pay">
         <p>Glamia Pay permet à la professionnelle d&apos;encaisser ses prestations : paiement en ligne lors de la réservation (acompte ou totalité), empreinte bancaire, liens de paiement, et encaissement sans contact Tap to Pay sur iPhone.</p>
-        <p>Les paiements sont traités par <strong>Stripe</strong>, prestataire de services de paiement agréé. La professionnelle qui active Glamia Pay ouvre un compte Stripe Express et accepte les conditions de Stripe (Stripe Connected Account Agreement). Glamia n&apos;est pas un établissement de paiement et ne détient pas les fonds : ils transitent par le compte Stripe de la professionnelle. Les données bancaires sont collectées et conservées par Stripe ; Glamia n&apos;y a pas accès.</p>
+        <p>Les paiements sont traités par <strong>Stripe</strong>, prestataire de services de paiement agréé. La professionnelle qui active Glamia Pay ouvre un compte Stripe Express et accepte les conditions de Stripe (Stripe Connected Account Agreement). Glamia n&apos;est pas un établissement de paiement et ne détient jamais les fonds : l&apos;argent va directement de la cliente à la professionnelle, sur le compte Stripe de cette dernière. Les données bancaires sont collectées et conservées par Stripe ; Glamia n&apos;y a pas accès.</p>
         <p>Des frais de service s&apos;appliquent aux encaissements réalisés via Glamia Pay ; ils sont portés à la connaissance de la professionnelle dans l&apos;application avant l&apos;activation du service.</p>
       </Section>
 

@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, Lock, X } from 'lucide-react'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 
@@ -3468,8 +3468,13 @@ export default function ReservationPage() {
                       : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à 24 h avant le RDV</strong> — tu changes de plans ? Annule à plus de 24 h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement (les frais de réservation restent acquis). À moins de 24 h, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>
+                <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
+                  <Lock size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
+                  <span>Paiement sécurisé par Stripe — l&apos;argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.</span>
+                </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
-                  Les cartes émises hors zone euro peuvent entraîner des frais plus élevés.
+                  Les cartes émises hors zone euro peuvent entraîner des frais plus élevés. En réglant, tu acceptes les{' '}
+                  <a href="https://booking.glamia.pro/cgu" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>conditions d&apos;utilisation</a>.
                 </p>
                 <Elements
                   stripe={getStripePromise(propay.stripe_account)}
