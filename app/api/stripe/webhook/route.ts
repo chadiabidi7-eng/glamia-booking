@@ -131,9 +131,15 @@ export async function POST(req: NextRequest) {
         const charge = event.data.object as Stripe.Charge
         const intentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
         if (intentId) {
+          // charge.refunded === true seulement si TOUT est remboursé ; l'event
+          // arrive aussi pour un remboursement partiel (amount_refunded = cumul)
           await supabaseAdmin
             .from('paiements')
-            .update({ statut: 'rembourse', updated_at: new Date().toISOString() })
+            .update({
+              statut: charge.refunded ? 'rembourse' : 'rembourse_partiel',
+              montant_rembourse: charge.amount_refunded ?? 0,
+              updated_at: new Date().toISOString(),
+            })
             .eq('stripe_payment_intent_id', intentId)
             .neq('statut', 'rembourse')
         }

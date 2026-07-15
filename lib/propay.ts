@@ -138,6 +138,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       )
       await supabaseAdmin.from('paiements').update({
         statut: 'rembourse',
+        montant_rembourse: paiement.montant + (paiement.frais_reservation ?? 0),
         historique: [...historique, { quand: maintenant, evenement: 'rembourse', detail: 'annulation > 24 h — automatique' }],
         updated_at: maintenant,
       }).eq('id', paiement.id)
