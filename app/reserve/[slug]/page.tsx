@@ -3450,9 +3450,9 @@ export default function ReservationPage() {
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
                   {propay.mode === 'total'
-                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), rien à payer sur place. Remboursée si tu annules plus de 24 h avant.</>
+                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), rien à payer sur place.</>
                     : propay.mode === 'acompte'
-                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), déduit de ta prestation. Remboursé si tu annules plus de 24 h avant.</>
+                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), déduit du prix de ta prestation.</>
                       : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
                 </p>
                 {/* Politique d'annulation mise en avant */}
@@ -3463,10 +3463,9 @@ export default function ReservationPage() {
                 }}>
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
-                    <strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong>
                     {propay.mode === 'empreinte'
-                      ? <> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
-                      : <> — {propay.mode === 'total' ? 'le paiement' : 'l’acompte'} est intégralement remboursé. Passé ce délai, la somme est conservée par la praticienne.</>}
+                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
+                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à 24 h avant le RDV</strong> — tu changes de plans ? Annule à plus de 24 h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement (les frais de réservation restent acquis). À moins de 24 h, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>

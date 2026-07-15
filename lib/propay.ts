@@ -130,16 +130,18 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
         await supabaseAdmin.from('paiements').update({ statut: paiement.statut, updated_at: maintenant }).eq('id', paiement.id)
         return { resultat: 'paiement_stripe_manquant' }
       }
-      // refund_application_fee : Glamia rend sa commission sur tout remboursement
+      // Frais de réservation CONSERVÉS (modèle plateforme, décision 15 juil.) :
+      // seul le montant de la prestation revient à la cliente. La commission
+      // n'est pas rendue (couverte par les frais) → la pro reste à ~0 net.
       // idempotencyKey : un rejeu identique ne crée pas un 2e remboursement
       await stripe.refunds.create(
-        { payment_intent: paiement.stripe_payment_intent_id, refund_application_fee: true },
+        { payment_intent: paiement.stripe_payment_intent_id, amount: paiement.montant, refund_application_fee: false },
         { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}` },
       )
       await supabaseAdmin.from('paiements').update({
         statut: 'rembourse',
-        montant_rembourse: paiement.montant + (paiement.frais_reservation ?? 0),
-        historique: [...historique, { quand: maintenant, evenement: 'rembourse', detail: 'annulation > 24 h — automatique' }],
+        montant_rembourse: paiement.montant,
+        historique: [...historique, { quand: maintenant, evenement: 'rembourse', detail: 'annulation > 24 h — automatique, frais de réservation conservés' }],
         updated_at: maintenant,
       }).eq('id', paiement.id)
       return { resultat: 'rembourse' }
