@@ -11,7 +11,7 @@ import Stripe from 'stripe'
 //     stripe_account, intent_id }
 //
 // Montants en CENTIMES côté Stripe. Spec (13 juil. 2026) :
-// - acompte = % ou fixe (config pro), plafonné à 40 % du total ET 50 €
+// - acompte = % ou fixe (config pro), plafonné à 50 % du total ET 50 €
 // - mode empreinte : SetupIntent (0 € prélevé, carte enregistrée avec 3DS)
 // - mode acompte : PaymentIntent — la cliente paie acompte + frais de
 //   réservation (gross-up : frais Stripe + commission Glamia 1,5 %), la pro
@@ -25,7 +25,7 @@ const supabaseAdmin = createClient(
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-const PLAFOND_POURCENT = 40
+const PLAFOND_POURCENT = 50
 const PLAFOND_EUROS_CENTIMES = 50_00
 // Commission Glamia — passer à 0 pour la retirer (décision : 1,5 %, 13 juil.)
 const COMMISSION_GLAMIA_PCT = 0.015
