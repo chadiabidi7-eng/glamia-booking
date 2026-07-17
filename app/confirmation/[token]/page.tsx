@@ -26,6 +26,7 @@ type RdvInfo = {
   duree: number
   instructions: string | null
   inspirations: string[]
+  decalage_bloque?: boolean
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -381,6 +382,13 @@ function ConfirmationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'decaler', new_date: newDateISO }),
       })
+      // Le seuil des 24 h a pu être franchi depuis le chargement de la page
+      if (res.status === 403) {
+        setRdv(prev => (prev ? { ...prev, decalage_bloque: true } : prev))
+        setShowDecaler(false)
+        setActing(false)
+        return
+      }
       if (!res.ok) { setState('error'); setActing(false); return }
       setState('rescheduled')
     } catch {
@@ -566,11 +574,17 @@ function ConfirmationPage() {
               <button
                 className="glamia-btn-cancel"
                 onClick={() => setShowDecaler(!showDecaler)}
-                disabled={acting}
+                disabled={acting || rdv.decalage_bloque}
                 style={{ borderColor: PINK, color: PINK }}
               >
                 <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Décaler mon RDV
               </button>
+              {rdv.decalage_bloque && (
+                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: '1.5', margin: 0, textAlign: 'center' }}>
+                  À moins de 24 h du rendez-vous, le décalage en ligne n&apos;est plus possible.
+                  Pour tout changement, contacte directement ta praticienne.
+                </p>
+              )}
             </div>
 
             {/* ── Interface de décalage ── */}

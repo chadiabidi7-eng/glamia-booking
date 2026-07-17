@@ -17,6 +17,22 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
+// Décalage fermé à < 24 h du RDV quand un paiement Glamia Pay est engagé
+// (décision 17 juil.) : sinon décaler puis annuler > 24 h de la nouvelle date
+// contournerait la règle d'annulation tardive (remboursement indu). Même
+// calcul de seuil que traiterAnnulationPropay pour rester cohérent.
+const SEUIL_TARDIVE_MS = 24 * 3600_000
+async function decalageBloque(rdvId: string, dateRdv: string): Promise<boolean> {
+  if (new Date(dateRdv).getTime() - Date.now() >= SEUIL_TARDIVE_MS) return false
+  const { data } = await supabaseAdmin
+    .from('paiements')
+    .select('id')
+    .eq('rdv_id', rdvId)
+    .in('statut', ['empreinte_posee', 'acompte_paye', 'paye'])
+    .limit(1)
+  return (data ?? []).length > 0
+}
+
 // GET /api/confirmation/[token] — Charger les infos du RDV
 export async function GET(
   req: NextRequest,
@@ -97,6 +113,7 @@ export async function GET(
     instructions: data.instructions ?? null,
     inspirations: (data.inspirations as string[] | null) ?? [],
     rdvs_jour: rdvsJour,
+    decalage_bloque: await decalageBloque(data.id, data.date as string),
   })
 }
 
@@ -133,6 +150,10 @@ export async function POST(
     const newDate = body.new_date as string
     if (!newDate) {
       return NextResponse.json({ error: 'new_date_required' }, { status: 400 })
+    }
+
+    if (await decalageBloque(rdv.id, rdv.date as string)) {
+      return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
     }
 
     const oldDateStr = (rdv.date as string).slice(0, 10)
