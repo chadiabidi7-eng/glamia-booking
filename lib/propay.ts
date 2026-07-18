@@ -37,7 +37,9 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       .from('paiements')
       .select('*')
       .eq('rdv_id', rdvId)
-      .in('statut', ['empreinte_posee', 'acompte_paye', 'paye'])
+      // rembourse_partiel inclus : un geste commercial a rendu une part, mais
+      // il reste un solde à rembourser si la cliente annule > 24 h (faille C17).
+      .in('statut', ['empreinte_posee', 'acompte_paye', 'paye', 'rembourse_partiel'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -146,19 +148,26 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       // (le filtre d'entrée l'exclurait de tout rejeu → argent jamais rendu
       // sans SQL manuel). Statut d'origine = récupérable : rejouable par le
       // cron de réconciliation ou un remboursement manuel de la pro.
-      try {
-        await stripe.refunds.create(
-          { payment_intent: paiement.stripe_payment_intent_id, amount: paiement.montant, refund_application_fee: false },
-          { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}` },
-        )
-      } catch (e) {
-        const erreur = e as { code?: string; message?: string }
-        await supabaseAdmin.from('paiements').update({
-          statut: paiement.statut,
-          historique: [...historique, { quand: maintenant, evenement: 'echec_remboursement', detail: erreur.code ?? erreur.message }],
-          updated_at: maintenant,
-        }).eq('id', paiement.id)
-        return { resultat: 'echec_remboursement' }
+      // Reste à rembourser = montant − déjà remboursé (cas rembourse_partiel :
+      // un geste commercial a déjà rendu une part ; on ne rembourse que le
+      // solde, sinon Stripe rejette un montant supérieur au restant).
+      const dejaRembourse = paiement.montant_rembourse ?? 0
+      const resteARembourser = paiement.montant - dejaRembourse
+      if (resteARembourser > 0) {
+        try {
+          await stripe.refunds.create(
+            { payment_intent: paiement.stripe_payment_intent_id, amount: resteARembourser, refund_application_fee: false },
+            { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}_${dejaRembourse}` },
+          )
+        } catch (e) {
+          const erreur = e as { code?: string; message?: string }
+          await supabaseAdmin.from('paiements').update({
+            statut: paiement.statut,
+            historique: [...historique, { quand: maintenant, evenement: 'echec_remboursement', detail: erreur.code ?? erreur.message }],
+            updated_at: maintenant,
+          }).eq('id', paiement.id)
+          return { resultat: 'echec_remboursement' }
+        }
       }
       await supabaseAdmin.from('paiements').update({
         statut: 'rembourse',
