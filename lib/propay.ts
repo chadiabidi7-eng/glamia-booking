@@ -27,6 +27,11 @@ const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
 export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat: string }> {
+  // Suivi du verrou : si une erreur inattendue survient APRÈS le claim, on
+  // restaure le statut d'origine dans le catch — jamais de ligne figée en
+  // 'annulation_en_cours' (qui serait invisible à tout rejeu → argent perdu).
+  let claimId: string | null = null
+  let statutAvantClaim: string | null = null
   try {
     const { data: paiement } = await supabaseAdmin
       .from('paiements')
@@ -67,6 +72,8 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       .eq('statut', paiement.statut)
       .select('id')
     if (!claim || claim.length === 0) return { resultat: 'deja_traite' }
+    claimId = paiement.id
+    statutAvantClaim = paiement.statut
 
     // ── Empreinte ──
     if (paiement.statut === 'empreinte_posee') {
@@ -133,11 +140,26 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       // Frais de réservation CONSERVÉS (modèle plateforme, décision 15 juil.) :
       // seul le montant de la prestation revient à la cliente. La commission
       // n'est pas rendue (couverte par les frais) → la pro reste à ~0 net.
-      // idempotencyKey : un rejeu identique ne crée pas un 2e remboursement
-      await stripe.refunds.create(
-        { payment_intent: paiement.stripe_payment_intent_id, amount: paiement.montant, refund_application_fee: false },
-        { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}` },
-      )
+      // idempotencyKey : un rejeu identique ne crée pas un 2e remboursement.
+      // Si Stripe échoue (lenteur, coupure), on RESTAURE le statut d'origine
+      // au lieu de laisser la ligne coincée en 'annulation_en_cours' à vie
+      // (le filtre d'entrée l'exclurait de tout rejeu → argent jamais rendu
+      // sans SQL manuel). Statut d'origine = récupérable : rejouable par le
+      // cron de réconciliation ou un remboursement manuel de la pro.
+      try {
+        await stripe.refunds.create(
+          { payment_intent: paiement.stripe_payment_intent_id, amount: paiement.montant, refund_application_fee: false },
+          { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}` },
+        )
+      } catch (e) {
+        const erreur = e as { code?: string; message?: string }
+        await supabaseAdmin.from('paiements').update({
+          statut: paiement.statut,
+          historique: [...historique, { quand: maintenant, evenement: 'echec_remboursement', detail: erreur.code ?? erreur.message }],
+          updated_at: maintenant,
+        }).eq('id', paiement.id)
+        return { resultat: 'echec_remboursement' }
+      }
       await supabaseAdmin.from('paiements').update({
         statut: 'rembourse',
         montant_rembourse: paiement.montant,
@@ -157,6 +179,16 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     return { resultat: 'conserve' }
   } catch (e) {
     console.error('[propay] annulation:', rdvId, e)
+    // Ne jamais laisser la ligne coincée : restaurer le statut d'origine
+    // (récupérable ; le rejeu Stripe est idempotent via les clés annul_*).
+    if (claimId && statutAvantClaim) {
+      try {
+        await supabaseAdmin.from('paiements')
+          .update({ statut: statutAvantClaim, updated_at: new Date().toISOString() })
+          .eq('id', claimId)
+          .eq('statut', 'annulation_en_cours')
+      } catch { /* best-effort */ }
+    }
     return { resultat: 'erreur' }
   }
 }
