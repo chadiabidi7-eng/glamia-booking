@@ -1817,6 +1817,13 @@ export default function ReservationPage() {
             }
             if (palierAtteint) {
               update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
+            } else if (nouveauTampons >= fideliteConfig.nb_ronds) {
+              // Carte pleine SANS palier sur le dernier rond : rien à réclamer →
+              // nouvelle carte immédiatement. Sinon les tampons dépassent nb_ronds
+              // et la carte ne se réinitialise jamais (cas Chadi English, 12/10,
+              // 18 juil. 2026). Même logique que useFidelite.ts côté app.
+              update.tampons = nouveauTampons % fideliteConfig.nb_ronds
+              update.cartes_completees = ficheApres.cartes_completees + 1
             }
             await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
 
