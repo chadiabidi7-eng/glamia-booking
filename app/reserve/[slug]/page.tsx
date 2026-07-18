@@ -1621,10 +1621,13 @@ export default function ReservationPage() {
     // sous 1 €) — l'ancien repli sur prixTotal exigeait une empreinte au
     // prix plein sur un RDV gratuit (fix 15 juil. 2026)
     const total = Math.max(0, prixFinal)
+    // total_plein = prix avant la récompense fidélité (Q2) : un RDV OFFERT
+    // garde quand même une empreinte basée sur la vraie valeur de la prestation.
+    const totalPlein = Math.max(0, prixTotal)
     fetch('/api/propay/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pro_id: pro.id, total }),
+      body: JSON.stringify({ pro_id: pro.id, total, total_plein: totalPlein }),
     })
       .then(r => r.json())
       .then((d: PropayInfo) => setPropay(d))

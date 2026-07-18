@@ -52,7 +52,7 @@ export function calculerTotalCliente(acompteCentimes: number): { commission: num
 }
 
 export async function POST(req: NextRequest) {
-  let body: { pro_id?: unknown; total?: unknown }
+  let body: { pro_id?: unknown; total?: unknown; total_plein?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -84,12 +84,19 @@ export async function POST(req: NextRequest) {
   }
 
   const totalCentimes = Math.round(totalEuros * 100)
+  const totalPleinCentimes = Math.round(Math.max(totalEuros, Number(body.total_plein) || 0) * 100)
   const mode: 'empreinte' | 'acompte' | 'total' =
     config.mode === 'acompte' ? 'acompte' : config.mode === 'total' ? 'total' : 'empreinte'
+  // RDV OFFERT par la fidélité (prix ~0) — décision Chadi 18 juil. (Q2) :
+  // - mode EMPREINTE : on pose quand même une empreinte, calculée sur le prix
+  //   PLEIN (dédommagement no-show réel), pas sur le prix offert.
+  // - mode ACOMPTE/TOTAL : rien (on ne pré-paie pas un RDV offert).
+  const rdvOffert = totalCentimes < 100
+  const baseCalcul = (mode === 'empreinte' && rdvOffert) ? totalPleinCentimes : totalCentimes
   // Paiement total : la base est le prix complet ; sinon l'acompte plafonné
-  const acompte = mode === 'total' ? totalCentimes : calculerAcompte(totalCentimes, config)
+  const acompte = mode === 'total' ? totalCentimes : calculerAcompte(baseCalcul, config)
   if (acompte < 100) {
-    // Moins d'1 € (prestation gratuite/quasi) : pas de carte exigée
+    // Moins d'1 € (prestation gratuite/quasi, ou acompte sur RDV offert) : pas de carte
     return NextResponse.json({ actif: false })
   }
 
