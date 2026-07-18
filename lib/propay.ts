@@ -47,7 +47,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
 
     const { data: rdv } = await supabaseAdmin
       .from('rendez_vous')
-      .select('date, annule_par')
+      .select('date, annule_par, date_change_pro_le')
       .eq('id', rdvId)
       .maybeSingle()
     if (!rdv?.date) return { resultat: 'rdv_introuvable' }
@@ -69,7 +69,13 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     if (!compte) return { resultat: 'compte_introuvable' }
     const stripeAccount = compte.account_id
 
-    const tardive = new Date(rdv.date).getTime() - Date.now() < SEUIL_TARDIVE_MS
+    // Grâce C5 : si la PRO a déplacé le RDV dans les dernières 24 h, l'annulation
+    // de la cliente n'est PAS tardive — elle ne doit pas être prélevée pour un
+    // déplacement qu'elle n'a pas décidé (même si le nouveau créneau est < 24 h).
+    const changeProRecent = (rdv as { date_change_pro_le?: string | null }).date_change_pro_le
+      ? Date.now() - new Date((rdv as { date_change_pro_le: string }).date_change_pro_le).getTime() < SEUIL_TARDIVE_MS
+      : false
+    const tardive = !changeProRecent && new Date(rdv.date).getTime() - Date.now() < SEUIL_TARDIVE_MS
     const historique = Array.isArray(paiement.historique) ? paiement.historique : []
     const maintenant = new Date().toISOString()
 
