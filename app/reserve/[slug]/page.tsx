@@ -1311,18 +1311,26 @@ export default function ReservationPage() {
 
       const newDateISO = `${reprogDate}T${reprogHeure}:00.000Z`
 
-      const { error } = await supabase
-        .from('rendez_vous')
-        .update({
-          date: newDateISO,
-          statut: 'en_attente',
-          nb_decalages: (rdvADecaler?.nb_decalages ?? 0) + 1,
-          rappel_envoye_count: 0,
-          rappel_envoye_at: null,
-        })
-        .eq('id', reprogRdvId)
-
-      if (error) throw error
+      // Guichet serveur (chantier RLS) : vérifie le téléphone + les gardes
+      // (décalage tardif, plafond 3), puis met à jour la date. Remplace
+      // l'écriture anonyme directe.
+      const res = await fetch('/api/rdv/decaler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rdv_id: reprogRdvId, telephone, new_date: newDateISO }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(
+          d?.error === 'decalage_max_atteint'
+            ? 'Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.'
+            : d?.error === 'decalage_tardif'
+              ? 'À moins de 24 h du rendez-vous, le décalage en ligne n\'est plus possible. Contacte directement ta praticienne.'
+              : 'Impossible de reprogrammer ce rendez-vous.',
+        )
+        setReprogSaving(false)
+        return
+      }
 
       // Push notification
       envoyerPushNotif(
