@@ -2617,6 +2617,20 @@ export default function ReservationPage() {
                             </button>
                           </div>
 
+                          {/* Avertissement conséquence (M2) : au 2e tap seulement, et
+                              seulement à moins de 24 h du RDV. Formulation conditionnelle
+                              car le site (anonyme) ne peut pas lire le montant du paiement. */}
+                          {annulationAConfirmer === rdv.id
+                            && new Date(rdv.date).getTime() - Date.now() < 24 * 3600 * 1000 && (
+                            <p style={{
+                              fontSize: 12, color: '#b45309', background: '#fffbeb',
+                              border: '1px solid #fde68a', borderRadius: 8,
+                              padding: '8px 10px', margin: '8px 0 0', lineHeight: 1.5,
+                            }}>
+                              À moins de 24 h du rendez-vous : si un acompte ou une empreinte a été laissé à la réservation, il peut être conservé ou prélevé.
+                            </p>
+                          )}
+
                           {/* ── Panneau modification des prestations ── */}
                           {modifRdvId === rdv.id && (
                             <div ref={modifPanelRef} style={{ marginTop: 16, borderTop: '1px solid #f3f4f6', paddingTop: 16, scrollMarginTop: 12 }}>
