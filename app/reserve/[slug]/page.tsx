@@ -1114,22 +1114,23 @@ export default function ReservationPage() {
     const dateAffichee = newDate ? formatDateLong(newDate) : formatRdvDate(rdv.date)
     const heureAffichee = newHeure ?? formatRdvHeure(rdv.date)
 
-    const patch: Record<string, unknown> = {
-      techniques: techs,
-      technique: labels,
-      specialite: specs,
-      duree,
-      prix: prix > 0 ? prix : null,
-    }
-    if (newDate && newHeure) {
-      patch.date = dateISO
-      patch.statut = 'en_attente'
-      patch.rappel_envoye_count = 0
-      patch.rappel_envoye_at = null
-    }
-
-    const { error } = await supabase.from('rendez_vous').update(patch).eq('id', rdv.id)
-    if (error) throw error
+    // Guichet serveur (chantier RLS) : vérifie le téléphone + gardes de décalage,
+    // puis applique la modif. Remplace l'écriture anonyme directe.
+    const res = await fetch('/api/rdv/modifier-prestations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rdv_id: rdv.id,
+        telephone,
+        techniques: techs,
+        technique: labels,
+        specialite: specs,
+        duree,
+        prix: prix > 0 ? prix : null,
+        new_date: (newDate && newHeure) ? dateISO : undefined,
+      }),
+    })
+    if (!res.ok) throw new Error('modif_echouee')
 
     // Push à la pro
     envoyerPushNotif(
