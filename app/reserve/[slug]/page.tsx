@@ -1739,15 +1739,25 @@ export default function ReservationPage() {
       if (rdvErr) throw rdvErr
 
       // ── Glamia Pay : lier l'empreinte/acompte validé au RDV (journal paiements) ──
+      // Robuste (C7/C8) : un échec transitoire (blip réseau, 500) laissait le
+      // paiement capturé SANS ligne = argent sans trace. On réessaie jusqu'à 3×.
+      // Sur erreur définitive (409 : RDV annulé, montant incohérent, intent déjà
+      // utilisé), on arrête — le serveur a déjà remboursé les cas « payé mais
+      // non rattachable ». La liaison est idempotente (unicité intent en base).
       if (propayIntentId && nouveau?.id) {
-        try {
-          await fetch('/api/propay/lier', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pro_id: pro.id, rdv_id: nouveau.id, intent_id: propayIntentId }),
-          })
-        } catch (e) {
-          console.error('[glamia-pay] liaison au RDV:', e)
+        for (let tentative = 0; tentative < 3; tentative++) {
+          try {
+            const r = await fetch('/api/propay/lier', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pro_id: pro.id, rdv_id: nouveau.id, intent_id: propayIntentId }),
+            })
+            const d = await r.json().catch(() => ({}))
+            if ((r.ok && d?.success) || r.status === 409) break
+          } catch (e) {
+            console.error(`[glamia-pay] liaison au RDV (tentative ${tentative + 1}):`, e)
+          }
+          await new Promise(res => setTimeout(res, 800))
         }
       }
 

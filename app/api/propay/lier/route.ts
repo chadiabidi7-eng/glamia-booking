@@ -134,7 +134,15 @@ export async function POST(req: NextRequest) {
     const cfgPaiement = configDepuisMeta(paiement.metadata)
     if (!verifierMontant(montantDeclare, estTotal ? 'total' : 'acompte', cfgPaiement)) {
       console.warn('[api/propay/lier] montant incohérent', { rdvId, montantDeclare, attendu: montantAttendu(estTotal ? 'total' : 'acompte', cfgPaiement) })
-      return NextResponse.json({ error: 'montant_incoherent' }, { status: 409 })
+      // Paiement capturé mais non rattachable → on le rembourse : ne jamais
+      // garder d'argent sans ligne de suivi (C7/C8).
+      try {
+        await stripe.refunds.create(
+          { payment_intent: paiement.id },
+          { stripeAccount, idempotencyKey: `lier_remb_${paiement.id}` },
+        )
+      } catch (e) { console.error('[api/propay/lier] remboursement montant incohérent:', e) }
+      return NextResponse.json({ error: 'montant_incoherent', rembourse: true }, { status: 409 })
     }
     const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
