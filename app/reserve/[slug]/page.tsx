@@ -969,81 +969,22 @@ export default function ReservationPage() {
     try {
       const rdv = rdvsAVenir.find(r => r.id === rdvId)
 
-      const { error } = await supabase
-        .from('rendez_vous')
-        // notif_annulation_vue: annulation par la CLIENTE → notification
-        // in-app sur l'écran Accueil de la pro. annule_par='cliente' : le moteur
-        // paiement traite normalement (remboursement/prélèvement selon 24 h).
-        .update({ statut: 'annule', notif_annulation_vue: false, annule_par: 'cliente' })
-        .eq('id', rdvId)
-
-      if (error) throw error
-      setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
-
-      // Glamia Pay : libération / remboursement / prélèvement tardif automatique
-      // (échec non bloquant — l'annulation du RDV reste acquise)
-      fetch('/api/propay/annulation', {
+      // Guichet serveur (chantier RLS 18 juil.) : vérifie le téléphone de la
+      // cliente, puis annule + traite paiement/fidélité/réduction côté serveur.
+      // Remplace les écritures anonymes directes (statut RDV + carte fidélité).
+      const res = await fetch('/api/rdv/annuler', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rdv_id: rdvId }),
-      }).catch(e => console.error('[glamia-pay] annulation:', e))
+        body: JSON.stringify({ rdv_id: rdvId, telephone }),
+      })
+      if (!res.ok) throw new Error('annulation_echouee')
+      setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
-      // Restaurer la carte fidélité
-      if (rdv && pro && clienteId && fideliteConfig?.active) {
-        try {
-          const { data: ficheFraiche } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', clienteId)
-            .maybeSingle()
-
-          if (ficheFraiche) {
-            const update: Record<string, unknown> = {
-              updated_at: new Date().toISOString(),
-            }
-
-            if (rdv.fidelite_appliquee) {
-              // Le RDV avait consommé une récompense → défaire le reset + retirer le tampon
-              const wasCardReset = ficheFraiche.tampons === 0 && ficheFraiche.cartes_completees > 0
-              if (wasCardReset) {
-                update.tampons = fideliteConfig.nb_ronds - 1
-                update.cartes_completees = ficheFraiche.cartes_completees - 1
-              } else {
-                update.tampons = Math.max(0, ficheFraiche.tampons - 1)
-              }
-            } else if (ficheFraiche.tampons > 0) {
-              // RDV sans récompense → juste retirer un tampon
-              update.tampons = ficheFraiche.tampons - 1
-              // Ne retirer la récompense que si elle correspond au palier actuel
-              const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
-              if (palierActuel && ficheFraiche.recompense_disponible) {
-                update.recompense_disponible = null
-              }
-            }
-
-            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
-          }
-        } catch (e) {
-          console.error('[handleAnnulerRdv] Erreur retrait tampon fidélité:', e)
-        }
-      }
-
-      // Rendre son utilisation de réduction limitée à la cliente
-      if (rdv?.reduction_appliquee?.limitee && clienteId) {
-        try {
-          const { error: reducError } = await supabase.rpc('restaurer_reduction_cliente', {
-            p_cliente_id: clienteId,
-            p_type: rdv.reduction_appliquee.type,
-            p_valeur: rdv.reduction_appliquee.valeur,
-          })
-          if (reducError) throw reducError
-          setReductionCliente(prev => prev
-            ? { ...prev, restants: prev.restants != null ? prev.restants + 1 : null }
-            : { type: rdv.reduction_appliquee!.type, valeur: rdv.reduction_appliquee!.valeur, restants: 1 })
-        } catch (e) {
-          console.error('[handleAnnulerRdv] Erreur restauration réduction:', e)
-        }
+      // Affichage local : le serveur a déjà restauré la réduction en base
+      if (rdv?.reduction_appliquee?.limitee) {
+        setReductionCliente(prev => prev
+          ? { ...prev, restants: prev.restants != null ? prev.restants + 1 : null }
+          : { type: rdv.reduction_appliquee!.type, valeur: rdv.reduction_appliquee!.valeur, restants: 1 })
       }
 
       if (rdv && pro) {
