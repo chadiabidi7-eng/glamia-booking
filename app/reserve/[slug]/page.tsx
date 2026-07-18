@@ -3517,6 +3517,12 @@ export default function ReservationPage() {
                   <a href="https://booking.glamia.pro/cgu" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>conditions d&apos;utilisation</a>.
                 </p>
                 <Elements
+                  // key = client_secret : si la cliente revient en arrière et
+                  // change le montant, un nouvel intent est créé et le composant
+                  // se REMONTE dessus. Sans ça, Stripe garde l'ancien secret et
+                  // la cliente pourrait valider un montant différent de l'affiché
+                  // (faille C10).
+                  key={propay.client_secret}
                   stripe={getStripePromise(propay.stripe_account)}
                   options={{ clientSecret: propay.client_secret, locale: 'fr' }}
                 >
