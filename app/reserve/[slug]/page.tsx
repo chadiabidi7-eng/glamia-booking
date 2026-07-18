@@ -577,6 +577,9 @@ export default function ReservationPage() {
 
   // ── Fidélité ─────────────────────────────────
   const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
+  // La pro a-t-elle l'acompte/empreinte activé ? Sert à n'afficher l'avertissement
+  // d'annulation < 24 h (M2) que quand un paiement a pu être engagé.
+  const [acompteActif, setAcompteActif] = useState(false)
   // Réduction personnelle de la cliente (cumulable avec la fidélité)
   // restants : null = illimitée, sinon nombre de RDV restants (0 = épuisée, non chargée)
   const [reductionCliente, setReductionCliente] = useState<{ type: string; valeur: number; restants: number | null } | null>(null)
@@ -858,12 +861,14 @@ export default function ReservationPage() {
 
   async function chargerFidelite(proId: string, clienteId: string) {
     try {
-      // Config pro
+      // Config pro (fidélité + flag acompte : ce dernier conditionne
+      // l'avertissement d'annulation < 24 h, cf. M2)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('fidelite_config')
+        .select('fidelite_config, acompte_config')
         .eq('id', proId)
         .single()
+      setAcompteActif(((profile?.acompte_config as any)?.actif) === true)
       if (profile?.fidelite_config) {
         setFideliteConfig(profile.fidelite_config as any)
       } else {
@@ -2617,10 +2622,11 @@ export default function ReservationPage() {
                             </button>
                           </div>
 
-                          {/* Avertissement conséquence (M2) : au 2e tap seulement, et
-                              seulement à moins de 24 h du RDV. Formulation conditionnelle
-                              car le site (anonyme) ne peut pas lire le montant du paiement. */}
-                          {annulationAConfirmer === rdv.id
+                          {/* Avertissement conséquence (M2) : au 2e tap seulement,
+                              à moins de 24 h du RDV, et uniquement si la pro utilise
+                              l'acompte/empreinte. Formulation conditionnelle car le site
+                              (anonyme) ne peut pas lire le montant exact du paiement. */}
+                          {annulationAConfirmer === rdv.id && acompteActif
                             && new Date(rdv.date).getTime() - Date.now() < 24 * 3600 * 1000 && (
                             <p style={{
                               fontSize: 12, color: '#b45309', background: '#fffbeb',
