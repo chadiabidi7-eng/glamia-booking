@@ -133,7 +133,7 @@ export async function POST(
   // Vérifier que le RDV existe et que le token est valide
   const { data: rdv, error: fetchErr } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, statut, token_expiration, cliente_id, pro_id, nb_decalages')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -163,6 +163,13 @@ export async function POST(
       return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
     }
 
+    // Plafond de 3 décalages par RDV (décision Chadi 18 juil., Q1 de l'audit) :
+    // sans limite, une cliente peut monopoliser un créneau des semaines en
+    // décalant à répétition juste au-dessus de 24 h.
+    if (((rdv as { nb_decalages?: number }).nb_decalages ?? 0) >= 3) {
+      return NextResponse.json({ error: 'decalage_max_atteint' }, { status: 403 })
+    }
+
     const oldDateStr = (rdv.date as string).slice(0, 10)
     const oldHeureStr = (rdv.date as string).slice(11, 16)
 
@@ -171,6 +178,7 @@ export async function POST(
       .update({
         date: newDate,
         statut: 'en_attente',
+        nb_decalages: ((rdv as { nb_decalages?: number }).nb_decalages ?? 0) + 1,
         rappel_envoye_count: 0,
         rappel_envoye_at: null,
         token_confirmation: null,

@@ -76,6 +76,7 @@ type RdvAVenir = {
   duree: number
   prix: number | null
   statut: string
+  nb_decalages?: number
   fidelite_appliquee: { type: string; valeur: number } | null
   reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
   techniques: { nom: string; prix: number; duree: number; categorie?: string }[] | null
@@ -895,7 +896,7 @@ export default function ReservationPage() {
       const now = new Date().toISOString()
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations')
+        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, nb_decalages')
         .eq('cliente_id', cId)
         .eq('pro_id', proId)
         .gte('date', now)
@@ -1346,6 +1347,13 @@ export default function ReservationPage() {
 
   async function handleReprogrammer() {
     if (!pro || !reprogRdvId || !reprogDate || !reprogHeure) return
+    // Plafond de 3 décalages par RDV (Q1, décision 18 juil.) : au-delà, il faut
+    // contacter la praticienne — évite qu'un créneau soit monopolisé sans fin.
+    const rdvADecaler = rdvsAVenir.find(r => r.id === reprogRdvId)
+    if ((rdvADecaler?.nb_decalages ?? 0) >= 3) {
+      alert('Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.')
+      return
+    }
     setReprogSaving(true)
     try {
       // Modification de prestations en attente → tout appliquer d'un coup
@@ -1367,6 +1375,7 @@ export default function ReservationPage() {
         .update({
           date: newDateISO,
           statut: 'en_attente',
+          nb_decalages: (rdvADecaler?.nb_decalages ?? 0) + 1,
           rappel_envoye_count: 0,
           rappel_envoye_at: null,
         })
