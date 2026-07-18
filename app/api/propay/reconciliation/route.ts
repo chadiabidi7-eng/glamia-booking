@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { traiterAnnulationPropay } from '@/lib/propay'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Glamia Pay — filet de réconciliation (18 juil. 2026).
+// Rattrape les remboursements d'annulation qui ont échoué ou ne se sont jamais
+// faits, pour qu'une cliente ayant annulé dans les règles revoie TOUJOURS son
+// argent — sans intervention SQL manuelle. Complète le durcissement de
+// lib/propay.ts (plus de ligne figée en 'annulation_en_cours').
+//
+// Portée VOLONTAIREMENT limitée au sens REMBOURSEMENT (argent qui revient à la
+// cliente). Le sens PRÉLÈVEMENT d'empreinte reste une action manuelle de la pro
+// pour ne JAMAIS débiter une cliente par automatisme (cf. faille C16 de l'audit).
+//
+// Appelé chaque heure par pg_cron : Authorization: Bearer <CRON_SECRET>.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
+
+const SEUIL_MS = 24 * 3600_000      // remboursement dû si annulation > 24 h avant le RDV
+const AGE_MIN_MS = 10 * 60_000      // ne pas toucher une annulation de moins de 10 min (peut être en cours)
+
+export async function POST(req: NextRequest) {
+  const secret = process.env.CRON_SECRET
+  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'non_autorise' }, { status: 401 })
+  }
+
+  const maintenant = Date.now()
+
+  // 1) Débloquer les paiements figés en 'annulation_en_cours' depuis > 10 min :
+  //    remettre un statut rejouable. payment_intent présent = acompte/paye
+  //    (remboursement retenté en étape 2) ; sinon empreinte → empreinte_posee
+  //    (revue manuelle, jamais de prélèvement automatique).
+  let debloques = 0
+  const { data: figes } = await supabaseAdmin
+    .from('paiements')
+    .select('id, stripe_payment_intent_id, updated_at')
+    .eq('statut', 'annulation_en_cours')
+  for (const p of figes ?? []) {
+    if (maintenant - new Date(p.updated_at as string).getTime() < AGE_MIN_MS) continue
+    const cible = p.stripe_payment_intent_id ? 'acompte_paye' : 'empreinte_posee'
+    const { error } = await supabaseAdmin
+      .from('paiements')
+      .update({ statut: cible, updated_at: new Date().toISOString() })
+      .eq('id', p.id)
+      .eq('statut', 'annulation_en_cours')
+    if (!error) debloques++
+  }
+
+  // 2) Rembourser les acomptes dus mais jamais rendus : RDV annulé encore à
+  //    plus de 24 h, acompte toujours détenu. On relance le moteur d'annulation
+  //    (idempotent via les clés Stripe annul_*, donc aucun double remboursement).
+  const seuil = new Date(maintenant + SEUIL_MS).toISOString()
+  const resultats: Record<string, string> = {}
+  const { data: rdvs } = await supabaseAdmin
+    .from('rendez_vous')
+    .select('id')
+    .eq('statut', 'annule')
+    .gt('date', seuil)
+    .limit(300)
+  const ids = (rdvs ?? []).map(r => r.id)
+  if (ids.length) {
+    const { data: paies } = await supabaseAdmin
+      .from('paiements')
+      .select('rdv_id')
+      .in('rdv_id', ids)
+      .in('statut', ['acompte_paye', 'paye'])
+    const rdvIds = [...new Set((paies ?? []).map(p => p.rdv_id as string))]
+    for (const rid of rdvIds) {
+      try {
+        const { resultat } = await traiterAnnulationPropay(rid)
+        resultats[rid] = resultat
+      } catch (e) {
+        resultats[rid] = (e as Error).message ?? 'erreur'
+      }
+      await new Promise(r => setTimeout(r, 120))
+    }
+  }
+
+  const bilan = { debloques, remboursements_relances: Object.keys(resultats).length, resultats }
+  console.log('[reconciliation-paiements]', JSON.stringify(bilan))
+  return NextResponse.json(bilan)
+}
