@@ -145,6 +145,13 @@ export async function POST(
     return NextResponse.json({ error: 'expired' }, { status: 410 })
   }
 
+  // RDV déjà annulé : ne pas le ressusciter via 'confirmer' ou 'décaler'
+  // (faille C4/M1 — lien e-mail réutilisé ou onglet resté ouvert). Le rejeu
+  // de 'annuler' reste géré plus bas par une réponse idempotente.
+  if (rdv.statut === 'annule' && action !== 'annuler') {
+    return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
+  }
+
   // ── Action : décaler ──────────────────────────────────────────────────
   if (action === 'decaler') {
     const newDate = body.new_date as string
@@ -264,7 +271,7 @@ export async function POST(
     return NextResponse.json({ success: true, statut: 'annule', deja: true })
   }
   const newStatut = action === 'confirmer' ? 'confirme' : 'annule'
-  const updateData: Record<string, string | boolean> = { statut: newStatut }
+  const updateData: Record<string, string | boolean | null> = { statut: newStatut }
   if (action === 'confirmer') {
     updateData.rappel_confirme_at = new Date().toISOString()
   }
@@ -273,6 +280,10 @@ export async function POST(
     updateData.notif_annulation_vue = false
     // Origine cliente : le moteur paiement traite normalement (garde C16)
     updateData.annule_par = 'cliente'
+    // Invalider le lien : après annulation, il ne doit plus permettre de
+    // confirmer ni décaler (anti-résurrection C4/M1).
+    updateData.token_confirmation = null
+    updateData.token_expiration = null
   }
 
   const { error: updateErr } = await supabaseAdmin
