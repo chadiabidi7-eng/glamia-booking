@@ -71,14 +71,31 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'account.updated': {
         const compte = event.data.object as Stripe.Account
+        const nowEnabled = compte.charges_enabled === true
+        // État précédent, pour détecter une SUSPENSION (true → false)
+        const { data: avant } = await supabaseAdmin
+          .from('stripe_comptes')
+          .select('pro_id, charges_enabled')
+          .eq('account_id', compte.id)
+          .maybeSingle()
         await supabaseAdmin
           .from('stripe_comptes')
           .update({
-            charges_enabled: compte.charges_enabled === true,
+            charges_enabled: nowEnabled,
             details_submitted: compte.details_submitted === true,
             updated_at: new Date().toISOString(),
           })
           .eq('account_id', compte.id)
+        // Suspension → prévenir la pro tout de suite. Sans ça elle découvrait
+        // le blocage seulement en tentant de prélever, et l'app accusait la
+        // cliente (moitié proactive de C19).
+        if (avant?.charges_enabled === true && !nowEnabled && avant.pro_id) {
+          await pousserNotifPro(
+            avant.pro_id,
+            'Compte Stripe à régulariser',
+            "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
+          )
+        }
         break
       }
 
