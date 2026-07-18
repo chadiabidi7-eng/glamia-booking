@@ -95,6 +95,12 @@ export async function POST(req: NextRequest) {
 
   const stripeAccount = compte.account_id
 
+  // Config figée dans l'intent : la vérification anti-fraude de /lier doit
+  // recalculer l'acompte attendu avec le réglage EN VIGUEUR AU PAIEMENT, pas
+  // celui du moment de la liaison — sinon une pro qui change sa config entre
+  // les deux fait rejeter un paiement légitime déjà encaissé (faille C9).
+  const glamiaCfg = JSON.stringify({ type: config.type ?? 'pourcent', valeur: config.valeur ?? 0 })
+
   try {
     if (mode === 'empreinte') {
       // Carte enregistrée avec 3DS, prélèvement futur possible hors session
@@ -109,7 +115,7 @@ export async function POST(req: NextRequest) {
           // Carte uniquement (Apple Pay/Google Pay passent par 'card' en wallet)
           // — pas de Bancontact/Klarna/iDEAL
           payment_method_types: ['card'],
-          metadata: { glamia_pro_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte) },
+          metadata: { glamia_pro_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte), glamia_cfg: glamiaCfg },
         },
         { stripeAccount },
       )
@@ -139,7 +145,7 @@ export async function POST(req: NextRequest) {
         // Carte uniquement (Apple Pay/Google Pay inclus via wallet 'card')
         payment_method_types: ['card'],
         application_fee_amount: commission,
-        metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais) },
+        metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais), glamia_cfg: glamiaCfg },
       },
       { stripeAccount },
     )

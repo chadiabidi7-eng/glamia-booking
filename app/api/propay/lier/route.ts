@@ -60,12 +60,22 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
   const configPro = (profilPro?.acompte_config ?? {}) as Parameters<typeof calculerAcompte>[1]
   const prixCentimes = Math.round(Number(rdv.prix ?? 0) * 100)
-  const montantAttendu = (type: string) =>
-    type === 'total' ? prixCentimes : calculerAcompte(prixCentimes, configPro)
-  const verifierMontant = (declare: number, type: string) => {
+  // Config FIGÉE dans l'intent au moment du paiement (glamia_cfg) : on valide
+  // contre elle, pas contre la config courante — sinon un changement de réglage
+  // de la pro entre le paiement et la liaison fait rejeter un paiement légitime
+  // déjà encaissé (faille C9). Repli sur la config courante si absente (intents
+  // antérieurs à ce champ).
+  const configDepuisMeta = (meta: Stripe.Metadata | null | undefined): Parameters<typeof calculerAcompte>[1] => {
+    const raw = meta?.glamia_cfg
+    if (raw) { try { return JSON.parse(raw) } catch { /* config courante */ } }
+    return configPro
+  }
+  const montantAttendu = (type: string, cfg: Parameters<typeof calculerAcompte>[1]) =>
+    type === 'total' ? prixCentimes : calculerAcompte(prixCentimes, cfg)
+  const verifierMontant = (declare: number, type: string, cfg: Parameters<typeof calculerAcompte>[1]) => {
     // tolérance 2 c (arrondis) ; un montant SUPÉRIEUR à l'attendu n'est pas
     // une fraude contre la pro
-    return declare >= montantAttendu(type) - 2
+    return declare >= montantAttendu(type, cfg) - 2
   }
 
   const { data: compte } = await supabaseAdmin
@@ -84,8 +94,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
       }
       const acompteEmpreinte = parseInt(String(setup.metadata?.glamia_acompte ?? '0'), 10)
-      if (!verifierMontant(acompteEmpreinte, 'acompte')) {
-        console.warn('[api/propay/lier] montant empreinte incohérent', { rdvId, acompteEmpreinte, attendu: montantAttendu('acompte') })
+      const cfgEmpreinte = configDepuisMeta(setup.metadata)
+      if (!verifierMontant(acompteEmpreinte, 'acompte', cfgEmpreinte)) {
+        console.warn('[api/propay/lier] montant empreinte incohérent', { rdvId, acompteEmpreinte, attendu: montantAttendu('acompte', cfgEmpreinte) })
         return NextResponse.json({ error: 'montant_incoherent' }, { status: 409 })
       }
       const { error } = await supabaseAdmin.from('paiements').insert({
@@ -120,8 +131,9 @@ export async function POST(req: NextRequest) {
     }
     const estTotal = paiement.metadata?.glamia_type === 'total'
     const montantDeclare = parseInt(String(paiement.metadata?.glamia_acompte ?? '0'), 10)
-    if (!verifierMontant(montantDeclare, estTotal ? 'total' : 'acompte')) {
-      console.warn('[api/propay/lier] montant incohérent', { rdvId, montantDeclare, attendu: montantAttendu(estTotal ? 'total' : 'acompte') })
+    const cfgPaiement = configDepuisMeta(paiement.metadata)
+    if (!verifierMontant(montantDeclare, estTotal ? 'total' : 'acompte', cfgPaiement)) {
+      console.warn('[api/propay/lier] montant incohérent', { rdvId, montantDeclare, attendu: montantAttendu(estTotal ? 'total' : 'acompte', cfgPaiement) })
       return NextResponse.json({ error: 'montant_incoherent' }, { status: 409 })
     }
     const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
