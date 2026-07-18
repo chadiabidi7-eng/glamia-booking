@@ -271,6 +271,8 @@ export async function POST(
   if (action === 'annuler') {
     // Annulation par la cliente → notification in-app pour la pro
     updateData.notif_annulation_vue = false
+    // Origine cliente : le moteur paiement traite normalement (garde C16)
+    updateData.annule_par = 'cliente'
   }
 
   const { error: updateErr } = await supabaseAdmin

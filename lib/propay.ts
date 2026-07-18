@@ -47,10 +47,19 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
 
     const { data: rdv } = await supabaseAdmin
       .from('rendez_vous')
-      .select('date')
+      .select('date, annule_par')
       .eq('id', rdvId)
       .maybeSingle()
     if (!rdv?.date) return { resultat: 'rdv_introuvable' }
+
+    // Annulation décidée par la PRO : le volet paiement est géré par l'app
+    // (empreinte libérée + choix de remboursement de l'acompte). La route
+    // publique ne doit RIEN faire — sinon, dans la fenêtre entre le passage
+    // du RDV en 'annule' et la libération, elle prélèverait la cliente pour
+    // une annulation qu'elle n'a pas décidée (faille C16).
+    if ((rdv as { annule_par?: string | null }).annule_par === 'pro') {
+      return { resultat: 'annule_par_pro' }
+    }
 
     const { data: compte } = await supabaseAdmin
       .from('stripe_comptes')
