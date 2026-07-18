@@ -2416,7 +2416,9 @@ export default function ReservationPage() {
                       const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${prochainPalier.valeur}€` : `-${prochainPalier.valeur}%`
                       return (
                         <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          Encore {prochainPalier.position - tampons} RDV avant {label}
+                          {prochainPalier.position - tampons === 1
+                            ? `Prochain RDV : ${label}`
+                            : `${label} sur ton ${prochainPalier.position - tampons}e RDV`}
                         </p>
                       )
                     })()}
