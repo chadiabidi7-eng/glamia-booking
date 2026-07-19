@@ -1723,98 +1723,16 @@ export default function ReservationPage() {
         }
       }
 
-      // Fidélité : consommer récompense existante, ajouter tampon, consommer si palier proactif
-      if (cId && fideliteConfig?.active) {
+      // Fidélité (guichet serveur, chantier RLS) : vérifie le téléphone puis
+      // applique la logique tampon côté serveur. Remplace les écritures anonymes
+      // directes sur fidelite_clientes.
+      if (cId && fideliteConfig?.active && nouveau?.id) {
         try {
-          const { data: ficheFraiche } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', cId)
-            .maybeSingle()
-
-          // Consommer la récompense existante si elle a été appliquée au prix
-          if (ficheFraiche?.recompense_disponible && recompenseExistante) {
-            const consumeUpdate: Record<string, unknown> = {
-              recompense_disponible: null,
-              updated_at: new Date().toISOString(),
-            }
-            if (ficheFraiche.tampons >= fideliteConfig.nb_ronds) {
-              consumeUpdate.tampons = 0
-              consumeUpdate.cartes_completees = ficheFraiche.cartes_completees + 1
-            }
-            await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheFraiche.id)
-          }
-
-          // Re-lire la fiche après consommation éventuelle
-          const { data: ficheApres } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', cId)
-            .maybeSingle()
-
-          if (!ficheApres) {
-            // Créer la fiche
-            const palierUn = fideliteConfig.paliers.find((p: any) => p.position === 1)
-            const insertData: Record<string, unknown> = {
-              pro_id: pro.id,
-              cliente_id: cId,
-              tampons: 1,
-            }
-            if (palierUn) {
-              insertData.recompense_disponible = { type: palierUn.type, valeur: palierUn.valeur }
-            }
-            await supabase.from('fidelite_clientes').insert(insertData)
-            // Si palier 1 atteint proactivement, consommer immédiatement
-            if (palierUn && !recompenseExistante) {
-              const { data: ficheNew } = await supabase
-                .from('fidelite_clientes')
-                .select('id, tampons, cartes_completees')
-                .eq('pro_id', pro.id)
-                .eq('cliente_id', cId)
-                .maybeSingle()
-              if (ficheNew) {
-                const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
-                if (ficheNew.tampons >= fideliteConfig.nb_ronds) {
-                  consumeUpdate.tampons = 0
-                  consumeUpdate.cartes_completees = ficheNew.cartes_completees + 1
-                }
-                await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheNew.id)
-              }
-            }
-          } else {
-            const nouveauTampons = ficheApres.tampons + 1
-            const palierAtteint = [...fideliteConfig.paliers]
-              .sort((a: any, b: any) => b.position - a.position)
-              .find((p: any) => p.position === nouveauTampons)
-
-            const update: Record<string, unknown> = {
-              tampons: nouveauTampons,
-              updated_at: new Date().toISOString(),
-            }
-            if (palierAtteint) {
-              update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
-            } else if (nouveauTampons >= fideliteConfig.nb_ronds) {
-              // Carte pleine SANS palier sur le dernier rond : rien à réclamer →
-              // nouvelle carte immédiatement. Sinon les tampons dépassent nb_ronds
-              // et la carte ne se réinitialise jamais (cas Chadi English, 12/10,
-              // 18 juil. 2026). Même logique que useFidelite.ts côté app.
-              update.tampons = nouveauTampons % fideliteConfig.nb_ronds
-              update.cartes_completees = ficheApres.cartes_completees + 1
-            }
-            await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
-
-            // Si palier atteint proactivement, consommer immédiatement + reset carte si pleine
-            if (palierAtteint && !recompenseExistante) {
-              const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
-              if (nouveauTampons >= fideliteConfig.nb_ronds) {
-                consumeUpdate.tampons = 0
-                consumeUpdate.cartes_completees = ficheApres.cartes_completees + 1
-              }
-              await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheApres.id)
-            }
-          }
+          await fetch('/api/rdv/fidelite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rdv_id: nouveau.id, telephone, recompense_existante: !!recompenseExistante }),
+          })
         } catch (e) {
           console.error('[handleConfirm] Erreur fidélité:', e)
         }
