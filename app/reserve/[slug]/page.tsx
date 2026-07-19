@@ -1698,7 +1698,29 @@ export default function ReservationPage() {
         .select('id')
         .single()
 
-      if (rdvErr) throw rdvErr
+      if (rdvErr) {
+        // C11 : deux onglets → même créneau. Le verrou anti-doublon (index
+        // rdv_booking_creneau_unique, source='booking') rejette le 2e insert
+        // (23505). Ce 2e onglet a déjà confirmé son paiement, mais `lier` n'a
+        // pas tourné → paiement capturé SANS ligne = orphelin invisible pour la
+        // réconciliation : on le rembourse tout de suite via le guichet dédié.
+        if ((rdvErr as { code?: string }).code === '23505') {
+          if (propayIntentId) {
+            try {
+              await fetch('/api/propay/rembourser-orphelin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pro_id: pro.id, intent_id: propayIntentId }),
+              })
+            } catch (e) { console.error('[glamia-pay] remboursement doublon C11:', e) }
+          }
+          alert(propayIntentId
+            ? "Tu as déjà une réservation à ce créneau. Ton paiement vient d'être annulé — choisis un autre horaire."
+            : "Tu as déjà une réservation à ce créneau. Choisis un autre horaire.")
+          return
+        }
+        throw rdvErr
+      }
 
       // ── Glamia Pay : lier l'empreinte/acompte validé au RDV (journal paiements) ──
       // Robuste (C7/C8) : un échec transitoire (blip réseau, 500) laissait le
