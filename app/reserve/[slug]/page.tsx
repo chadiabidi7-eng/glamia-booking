@@ -1765,9 +1765,12 @@ export default function ReservationPage() {
             const res = result.data as { success: boolean; error?: string }
             if (!res.success) {
               console.warn('[handleConfirm] Offre non appliquée:', res.error)
-              // Recalculer le prix sans offre
-              const prixSansOffre = prixTotalBrut > 0 ? prixTotalBrut : null
-              await supabase.from('rendez_vous').update({ prix: prixSansOffre, offre_id: null }).eq('id', nouveau.id)
+              // Recalculer le prix sans offre — guichet serveur (chantier RLS)
+              await fetch('/api/rdv/retirer-offre', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rdv_id: nouveau.id, telephone, prix: prixTotalBrut > 0 ? prixTotalBrut : null }),
+              }).catch(e => console.error('[handleConfirm] retirer-offre:', e))
             }
           }
         } catch (e) {
