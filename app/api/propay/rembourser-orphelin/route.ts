@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { journaliserOrphelin } from '@/lib/orphelins'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — rembourse un paiement ORPHELIN (audit C11).
@@ -74,6 +75,15 @@ export async function POST(req: NextRequest) {
       { payment_intent: paiement.id },
       { stripeAccount, idempotencyKey: `orphelin_remb_${paiement.id}` },
     )
+    // Journal + notif admin (une seule fois, idempotent). Cause 'doublon' : la
+    // cliente a bien sa 1re réservation, c'est le 2e paiement en trop qu'on rend.
+    await journaliserOrphelin({
+      admin: supabaseAdmin,
+      intentId: paiement.id,
+      proId,
+      montant: paiement.amount,
+      cause: 'doublon',
+    })
     return NextResponse.json({ success: true, rembourse: true })
   } catch (e) {
     console.error('[api/propay/rembourser-orphelin]', e)
