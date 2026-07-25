@@ -2058,6 +2058,15 @@ export default function ReservationPage() {
                 </span>
               </div>
             )}
+            {/* Réduction personnelle (badge cliente) — vert émeraude, distinct du rose fidélité */}
+            {reductionCliente && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ background: '#0E9E6E', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>RÉDUCTION</span>
+                <span style={{ fontSize: 13, color: '#0E9E6E', fontWeight: 600 }}>
+                  {reductionCliente.type === 'euros' ? `-${reductionCliente.valeur} €` : `-${reductionCliente.valeur}%`}
+                </span>
+              </div>
+            )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
