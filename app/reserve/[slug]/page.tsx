@@ -11,11 +11,11 @@ import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gi
 // ─────────────────────────────────────────────
 type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
 type HorairesHebdo = Record<number, HorairesJour>
-type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; photos?: string[]; prix_type?: 'fixe' | 'a_partir_de' }
+type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; photos?: string[]; prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean }
 type CataloguePrestations = Record<string, Technique[]>
 
-// Technique sélectionnée avec catégorie embarquée
-type TechSelec = { categorie: string; nom: string; prix: number; duree: number; prix_type?: 'fixe' | 'a_partir_de' }
+// Technique sélectionnée avec catégorie embarquée (prix/duree unitaires ; quantite = nb d'exemplaires)
+type TechSelec = { categorie: string; nom: string; prix: number; duree: number; prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean; quantite?: number }
 
 type CreneauBloque = {
   id: string
@@ -76,7 +76,7 @@ type RdvAVenir = {
   statut: string
   fidelite_appliquee: { type: string; valeur: number } | null
   reduction_appliquee: { type: string; valeur: number; limitee: boolean } | null
-  techniques: { nom: string; prix: number; duree: number; categorie?: string }[] | null
+  techniques: { nom: string; prix: number; duree: number; categorie?: string; quantite?: number }[] | null
   offre_id: string | null
   inspirations: string[] | null
 }
@@ -595,15 +595,15 @@ export default function ReservationPage() {
   const [loadingPremierCreneau, setLoadingPremierCreneau] = useState(false)
 
   // ── Totaux calculés (toutes spécialités) ─────
-  const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree, 0)
-  const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix, 0)
+  const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
+  const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
   const prixTotal = offreAppliquee
     ? offreAppliquee.prix_promo + techniquesSelectionnees.reduce((s, t) => {
         // Trouver si cette technique fait partie de l'offre
         const estDansOffre = Object.entries(catalogue).some(([cat, techs]) =>
           cat === t.categorie && techs.some(x => offreAppliquee.prestations_ids.includes(x.id) && x.nom === t.nom)
         )
-        return s + (estDansOffre ? 0 : t.prix)
+        return s + (estDansOffre ? 0 : t.prix * (t.quantite ?? 1))
       }, 0)
     : prixTotalBrut
 
@@ -1074,6 +1074,7 @@ export default function ReservationPage() {
       nom: t.nom,
       prix: t.prix,
       duree: t.duree,
+      quantite: t.quantite ?? 1,
     })))
     // Cartes repliées à l'ouverture — les spécialités déjà choisies restent
     // repérables grâce à l'en-tête rose + badge ✓ n
@@ -1095,22 +1096,31 @@ export default function ReservationPage() {
     setModifSelection([])
   }
 
-  function toggleModifTech(t: { id?: string; nom: string; prix: number; duree: number }, categorie: string) {
+  function toggleModifTech(t: { id?: string; nom: string; prix: number; duree: number; quantifiable?: boolean }, categorie: string) {
     setModifSelection(prev => {
       const dedans = prev.some(s => s.nom === t.nom && s.categorie === categorie)
       return dedans
         ? prev.filter(s => !(s.nom === t.nom && s.categorie === categorie))
-        : [...prev, { categorie, nom: t.nom, prix: t.prix, duree: t.duree }]
+        : [...prev, { categorie, nom: t.nom, prix: t.prix, duree: t.duree, quantifiable: t.quantifiable, quantite: 1 }]
     })
+  }
+
+  // Choix multiple (modif) : ajuster la quantité d'une prestation (1 à 20)
+  function ajusterModifQuantite(nom: string, categorie: string, delta: number) {
+    setModifSelection(prev => prev.map(s =>
+      s.nom === nom && s.categorie === categorie
+        ? { ...s, quantite: Math.min(20, Math.max(1, (s.quantite ?? 1) + delta)) }
+        : s
+    ))
   }
 
   // Applique la modification (et éventuellement une nouvelle date/heure)
   async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null) {
     if (!pro) return
-    const duree = techs.reduce((s, t) => s + t.duree, 0)
-    const base = techs.reduce((s, t) => s + t.prix, 0)
+    const duree = techs.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
+    const base = techs.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
     const prix = prixApresReducsRdv(base, rdv)
-    const labels = techs.map(t => t.nom).join(', ')
+    const labels = techs.map(t => (t.quantite ?? 1) > 1 ? `${t.nom} ×${t.quantite}` : t.nom).join(', ')
     const specs = [...new Set(techs.map(t => t.categorie))].join(', ')
     const dateISO = newDate && newHeure ? `${newDate}T${newHeure}:00.000Z` : rdv.date
     const dateAffichee = newDate ? formatDateLong(newDate) : formatRdvDate(rdv.date)
@@ -1193,7 +1203,7 @@ export default function ReservationPage() {
     if (!pro || modifSelection.length === 0) return
     setModifSaving(true)
     try {
-      const nouvelleDuree = modifSelection.reduce((s, t) => s + t.duree, 0)
+      const nouvelleDuree = modifSelection.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
       if (nouvelleDuree > rdv.duree) {
         const dateStr = (rdv.date as string).slice(0, 10)
         const heureActuelle = formatRdvHeure(rdv.date)
@@ -1405,7 +1415,7 @@ export default function ReservationPage() {
     setTechniquesSelectionnees(prev => {
       const exists = prev.find(s => s.nom === t.nom && s.categorie === cat)
       if (exists) return prev.filter(s => !(s.nom === t.nom && s.categorie === cat))
-      return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat, prix_type: t.prix_type }]
+      return [...prev, { nom: t.nom, prix: t.prix, duree: t.duree, categorie: cat, prix_type: t.prix_type, quantifiable: t.quantifiable, quantite: 1 }]
     })
     // Réinitialiser date/heure (la durée change → les créneaux doivent être recalculés)
     setDate('')
@@ -1415,6 +1425,17 @@ export default function ReservationPage() {
       const exists = techniquesSelectionnees.find(s => s.nom === t.nom && s.categorie === cat)
       if (exists) setOffreAppliquee(null) // on décoche → retirer l'offre
     }
+  }
+
+  // Choix multiple : ajuster la quantité d'une prestation sélectionnée (1 à 20)
+  function ajusterQuantite(nom: string, cat: string, delta: number) {
+    setTechniquesSelectionnees(prev => prev.map(s =>
+      s.nom === nom && s.categorie === cat
+        ? { ...s, quantite: Math.min(20, Math.max(1, (s.quantite ?? 1) + delta)) }
+        : s
+    ))
+    setDate('')
+    setHeure('')
   }
 
   // ── Step 4 : Load slots ───────────────────────
@@ -1552,7 +1573,7 @@ export default function ReservationPage() {
 
     const categories    = [...new Set(techniquesSelectionnees.map(t => t.categorie))]
     const categoriesStr = categories.join(', ')
-    const techniquesStr = techniquesSelectionnees.map(t => t.nom).join(', ')
+    const techniquesStr = techniquesSelectionnees.map(t => (t.quantite ?? 1) > 1 ? `${t.nom} ×${t.quantite}` : t.nom).join(', ')
 
     try {
       // Re-vérification de dernière seconde : le créneau choisi est-il
@@ -2020,11 +2041,11 @@ export default function ReservationPage() {
             {techniquesSelectionnees.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><SpecialiteIcon specialite={t.categorie} size={16} />{t.nom}</p>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><SpecialiteIcon specialite={t.categorie} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
-                  {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : '—')} · {formatDuree(t.duree)}
+                  {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix * (t.quantite ?? 1)} €` : (t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
                 </span>
               </div>
             ))}
@@ -2558,10 +2579,12 @@ export default function ReservationPage() {
                                       {ouvert && (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px 10px', borderTop: '1px solid #f3f4f6' }}>
                                           {s.techniques.map(t => {
-                                            const selected = modifSelection.some(sel => sel.nom === t.nom && sel.categorie === s.nom)
+                                            const selM = modifSelection.find(sel => sel.nom === t.nom && sel.categorie === s.nom)
+                                            const selected = selM !== undefined
+                                            const quantite = selM?.quantite ?? 1
                                             return (
+                                              <div key={t.id ?? t.nom}>
                                               <button
-                                                key={t.id ?? t.nom}
                                                 onClick={() => toggleModifTech(t, s.nom)}
                                                 style={{
                                                   display: 'flex', alignItems: 'center', gap: 10,
@@ -2576,11 +2599,21 @@ export default function ReservationPage() {
                                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                   color: '#fff', fontSize: 11, fontWeight: 700,
                                                 }}>{selected ? '✓' : ''}</span>
-                                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}</span>
+                                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}{selected && t.quantifiable && quantite > 1 ? ` ×${quantite}` : ''}</span>
                                                 <span style={{ fontSize: 12, color: '#6b7280' }}>
-                                                  {t.prix > 0 ? `${t.prix} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree)}
+                                                  {t.prix > 0 ? `${t.prix * quantite} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree * quantite)}
                                                 </span>
                                               </button>
+                                              {selected && t.quantifiable && (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '6px 12px 2px', background: PINK_LIGHT, borderRadius: 10, marginTop: 4 }}>
+                                                  <button type="button" onClick={() => ajusterModifQuantite(t.nom, s.nom, -1)} disabled={quantite <= 1}
+                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
+                                                  <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#1f2937' }}>{quantite}</span>
+                                                  <button type="button" onClick={() => ajusterModifQuantite(t.nom, s.nom, 1)} disabled={quantite >= 20}
+                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
+                                                </div>
+                                              )}
+                                              </div>
                                             )
                                           })}
                                         </div>
@@ -2591,9 +2624,9 @@ export default function ReservationPage() {
                               </div>
                               {/* Récap + confirmation */}
                               {(() => {
-                                const base = modifSelection.reduce((s, t) => s + t.prix, 0)
+                                const base = modifSelection.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
                                 const total = prixApresReducsRdv(base, rdv)
-                                const duree = modifSelection.reduce((s, t) => s + t.duree, 0)
+                                const duree = modifSelection.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
                                 return (
                                   <div style={{ marginTop: 14 }}>
                                     <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#1f2937', textAlign: 'center' }}>
@@ -2943,9 +2976,11 @@ export default function ReservationPage() {
                       {ouvert && (
                         <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #f3f4f6' }}>
                           {s.techniques.map(t => {
-                            const selected = techniquesSelectionnees.some(
+                            const selT = techniquesSelectionnees.find(
                               sel => sel.nom === t.nom && sel.categorie === s.nom
                             )
+                            const selected = selT !== undefined
+                            const quantite = selT?.quantite ?? 1
                             // Détails optionnels configurés par la pro (photos / description)
                             const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 3)
                             const descTech = (t.description ?? '').trim()
@@ -3060,6 +3095,20 @@ export default function ReservationPage() {
                                           {descTech}
                                         </p>
                                       )}
+                                    </div>
+                                  </div>
+                                )}
+                                {selected && t.quantifiable && (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px 2px 44px' }}>
+                                    <span style={{ fontSize: 13, color: '#6b7280' }}>
+                                      Quantité · {t.prix * quantite} € · {formatDuree(t.duree * quantite)}
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: PINK_LIGHT, borderRadius: 10, padding: '2px 6px' }}>
+                                      <button type="button" onClick={() => ajusterQuantite(t.nom, s.nom, -1)} disabled={quantite <= 1}
+                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
+                                      <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{quantite}</span>
+                                      <button type="button" onClick={() => ajusterQuantite(t.nom, s.nom, 1)} disabled={quantite >= 20}
+                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
                                     </div>
                                   </div>
                                 )}
@@ -3284,11 +3333,11 @@ export default function ReservationPage() {
                     {techniquesSelectionnees.map((t, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{t.nom}</p>
+                          <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
                           <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
-                          {t.prix > 0 ? `${t.prix} €` : '—'} · {formatDuree(t.duree)}
+                          {t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
                         </span>
                       </div>
                     ))}
@@ -3484,12 +3533,12 @@ export default function ReservationPage() {
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', display: 'block' }}>
-                      {t.nom}
+                      {t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
                     </span>
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{t.categorie}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : '—')} · {formatDuree(t.duree)}
+                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix * (t.quantite ?? 1)} €` : (t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
                   </span>
                 </div>
               ))}
