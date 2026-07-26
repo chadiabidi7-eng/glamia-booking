@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
+import { formatPrix } from '@/lib/devise'
 
 // ─────────────────────────────────────────────
 // Types
@@ -21,6 +22,7 @@ type RdvInfo = {
   pro_pseudo: string | null
   pro_photo: string | null
   pro_adresse: string | null
+  pro_devise: string | null
   pro_id: string
   horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
   duree: number
@@ -532,7 +534,7 @@ function ConfirmationPage() {
               {rdv.prix != null && rdv.prix > 0 && (
                 <div style={S.cardRow}>
                   <span style={S.cardIcon}><CreditCard size={18} color={GLAMIA_PINK} /></span>
-                  <span style={S.cardValue}>{rdv.prix} €</span>
+                  <span style={S.cardValue}>{formatPrix(rdv.prix, rdv.pro_devise)}</span>
                 </div>
               )}
             </div>
@@ -690,7 +692,7 @@ function ConfirmationPage() {
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.prix != null && rdv.prix > 0 && (
-                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{rdv.prix} €</p>
+                <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{formatPrix(rdv.prix, rdv.pro_devise)}</p>
               )}
               {rdv.pro_adresse && (
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>

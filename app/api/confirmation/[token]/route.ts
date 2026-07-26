@@ -48,7 +48,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -91,6 +91,7 @@ export async function GET(
     pro_pseudo: pro?.pseudo ?? null,
     pro_photo: pro?.avatar_url ?? null,
     pro_adresse: pro?.adresse ?? null,
+    pro_devise: (pro as any)?.devise ?? 'EUR',
     pro_id: data.pro_id,
     horaires: (pro as any)?.horaires ?? null,
     duree: data.duree ?? 60,
