@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
+import { formatPrix, symboleDevise } from '@/lib/devise';
 import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
 
 // ─────────────────────────────────────────────
@@ -64,6 +65,7 @@ type ProInfo = {
   message_accueil?: string
   adresse?: string
   is_pro?: boolean
+  devise?: string
 }
 
 type RdvAVenir = {
@@ -367,7 +369,7 @@ function getTechInfo(pid: string, catalogue: CataloguePrestations): { nom: strin
 }
 
 function OffresSection({
-  offres, offreAppliquee, catalogue, techniquesSelectionnees, onApply, onRemove,
+  offres, offreAppliquee, catalogue, techniquesSelectionnees, onApply, onRemove, devise,
 }: {
   offres: Offre[]
   offreAppliquee: Offre | null
@@ -375,6 +377,7 @@ function OffresSection({
   techniquesSelectionnees: TechSelec[]
   onApply: (o: Offre) => void
   onRemove: (o: Offre) => void
+  devise?: string
 }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? offres : offres.slice(0, 3)
@@ -440,9 +443,9 @@ function OffresSection({
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {prixOrig > 0 && prixOrig !== o.prix_promo && (
-                    <div style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>{prixOrig} €</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>{formatPrix(prixOrig, devise)}</div>
                   )}
-                  <div style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{o.prix_promo} €</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{formatPrix(o.prix_promo, devise)}</div>
                 </div>
               </button>
             )
@@ -718,6 +721,7 @@ export default function ReservationPage() {
         message_accueil:  found.message_accueil ?? undefined,
         adresse:          found.adresse ?? undefined,
         is_pro:           found.is_pro ?? false,
+        devise:           found.devise ?? 'EUR',
       })
 
       // Accès temps réel : abonnement actif OU essai en cours. Ne jamais se
@@ -2024,7 +2028,7 @@ export default function ReservationPage() {
               { icon: <User size={18} color={GLAMIA_PINK} />, label: `${clientePrenom} ${clienteNom}` },
               { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
               { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeTotal)}` },
-              ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? `${prixFinal} €` : `${prixTotal} €` }] : []),
+              ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? formatPrix(prixFinal, pro?.devise) : formatPrix(prixTotal, pro?.devise) }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
@@ -2045,7 +2049,7 @@ export default function ReservationPage() {
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
-                  {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix * (t.quantite ?? 1)} €` : (t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                  {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
                 </span>
               </div>
             ))}
@@ -2054,7 +2058,7 @@ export default function ReservationPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
                 <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
-                  {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                  {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                 </span>
               </div>
             )}
@@ -2063,7 +2067,7 @@ export default function ReservationPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ background: '#0E9E6E', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>RÉDUCTION</span>
                 <span style={{ fontSize: 13, color: '#0E9E6E', fontWeight: 600 }}>
-                  {reductionCliente.type === 'euros' ? `-${reductionCliente.valeur} €` : `-${reductionCliente.valeur}%`}
+                  {reductionCliente.type === 'euros' ? `-${formatPrix(reductionCliente.valeur, pro?.devise)}` : `-${reductionCliente.valeur}%`}
                 </span>
               </div>
             )}
@@ -2072,9 +2076,9 @@ export default function ReservationPage() {
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'} · {formatDuree(dureeTotal)}</>
                 ) : (
-                  <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
+                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
                 )}
               </span>
             </div>
@@ -2264,7 +2268,7 @@ export default function ReservationPage() {
                       <strong>{pro.pseudo || `${pro.prenom} ${pro.nom}`}</strong> vous fait bénéficier
                       d'une réduction personnelle de{' '}
                       <strong style={{ color: PINK }}>
-                        −{reductionCliente.valeur}{reductionCliente.type === 'euros' ? ' €' : ' %'}
+                        −{reductionCliente.valeur}{reductionCliente.type === 'euros' ? ` ${symboleDevise(pro?.devise)}` : ' %'}
                       </strong>
                       {reductionCliente.restants == null
                         ? ', appliquée automatiquement à tous vos rendez-vous.'
@@ -2292,7 +2296,7 @@ export default function ReservationPage() {
                           ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
                           ?? null
                         if (!prochaine) return null
-                        const label = prochaine.type === 'gratuit' ? 'Offert' : `-${prochaine.valeur}${prochaine.type === 'euros' ? '€' : '%'}`
+                        const label = prochaine.type === 'gratuit' ? 'Offert' : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
                         return (
                           <span style={{
                             background: PINK, color: '#fff', borderRadius: 10,
@@ -2309,7 +2313,7 @@ export default function ReservationPage() {
                         const tampons = fideliteFiche?.tampons ?? 0
                         const estTamponné = pos <= tampons
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
                         return (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
@@ -2335,7 +2339,7 @@ export default function ReservationPage() {
                       const tampons = fideliteFiche?.tampons ?? 0
                       const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
                       if (!prochainPalier) return null
-                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${prochainPalier.valeur}€` : `-${prochainPalier.valeur}%`
+                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
                       return (
                         <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
                           Encore {prochainPalier.position - tampons} RDV avant {label}
@@ -2375,7 +2379,7 @@ export default function ReservationPage() {
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />Prestations modifiées !</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
-                                {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''} — un email de confirmation à jour vous a été envoyé
+                                {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — un email de confirmation à jour vous a été envoyé
                               </p>
                             </div>
                           )}
@@ -2389,7 +2393,7 @@ export default function ReservationPage() {
                                 {rdv.technique}
                               </p>
                               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${rdv.prix} €` : ''}
+                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''}
                               </p>
                             </div>
                           </div>
@@ -2610,7 +2614,7 @@ export default function ReservationPage() {
                                                 }}>{selected ? '✓' : ''}</span>
                                                 <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}{selected && t.quantifiable && quantite > 1 ? ` ×${quantite}` : ''}</span>
                                                 <span style={{ fontSize: 12, color: '#6b7280' }}>
-                                                  {t.prix > 0 ? `${t.prix * quantite} €` : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree * quantite)}
+                                                  {t.prix > 0 ? formatPrix(t.prix * quantite, pro?.devise) : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree * quantite)}
                                                 </span>
                                               </button>
                                               {selected && t.quantifiable && (
@@ -2641,8 +2645,8 @@ export default function ReservationPage() {
                                     <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#1f2937', textAlign: 'center' }}>
                                       {modifSelection.length === 0 ? 'Sélectionnez au moins une prestation' : (
                                         <>
-                                          {total !== base && <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 6 }}>{base} €</span>}
-                                          {total > 0 ? `${total} €` : 'Offert'} · {formatDuree(duree)}
+                                          {total !== base && <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 6 }}>{formatPrix(base, pro?.devise)}</span>}
+                                          {total > 0 ? formatPrix(total, pro?.devise) : 'Offert'} · {formatDuree(duree)}
                                         </>
                                       )}
                                     </p>
@@ -2845,7 +2849,7 @@ export default function ReservationPage() {
                       {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
                         const pos = i + 1
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${palier.valeur}€` : `-${palier.valeur}%`) : ''
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
                         return (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
@@ -2897,6 +2901,7 @@ export default function ReservationPage() {
                 offres={offresEligibles}
                 offreAppliquee={offreAppliquee}
                 catalogue={catalogue}
+                devise={pro?.devise}
                 techniquesSelectionnees={techniquesSelectionnees}
                 onApply={(o) => {
                   setOffreAppliquee(o)
@@ -3027,13 +3032,13 @@ export default function ReservationPage() {
                                         if (promoOffre) {
                                           return (
                                             <>
-                                              <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{t.prix} €</span>
-                                              <span style={{ color: PINK, fontWeight: 600 }}>{promoOffre.prix_promo} €</span>
+                                              <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{formatPrix(t.prix, pro?.devise)}</span>
+                                              <span style={{ color: PINK, fontWeight: 600 }}>{formatPrix(promoOffre.prix_promo, pro?.devise)}</span>
                                               {' · '}{formatDuree(t.duree)}
                                             </>
                                           )
                                         }
-                                        return <>{t.prix_type === 'a_partir_de' ? `A partir de ${t.prix} €` : (t.prix > 0 ? `${t.prix} €` : 'Gratuit')} · {formatDuree(t.duree)}</>
+                                        return <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix, pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : 'Gratuit')} · {formatDuree(t.duree)}</>
                                       })()}
                                     </p>
                                     {/* Pastille détails — affordance explicite, tap séparé de la sélection */}
@@ -3110,7 +3115,7 @@ export default function ReservationPage() {
                                 {selected && t.quantifiable && (
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px 2px 44px' }}>
                                     <span style={{ fontSize: 13, color: '#6b7280' }}>
-                                      Quantité · {t.prix * quantite} € · {formatDuree(t.duree * quantite)}
+                                      Quantité · {formatPrix(t.prix * quantite, pro?.devise)} · {formatDuree(t.duree * quantite)}
                                     </span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: PINK_LIGHT, borderRadius: 10, padding: '2px 6px' }}>
                                       <button type="button" onClick={() => ajusterQuantite(t.nom, s.nom, -1)} disabled={quantite <= 1}
@@ -3315,10 +3320,10 @@ export default function ReservationPage() {
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: 'Total',
                   value: prixFinal !== prixTotal
-                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotal} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</span></>
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</span></>
                     : offreAppliquee && prixTotalBrut !== prixTotal
-                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{prixTotalBrut} €</span><span style={{ color: PINK, fontWeight: 700 }}>{prixTotal} €</span></>
-                      : `${prixTotal} €`
+                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
+                      : formatPrix(prixTotal, pro?.devise)
                 }] : []),
               ].map((row, i) => (
                 <div key={i}>
@@ -3346,7 +3351,7 @@ export default function ReservationPage() {
                           <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
-                          {t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                          {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
                         </span>
                       </div>
                     ))}
@@ -3364,7 +3369,7 @@ export default function ReservationPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
                         <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
-                          {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${recompenseFidelite.valeur} €` : `-${recompenseFidelite.valeur}%`}
+                          {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                         </span>
                       </div>
                     )}
@@ -3373,11 +3378,11 @@ export default function ReservationPage() {
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                         {prixFinal !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'} · {formatDuree(dureeTotal)}</>
                         ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{prixTotalBrut} €</span>{prixTotal} € · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeTotal)}</>
                         ) : (
-                          <>{prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}</>
+                          <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
                         )}
                       </span>
                     </div>
@@ -3547,7 +3552,7 @@ export default function ReservationPage() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{t.categorie}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {t.prix_type === 'a_partir_de' ? `A partir de ${t.prix * (t.quantite ?? 1)} €` : (t.prix > 0 ? `${t.prix * (t.quantite ?? 1)} €` : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                    {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
                   </span>
                 </div>
               ))}
@@ -3556,8 +3561,8 @@ export default function ReservationPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{prixTotal} €</span>{prixFinal > 0 ? `${prixFinal} €` : 'Offert'}</>
-                ) : prixTotal > 0 ? `${prixTotal} €` : '—'} · {formatDuree(dureeTotal)}
+                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</>
+                ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}
               </span>
               <button
                 onClick={() => setStep(3)}
