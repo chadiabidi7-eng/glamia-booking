@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { Calendar, Clock, Sparkles, CreditCard, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
+import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -25,12 +25,139 @@ type RdvInfo = {
   horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
   duree: number
   instructions: string | null
+  inspirations: string[]
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
 
 // Bloc instructions de la pro — affiché avant ET après confirmation
 // (c'est surtout après avoir confirmé que la cliente doit les lire)
+// Compression d'image côté navigateur : max 1280 px, JPEG qualité 0.8 → data URL
+// (même helper que la page de réservation)
+async function compresserImage(file: File): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'))
+    reader.readAsDataURL(file)
+  })
+  const img: HTMLImageElement = await new Promise((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => resolve(i)
+    i.onerror = () => reject(new Error('Image illisible'))
+    i.src = dataUrl
+  })
+  const MAX = 1280
+  const ratio = Math.min(1, MAX / Math.max(img.width, img.height))
+  const w = Math.max(1, Math.round(img.width * ratio))
+  const h = Math.max(1, Math.round(img.height * ratio))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas indisponible')
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.8)
+}
+
+// Encadré « Tes inspirations » : photos déjà transmises + ajout jusqu'à 3,
+// tant que le RDV est à venir (upload authentifié par le token du lien)
+function SectionInspirations({
+  token,
+  rdv,
+  onAjout,
+}: {
+  token: string
+  rdv: RdvInfo
+  onAjout: (toutes: string[]) => void
+}) {
+  const [envoi, setEnvoi] = useState(false)
+  const photos = rdv.inspirations ?? []
+  const rdvFutur = new Date(`${rdv.date}T${rdv.heure}:00`) > new Date()
+  if (!rdvFutur && photos.length === 0) return null
+
+  const gererAjout = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fichiers = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    const restant = 3 - photos.length
+    if (fichiers.length === 0 || restant <= 0 || envoi) return
+    const aTraiter = fichiers.slice(0, restant)
+    if (fichiers.length > restant) {
+      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+    }
+    setEnvoi(true)
+    try {
+      const dataUrls: string[] = []
+      for (const f of aTraiter) dataUrls.push(await compresserImage(f))
+      const res = await fetch('/api/inspirations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, photos: dataUrls }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.inspirations) throw new Error(json.error ?? 'upload_failed')
+      onAjout(json.inspirations)
+    } catch (err) {
+      console.error('[confirmation] inspirations:', err)
+      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  const tuile = (icone: React.ReactNode, texte: string, extraInput: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <label style={{
+      width: 72, height: 72, borderRadius: 12, border: '1.5px dashed #d1d5db',
+      background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 3, cursor: envoi ? 'default' : 'pointer',
+      flexShrink: 0, opacity: envoi ? 0.5 : 1, boxSizing: 'border-box',
+    }}>
+      {icone}
+      <span style={{ fontSize: 9.5, color: '#9ca3af', fontWeight: 600 }}>{envoi ? 'Envoi…' : texte}</span>
+      <input type="file" accept="image/*" onChange={gererAjout} disabled={envoi} style={{ display: 'none' }} {...extraInput} />
+    </label>
+  )
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+      border: `1.5px solid ${PINK}55`,
+      borderRadius: 16, padding: '14px 14px 16px', marginTop: 16, textAlign: 'left',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <span style={{
+          width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Sparkles size={15} color="#fff" />
+        </span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>Tes inspirations 💅</span>
+      </div>
+      <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
+        {photos.length >= 3
+          ? 'Tes 3 photos ont bien été transmises.'
+          : `Montre ce que tu as en tête — ajoute jusqu'à ${3 - photos.length} photo${3 - photos.length > 1 ? 's' : ''} (optionnel).`}
+      </p>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {photos.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={`Inspiration ${i + 1}`}
+            style={{ width: 72, height: 72, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block', flexShrink: 0 }}
+          />
+        ))}
+        {rdvFutur && photos.length < 3 && (
+          <>
+            {tuile(<Camera size={18} color={PINK} />, 'Prendre', { capture: 'environment' })}
+            {tuile(<ImagePlus size={18} color={PINK} />, 'Importer', { multiple: true })}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function InstructionsBox({ instructions }: { instructions: string | null }) {
   if (!instructions) return null
   return (
@@ -349,6 +476,11 @@ function ConfirmationPage() {
               <p style={S.infoLineSub}>{prestationLabel}</p>
             </div>
             <InstructionsBox instructions={rdv.instructions} />
+            <SectionInspirations
+              token={token}
+              rdv={rdv}
+              onAjout={toutes => setRdv(prev => (prev ? { ...prev, inspirations: toutes } : prev))}
+            />
           </div>
         )}
 
@@ -407,6 +539,13 @@ function ConfirmationPage() {
 
             {/* Instructions */}
             <InstructionsBox instructions={rdv.instructions} />
+
+            {/* Inspirations : consultables et complétables jusqu'au RDV */}
+            <SectionInspirations
+              token={token}
+              rdv={rdv}
+              onAjout={toutes => setRdv(prev => (prev ? { ...prev, inspirations: toutes } : prev))}
+            />
 
             {/* Boutons */}
             <div style={S.actions}>
