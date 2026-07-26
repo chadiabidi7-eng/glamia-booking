@@ -3,8 +3,10 @@
 // La page de résa affiche les prix dans la devise choisie par LA PRO.
 
 const SYMBOLES: Record<string, string> = {
-  EUR: '€', CHF: 'CHF', CAD: '$', MAD: 'DH', TND: 'DT', DZD: 'DA',
+  EUR: '€', CHF: 'CHF', CAD: '$', MAD: 'DH', DZD: 'DA', TND: 'DT',
   XOF: 'FCFA', XAF: 'FCFA', HTG: 'G', CDF: 'FC', MGA: 'Ar',
+  MRU: 'UM', GNF: 'FG', RWF: 'FRw', BIF: 'FBu', DJF: 'Fdj', KMF: 'CF',
+  SCR: 'SR', MUR: 'Rs', LBP: 'LL', XPF: 'XPF', VUV: 'VT', EGP: 'LE',
 };
 
 /** Symbole d'une devise (repli € si code inconnu). */
