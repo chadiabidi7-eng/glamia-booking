@@ -190,7 +190,7 @@ export async function POST(
       if (cliente?.email) {
         const { data: proInfo } = await supabaseAdmin
           .from('profiles')
-          .select('prenom, nom, pseudo, adresse')
+          .select('prenom, nom, pseudo, adresse, devise')
           .eq('id', rdv.pro_id)
           .maybeSingle()
 
@@ -218,6 +218,7 @@ export async function POST(
               heure: newHeureStr,
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
               prix_total: rdvFull?.prix ?? 0,
+              devise: (proInfo as any)?.devise ?? 'EUR',
               adresse: proInfo?.adresse || '',
               techniques: rdvFull ? [{
                 nom: rdvFull.technique ?? '',

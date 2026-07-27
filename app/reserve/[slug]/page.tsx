@@ -1173,6 +1173,7 @@ export default function ReservationPage() {
               heure: heureAffichee,
               duree: formatDuree(duree),
               prix_total: prix,
+              devise: pro.devise ?? 'EUR',
               adresse: pro.adresse || '',
               techniques: techs.map(t => ({
                 nom: t.nom,
@@ -1369,6 +1370,7 @@ export default function ReservationPage() {
                 heure: reprogHeure,
                 duree: formatDuree(rdvReprog.duree),
                 prix_total: rdvReprog.prix ?? 0,
+                devise: pro.devise ?? 'EUR',
                 adresse: pro.adresse || '',
                 techniques: [{
                   nom: rdvReprog.technique,
@@ -1830,6 +1832,7 @@ export default function ReservationPage() {
             heure,
             duree: formatDuree(dureeTotal),
             prix_total: prixFinal,
+            devise: pro.devise ?? 'EUR',
             adresse: pro.adresse || '',
             skip_rappel_notice: dansMotins24h,
             techniques: techniquesSelectionnees.map(t => ({
