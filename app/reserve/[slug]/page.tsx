@@ -944,72 +944,24 @@ export default function ReservationPage() {
     try {
       const rdv = rdvsAVenir.find(r => r.id === rdvId)
 
-      const { error } = await supabase
-        .from('rendez_vous')
-        // notif_annulation_vue: annulation par la CLIENTE → notification
-        // in-app sur l'écran Accueil de la pro
-        .update({ statut: 'annule', notif_annulation_vue: false })
-        .eq('id', rdvId)
-
-      if (error) throw error
+      // Guichet serveur (chantier RLS) : vérifie que le téléphone fourni est
+      // bien celui de la cliente du RDV, PUIS annule et traite fidélité et
+      // réduction en service role. Remplace l'écriture anonyme directe, qui
+      // laissait annuler le RDV de n'importe qui avec la clé publique.
+      const res = await fetch('/api/rdv/annuler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rdv_id: rdvId, telephone }),
+      })
+      if (!res.ok) throw new Error('annulation_echouee')
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
-      // Restaurer la carte fidélité
-      if (rdv && pro && clienteId && fideliteConfig?.active) {
-        try {
-          const { data: ficheFraiche } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', clienteId)
-            .maybeSingle()
-
-          if (ficheFraiche) {
-            const update: Record<string, unknown> = {
-              updated_at: new Date().toISOString(),
-            }
-
-            if (rdv.fidelite_appliquee) {
-              // Le RDV avait consommé une récompense → défaire le reset + retirer le tampon
-              const wasCardReset = ficheFraiche.tampons === 0 && ficheFraiche.cartes_completees > 0
-              if (wasCardReset) {
-                update.tampons = fideliteConfig.nb_ronds - 1
-                update.cartes_completees = ficheFraiche.cartes_completees - 1
-              } else {
-                update.tampons = Math.max(0, ficheFraiche.tampons - 1)
-              }
-            } else if (ficheFraiche.tampons > 0) {
-              // RDV sans récompense → juste retirer un tampon
-              update.tampons = ficheFraiche.tampons - 1
-              // Ne retirer la récompense que si elle correspond au palier actuel
-              const palierActuel = fideliteConfig.paliers.find((p: any) => p.position === ficheFraiche.tampons)
-              if (palierActuel && ficheFraiche.recompense_disponible) {
-                update.recompense_disponible = null
-              }
-            }
-
-            await supabase.from('fidelite_clientes').update(update).eq('id', ficheFraiche.id)
-          }
-        } catch (e) {
-          console.error('[handleAnnulerRdv] Erreur retrait tampon fidélité:', e)
-        }
-      }
-
-      // Rendre son utilisation de réduction limitée à la cliente
-      if (rdv?.reduction_appliquee?.limitee && clienteId) {
-        try {
-          const { error: reducError } = await supabase.rpc('restaurer_reduction_cliente', {
-            p_cliente_id: clienteId,
-            p_type: rdv.reduction_appliquee.type,
-            p_valeur: rdv.reduction_appliquee.valeur,
-          })
-          if (reducError) throw reducError
-          setReductionCliente(prev => prev
-            ? { ...prev, restants: prev.restants != null ? prev.restants + 1 : null }
-            : { type: rdv.reduction_appliquee!.type, valeur: rdv.reduction_appliquee!.valeur, restants: 1 })
-        } catch (e) {
-          console.error('[handleAnnulerRdv] Erreur restauration réduction:', e)
-        }
+      // Carte de fidélité et réduction limitée : entièrement traitées par le
+      // guichet ci-dessus. Ne reste ici que la mise à jour de l'AFFICHAGE.
+      if (rdv?.reduction_appliquee?.limitee) {
+        setReductionCliente(prev => prev
+          ? { ...prev, restants: prev.restants != null ? prev.restants + 1 : null }
+          : { type: rdv.reduction_appliquee!.type, valeur: rdv.reduction_appliquee!.valeur, restants: 1 })
       }
 
       if (rdv && pro) {
@@ -1139,22 +1091,24 @@ export default function ReservationPage() {
     const dateAffichee = newDate ? formatDateLong(newDate) : formatRdvDate(rdv.date)
     const heureAffichee = newHeure ?? formatRdvHeure(rdv.date)
 
-    const patch: Record<string, unknown> = {
-      techniques: techs,
-      technique: labels,
-      specialite: specs,
-      duree,
-      prix: prix > 0 ? prix : null,
-    }
-    if (newDate && newHeure) {
-      patch.date = dateISO
-      patch.statut = 'en_attente'
-      patch.rappel_envoye_count = 0
-      patch.rappel_envoye_at = null
-    }
-
-    const { error } = await supabase.from('rendez_vous').update(patch).eq('id', rdv.id)
-    if (error) throw error
+    // Guichet serveur (chantier RLS) : vérifie le téléphone de la cliente, puis
+    // applique la modification. Remplace l'écriture anonyme directe, qui
+    // laissait modifier le RDV de n'importe qui avec la clé publique.
+    const res = await fetch('/api/rdv/modifier-prestations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rdv_id: rdv.id,
+        telephone,
+        techniques: techs,
+        technique: labels,
+        specialite: specs,
+        duree,
+        prix: prix > 0 ? prix : null,
+        new_date: (newDate && newHeure) ? dateISO : undefined,
+      }),
+    })
+    if (!res.ok) throw new Error('modif_echouee')
 
     // Push à la pro
     envoyerPushNotif(
@@ -1330,17 +1284,26 @@ export default function ReservationPage() {
 
       const newDateISO = `${reprogDate}T${reprogHeure}:00.000Z`
 
-      const { error } = await supabase
-        .from('rendez_vous')
-        .update({
-          date: newDateISO,
-          statut: 'en_attente',
-          rappel_envoye_count: 0,
-          rappel_envoye_at: null,
-        })
-        .eq('id', reprogRdvId)
-
-      if (error) throw error
+      // Guichet serveur (chantier RLS) : vérifie le téléphone de la cliente,
+      // puis décale. Remplace l'écriture anonyme directe, qui laissait déplacer
+      // le RDV de n'importe qui avec la clé publique.
+      const res = await fetch('/api/rdv/decaler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rdv_id: reprogRdvId, telephone, new_date: newDateISO }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(
+          d?.error === 'decalage_max_atteint'
+            ? 'Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.'
+            : d?.error === 'decalage_tardif'
+              ? 'À moins de 24 h du rendez-vous, le décalage en ligne n\'est plus possible. Contacte directement ta praticienne.'
+              : 'Impossible de reprogrammer ce rendez-vous.',
+        )
+        setReprogSaving(false)
+        return
+      }
 
       // Push notification
       envoyerPushNotif(
@@ -1759,91 +1722,17 @@ export default function ReservationPage() {
 
       if (rdvErr) throw rdvErr
 
-      // Fidélité : consommer récompense existante, ajouter tampon, consommer si palier proactif
-      if (cId && fideliteConfig?.active) {
+      // Fidélité — guichet serveur (chantier RLS) : vérifie le téléphone de la
+      // cliente, puis applique TOUTE la logique tampon côté serveur (récompense
+      // consommée, tampon ajouté, palier atteint). Remplace une dizaine
+      // d'écritures anonymes directes sur fidelite_clientes.
+      if (cId && fideliteConfig?.active && nouveau?.id) {
         try {
-          const { data: ficheFraiche } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', cId)
-            .maybeSingle()
-
-          // Consommer la récompense existante si elle a été appliquée au prix
-          if (ficheFraiche?.recompense_disponible && recompenseExistante) {
-            const consumeUpdate: Record<string, unknown> = {
-              recompense_disponible: null,
-              updated_at: new Date().toISOString(),
-            }
-            if (ficheFraiche.tampons >= fideliteConfig.nb_ronds) {
-              consumeUpdate.tampons = 0
-              consumeUpdate.cartes_completees = ficheFraiche.cartes_completees + 1
-            }
-            await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheFraiche.id)
-          }
-
-          // Re-lire la fiche après consommation éventuelle
-          const { data: ficheApres } = await supabase
-            .from('fidelite_clientes')
-            .select('*')
-            .eq('pro_id', pro.id)
-            .eq('cliente_id', cId)
-            .maybeSingle()
-
-          if (!ficheApres) {
-            // Créer la fiche
-            const palierUn = fideliteConfig.paliers.find((p: any) => p.position === 1)
-            const insertData: Record<string, unknown> = {
-              pro_id: pro.id,
-              cliente_id: cId,
-              tampons: 1,
-            }
-            if (palierUn) {
-              insertData.recompense_disponible = { type: palierUn.type, valeur: palierUn.valeur }
-            }
-            await supabase.from('fidelite_clientes').insert(insertData)
-            // Si palier 1 atteint proactivement, consommer immédiatement
-            if (palierUn && !recompenseExistante) {
-              const { data: ficheNew } = await supabase
-                .from('fidelite_clientes')
-                .select('id, tampons, cartes_completees')
-                .eq('pro_id', pro.id)
-                .eq('cliente_id', cId)
-                .maybeSingle()
-              if (ficheNew) {
-                const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
-                if (ficheNew.tampons >= fideliteConfig.nb_ronds) {
-                  consumeUpdate.tampons = 0
-                  consumeUpdate.cartes_completees = ficheNew.cartes_completees + 1
-                }
-                await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheNew.id)
-              }
-            }
-          } else {
-            const nouveauTampons = ficheApres.tampons + 1
-            const palierAtteint = [...fideliteConfig.paliers]
-              .sort((a: any, b: any) => b.position - a.position)
-              .find((p: any) => p.position === nouveauTampons)
-
-            const update: Record<string, unknown> = {
-              tampons: nouveauTampons,
-              updated_at: new Date().toISOString(),
-            }
-            if (palierAtteint) {
-              update.recompense_disponible = { type: palierAtteint.type, valeur: palierAtteint.valeur }
-            }
-            await supabase.from('fidelite_clientes').update(update).eq('id', ficheApres.id)
-
-            // Si palier atteint proactivement, consommer immédiatement + reset carte si pleine
-            if (palierAtteint && !recompenseExistante) {
-              const consumeUpdate: Record<string, unknown> = { recompense_disponible: null, updated_at: new Date().toISOString() }
-              if (nouveauTampons >= fideliteConfig.nb_ronds) {
-                consumeUpdate.tampons = 0
-                consumeUpdate.cartes_completees = ficheApres.cartes_completees + 1
-              }
-              await supabase.from('fidelite_clientes').update(consumeUpdate).eq('id', ficheApres.id)
-            }
-          }
+          await fetch('/api/rdv/fidelite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rdv_id: nouveau.id, telephone, recompense_existante: !!recompenseExistante }),
+          })
         } catch (e) {
           console.error('[handleConfirm] Erreur fidélité:', e)
         }
@@ -1876,9 +1765,13 @@ export default function ReservationPage() {
             const res = result.data as { success: boolean; error?: string }
             if (!res.success) {
               console.warn('[handleConfirm] Offre non appliquée:', res.error)
-              // Recalculer le prix sans offre
-              const prixSansOffre = prixTotalBrut > 0 ? prixTotalBrut : null
-              await supabase.from('rendez_vous').update({ prix: prixSansOffre, offre_id: null }).eq('id', nouveau.id)
+              // Recalculer le prix sans offre — guichet serveur (chantier RLS),
+              // dernier UPDATE anonyme direct résiduel sur rendez_vous
+              await fetch('/api/rdv/retirer-offre', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rdv_id: nouveau.id, telephone, prix: prixTotalBrut > 0 ? prixTotalBrut : null }),
+              }).catch(e => console.error('[handleConfirm] retirer-offre:', e))
             }
           }
         } catch (e) {
