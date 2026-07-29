@@ -200,7 +200,8 @@
       "verifCreneauImpossible": "Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.",
       "creneauPris": "Ce créneau vient d'être réservé 😔 Choisis-en un autre.",
       "erreurGlobale": "Une erreur est survenue. Ouvre la console (F12) pour voir le détail."
-    }
+    },
+    "etape": "Étape {{n}}/{{total}} — {{nom}}"
   },
   "confirmation": {
     "chargement": "Chargement...",

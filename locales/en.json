@@ -206,7 +206,8 @@
       "verifCreneauImpossible": "Could not check the slot availability. Try again in a moment.",
       "creneauPris": "This slot was just booked 😔 Pick another one.",
       "erreurGlobale": "Something went wrong. Open the console (F12) for details."
-    }
+    },
+    "etape": "Step {{n}}/{{total}} — {{nom}}"
   },
   "confirmation": {
     "chargement": "Loading...",

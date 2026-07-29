@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { formatPrix, symboleDevise } from '@/lib/devise';
+import { creerTr, joursCourtLoc, localeTag, moisLoc, tr, type Langue } from '@/lib/i18n';
 import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
 
 // ─────────────────────────────────────────────
@@ -66,6 +67,8 @@ type ProInfo = {
   adresse?: string
   is_pro?: boolean
   devise?: string
+  // Langue de la PRO : c'est SA vitrine, pas le navigateur de la cliente qui décide.
+  langue?: Langue
 }
 
 type RdvAVenir = {
@@ -116,7 +119,12 @@ const MOIS = [
 const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 // 5 étapes : Techniques fusionnées en une seule étape accordéon
-const STEP_LABELS = ['Identification', 'Techniques', 'Date', 'Heure', 'Confirmation']
+// Fonction et non constante : trad() n'existe qu'au sein du composant, et le
+// libellé doit suivre la langue de la pro chargée depuis la base.
+const stepLabels = (t: (c: string) => string) => [
+  t('resa.steps.identification'), t('resa.steps.techniques'),
+  t('resa.steps.date'), t('resa.steps.heure'), t('resa.steps.confirmation'),
+]
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -374,7 +382,7 @@ function getTechInfo(pid: string, catalogue: CataloguePrestations): { nom: strin
 }
 
 function OffresSection({
-  offres, offreAppliquee, catalogue, techniquesSelectionnees, onApply, onRemove, devise,
+  offres, offreAppliquee, catalogue, techniquesSelectionnees, onApply, onRemove, devise, langue,
 }: {
   offres: Offre[]
   offreAppliquee: Offre | null
@@ -383,6 +391,7 @@ function OffresSection({
   onApply: (o: Offre) => void
   onRemove: (o: Offre) => void
   devise?: string
+  langue: Langue
 }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? offres : offres.slice(0, 3)
@@ -426,7 +435,7 @@ function OffresSection({
                       color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700,
                       padding: '1px 5px', flexShrink: 0,
                     }}>
-                      {o.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
+                      {o.type === 'prix_fixe' ? tr(langue, 'resa.offres.promo') : tr(langue, 'resa.offres.pack')}
                     </span>
                     <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
                   </div>
@@ -605,6 +614,16 @@ export default function ReservationPage() {
   // Jours du mois affiché n'ayant AUCUN créneau libre pour la durée choisie.
   const [joursComplets, setJoursComplets] = useState<Set<string>>(new Set())
   const [loadingJoursComplets, setLoadingJoursComplets] = useState(false)
+
+  // ── i18n : la langue de la PRO, jamais celle du navigateur ───────────────
+  // Cette page est sa vitrine : elle s'adresse à ses clientes dans SA langue.
+  // Repli français tant que le profil n'est pas chargé, pour ne jamais afficher
+  // de clés brutes pendant le chargement.
+  const langue: Langue = pro?.langue ?? 'fr'
+  const trad = creerTr(langue)
+  const MOIS_LOC = moisLoc(langue)
+  const STEP_LABELS = stepLabels(trad)
+  const JOURS_COURT_LOC = joursCourtLoc(langue)
 
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
@@ -911,7 +930,7 @@ export default function ReservationPage() {
       }
     } catch (err) {
       console.error('[inspirations] Erreur compression:', err)
-      alert("Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.")
+      alert(trad('inspi.erreurAjout'))
     } finally {
       setInspiCompression(false)
     }
@@ -933,7 +952,7 @@ export default function ReservationPage() {
       setInspiDone(rdv.id)
     } catch (err) {
       console.error('[inspirations] Erreur envoi:', err)
-      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+      alert(trad('inspi.erreurEnvoi'))
     } finally {
       setInspiEnvoi(false)
     }
@@ -1015,7 +1034,7 @@ export default function ReservationPage() {
       if (rdv && pro) {
         envoyerPushNotif(
           pro.id,
-          '❌ RDV annulé',
+          trad('push.rdvAnnule.titre'),
           `${clientePrenom} a annulé son RDV du ${formatRdvDate(rdv.date)} à ${formatRdvHeure(rdv.date)}`
         )
       }
@@ -1159,7 +1178,7 @@ export default function ReservationPage() {
     // Push à la pro
     envoyerPushNotif(
       pro.id,
-      '🌸 RDV modifié',
+      trad('push.rdvModifie.titre'),
       `${clientePrenom} a modifié ses prestations du ${dateAffichee} à ${heureAffichee} : ${labels}`
     )
 
@@ -1250,7 +1269,7 @@ export default function ReservationPage() {
       await appliquerModifPresta(rdv, modifSelection, null, null)
     } catch (e) {
       console.error('[confirmerModifPresta] Erreur:', e)
-      alert('Impossible de modifier ce rendez-vous.')
+      alert(trad('resa.alertes.modifImpossible'))
     } finally {
       setModifSaving(false)
     }
@@ -1345,7 +1364,7 @@ export default function ReservationPage() {
       // Push notification
       envoyerPushNotif(
         pro.id,
-        '📅 RDV reprogrammé',
+        trad('push.rdvReprogramme.titre'),
         `${clientePrenom} a reprogrammé son RDV au ${formatDateLong(reprogDate)} à ${reprogHeure}`
       )
 
@@ -1401,7 +1420,7 @@ export default function ReservationPage() {
       scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
-      alert('Impossible de reprogrammer ce rendez-vous.')
+      alert(trad('resa.alertes.reprogImpossible'))
     } finally {
       setReprogSaving(false)
     }
@@ -1658,7 +1677,7 @@ export default function ReservationPage() {
       }
     }
     setCompressionEnCours(false)
-    if (echecs > 0) alert(echecs === 1 ? "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image." : `${echecs} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images.`)
+    if (echecs > 0) alert(echecs === 1 ? trad('inspi.erreurAjoutMultiple.one') : `${echecs} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images.`)
   }
 
   async function handleConfirm() {
@@ -1680,7 +1699,7 @@ export default function ReservationPage() {
         .lte('date', `${date}T23:59:59.999Z`)
         .neq('statut', 'annule')
       if (verifErr) {
-        alert('Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.')
+        alert(trad('resa.alertes.verifCreneauImpossible'))
         return
       }
       const debutMin = timeToMin(heure)
@@ -1981,19 +2000,19 @@ export default function ReservationPage() {
       if (nouvelleCliente) {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouvelle cliente · 📞 À rappeler' : '🌸 Nouvelle cliente !',
+          rappel ? trad('push.nouvelleCliente.titreRappel') : trad('push.nouvelleCliente.titre'),
           `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       } else {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouveau RDV · 📞 À rappeler' : '🌸 Nouveau RDV',
+          rappel ? trad('push.nouveauRdv.titreRappel') : trad('push.nouveauRdv.titre'),
           `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       }
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
-      alert('Une erreur est survenue. Ouvre la console (F12) pour voir le détail.')
+      alert(trad('resa.alertes.erreurGlobale'))
     } finally {
       setSubmitting(false)
     }
@@ -2041,7 +2060,7 @@ export default function ReservationPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
         <div style={{ textAlign: 'center' }}>
           <Sparkles size={48} color={GLAMIA_PINK} style={{ marginBottom: 16 }} />
-          <p style={{ color: PINK, fontWeight: 600, fontSize: 16 }}>Chargement...</p>
+          <p style={{ color: PINK, fontWeight: 600, fontSize: 16 }}>{trad('commun.chargement')}</p>
         </div>
       </div>
     )
@@ -2052,8 +2071,8 @@ export default function ReservationPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#fff' }}>
         <div style={{ textAlign: 'center', maxWidth: 320 }}>
           <Search size={56} color="#9ca3af" style={{ marginBottom: 16 }} />
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Page introuvable</h1>
-          <p style={{ color: '#6b7280', fontSize: 15 }}>Ce lien de réservation n'existe pas ou a été désactivé.</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>{trad('resa.introuvable.titre')}</h1>
+          <p style={{ color: '#6b7280', fontSize: 15 }}>{trad('resa.introuvable.texte')}</p>
         </div>
       </div>
     )
@@ -2111,7 +2130,7 @@ export default function ReservationPage() {
           <div style={{ width: 80, height: 80, borderRadius: 40, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <CheckCircle size={40} color={GLAMIA_PINK} />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>Votre RDV est bien enregistré</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1f2937', marginBottom: 8 }}>{trad('resa.confirmee.titre')}</h1>
 
           {/* Infos générales */}
           <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, textAlign: 'left', marginBottom: 16 }}>
@@ -2147,9 +2166,9 @@ export default function ReservationPage() {
             {/* Fidélité appliquée */}
             {recompenseFidelite && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
-                <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{trad('resa.fidelite')}</span>
                 <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
-                  {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
+                  {recompenseFidelite.type === 'gratuit' ? trad('commun.offert') : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                 </span>
               </div>
             )}
@@ -2164,10 +2183,10 @@ export default function ReservationPage() {
             )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{trad('commun.total')}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'} · {formatDuree(dureeTotal)}</>
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : trad('commun.offert')} · {formatDuree(dureeTotal)}</>
                 ) : (
                   <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
                 )}
@@ -2188,7 +2207,7 @@ export default function ReservationPage() {
               <CheckCircle size={15} color={PINK} />
               {inspirations.length > 1
                 ? `Tes ${inspirations.length} photos d'inspiration ont été transmises`
-                : "Ta photo d'inspiration a été transmise"}
+                : trad('inspi.statutTransmises.one')}
             </p>
           )}
           {inspirationsStatut === 'echec' && (
@@ -2207,12 +2226,12 @@ export default function ReservationPage() {
             </p>
           </div>
 
-          <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>À bientôt !</p>
+          <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>{trad('resa.confirmee.aBientot')}</p>
 
           {/* Logo Glamia + slogan */}
           <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
             <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>L'app des professionnelles de la beauté</p>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{trad('resa.confirmee.slogan')}</p>
           </div>
         </div>
       </div>
@@ -2249,7 +2268,7 @@ export default function ReservationPage() {
               ) : (
                 <>
                   <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro?.prenom}</p>
-                  <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>Réservation en ligne</p>
+                  <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>{trad('resa.header.reservationEnLigne')}</p>
                 </>
               )}
             </div>
@@ -2269,7 +2288,7 @@ export default function ReservationPage() {
             ))}
           </div>
           <p style={{ fontSize: 11, color: PINK, fontWeight: 600, margin: 0 }}>
-            Étape {step}/{STEP_LABELS.length} — {STEP_LABELS[step - 1]}
+            {trad('resa.etape', { n: step, total: STEP_LABELS.length, nom: STEP_LABELS[step - 1] })}
           </p>
         </div>
       </div>
@@ -2287,7 +2306,7 @@ export default function ReservationPage() {
             )}
             {hasSocials && (
               <div>
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>Retrouvez-moi sur les réseaux</p>
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>{trad('resa.reseaux')}</p>
                 <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
                   {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={36} />}
                   {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={36} />}
@@ -2303,15 +2322,15 @@ export default function ReservationPage() {
         ──────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h2 style={S.h2}>Bonjour !</h2>
-            <p style={S.sub}>Entrez votre numéro pour commencer.</p>
+            <h2 style={S.h2}>{trad('resa.s1.bonjour')}</h2>
+            <p style={S.sub}>{trad('resa.s1.entrezNumero')}</p>
 
-            <label style={S.label}>Téléphone</label>
+            <label style={S.label}>{trad('resa.s1.telephone')}</label>
             <input
               type="tel"
               value={telephone}
               onChange={e => { setTelephone(e.target.value); setPhoneStatus('idle') }}
-              placeholder="06 12 34 56 78"
+              placeholder={trad('resa.s1.telPlaceholder')}
               style={S.input}
               onKeyDown={e => e.key === 'Enter' && handleCheckPhone()}
             />
@@ -2327,7 +2346,7 @@ export default function ReservationPage() {
             )}
 
             {phoneStatus === 'checking' && (
-              <button style={{ ...S.btn, opacity: 0.7 }} disabled>Vérification...</button>
+              <button style={{ ...S.btn, opacity: 0.7 }} disabled>{trad('resa.s1.verification')}</button>
             )}
 
             {phoneStatus === 'known' && (
@@ -2336,7 +2355,7 @@ export default function ReservationPage() {
                   <User size={28} color={GLAMIA_PINK} />
                   <div>
                     <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
-                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
+                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{trad('resa.s1.reconnue')}</p>
                   </div>
                 </div>
 
@@ -2362,9 +2381,9 @@ export default function ReservationPage() {
                         −{reductionCliente.valeur}{reductionCliente.type === 'euros' ? ` ${symboleDevise(pro?.devise)}` : ' %'}
                       </strong>
                       {reductionCliente.restants == null
-                        ? ', appliquée automatiquement à tous vos rendez-vous.'
+                        ? trad('resa.s1.reductionTous')
                         : reductionCliente.restants === 1
-                          ? ', appliquée automatiquement à votre prochain rendez-vous.'
+                          ? trad('resa.s1.reductionProchain')
                           : `, appliquée automatiquement à vos ${reductionCliente.restants} prochains rendez-vous.`}
                     </p>
                   </div>
@@ -2378,7 +2397,7 @@ export default function ReservationPage() {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{trad('resa.s1.carteFidelite')}</span>
                       {/* Récompense du prochain RDV : existante ou palier atteint
                           par le prochain passage — même logique que le prix */}
                       {(() => {
@@ -2387,7 +2406,7 @@ export default function ReservationPage() {
                           ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
                           ?? null
                         if (!prochaine) return null
-                        const label = prochaine.type === 'gratuit' ? 'Offert' : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
+                        const label = prochaine.type === 'gratuit' ? trad('commun.offert') : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
                         return (
                           <span style={{
                             background: PINK, color: '#fff', borderRadius: 10,
@@ -2404,7 +2423,7 @@ export default function ReservationPage() {
                         const tampons = fideliteFiche?.tampons ?? 0
                         const estTamponné = pos <= tampons
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? trad('commun.offert') : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
                         return (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
@@ -2430,7 +2449,7 @@ export default function ReservationPage() {
                       const tampons = fideliteFiche?.tampons ?? 0
                       const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
                       if (!prochainPalier) return null
-                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
+                      const label = prochainPalier.type === 'gratuit' ? trad('resa.s1.offertMin') : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
                       return (
                         <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
                           Encore {prochainPalier.position - tampons} RDV avant {label}
@@ -2451,14 +2470,14 @@ export default function ReservationPage() {
                   </p>
                 ) : rdvsAVenir.length > 0 ? (
                   <div style={{ marginBottom: 20 }}>
-                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>Vos rendez-vous à venir</p>
+                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 12 }}>{trad('resa.s1.rdvsAVenir')}</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {rdvsAVenir.map(rdv => (
                         <div key={rdv.id} style={{ ...S.card }}>
                           {/* Confirmation visuelle reprog */}
                           {reprogDone === rdv.id && (
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />RDV reprogrammé !</p>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />{trad('resa.s1.reprogFait')}</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
                                 {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
                               </p>
@@ -2468,7 +2487,7 @@ export default function ReservationPage() {
                           {/* Confirmation visuelle modification des prestations */}
                           {modifDone === rdv.id && (
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
-                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />Prestations modifiées !</p>
+                              <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />{trad('resa.s1.modifFait')}</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
                                 {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — un email de confirmation à jour vous a été envoyé
                               </p>
@@ -2518,8 +2537,8 @@ export default function ReservationPage() {
                           >
                             <Camera size={14} color={PINK} />
                             {(rdv.inspirations?.length ?? 0) >= 3
-                              ? 'Mes inspirations (3/3)'
-                              : 'Ajouter mes inspirations'}
+                              ? trad('inspi.bouton33')
+                              : trad('inspi.bouton')}
                           </button>
 
                           {/* ── Panneau inspirations ── */}
@@ -2532,13 +2551,13 @@ export default function ReservationPage() {
                               {inspiDone === rdv.id ? (
                                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <CheckCircle size={15} color="#059669" />
-                                  Inspirations envoyées ! {pro?.prenom || 'Ta praticienne'} a été prévenue 💅
+                                  Inspirations envoyées ! {pro?.prenom || trad('inspi.taPraticienneMaj')} a été prévenue 💅
                                 </p>
                               ) : (
                                 <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6b7280', lineHeight: 1.4 }}>
                                   {(rdv.inspirations?.length ?? 0) >= 3
-                                    ? 'Tes 3 photos ont bien été transmises 💅'
-                                    : `Montre à ${pro?.prenom || 'ta praticienne'} ce que tu as en tête — elle recevra une notification.`}
+                                    ? trad('inspi.transmises')
+                                    : `Montre à ${pro?.prenom || trad('inspi.taPraticienne')} ce que tu as en tête — elle recevra une notification.`}
                                 </p>
                               )}
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: inspiDone === rdv.id ? 10 : 0 }}>
@@ -2554,12 +2573,12 @@ export default function ReservationPage() {
                                   <div key={`n${i}`} style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
                                     <img
                                       src={src}
-                                      alt="Nouvelle inspiration"
+                                      alt={trad('inspi.altNouvelle')}
                                       style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', border: `1.5px solid ${PINK}`, display: 'block' }}
                                     />
                                     <button
                                       onClick={() => setInspiNouvelles(prev => prev.filter((_, j) => j !== i))}
-                                      aria-label="Retirer cette photo"
+                                      aria-label={trad('inspi.retirerPhoto')}
                                       style={{
                                         position: 'absolute', top: -6, right: -6, width: 20, height: 20,
                                         borderRadius: 10, border: '2px solid #fff', background: '#1f2937',
@@ -2580,7 +2599,7 @@ export default function ReservationPage() {
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
                                       <Camera size={16} color={PINK} />
-                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>Prendre</span>
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{trad('inspi.prendre')}</span>
                                       <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
                                     <label style={{
@@ -2590,7 +2609,7 @@ export default function ReservationPage() {
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
                                       <ImagePlus size={16} color={PINK} />
-                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? 'Un instant…' : 'Importer'}</span>
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? trad('inspi.unInstant') : trad('inspi.importer')}</span>
                                       <input type="file" accept="image/*" multiple onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
                                   </>
@@ -2607,7 +2626,7 @@ export default function ReservationPage() {
                                     opacity: inspiEnvoi ? 0.6 : 1,
                                   }}
                                 >
-                                  {inspiEnvoi ? 'Envoi en cours…' : `Valider ${inspiNouvelles.length > 1 ? `mes ${inspiNouvelles.length} photos` : 'ma photo'}`}
+                                  {inspiEnvoi ? trad('inspi.envoiEnCours') : `Valider ${inspiNouvelles.length > 1 ? `mes ${inspiNouvelles.length} photos` : 'ma photo'}`}
                                 </button>
                               )}
                             </div>
@@ -2635,7 +2654,7 @@ export default function ReservationPage() {
                                 transition: 'all 0.15s',
                               }}
                             >
-                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                              {annulationEnCours === rdv.id ? '...' : trad('resa.s1.annuler')}
                             </button>
                           </div>
 
@@ -2734,10 +2753,10 @@ export default function ReservationPage() {
                                 return (
                                   <div style={{ marginTop: 14 }}>
                                     <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#1f2937', textAlign: 'center' }}>
-                                      {modifSelection.length === 0 ? 'Sélectionnez au moins une prestation' : (
+                                      {modifSelection.length === 0 ? trad('resa.s1.selectionnezUne') : (
                                         <>
                                           {total !== base && <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 6 }}>{formatPrix(base, pro?.devise)}</span>}
-                                          {total > 0 ? formatPrix(total, pro?.devise) : 'Offert'} · {formatDuree(duree)}
+                                          {total > 0 ? formatPrix(total, pro?.devise) : trad('commun.offert')} · {formatDuree(duree)}
                                         </>
                                       )}
                                     </p>
@@ -2749,7 +2768,7 @@ export default function ReservationPage() {
                                         background: PINK, color: '#fff', fontSize: 14, fontWeight: 700,
                                         cursor: 'pointer', opacity: (modifSaving || modifSelection.length === 0) ? 0.5 : 1,
                                       }}>
-                                      {modifSaving ? 'Modification...' : 'Confirmer la modification'}
+                                      {modifSaving ? trad('resa.s1.modification') : trad('resa.s1.confirmerModif')}
                                     </button>
                                   </div>
                                 )
@@ -2769,7 +2788,7 @@ export default function ReservationPage() {
                                 </div>
                               )}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={18} color={GLAMIA_PINK} />Nouvelle date</p>
+                                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><Calendar size={18} color={GLAMIA_PINK} />{trad('resa.s1.nouvelleDate')}</p>
                                 <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>
                                   ✕ Fermer
                                 </button>
@@ -2834,7 +2853,7 @@ export default function ReservationPage() {
                                     <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{formatDateLong(reprogDate)}
                                   </p>
                                   {reprogLoadingSlots ? (
-                                    <p style={{ textAlign: 'center', color: PINK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+                                    <p style={{ textAlign: 'center', color: PINK, fontSize: 14, fontWeight: 600 }}>{trad('commun.chargement')}</p>
                                   ) : reprogSlots.filter(s => s.disponible).length === 0 ? (
                                     <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
                                       Aucun créneau de {formatDuree(rdv.duree)} disponible ce jour.
@@ -2878,7 +2897,7 @@ export default function ReservationPage() {
                                     opacity: reprogSaving ? 0.7 : 1, transition: 'opacity 0.15s',
                                   }}
                                 >
-                                  {reprogSaving ? (modifPendingTechs ? 'Modification...' : 'Reprogrammation...') : `${modifPendingTechs ? 'Confirmer pour le' : 'Reprogrammer au'} ${formatDateLong(reprogDate)} à ${reprogHeure}`}
+                                  {reprogSaving ? (modifPendingTechs ? trad('resa.s1.modification') : trad('resa.s1.reprogrammation')) : `${modifPendingTechs ? 'Confirmer pour le' : 'Reprogrammer au'} ${formatDateLong(reprogDate)} à ${reprogHeure}`}
                                 </button>
                               )}
                             </div>
@@ -2911,18 +2930,18 @@ export default function ReservationPage() {
                   </p>
                   <div style={{ display: 'flex', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <label style={S.label}>Prénom</label>
-                      <input type="text" value={clientePrenom} onChange={e => setClientePrenom(e.target.value)} placeholder="Sophie" style={S.input} autoCapitalize="words" />
+                      <label style={S.label}>{trad('resa.s1.prenom')}</label>
+                      <input type="text" value={clientePrenom} onChange={e => setClientePrenom(e.target.value)} placeholder={trad('resa.s1.prenomPlaceholder')} style={S.input} autoCapitalize="words" />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={S.label}>Nom</label>
-                      <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder="Martin" style={S.input} autoCapitalize="words" />
+                      <label style={S.label}>{trad('resa.s1.nom')}</label>
+                      <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder={trad('resa.s1.nomPlaceholder')} style={S.input} autoCapitalize="words" />
                     </div>
                   </div>
                   <div style={{ marginTop: 4 }}>
-                    <label style={S.label}>Email</label>
-                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="votre@email.com" style={S.input} autoCapitalize="none" />
-                    <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Pour recevoir votre confirmation de RDV</p>
+                    <label style={S.label}>{trad('resa.s1.email')}</label>
+                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder={trad('resa.s1.emailPlaceholder')} style={S.input} autoCapitalize="none" />
+                    <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>{trad('resa.s1.emailAide')}</p>
                   </div>
                 </div>
 
@@ -2934,13 +2953,13 @@ export default function ReservationPage() {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{trad('resa.s1.carteFidelite')}</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                       {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
                         const pos = i + 1
                         const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? trad('commun.offert') : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
                         return (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                             <div style={{
@@ -2989,6 +3008,7 @@ export default function ReservationPage() {
             {/* Offres en cours */}
             {offresEligibles.length > 0 && (
               <OffresSection
+                langue={langue}
                 offres={offresEligibles}
                 offreAppliquee={offreAppliquee}
                 catalogue={catalogue}
@@ -3037,8 +3057,8 @@ export default function ReservationPage() {
               />
             )}
 
-            <h2 style={S.h2}>Quelles prestations ?</h2>
-            <p style={S.sub}>Sélectionnez une ou plusieurs techniques.</p>
+            <h2 style={S.h2}>{trad('resa.s2.titre')}</h2>
+            <p style={S.sub}>{trad('resa.s2.sousTitre')}</p>
 
             {specialitesActives.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0', color: '#9ca3af' }}>
@@ -3129,14 +3149,14 @@ export default function ReservationPage() {
                                             </>
                                           )
                                         }
-                                        return <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix, pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : 'Gratuit')} · {formatDuree(t.duree)}</>
+                                        return <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix, pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : trad('resa.s2.gratuit'))} · {formatDuree(t.duree)}</>
                                       })()}
                                     </p>
                                     {/* Pastille détails — affordance explicite, tap séparé de la sélection */}
                                     {aDetails && (
                                       <span
                                         onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
-                                        aria-label={depliee ? 'Masquer les détails' : 'Voir les détails'}
+                                        aria-label={depliee ? trad('resa.s2.masquerDetails') : trad('resa.s2.voirDetails')}
                                         style={{
                                           display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
                                           padding: photosTech.length > 0 ? '3px 10px 3px 4px' : '3px 10px',
@@ -3236,7 +3256,7 @@ export default function ReservationPage() {
         {step === 3 && (
           <div>
             <BackBtn onClick={() => setStep(2)} />
-            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={20} color={GLAMIA_PINK} />Choisissez une date</h2>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={20} color={GLAMIA_PINK} />{trad('resa.s3.titre')}</h2>
             {/* La durée est rappelée ici en permanence : c'est elle qui décide
                 quels jours sont complets. Sans ce rappel, une cliente qui
                 revient changer sa prestation verrait le calendrier se
@@ -3252,7 +3272,7 @@ export default function ReservationPage() {
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
                 border: `1.5px solid ${PINK}`, textAlign: 'center',
               }}>
-                <p style={{ fontSize: 14, color: PINK, fontWeight: 600, margin: 0 }}>Recherche du prochain créneau...</p>
+                <p style={{ fontSize: 14, color: PINK, fontWeight: 600, margin: 0 }}>{trad('resa.s3.rechercheCreneau')}</p>
               </div>
             )}
             {aucunCreneauProche && !loadingPremierCreneau && (
@@ -3344,11 +3364,11 @@ export default function ReservationPage() {
             <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: PINK }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Sélectionné</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{trad('resa.s3.selectionne')}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#E3F2FD' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Jour off</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{trad('resa.s3.jourOff')}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
@@ -3356,7 +3376,7 @@ export default function ReservationPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Passé</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{trad('resa.s3.passe')}</span>
               </div>
             </div>
           </div>
@@ -3368,7 +3388,7 @@ export default function ReservationPage() {
         {step === 4 && (
           <div>
             <BackBtn onClick={() => setStep(3)} />
-            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color={GLAMIA_PINK} />Choisissez une heure</h2>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color={GLAMIA_PINK} />{trad('resa.s4.titre')}</h2>
             <p style={{ ...S.sub, textTransform: 'capitalize' }}>{formatDateLong(date)}</p>
             <p style={{ fontSize: 13, color: '#9ca3af', marginTop: -16, marginBottom: 20 }}>
               Durée totale : {formatDuree(dureeTotal)}
@@ -3376,7 +3396,7 @@ export default function ReservationPage() {
 
             {loadingSlots ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <p style={{ color: PINK, fontWeight: 600 }}>Chargement des créneaux...</p>
+                <p style={{ color: PINK, fontWeight: 600 }}>{trad('resa.s4.chargementCreneaux')}</p>
               </div>
             ) : slots.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
@@ -3420,22 +3440,22 @@ export default function ReservationPage() {
         {step === 5 && (
           <div ref={step5Ref}>
             <BackBtn onClick={() => setStep(4)} />
-            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle size={20} color={GLAMIA_PINK} />Confirmation</h2>
-            <p style={S.sub}>Vérifiez les détails de votre rendez-vous.</p>
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle size={20} color={GLAMIA_PINK} />{trad('resa.steps.confirmation')}</h2>
+            <p style={S.sub}>{trad('resa.s5.sousTitre')}</p>
 
             <div style={{ ...S.card, marginBottom: 16 }}>
-              <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 16 }}>Récapitulatif</p>
+              <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 15, marginBottom: 16 }}>{trad('resa.s5.recap')}</p>
 
               {/* Infos principales */}
               {[
-                { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
-                { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
-                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
+                { icon: <User size={20} color={GLAMIA_PINK} />, label: trad('resa.s5.cliente'),  value: `${clientePrenom} ${clienteNom}` },
+                { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: trad('resa.steps.date'),     value: formatDateLong(date) },
+                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: trad('resa.steps.heure'),    value: `${heure} · ${formatDuree(dureeTotal)}` },
                 ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
-                  label: 'Total',
+                  label: trad('commun.total'),
                   value: prixFinal !== prixTotal
-                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</span></>
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : trad('commun.offert')}</span></>
                     : offreAppliquee && prixTotalBrut !== prixTotal
                       ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
                       : formatPrix(prixTotal, pro?.devise)
@@ -3458,7 +3478,7 @@ export default function ReservationPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <span style={{ width: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles size={20} color={GLAMIA_PINK} /></span>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>Prestations</p>
+                    <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>{trad('resa.prestations')}</p>
                     {techniquesSelectionnees.map((t, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -3474,7 +3494,7 @@ export default function ReservationPage() {
                     {offreAppliquee && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <span style={{ background: offreAppliquee.type === 'prix_fixe' ? PINK : '#7B1FA2', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>
-                          {offreAppliquee.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
+                          {offreAppliquee.type === 'prix_fixe' ? trad('resa.offres.promo') : trad('resa.offres.pack')}
                         </span>
                         <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{offreAppliquee.nom}</span>
                       </div>
@@ -3482,18 +3502,18 @@ export default function ReservationPage() {
                     {/* Fidélité appliquée */}
                     {recompenseFidelite && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
-                        <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>FIDÉLITÉ</span>
+                        <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{trad('resa.fidelite')}</span>
                         <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
-                          {recompenseFidelite.type === 'gratuit' ? 'Offert' : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
+                          {recompenseFidelite.type === 'gratuit' ? trad('commun.offert') : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                         </span>
                       </div>
                     )}
                     {/* Ligne total */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Total</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{trad('commun.total')}</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                         {prixFinal !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : trad('commun.offert')} · {formatDuree(dureeTotal)}</>
                         ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
                           <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeTotal)}</>
                         ) : (
@@ -3519,10 +3539,10 @@ export default function ReservationPage() {
                 }}>
                   <Sparkles size={15} color="#fff" />
                 </span>
-                <label style={{ ...S.label, marginBottom: 0 }}>Tes inspirations 💅</label>
+                <label style={{ ...S.label, marginBottom: 0 }}>{trad('inspi.titre')}</label>
               </div>
               <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
-                Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
+                Montre à {pro?.prenom || trad('inspi.taPraticienne')} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
                 Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.
               </p>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -3535,7 +3555,7 @@ export default function ReservationPage() {
                   />
                   <button
                     onClick={() => setInspirations(prev => prev.filter((_, j) => j !== i))}
-                    aria-label="Supprimer cette photo"
+                    aria-label={trad('inspi.supprimerPhoto')}
                     style={{
                       position: 'absolute', top: -7, right: -7, width: 22, height: 22,
                       borderRadius: 11, border: '2px solid #fff', background: '#1f2937',
@@ -3558,7 +3578,7 @@ export default function ReservationPage() {
                   }}>
                     <Camera size={20} color={PINK} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Prendre'}
+                      {compressionEnCours ? trad('inspi.unInstant') : trad('inspi.prendre')}
                     </span>
                     <input
                       type="file"
@@ -3578,7 +3598,7 @@ export default function ReservationPage() {
                   }}>
                     <ImagePlus size={20} color={PINK} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Importer'}
+                      {compressionEnCours ? trad('inspi.unInstant') : trad('inspi.importer')}
                     </span>
                     <input
                       type="file"
@@ -3594,11 +3614,11 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            <label style={S.label}>Commentaire (optionnel)</label>
+            <label style={S.label}>{trad('resa.s5.commentaire')}</label>
             <textarea
               value={commentaire}
               onChange={e => setCommentaire(e.target.value)}
-              placeholder="Informations supplémentaires pour votre praticienne..."
+              placeholder={trad('resa.s5.commentairePlaceholder')}
               rows={3}
               style={{ ...S.input, resize: 'none', marginBottom: 16 }}
             />
@@ -3628,7 +3648,7 @@ export default function ReservationPage() {
               disabled={submitting}
               style={{ ...S.btn, opacity: submitting ? 0.7 : 1, boxShadow: `0 4px 20px ${PINK}55` }}
             >
-              {submitting ? 'Enregistrement...' : 'Confirmer ma réservation'}
+              {submitting ? trad('resa.s5.enregistrement') : trad('resa.s5.confirmerResa')}
             </button>
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
@@ -3676,7 +3696,7 @@ export default function ReservationPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</>
+                  <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : trad('commun.offert')}</>
                 ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}
               </span>
               <button
@@ -3742,7 +3762,7 @@ export default function ReservationPage() {
               >
                 <img
                   src={url}
-                  alt="Photo de la prestation"
+                  alt={trad('resa.s2.altPhotoPresta')}
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
                 />
               </div>
@@ -3763,7 +3783,7 @@ export default function ReservationPage() {
               </div>
             )}
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, margin: 0 }}>
-              {photoOverlay.photos.length > 1 ? 'Glisse pour défiler · touche pour fermer' : 'Touche pour fermer'}
+              {photoOverlay.photos.length > 1 ? trad('inspi.carrouselHint') : trad('inspi.fermerHint')}
             </p>
           </div>
         </div>
@@ -3831,7 +3851,7 @@ function CalendarDay({
       disabled={isDisabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={isOff ? 'Jour de repos' : undefined}
+      title={isOff ? tr('fr', 'resa.s3.jourRepos') : undefined}
       style={{
         aspectRatio: '1', borderRadius: '50%', border: 'none',
         background: bg, color, fontWeight: 500, fontSize: 14,
