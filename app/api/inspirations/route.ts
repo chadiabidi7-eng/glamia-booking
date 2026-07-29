@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { tr, type Langue } from '@/lib/i18n'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -17,12 +18,17 @@ function normalizePhone(tel: string): string {
   return n
 }
 
-// « mercredi 15 juillet à 14:30 » (les dates RDV sont stockées en heure murale, lues en UTC)
-function formatRdvFr(iso: string): string {
+// Date et heure du RDV dans la langue de la pro — « mercredi 15 juillet » / « Wednesday 15 July »
+// + « 14:30 » / « 2:30 PM » (les dates RDV sont stockées en heure murale, lues en UTC)
+function dateHeureRdv(iso: string, langue: Langue): { date: string; heure: string } {
   const d = new Date(iso)
-  const jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
-  const heure = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
-  return `${jour} à ${heure}`
+  const date = d.toLocaleDateString(langue === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+  const h = d.getUTCHours()
+  const mn = String(d.getUTCMinutes()).padStart(2, '0')
+  const heure = langue === 'en'
+    ? `${h % 12 || 12}:${mn} ${h < 12 ? 'AM' : 'PM'}`
+    : `${String(h).padStart(2, '0')}:${mn}`
+  return { date, heure }
 }
 
 // POST /api/inspirations — Photos d'inspiration de la cliente pour un RDV
@@ -162,18 +168,21 @@ export async function POST(req: NextRequest) {
   if (parToken || parTelephone) {
     try {
       const [{ data: pro }, { data: cli }] = await Promise.all([
-        supabaseAdmin.from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle(),
+        supabaseAdmin.from('profiles').select('push_token, langue').eq('id', rdv.pro_id).maybeSingle(),
         supabaseAdmin.from('clientes').select('prenom, nom').eq('id', rdv.cliente_id).maybeSingle(),
       ])
       if (pro?.push_token) {
-        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || 'Ta cliente'
+        // Push dans la langue de la PRO (même logique que les mails)
+        const langue: Langue = pro.langue === 'en' ? 'en' : 'fr'
+        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || tr(langue, 'inspi.taCliente')
+        const { date, heure } = dateHeureRdv(rdv.date, langue)
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: pro.push_token,
-            title: 'Nouvelles inspirations 💅',
-            body: `${nomCliente} a ajouté ${urls.length > 1 ? `${urls.length} photos` : 'une photo'} d'inspiration pour son RDV du ${formatRdvFr(rdv.date)}.`,
+            title: tr(langue, 'inspi.pushTitre'),
+            body: tr(langue, 'inspi.pushCorps', { nom: nomCliente, count: urls.length, date, heure }),
           }),
         })
       }

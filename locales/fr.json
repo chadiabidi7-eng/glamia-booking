@@ -1,0 +1,340 @@
+{
+  "commun": {
+    "chargement": "Chargement...",
+    "continuer": "Continuer →",
+    "retour": "← Retour",
+    "fermer": "Fermer",
+    "offert": "Offert",
+    "total": "Total"
+  },
+  "meta": {
+    "description": "Réservez votre rendez-vous beauté en ligne"
+  },
+  "calendrier": {
+    "mois": [
+      "Janvier",
+      "Février",
+      "Mars",
+      "Avril",
+      "Mai",
+      "Juin",
+      "Juillet",
+      "Août",
+      "Septembre",
+      "Octobre",
+      "Novembre",
+      "Décembre"
+    ],
+    "moisMin": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ],
+    "joursCourt": [
+      "Lun",
+      "Mar",
+      "Mer",
+      "Jeu",
+      "Ven",
+      "Sam",
+      "Dim"
+    ],
+    "joursLongs": [
+      "dimanche",
+      "lundi",
+      "mardi",
+      "mercredi",
+      "jeudi",
+      "vendredi",
+      "samedi"
+    ]
+  },
+  "resa": {
+    "steps": {
+      "identification": "Identification",
+      "techniques": "Techniques",
+      "date": "Date",
+      "heure": "Heure",
+      "confirmation": "Confirmation"
+    },
+    "header": {
+      "reservationEnLigne": "Réservation en ligne",
+      "etape": "Étape {{step}}/{{total}} — {{label}}"
+    },
+    "introuvable": {
+      "titre": "Page introuvable",
+      "texte": "Ce lien de réservation n'existe pas ou a été désactivé."
+    },
+    "bloquee": {
+      "titre": "La prise de rendez-vous en ligne est indisponible pour le moment.",
+      "contactAvant": "Contactez ",
+      "contactApres": " sur ses réseaux sociaux."
+    },
+    "confirmee": {
+      "titre": "Votre RDV est bien enregistré",
+      "noteEmail": "Vous recevrez un email de confirmation 24h avant votre rendez-vous pour confirmer votre présence.",
+      "noteSpams": "Si vous ne recevez pas l'email, pensez à vérifier vos spams.",
+      "aBientot": "À bientôt !",
+      "slogan": "L'app des professionnelles de la beauté"
+    },
+    "prestations": "Prestations",
+    "aPartirDe": "A partir de {{prix}}",
+    "fidelite": "FIDÉLITÉ",
+    "reseaux": "Retrouvez-moi sur les réseaux",
+    "s1": {
+      "bonjour": "Bonjour !",
+      "entrezNumero": "Entrez votre numéro pour commencer.",
+      "telephone": "Téléphone",
+      "telPlaceholder": "06 12 34 56 78",
+      "verification": "Vérification...",
+      "bonjourPrenom": "Bonjour {{prenom}} !",
+      "reconnue": "Vous êtes bien reconnue.",
+      "reductionIntro": " vous fait bénéficier d'une réduction personnelle de ",
+      "reductionTous": ", appliquée automatiquement à tous vos rendez-vous.",
+      "reductionProchain": ", appliquée automatiquement à votre prochain rendez-vous.",
+      "reductionProchains": ", appliquée automatiquement à vos {{count}} prochains rendez-vous.",
+      "carteFidelite": "Carte de fidélité",
+      "auProchainRdv": "{{label}} au prochain RDV",
+      "offertMin": "offert",
+      "encoreAvant": "Encore {{count}} RDV avant {{label}}",
+      "cartesCompletees": {
+        "one": "{{count}} carte complétée",
+        "other": "{{count}} cartes complétées"
+      },
+      "chargementRdvs": "Chargement de vos rendez-vous...",
+      "rdvsAVenir": "Vos rendez-vous à venir",
+      "reprogFait": "RDV reprogrammé !",
+      "modifFait": "Prestations modifiées !",
+      "modifEmail": " — un email de confirmation à jour vous a été envoyé",
+      "modifierPrestations": "Modifier les prestations",
+      "reprogrammer": "Reprogrammer",
+      "annuler": "Annuler",
+      "vosPrestations": "Vos prestations",
+      "fermer": "✕ Fermer",
+      "selectionnezUne": "Sélectionnez au moins une prestation",
+      "modification": "Modification...",
+      "confirmerModif": "Confirmer la modification",
+      "dureePlusLongue": "Vos nouvelles prestations durent plus longtemps ({{duree}}) et ne rentrent plus dans votre créneau actuel. Choisissez un nouvel horaire :",
+      "nouvelleDate": "Nouvelle date",
+      "aucunCreneauDuree": "Aucun créneau de {{duree}} disponible ce jour.",
+      "reprogrammation": "Reprogrammation...",
+      "confirmerPourLe": "Confirmer pour le {{date}} à {{heure}}",
+      "reprogrammerAu": "Reprogrammer au {{date}} à {{heure}}",
+      "aucunRdv": "Aucun rendez-vous à venir.",
+      "nouveauRdv": "+ Prendre un nouveau rendez-vous",
+      "premiereVisite": "Première visite ? Enchanté(e) !",
+      "prenom": "Prénom",
+      "prenomPlaceholder": "Sophie",
+      "nom": "Nom",
+      "nomPlaceholder": "Martin",
+      "email": "Email",
+      "emailPlaceholder": "votre@email.com",
+      "emailAide": "Pour recevoir votre confirmation de RDV",
+      "cumulezTampons": "Cumulez des tampons à chaque RDV et profitez de réductions !",
+      "confirmAnnulation": "Annuler votre RDV du {{date}} à {{heure}} ({{prestation}}) ?"
+    },
+    "s2": {
+      "titre": "Quelles prestations ?",
+      "sousTitre": "Sélectionnez une ou plusieurs techniques.",
+      "aucunePrestation": "Aucune prestation disponible pour le moment.",
+      "gratuit": "Gratuit",
+      "enSavoirPlus": "En savoir plus",
+      "voirDetails": "Voir les détails",
+      "masquerDetails": "Masquer les détails",
+      "photoN": "photo {{n}}",
+      "altPhotoPresta": "Photo de la prestation"
+    },
+    "offres": {
+      "enCours": "Offres en cours",
+      "promo": "PROMO",
+      "pack": "PACK",
+      "minAuTotal": "{{duree}} min au total",
+      "voirAutres": "Voir les {{count}} autres offres",
+      "voirMoins": "Voir moins"
+    },
+    "s3": {
+      "titre": "Choisissez une date",
+      "sousTitre": "Sélectionnez un jour disponible.",
+      "rechercheCreneau": "Recherche du prochain créneau...",
+      "prochainCreneau": "Prochain créneau disponible",
+      "prendreCeRdv": "Prendre ce RDV →",
+      "selectionne": "Sélectionné",
+      "jourOff": "Jour off",
+      "passe": "Passé",
+      "jourRepos": "Jour de repos"
+    },
+    "s4": {
+      "titre": "Choisissez une heure",
+      "dureeTotale": "Durée totale : {{duree}}",
+      "chargementCreneaux": "Chargement des créneaux...",
+      "autreDate": "← Choisir une autre date"
+    },
+    "s5": {
+      "titre": "Confirmation",
+      "sousTitre": "Vérifiez les détails de votre rendez-vous.",
+      "recap": "Récapitulatif",
+      "cliente": "Cliente",
+      "date": "Date",
+      "heure": "Heure",
+      "commentaire": "Commentaire (optionnel)",
+      "commentairePlaceholder": "Informations supplémentaires pour votre praticienne...",
+      "rappel": "Souhaitez-vous être rappelée avant votre rendez-vous ?",
+      "enregistrement": "Enregistrement...",
+      "confirmerResa": "Confirmer ma réservation",
+      "rgpd": "En confirmant, vous acceptez que vos données soient utilisées uniquement dans le cadre de votre rendez-vous.",
+      "politique": "Politique de confidentialité"
+    },
+    "alertes": {
+      "annulationImpossible": "Impossible d'annuler ce rendez-vous.",
+      "modifImpossible": "Impossible de modifier ce rendez-vous.",
+      "reprogImpossible": "Impossible de reprogrammer ce rendez-vous.",
+      "verifCreneauImpossible": "Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.",
+      "creneauPris": "Ce créneau vient d'être réservé 😔 Choisis-en un autre.",
+      "erreurGlobale": "Une erreur est survenue. Ouvre la console (F12) pour voir le détail."
+    }
+  },
+  "confirmation": {
+    "chargement": "Chargement...",
+    "lienExpire": {
+      "titre": "Lien expiré",
+      "ligne1": "Ce lien de confirmation n'est plus valide.",
+      "ligne2": "Contactez votre professionnelle pour un nouveau lien."
+    },
+    "dejaConfirme": {
+      "titre": "RDV déjà confirmé",
+      "avant": "Votre rendez-vous chez ",
+      "apres": " est déjà confirmé."
+    },
+    "dejaAnnule": {
+      "titre": "RDV annulé",
+      "texte": "Ce rendez-vous a été annulé."
+    },
+    "votreRdv": "Votre rendez-vous",
+    "dateAHeure": "{{date}} à {{heure}}",
+    "confirmer": "Confirmer mon RDV",
+    "confirmationEnCours": "Confirmation...",
+    "annuler": "Annuler mon RDV",
+    "annulationEnCours": "Annulation...",
+    "decaler": "Décaler mon RDV",
+    "nouvelleDate": "Choisissez une nouvelle date",
+    "chargementCreneaux": "Chargement des créneaux...",
+    "aucunCreneau": "Aucun créneau disponible ce jour.",
+    "decalageEnCours": "Décalage en cours...",
+    "decalerAu": "Décaler au {{date}} à {{heure}}",
+    "confirme": {
+      "titre": "RDV confirmé !",
+      "avant": "Votre rendez-vous chez ",
+      "apres": " est confirmé."
+    },
+    "fermerPage": "Vous pouvez fermer cette page.",
+    "annule": {
+      "titre": "RDV annulé",
+      "texte": "Votre rendez-vous a bien été annulé."
+    },
+    "decale": {
+      "titre": "RDV décalé !",
+      "texte": "Votre rendez-vous a bien été décalé.",
+      "nouvelEmail": "Vous recevrez un nouvel email de confirmation."
+    },
+    "erreur": {
+      "titre": "Erreur",
+      "texte": "Une erreur est survenue. Veuillez réessayer ou contacter votre professionnelle."
+    },
+    "instructions": "Instructions pour votre RDV"
+  },
+  "push": {
+    "rdvAnnule": {
+      "titre": "❌ RDV annulé",
+      "corps": "{{prenom}} a annulé son RDV du {{date}} à {{heure}}"
+    },
+    "rdvModifie": {
+      "titre": "🌸 RDV modifié",
+      "corps": "{{prenom}} a modifié ses prestations du {{date}} à {{heure}} : {{prestations}}"
+    },
+    "rdvReprogramme": {
+      "titre": "📅 RDV reprogrammé",
+      "corps": "{{prenom}} a reprogrammé son RDV au {{date}} à {{heure}}"
+    },
+    "rdvDecale": {
+      "titre": "📅 RDV décalé",
+      "corps": "{{prenom}} a décalé son RDV du {{ancienneDate}} au {{nouvelleDate}} à {{heure}}"
+    },
+    "rdvConfirme": {
+      "titre": "✅ RDV confirmé",
+      "corps": "{{prenom}} a confirmé son RDV du {{date}} à {{heure}}"
+    },
+    "mentionRappel": "\n📞 {{prenom}} souhaite être rappelée !",
+    "nouvelleCliente": {
+      "titre": "🌸 Nouvelle cliente !",
+      "titreRappel": "🌸 Nouvelle cliente · 📞 À rappeler",
+      "corps": "{{prenom}} {{nom}} a pris RDV pour {{prestations}} le {{date}} à {{heure}}{{mention}}"
+    },
+    "nouveauRdv": {
+      "titre": "🌸 Nouveau RDV",
+      "titreRappel": "🌸 Nouveau RDV · 📞 À rappeler",
+      "corps": "{{prenom}} a pris RDV pour {{prestations}} le {{date}} à {{heure}}{{mention}}"
+    },
+    "uneCliente": "Une cliente",
+    "uneClienteMin": "une cliente"
+  },
+  "inspi": {
+    "titre": "Tes inspirations 💅",
+    "intro": "Montre à {{prenom}} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel). Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.",
+    "confIntro": {
+      "one": "Montre ce que tu as en tête — ajoute jusqu'à 1 photo (optionnel).",
+      "other": "Montre ce que tu as en tête — ajoute jusqu'à {{count}} photos (optionnel)."
+    },
+    "introCourte": "Montre à {{prenom}} ce que tu as en tête — elle recevra une notification.",
+    "taPraticienne": "ta praticienne",
+    "taPraticienneMaj": "Ta praticienne",
+    "taCliente": "Ta cliente",
+    "alt": "Inspiration {{n}}",
+    "altNouvelle": "Nouvelle inspiration",
+    "supprimerPhoto": "Supprimer cette photo",
+    "retirerPhoto": "Retirer cette photo",
+    "unInstant": "Un instant…",
+    "envoi": "Envoi…",
+    "envoiEnCours": "Envoi en cours…",
+    "prendre": "Prendre",
+    "importer": "Importer",
+    "max3": {
+      "one": "3 photos maximum : seule la première a été gardée.",
+      "other": "3 photos maximum : seules les {{count}} premières ont été gardées."
+    },
+    "erreurAjout": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "erreurAjoutMultiple": {
+      "one": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+      "other": "{{count}} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images."
+    },
+    "erreurEnvoi": "Tes photos n'ont pas pu être envoyées. Réessaie.",
+    "bouton": "Ajouter mes inspirations",
+    "bouton33": "Mes inspirations (3/3)",
+    "envoyees": "Inspirations envoyées ! {{prenom}} a été prévenue 💅",
+    "transmises": "Tes 3 photos ont bien été transmises 💅",
+    "valider": {
+      "one": "Valider ma photo",
+      "other": "Valider mes {{count}} photos"
+    },
+    "statutTransmises": {
+      "one": "Ta photo d'inspiration a été transmise",
+      "other": "Tes {{count}} photos d'inspiration ont été transmises"
+    },
+    "statutEchec": "Tes photos d'inspiration n'ont pas pu être envoyées.",
+    "carrouselHint": "Glisse pour défiler · touche pour fermer",
+    "fermerHint": "Touche pour fermer",
+    "pushTitre": "Nouvelles inspirations 💅",
+    "pushCorps": {
+      "one": "{{nom}} a ajouté une photo d'inspiration pour son RDV du {{date}} à {{heure}}.",
+      "other": "{{nom}} a ajouté {{count}} photos d'inspiration pour son RDV du {{date}} à {{heure}}."
+    }
+  }
+}
