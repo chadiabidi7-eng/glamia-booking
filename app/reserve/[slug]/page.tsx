@@ -91,6 +91,11 @@ type Slot = { heure: string; disponible: boolean }
 const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
 
+// Profondeur de la recherche du prochain créneau libre, en jours. À 30, une
+// pro complète jusqu'à début septembre ne renvoyait rien et la carte
+// disparaissait sans explication.
+const HORIZON_PREMIER_CRENEAU = 90
+
 const DEFAULT_HORAIRES: HorairesHebdo = {
   0: { actif: false, debut: '09:00', fin: '18:00' },
   1: { actif: false, debut: '09:00', fin: '18:00' },
@@ -596,6 +601,10 @@ export default function ReservationPage() {
   // ── Premier créneau disponible ─────────────
   const [premierCreneau, setPremierCreneau] = useState<{ date: string; heure: string } | null>(null)
   const [loadingPremierCreneau, setLoadingPremierCreneau] = useState(false)
+  const [aucunCreneauProche, setAucunCreneauProche] = useState(false)
+  // Jours du mois affiché n'ayant AUCUN créneau libre pour la durée choisie.
+  const [joursComplets, setJoursComplets] = useState<Set<string>>(new Set())
+  const [loadingJoursComplets, setLoadingJoursComplets] = useState(false)
 
   // ── Totaux calculés (toutes spécialités) ─────
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
@@ -1491,15 +1500,91 @@ export default function ReservationPage() {
     if (step === 3 && pro && dureeTotal > 0) findPremierCreneau()
   }, [step, pro, dureeTotal])
 
+  // ── Jours complets du mois affiché ────────────────────────────────────────
+  // Le calendrier ne connaissait que « passé » et « jour off » : un jour plein
+  // restait blanc et cliquable, et la cliente arrivait sur une liste de
+  // créneaux vide. On charge les RDV du mois en une requête, puis on rejoue
+  // localement le MÊME generateSlots que l'écran des heures — deux logiques
+  // séparées finiraient tôt ou tard par se contredire.
+  //
+  // Le résultat dépend de la durée choisie : un jour peut être complet pour
+  // une pose de 2 h et libre pour une retouche de 15 min. C'est voulu, et
+  // c'est ce que la ligne d'explication sous le titre annonce à la cliente.
+  useEffect(() => {
+    if (step !== 3 || !pro || dureeTotal === 0) return
+    let annule = false
+
+    ;(async () => {
+      setLoadingJoursComplets(true)
+      try {
+        const nbJours = getDaysInMonth(calYear, calMonth)
+        const debut = buildDateStr(calYear, calMonth, 1)
+        const fin = buildDateStr(calYear, calMonth, nbJours)
+
+        const { data: rdvs, error } = await supabase
+          .from('rendez_vous')
+          .select('date, duree, statut')
+          .eq('pro_id', pro.id)
+          .gte('date', `${debut}T00:00:00.000Z`)
+          .lte('date', `${fin}T23:59:59.999Z`)
+          .neq('statut', 'annule')
+
+        // Lecture impossible : on ne marque RIEN comme complet. Griser à tort
+        // fermerait la porte à des clientes qui pouvaient réserver.
+        if (error || annule) return
+
+        const parJour: Record<string, { heure: string; duree: number }[]> = {}
+        for (const r of rdvs ?? []) {
+          const d = new Date(r.date)
+          const cle = buildDateStr(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+          ;(parJour[cle] ??= []).push({
+            heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+            duree: r.duree,
+          })
+        }
+
+        const complets = new Set<string>()
+        const maintenant = new Date()
+        const debutDuJour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate())
+        for (let jour = 1; jour <= nbJours; jour++) {
+          const dateStr = buildDateStr(calYear, calMonth, jour)
+          // Les jours off et passés ont déjà leur propre état : les marquer
+          // « complet » en plus brouillerait la légende.
+          if (new Date(calYear, calMonth, jour) < debutDuJour) continue
+          if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
+          if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+
+          const dispo = generateSlots(
+            dateStr, dureeTotal, pro.horaires, parJour[dateStr] ?? [],
+            pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable,
+          ).some(s => s.disponible)
+          if (!dispo) complets.add(dateStr)
+        }
+        if (!annule) setJoursComplets(complets)
+      } catch (e) {
+        console.error('[joursComplets]', e)
+      } finally {
+        if (!annule) setLoadingJoursComplets(false)
+      }
+    })()
+
+    return () => { annule = true }
+  }, [step, pro, dureeTotal, calYear, calMonth, rdvVersion])
+
   async function findPremierCreneau() {
     if (!pro || dureeTotal === 0) return
     setLoadingPremierCreneau(true)
     setPremierCreneau(null)
+    setAucunCreneauProche(false)
 
     try {
       const now = new Date()
       const maxDate = new Date(now)
-      maxDate.setDate(maxDate.getDate() + 30)
+      // 90 jours et non 30 : une pro complète jusqu'à début septembre n'avait
+      // AUCUN créneau dans l'ancienne fenêtre, et la carte disparaissait sans
+      // un mot — alors que c'est précisément chez les pros très demandées que
+      // « prendre le prochain créneau » rend le plus service.
+      maxDate.setDate(maxDate.getDate() + HORIZON_PREMIER_CRENEAU)
 
       const fromStr = buildDateStr(now.getFullYear(), now.getMonth(), now.getDate())
       const toStr = buildDateStr(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
@@ -1523,7 +1608,8 @@ export default function ReservationPage() {
         })
       }
 
-      for (let i = 0; i <= 30; i++) {
+      let trouve = false
+      for (let i = 0; i <= HORIZON_PREMIER_CRENEAU; i++) {
         const d = new Date(now)
         d.setDate(d.getDate() + i)
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
@@ -1533,13 +1619,15 @@ export default function ReservationPage() {
 
         const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [], pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable)
         const available = daySlots.find(s => s.disponible)
-        console.log('[firstAvailable] now:', new Date().toISOString(), 'day:', dateStr, 'slots dispo:', daySlots.filter(s => s.disponible).map(s => s.heure), 'candidate:', available?.heure ?? 'none')
 
         if (available) {
           setPremierCreneau({ date: dateStr, heure: available.heure })
+          trouve = true
           break
         }
       }
+      // Rien trouvé : on le DIT, au lieu de faire disparaître la carte.
+      setAucunCreneauProche(!trouve)
     } catch (e) {
       console.error('[findPremierCreneau] Erreur:', e)
     } finally {
@@ -3149,7 +3237,14 @@ export default function ReservationPage() {
           <div>
             <BackBtn onClick={() => setStep(2)} />
             <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={20} color={GLAMIA_PINK} />Choisissez une date</h2>
-            <p style={S.sub}>Sélectionnez un jour disponible.</p>
+            {/* La durée est rappelée ici en permanence : c'est elle qui décide
+                quels jours sont complets. Sans ce rappel, une cliente qui
+                revient changer sa prestation verrait le calendrier se
+                remplir ou se vider sans comprendre pourquoi. */}
+            <p style={S.sub}>
+              Disponibilités pour une durée de {formatDuree(dureeTotal)}.
+              {loadingJoursComplets && ' Vérification des jours complets…'}
+            </p>
 
             {/* Carte premier créneau disponible */}
             {loadingPremierCreneau && (
@@ -3158,6 +3253,17 @@ export default function ReservationPage() {
                 border: `1.5px solid ${PINK}`, textAlign: 'center',
               }}>
                 <p style={{ fontSize: 14, color: PINK, fontWeight: 600, margin: 0 }}>Recherche du prochain créneau...</p>
+              </div>
+            )}
+            {aucunCreneauProche && !loadingPremierCreneau && (
+              <div style={{
+                background: '#FFF8E7', borderRadius: 16, padding: 16, marginBottom: 20,
+                border: '1.5px solid #f0e0b8',
+              }}>
+                <p style={{ fontSize: 14, color: '#8a6d3b', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                  Aucun créneau disponible dans les 3 prochains mois pour cette durée.
+                  Parcourez le calendrier ou contactez-la directement.
+                </p>
               </div>
             )}
             {premierCreneau && !loadingPremierCreneau && (
@@ -3216,7 +3322,8 @@ export default function ReservationPage() {
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
                 const isOff   = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
-                const isDisabled = isPast || isOff
+                const isComplet = joursComplets.has(dateStr)
+                const isDisabled = isPast || isOff || isComplet
                 const isSelected = date === dateStr
 
                 return (
@@ -3226,6 +3333,7 @@ export default function ReservationPage() {
                     isSelected={isSelected}
                     isPast={isPast}
                     isOff={isOff && !isPast}
+                    isComplet={isComplet}
                     isDisabled={isDisabled}
                     onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setStep(4) } }}
                   />
@@ -3241,6 +3349,10 @@ export default function ReservationPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#E3F2FD' }} />
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Jour off</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Complet</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
@@ -3678,12 +3790,14 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 }
 
 function CalendarDay({
-  day, isSelected, isPast, isOff, isDisabled, onClick,
+  day, isSelected, isPast, isOff, isComplet, isDisabled, onClick,
 }: {
   day: number
   isSelected: boolean
   isPast: boolean
   isOff: boolean
+  /** La pro travaille ce jour-là, mais plus une seule place pour cette durée. */
+  isComplet?: boolean
   isDisabled: boolean
   onClick: () => void
 }) {
@@ -3693,9 +3807,11 @@ function CalendarDay({
     ? PINK
     : isOff
       ? '#E3F2FD'   // jour off : bleu ciel très clair
-      : hovered && !isDisabled
-        ? '#F9EEF4'
-        : 'transparent'
+      : isComplet
+        ? '#F3E4EC' // complet : rose grisé, distinct du jour off
+        : hovered && !isDisabled
+          ? '#F9EEF4'
+          : 'transparent'
 
   const color = isSelected
     ? '#fff'
@@ -3703,9 +3819,11 @@ function CalendarDay({
       ? '#d1d5db'   // passé : gris clair
       : isOff
         ? '#90CAF9'  // off : bleu clair (lisible sur fond bleu ciel)
-        : hovered
-          ? PINK
-          : '#374151'
+        : isComplet
+          ? '#C49BB4' // complet : rose éteint, lisible sans inviter au clic
+          : hovered
+            ? PINK
+            : '#374151'
 
   return (
     <button
