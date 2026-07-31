@@ -488,6 +488,11 @@ function OffresSection({
 // ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
+const champAttente: React.CSSProperties = {
+  width: '100%', padding: '11px 13px', marginBottom: 10, borderRadius: 10,
+  border: '1px solid #e5e7eb', fontSize: 15, outline: 'none', boxSizing: 'border-box',
+}
+
 export default function ReservationPage() {
   const params  = useParams()
   const slug    = params.slug as string
@@ -573,6 +578,37 @@ export default function ReservationPage() {
 
   // ── Step 4 : Heure ───────────────────────────
   const [slots,        setSlots]        = useState<Slot[]>([])
+  // Liste d'attente, proposée quand la journée choisie est complète.
+  const [attenteOuverte, setAttenteOuverte] = useState(false)
+  const [attentePrenom, setAttentePrenom] = useState('')
+  const [attenteTel, setAttenteTel] = useState('')
+  const [attenteEmail, setAttenteEmail] = useState('')
+  const [attenteEtat, setAttenteEtat] = useState<'repos' | 'envoi' | 'inscrite' | 'erreur'>('repos')
+
+  const inscrireListeAttente = async () => {
+    if (!pro || !date) return
+    setAttenteEtat('envoi')
+    try {
+      const r = await fetch('/api/liste-attente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pro_id: pro.id,
+          jour: date,
+          duree_min: dureeTotal,
+          prenom: attentePrenom,
+          telephone: attenteTel,
+          email: attenteEmail,
+          prestations: techniquesSelectionnees.map(t => ({ categorie: t.categorie, nom: t.nom })),
+        }),
+      })
+      if (!r.ok) throw new Error()
+      setAttenteEtat('inscrite')
+    } catch {
+      setAttenteEtat('erreur')
+    }
+  }
+
   // Seuls les créneaux réellement réservables sont montrés. Avant, les heures
   // prises restaient affichées en gris pâle : une pro a cru que le site les
   // proposait encore après un rendez-vous. Un mur d'heures inutilisables
@@ -3275,9 +3311,61 @@ export default function ReservationPage() {
                 <p style={{ color: PINK, fontWeight: 600 }}>Chargement des créneaux...</p>
               </div>
             ) : slotsLibres.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
                 <Clock size={40} color="#9ca3af" style={{ marginBottom: 12 }} />
-                <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
+                <p style={{ color: '#6b7280', marginBottom: 20 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
+
+                {/* Journée complète : plutôt que de la renvoyer chercher ailleurs,
+                    on lui propose d'être prévenue si une place se libère. */}
+                {attenteEtat === 'inscrite' ? (
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 14, padding: '18px 20px', maxWidth: 420, margin: '0 auto 18px' }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: 15 }}>C&apos;est noté</p>
+                    <p style={{ margin: '6px 0 0', color: '#15803d', fontSize: 14, lineHeight: 1.5 }}>
+                      Vous recevrez un e-mail si une place se libère ce jour-là. La place part à la première qui réserve.
+                    </p>
+                  </div>
+                ) : attenteOuverte ? (
+                  <div style={{ background: '#fff', border: `1.5px solid ${PINK}`, borderRadius: 14, padding: 18, maxWidth: 420, margin: '0 auto 18px', textAlign: 'left' }}>
+                    <p style={{ margin: '0 0 14px', fontWeight: 700, color: '#1f2937', fontSize: 15 }}>
+                      Être prévenue si une place se libère
+                    </p>
+                    <input value={attentePrenom} onChange={e => setAttentePrenom(e.target.value)} placeholder="Prénom"
+                      style={champAttente} />
+                    <input value={attenteTel} onChange={e => setAttenteTel(e.target.value)} placeholder="Téléphone" inputMode="tel"
+                      style={champAttente} />
+                    <input value={attenteEmail} onChange={e => setAttenteEmail(e.target.value)} placeholder="E-mail" inputMode="email"
+                      style={champAttente} />
+                    {attenteEtat === 'erreur' && (
+                      <p style={{ color: '#c62828', fontSize: 13, margin: '0 0 10px' }}>
+                        Vérifiez le prénom, le téléphone et l&apos;e-mail, puis réessayez.
+                      </p>
+                    )}
+                    <button
+                      onClick={inscrireListeAttente}
+                      disabled={attenteEtat === 'envoi'}
+                      style={{
+                        width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+                        background: PINK, color: '#fff', fontWeight: 700, fontSize: 15,
+                        cursor: attenteEtat === 'envoi' ? 'default' : 'pointer', opacity: attenteEtat === 'envoi' ? 0.6 : 1,
+                      }}>
+                      {attenteEtat === 'envoi' ? 'Enregistrement…' : 'Me prévenir'}
+                    </button>
+                    <p style={{ margin: '10px 0 0', color: '#9ca3af', fontSize: 12, lineHeight: 1.5 }}>
+                      Vos coordonnées servent uniquement à vous prévenir pour ce jour-là, et sont effacées ensuite.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setAttenteOuverte(true); setAttenteTel(telephone) }}
+                    style={{
+                      display: 'block', margin: '0 auto 18px', padding: '13px 24px', borderRadius: 12,
+                      border: `1.5px solid ${PINK}`, background: '#fff', color: PINK,
+                      fontWeight: 700, fontSize: 15, cursor: 'pointer',
+                    }}>
+                    Me prévenir si une place se libère
+                  </button>
+                )}
+
                 <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
                   ← Choisir une autre date
                 </button>
