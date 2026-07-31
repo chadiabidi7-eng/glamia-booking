@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { formatPrix, symboleDevise } from '@/lib/devise';
@@ -495,6 +495,7 @@ const champAttente: React.CSSProperties = {
 
 export default function ReservationPage() {
   const params  = useParams()
+  const rechercheUrl = useSearchParams()
   const slug    = params.slug as string
   const todayJs = new Date()
 
@@ -584,6 +585,45 @@ export default function ReservationPage() {
   const [attenteTel, setAttenteTel] = useState('')
   const [attenteEmail, setAttenteEmail] = useState('')
   const [attenteEtat, setAttenteEtat] = useState<'repos' | 'envoi' | 'inscrite' | 'erreur'>('repos')
+
+  // Arrivée depuis le bouton du mail : le jour, l'heure et les prestations sont
+  // dans le lien. On les repose pour qu'il ne reste que le téléphone à donner —
+  // sans ça la cliente refait tout le parcours pour une place qui part vite.
+  const repriseFaite = useRef(false)
+  const [repriseAttente, setRepriseAttente] = useState(false)
+
+  useEffect(() => {
+    if (repriseFaite.current || !pro || Object.keys(catalogue).length === 0) return
+
+    const jourUrl = rechercheUrl.get('jour')
+    const heureUrl = rechercheUrl.get('heure')
+    if (!jourUrl || !heureUrl) return
+
+    let voulues: { categorie?: string; nom?: string }[] = []
+    try { voulues = JSON.parse(rechercheUrl.get('presta') || '[]') } catch { voulues = [] }
+
+    // On retrouve les prestations dans le catalogue de la pro : les prix et les
+    // durées viennent de LÀ, jamais du lien, qui pourrait être bricolé.
+    const retrouvees: TechSelec[] = []
+    for (const v of voulues) {
+      for (const [cat, techs] of Object.entries(catalogue)) {
+        const t = techs.find(x => x.nom === v?.nom && (!v?.categorie || cat === v.categorie))
+        if (t) {
+          retrouvees.push({
+            categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree,
+            prix_type: t.prix_type, quantifiable: t.quantifiable,
+          })
+          break
+        }
+      }
+    }
+
+    if (retrouvees.length > 0) setTechniquesSelectionnees(retrouvees)
+    setDate(jourUrl)
+    setHeure(heureUrl)
+    setRepriseAttente(retrouvees.length > 0)
+    repriseFaite.current = true
+  }, [pro, catalogue, rechercheUrl])
 
   const inscrireListeAttente = async () => {
     if (!pro || !date) return
@@ -2828,8 +2868,8 @@ export default function ReservationPage() {
                 {/* Masqué pendant une reprogrammation ou une modification de
                     prestations : ces panneaux ont leur propre bouton de confirmation */}
                 {!reprogRdvId && !modifRdvId && (
-                  <button onClick={() => setStep(2)} style={S.btn}>
-                    + Prendre un nouveau rendez-vous
+                  <button onClick={() => setStep(repriseAttente ? 5 : 2)} style={S.btn}>
+                    {repriseAttente ? 'Confirmer cette place' : '+ Prendre un nouveau rendez-vous'}
                   </button>
                 )}
               </div>
@@ -2899,7 +2939,7 @@ export default function ReservationPage() {
                 )}
 
                 <button
-                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(2) }}
+                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(repriseAttente ? 5 : 2) }}
                   disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
                   style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) ? 0.5 : 1 }}
                 >
