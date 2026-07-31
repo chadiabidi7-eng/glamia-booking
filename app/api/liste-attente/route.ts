@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return NextResponse.json({ error: 'corps_invalide' }, { status: 400 }) }
 
-  const { pro_id, jour, duree_min, prenom, telephone, email, prestations } = body
+  const { pro_id, jour, duree_min, prenom, nom, telephone, email, prestations } = body
 
   if (!estId(pro_id)) return NextResponse.json({ error: 'pro_invalide' }, { status: 400 })
   if (!estJour(jour)) return NextResponse.json({ error: 'jour_invalide' }, { status: 400 })
@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
   if (jour < aujourdhui) return NextResponse.json({ error: 'jour_passe' }, { status: 400 })
 
   const prenomNet = typeof prenom === 'string' ? prenom.trim().slice(0, 80) : ''
+  const nomNet = typeof nom === 'string' ? nom.trim().slice(0, 80) : ''
   const telNet = typeof telephone === 'string' ? telephone.replace(/[\s\-.()]/g, '').slice(0, 25) : ''
 
   if (prenomNet.length < 2) return NextResponse.json({ error: 'prenom_requis' }, { status: 400 })
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
       jour,
       duree_min: Math.round(duree),
       prenom: prenomNet,
+      nom: nomNet || null,
       telephone: telNet,
       email: (email as string).trim().toLowerCase(),
       prestations: Array.isArray(prestations) ? prestations.slice(0, 20) : null,
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           to: pro.push_token,
           title: '🌸 Une cliente attend une place',
-          body: `${prenomNet} aimerait venir le ${jourLisible} (${dureeLisible}). Elle sera prévenue si une place se libère.`,
+          body: `${[prenomNet, nomNet].filter(Boolean).join(' ')} aimerait venir le ${jourLisible} (${dureeLisible}). Elle sera prévenue si une place se libère.`,
         }),
       })
     }

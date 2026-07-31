@@ -582,6 +582,7 @@ export default function ReservationPage() {
   // Liste d'attente, proposée quand la journée choisie est complète.
   const [attenteOuverte, setAttenteOuverte] = useState(false)
   const [attentePrenom, setAttentePrenom] = useState('')
+  const [attenteNom, setAttenteNom] = useState('')
   const [attenteTel, setAttenteTel] = useState('')
   const [attenteEmail, setAttenteEmail] = useState('')
   const [attenteEtat, setAttenteEtat] = useState<'repos' | 'envoi' | 'inscrite' | 'erreur'>('repos')
@@ -657,6 +658,7 @@ export default function ReservationPage() {
           jour: date,
           duree_min: dureeTotal,
           prenom: attentePrenom,
+          nom: attenteNom,
           telephone: attenteTel,
           email: attenteEmail,
           prestations: techniquesSelectionnees.map(t => ({ categorie: t.categorie, nom: t.nom })),
@@ -3398,11 +3400,13 @@ export default function ReservationPage() {
                       Être prévenue si une place se libère
                     </p>
                     <p style={{ margin: '0 0 14px', color: '#9ca3af', fontSize: 13, lineHeight: 1.5 }}>
-                      {attentePrenom && attenteEmail
+                      {attentePrenom && attenteNom && attenteEmail
                         ? 'Vérifiez vos coordonnées et validez.'
                         : 'Laissez vos coordonnées, on vous écrit dès qu\'une place se libère.'}
                     </p>
                     <input value={attentePrenom} onChange={e => setAttentePrenom(e.target.value)} placeholder="Prénom"
+                      style={champAttente} />
+                    <input value={attenteNom} onChange={e => setAttenteNom(e.target.value)} placeholder="Nom"
                       style={champAttente} />
                     <input value={attenteTel} onChange={e => setAttenteTel(e.target.value)} placeholder="Téléphone" inputMode="tel"
                       style={champAttente} />
@@ -3435,6 +3439,7 @@ export default function ReservationPage() {
                       setAttenteOuverte(true)
                       setAttenteTel(prev => prev || telephone)
                       setAttentePrenom(prev => prev || clientePrenom)
+                      setAttenteNom(prev => prev || clienteNom)
                       setAttenteEmail(prev => prev || clienteEmail)
                     }}
                     style={{
