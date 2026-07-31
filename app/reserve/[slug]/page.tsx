@@ -3285,9 +3285,14 @@ export default function ReservationPage() {
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#E3F2FD' }} />
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Jour off</span>
               </div>
+              {/* « Complet » disait seulement de renoncer. Il faut qu'il dise
+                  aussi qu'on peut y faire quelque chose, sinon personne ne
+                  cliquera jamais sur un jour rose. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Complet</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>
+                  Complet — <span style={{ color: PINK, fontWeight: 600 }}>cliquez pour être prévenue</span>
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#e5e7eb' }} />
