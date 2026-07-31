@@ -65,5 +65,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'enregistrement_impossible' }, { status: 500 })
   }
 
+  // Push à la pro. Une inscription est un signal commercial : quelqu'un veut
+  // venir et ne peut pas. Elle peut ouvrir une heure ou rappeler directement.
+  // L'échec de la notification n'invalide jamais l'inscription, qui est déjà
+  // enregistrée : on log et on renvoie ok.
+  try {
+    const { data: pro } = await supabaseAdmin
+      .from('profiles').select('push_token').eq('id', pro_id).maybeSingle()
+
+    if (pro?.push_token) {
+      const [a, m, j] = (jour as string).split('-').map(Number)
+      const jourLisible = new Date(Date.UTC(a, m - 1, j)).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
+      })
+      const h = Math.floor(duree / 60)
+      const min = Math.round(duree) % 60
+      const dureeLisible = h === 0 ? `${min} min` : min === 0 ? `${h}h` : `${h}h${String(min).padStart(2, '0')}`
+
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: pro.push_token,
+          title: '🌸 Une cliente attend une place',
+          body: `${prenomNet} aimerait venir le ${jourLisible} (${dureeLisible}). Elle sera prévenue si une place se libère.`,
+        }),
+      })
+    }
+  } catch (e) {
+    console.error('[liste-attente] push', e)
+  }
+
   return NextResponse.json({ ok: true })
 }
