@@ -3334,8 +3334,13 @@ export default function ReservationPage() {
                   </div>
                 ) : attenteOuverte ? (
                   <div style={{ background: '#fff', border: `1.5px solid ${PINK}`, borderRadius: 14, padding: 18, maxWidth: 420, margin: '0 auto 18px', textAlign: 'left' }}>
-                    <p style={{ margin: '0 0 14px', fontWeight: 700, color: '#1f2937', fontSize: 15 }}>
+                    <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#1f2937', fontSize: 15 }}>
                       Être prévenue si une place se libère
+                    </p>
+                    <p style={{ margin: '0 0 14px', color: '#9ca3af', fontSize: 13, lineHeight: 1.5 }}>
+                      {attentePrenom && attenteEmail
+                        ? 'Vérifiez vos coordonnées et validez.'
+                        : 'Laissez vos coordonnées, on vous écrit dès qu\'une place se libère.'}
                     </p>
                     <input value={attentePrenom} onChange={e => setAttentePrenom(e.target.value)} placeholder="Prénom"
                       style={champAttente} />
@@ -3364,7 +3369,14 @@ export default function ReservationPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setAttenteOuverte(true); setAttenteTel(telephone) }}
+                    onClick={() => {
+                      // On ne redemande pas ce qu'on sait déjà : la fiche cliente
+                      // si elle est connue, sinon ce qu'elle vient de saisir.
+                      setAttenteOuverte(true)
+                      setAttenteTel(prev => prev || telephone)
+                      setAttentePrenom(prev => prev || clientePrenom)
+                      setAttenteEmail(prev => prev || clienteEmail)
+                    }}
                     style={{
                       display: 'block', margin: '0 auto 18px', padding: '13px 24px', borderRadius: 12,
                       border: `1.5px solid ${PINK}`, background: '#fff', color: PINK,
