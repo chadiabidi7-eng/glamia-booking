@@ -573,6 +573,11 @@ export default function ReservationPage() {
 
   // ── Step 4 : Heure ───────────────────────────
   const [slots,        setSlots]        = useState<Slot[]>([])
+  // Seuls les créneaux réellement réservables sont montrés. Avant, les heures
+  // prises restaient affichées en gris pâle : une pro a cru que le site les
+  // proposait encore après un rendez-vous. Un mur d'heures inutilisables
+  // n'aide personne à choisir. `slots` garde tout, il sert aux calculs.
+  const slotsLibres = slots.filter(s => s.disponible)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [heure,        setHeure]        = useState('')
   // Incrémenté par le realtime quand l'agenda de la pro change → recharge les créneaux
@@ -2734,19 +2739,17 @@ export default function ReservationPage() {
                                     </p>
                                   ) : (
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                                      {reprogSlots.map(s => (
+                                      {reprogSlots.filter(s => s.disponible).map(s => (
                                         <button
                                           key={s.heure}
-                                          disabled={!s.disponible}
-                                          onClick={() => { if (s.disponible) { setReprogHeure(s.heure); scrollVers(reprogConfirmRef, 'center') } }}
+                                          onClick={() => { setReprogHeure(s.heure); scrollVers(reprogConfirmRef, 'center') }}
                                           style={{
                                             padding: '10px 0', borderRadius: 10,
-                                            border: `1.5px solid ${!s.disponible ? '#e5e7eb' : reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
-                                            background: !s.disponible ? '#f9f9f9' : reprogHeure === s.heure ? PINK : '#fff',
-                                            color: !s.disponible ? '#d1d5db' : reprogHeure === s.heure ? '#fff' : '#374151',
+                                            border: `1.5px solid ${reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
+                                            background: reprogHeure === s.heure ? PINK : '#fff',
+                                            color: reprogHeure === s.heure ? '#fff' : '#374151',
                                             fontWeight: 600, fontSize: 13,
-                                            cursor: s.disponible ? 'pointer' : 'default',
-                                            textDecoration: !s.disponible ? 'line-through' : 'none',
+                                            cursor: 'pointer',
                                             transition: 'all 0.15s',
                                           }}
                                         >
@@ -3271,7 +3274,7 @@ export default function ReservationPage() {
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <p style={{ color: PINK, fontWeight: 600 }}>Chargement des créneaux...</p>
               </div>
-            ) : slots.length === 0 ? (
+            ) : slotsLibres.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <Clock size={40} color="#9ca3af" style={{ marginBottom: 12 }} />
                 <p style={{ color: '#6b7280', marginBottom: 16 }}>Aucun créneau de {formatDuree(dureeTotal)} disponible ce jour.</p>
@@ -3281,22 +3284,20 @@ export default function ReservationPage() {
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {slots.map(s => (
+                {slotsLibres.map(s => (
                   <button
                     key={s.heure}
-                    disabled={!s.disponible}
-                    onClick={() => { if (s.disponible) { setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) } }}
+                    onClick={() => { setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
-                      border: `1.5px solid ${!s.disponible ? '#e5e7eb' : heure === s.heure ? PINK : '#e5e7eb'}`,
-                      background: !s.disponible ? '#f9f9f9' : heure === s.heure ? PINK : '#fff',
-                      color: !s.disponible ? '#d1d5db' : heure === s.heure ? '#fff' : '#374151',
+                      border: `1.5px solid ${heure === s.heure ? PINK : '#e5e7eb'}`,
+                      background: heure === s.heure ? PINK : '#fff',
+                      color: heure === s.heure ? '#fff' : '#374151',
                       fontWeight: 600,
                       fontSize: 14,
-                      cursor: s.disponible ? 'pointer' : 'default',
+                      cursor: 'pointer',
                       transition: 'all 0.15s',
-                      textDecoration: !s.disponible ? 'line-through' : 'none',
                     }}
                   >
                     {s.heure}
