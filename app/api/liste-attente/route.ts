@@ -19,6 +19,38 @@ const estJour = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d
 const estEmail = (v: unknown): v is string =>
   typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
 
+// Le mail porte l'identifiant de l'inscription. La page s'en sert pour savoir
+// QUI arrive, et lui éviter de retaper ce qu'elle a déjà donné. L'identifiant
+// est un UUID : impossible à deviner, comme les liens de confirmation de RDV.
+export async function GET(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!estId(id)) return NextResponse.json({ error: 'id_invalide' }, { status: 400 })
+
+  const { data: attente } = await supabaseAdmin
+    .from('liste_attente')
+    .select('pro_id, jour, prenom, telephone, email')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!attente) return NextResponse.json({ error: 'inscription_introuvable' }, { status: 404 })
+
+  // Le nom de famille n'est pas demandé à l'inscription, mais la réservation en
+  // a besoin. On le retrouve sur sa fiche si elle est déjà venue.
+  const { data: cliente } = await supabaseAdmin
+    .from('clientes')
+    .select('prenom, nom, email')
+    .eq('pro_id', attente.pro_id)
+    .eq('telephone', attente.telephone)
+    .maybeSingle()
+
+  return NextResponse.json({
+    prenom: cliente?.prenom || attente.prenom,
+    nom: cliente?.nom ?? null,
+    telephone: attente.telephone,
+    email: attente.email || cliente?.email || null,
+  })
+}
+
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return NextResponse.json({ error: 'corps_invalide' }, { status: 400 }) }

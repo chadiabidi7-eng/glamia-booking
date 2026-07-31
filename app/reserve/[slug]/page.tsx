@@ -623,6 +623,26 @@ export default function ReservationPage() {
     setHeure(heureUrl)
     setRepriseAttente(retrouvees.length > 0)
     repriseFaite.current = true
+
+    // Le lien porte aussi l'inscription : on récupère son identité pour
+    // l'emmener directement à la confirmation. Redemander un téléphone qu'elle
+    // vient de donner, pour une place qui part à la première, c'est la perdre.
+    const attenteId = rechercheUrl.get('att')
+    if (attenteId && retrouvees.length > 0) {
+      fetch(`/api/liste-attente?id=${attenteId}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => {
+          if (!d?.telephone) return
+          setTelephone(d.telephone)
+          if (d.prenom) setClientePrenom(d.prenom)
+          if (d.nom) setClienteNom(d.nom)
+          if (d.email) setClienteEmail(d.email)
+          // Sans nom de famille, la réservation est incomplète : on la laisse
+          // à la première étape, où il ne lui manquera que ça.
+          if (d.nom && d.email) setStep(5)
+        })
+        .catch(() => { /* on reste au parcours normal */ })
+    }
   }, [pro, catalogue, rechercheUrl])
 
   const inscrireListeAttente = async () => {
