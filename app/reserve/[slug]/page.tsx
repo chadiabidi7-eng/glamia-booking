@@ -3255,7 +3255,10 @@ export default function ReservationPage() {
                 const isPast  = dayDate < today0
                 const isOff   = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                 const isComplet = joursComplets.has(dateStr)
-                const isDisabled = isPast || isOff || isComplet
+                // Un jour complet reste CLIQUABLE : c'est justement là qu'on
+                // propose la liste d'attente. Il garde son apparence « complet »
+                // pour ne pas faire espérer un créneau, mais la porte est ouverte.
+                const isDisabled = isPast || isOff
                 const isSelected = date === dateStr
 
                 return (
@@ -3267,7 +3270,7 @@ export default function ReservationPage() {
                     isOff={isOff && !isPast}
                     isComplet={isComplet}
                     isDisabled={isDisabled}
-                    onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setStep(4) } }}
+                    onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setAttenteOuverte(false); setAttenteEtat('repos'); setStep(4) } }}
                   />
                 )
               })}
@@ -3802,7 +3805,7 @@ function CalendarDay({
       : isOff
         ? '#90CAF9'  // off : bleu clair (lisible sur fond bleu ciel)
         : isComplet
-          ? '#C49BB4' // complet : rose éteint, lisible sans inviter au clic
+          ? '#C49BB4' // complet : rose éteint — cliquable, mais ne promet rien
           : hovered
             ? PINK
             : '#374151'
@@ -3813,7 +3816,7 @@ function CalendarDay({
       disabled={isDisabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={isOff ? 'Jour de repos' : undefined}
+      title={isOff ? 'Jour de repos' : isComplet ? 'Complet — être prévenue si une place se libère' : undefined}
       style={{
         aspectRatio: '1', borderRadius: '50%', border: 'none',
         background: bg, color, fontWeight: 500, fontSize: 14,
