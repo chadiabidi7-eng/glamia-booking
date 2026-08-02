@@ -1,9 +1,14 @@
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
+// Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
+// serveur, pour composer le titre de la page. Avec la clé publique il aurait
+// cessé de fonctionner le jour où la lecture anonyme des profils a été fermée
+// — et le titre serait devenu « Réservation » pour toutes les pros, sans que
+// rien d'autre ne signale le problème.
 const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function generateMetadata(
