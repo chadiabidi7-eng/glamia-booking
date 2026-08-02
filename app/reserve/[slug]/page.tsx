@@ -2266,9 +2266,18 @@ export default function ReservationPage() {
                       const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
                       if (!prochainPalier) return null
                       const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
+                      // « Encore 2 RDV avant -10 € » laissait croire que la
+                      // réduction tombait au rendez-vous SUIVANT le palier.
+                      // Elle tombe sur celui-là. On nomme donc le rendez-vous
+                      // concerné au lieu de compter ce qui reste avant.
+                      //
+                      // Même formulation que dans l'app, corrigée le matin
+                      // même : les deux écrans montrent la même carte à la
+                      // même personne, ils doivent dire la même chose.
+                      const n = prochainPalier.position - tampons
                       return (
                         <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          Encore {prochainPalier.position - tampons} RDV avant {label}
+                          {n === 1 ? `Prochain RDV : ${label}` : `${label} sur ton ${n}e RDV`}
                         </p>
                       )
                     })()}
