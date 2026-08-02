@@ -783,14 +783,15 @@ export default function ReservationPage() {
     setPhoneStatus('checking')
 
     try {
-      const { data: clientes, error } = await supabase
-        .from('clientes')
-        .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur, reduction_rdv_restants')
-        .eq('pro_id', pro.id)
-
-      if (error) throw error
-
-      const found = clientes?.find(c => normalizePhone(c.telephone) === normalized)
+      // Le serveur reconnaît la cliente et ne renvoie qu'ELLE. La page ne voit
+      // plus jamais le fichier clientes de la pro.
+      const rep = await fetch('/api/cliente/identifier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pro_id: pro.id, telephone: normalized }),
+      })
+      if (!rep.ok) throw new Error('identification')
+      const { cliente: found } = await rep.json()
 
       if (found) {
         setClienteId(found.id)
@@ -1697,33 +1698,23 @@ export default function ReservationPage() {
       const telNormalized = normalizePhone(telephone)
 
       if (!cId) {
-        const { data: allClientes, error: fetchErr } = await supabase
-          .from('clientes')
-          .select('id, telephone')
-          .eq('pro_id', pro.id)
+        // Un seul appel : le serveur retrouve la cliente à son numéro, ou la
+        // crée. Deux gestes séparés laissaient passer un doublon quand deux
+        // réservations partaient en même temps avec le même téléphone.
+        const rep = await fetch('/api/cliente/identifier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pro_id: pro.id, telephone: telNormalized, creer: true,
+            prenom: clientePrenom, nom: clienteNom, email: clienteEmail,
+          }),
+        })
+        if (!rep.ok) throw new Error('identification cliente')
+        const { cliente: fiche, creee } = await rep.json()
 
-        if (!fetchErr && allClientes) {
-          const fc = allClientes.find(c => normalizePhone(c.telephone) === telNormalized)
-          if (fc) cId = fc.id
-        }
-
-        if (!cId) {
-          const { data: created, error: createErr } = await supabase
-            .from('clientes')
-            .insert({
-              pro_id:    pro.id,
-              prenom:    clientePrenom.trim(),
-              nom:       clienteNom.trim(),
-              telephone: telNormalized,
-              email:     clienteEmail.trim() || null,
-              source:    'booking',
-            })
-            .select('id')
-            .single()
-
-          if (createErr) throw createErr
-          cId = created!.id
-          nouvelleCliente = true
+        if (fiche) {
+          cId = fiche.id
+          nouvelleCliente = creee === true
         }
       }
 
