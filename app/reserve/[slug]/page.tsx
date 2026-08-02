@@ -1755,27 +1755,29 @@ export default function ReservationPage() {
 
     try {
       // Re-vérification de dernière seconde : le créneau choisi est-il
-      // toujours libre ? (la grille peut dater de plusieurs minutes)
-      const { data: rdvsJour, error: verifErr } = await supabase
-        .from('rendez_vous')
-        .select('date, duree')
-        .eq('pro_id', pro.id)
-        .gte('date', `${date}T00:00:00.000Z`)
-        .lte('date', `${date}T23:59:59.999Z`)
-        .neq('statut', 'annule')
-      if (verifErr) {
-        alert('Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.')
-        return
+      // Toujours réservable ? La grille affichée peut dater de plusieurs
+      // minutes, et elle ne sait rien de ce que la pro a changé depuis. Le
+      // serveur relit l'état réel : autres rendez-vous, MAIS AUSSI créneaux
+      // bloqués, horaires et jours fermés — ce que cette vérification, faite
+      // ici en local, ne regardait pas.
+      let verifOk = false
+      let verifMessage = ''
+      try {
+        const r = await fetch('/api/rdv/verifier-creneau', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeTotal }),
+        })
+        const v = await r.json()
+        verifOk = r.ok && v?.ok === true
+        verifMessage = v?.message ?? ''
+      } catch {
+        verifOk = false
       }
-      const debutMin = timeToMin(heure)
-      const finMin = debutMin + dureeTotal
-      const conflit = (rdvsJour ?? []).some(r => {
-        const d = new Date(r.date)
-        const debutR = d.getUTCHours() * 60 + d.getUTCMinutes()
-        return debutMin < debutR + (r.duree ?? 0) && finMin > debutR
-      })
-      if (conflit) {
-        alert('Ce créneau vient d\'être réservé 😔 Choisis-en un autre.')
+      if (!verifOk) {
+        // Sans réponse claire du serveur, on ne devine pas : on renvoie au choix
+        // du créneau plutôt que d'enregistrer un rendez-vous peut-être impossible.
+        alert(verifMessage || 'Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.')
         setHeure('')
         setStep(4)
         setRdvVersion(v => v + 1)
