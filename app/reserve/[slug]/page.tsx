@@ -5,32 +5,21 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { formatPrix, symboleDevise } from '@/lib/devise';
+import {
+  generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
+  type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
+} from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
-type HorairesHebdo = Record<number, HorairesJour>
 type Technique = { id: string; nom: string; active: boolean; prix: number; duree: number; description?: string; photos?: string[]; prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean }
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée (prix/duree unitaires ; quantite = nb d'exemplaires)
 type TechSelec = { categorie: string; nom: string; prix: number; duree: number; prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean; quantite?: number }
 
-type CreneauBloque = {
-  id: string
-  date: string            // YYYY-MM-DD (ou date début pour période)
-  date_fin?: string       // YYYY-MM-DD (date fin pour période multi-jours)
-  touteLaJournee: boolean
-  debut?: string          // "HH:mm" (créneau horaire uniquement)
-  fin?: string            // "HH:mm" (créneau horaire uniquement)
-  motif?: string
-}
-
-type PlageHoraire = { debut: string; fin: string }
-type JourSpecifique = { actif: boolean; plages: PlageHoraire[] }
-type HorairesSpecifiques = Record<string, JourSpecifique>
 
 type Offre = {
   id: string
@@ -101,7 +90,6 @@ type RdvAVenir = {
   inspirations: string[] | null
 }
 
-type Slot = { heure: string; disponible: boolean }
 
 // ─────────────────────────────────────────────
 // Constants
@@ -182,15 +170,6 @@ function normalizePhone(tel: string): string {
   return n
 }
 
-function timeToMin(t: string) {
-  const [h, m] = t.split(':').map(Number)
-  return h * 60 + m
-}
-
-function minToTime(m: number) {
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-}
-
 function formatDuree(min: number) {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
@@ -239,87 +218,6 @@ function getFirstDayOfWeek(year: number, month: number) {
 
 function buildDateStr(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
-function isDayWorking(dateStr: string, horaires: HorairesHebdo, horairesSpec?: HorairesSpecifiques, planningVar?: boolean) {
-  if (planningVar) {
-    const spec = horairesSpec?.[dateStr]
-    // En mode variable : dispo uniquement si des plages existent
-    return !!(spec?.plages && spec.plages.length > 0)
-  }
-  const jour = new Date(dateStr + 'T00:00:00').getDay()
-  const h = horaires[jour]
-  return h?.actif === true || h?.active === true
-}
-
-function isDateInPeriod(dateStr: string, b: CreneauBloque): boolean {
-  if (b.date_fin) return dateStr >= b.date && dateStr <= b.date_fin
-  return dateStr === b.date
-}
-
-function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
-  return bloques.some(b => b.touteLaJournee && isDateInPeriod(dateStr, b))
-}
-
-function generateSlots(
-  date: string,
-  duree: number,
-  horaires: HorairesHebdo,
-  rdvExistants: { heure: string; duree: number }[],
-  bloques: CreneauBloque[] = [],
-  horairesSpec?: HorairesSpecifiques,
-  planningVar?: boolean,
-): Slot[] {
-  if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
-
-  let plages: { start: number; end: number }[]
-
-  if (planningVar) {
-    const spec = horairesSpec?.[date]
-    if (!spec?.plages || spec.plages.length === 0) return []
-    plages = spec.plages.map(p => ({ start: timeToMin(p.debut), end: timeToMin(p.fin) }))
-  } else {
-    const jour = new Date(date + 'T00:00:00').getDay()
-    const h = horaires[jour]
-    if (!h?.actif && !h?.active) return []
-    if (h.pause) {
-      plages = [
-        { start: timeToMin(h.debut), end: timeToMin(h.pause.debut) },
-        { start: timeToMin(h.pause.fin), end: timeToMin(h.fin) },
-      ]
-    } else {
-      plages = [{ start: timeToMin(h.debut), end: timeToMin(h.fin) }]
-    }
-  }
-
-  if (plages.length === 0) return []
-
-  const INTERVAL = 30
-
-  const taken = rdvExistants.map(r => ({
-    start: timeToMin(r.heure),
-    end:   timeToMin(r.heure) + r.duree,
-  }))
-
-  const blockedRanges = bloques
-    .filter(b => b.date === date && !b.touteLaJournee && b.debut && b.fin)
-    .map(b => ({ start: timeToMin(b.debut!), end: timeToMin(b.fin!) }))
-
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const limiteMin = date === todayStr ? now.getHours() * 60 + now.getMinutes() + 60 : 0
-
-  const slots: Slot[] = []
-  for (const plage of plages) {
-    for (let t = plage.start; t + duree <= plage.end; t += INTERVAL) {
-      if (limiteMin > 0 && t < limiteMin) continue
-      const end = t + duree
-      const isTaken = taken.some(r => t < r.end && end > r.start)
-      const isBlocked = blockedRanges.some(r => t < r.end && end > r.start)
-      slots.push({ heure: minToTime(t), disponible: !isTaken && !isBlocked })
-    }
-  }
-  return slots
 }
 
 // ─────────────────────────────────────────────
@@ -1538,10 +1436,20 @@ export default function ReservationPage() {
   }
 
   // ── Step 4 : Load slots ───────────────────────
-  // Dépend du step + date (dureeTotal est stable quand on arrive à step 4)
+  // Dépend du step + date (dureeTotal est stable quand on arrive à step 4).
+  //
+  // `pro` fait AUSSI partie des dépendances, et c'est indispensable : la grille
+  // se construit à partir de ses horaires et de ses créneaux bloqués. Sans lui,
+  // le message temps réel mettait bien le profil à jour, mais la grille restait
+  // celle d'avant — il fallait passer à l'étape suivante et revenir pour la voir
+  // changer. Le rafraîchissement automatique ne servait donc à rien.
+  //
+  // `pro` est un objet recréé à chaque mise à jour, y compris temps réel : c'est
+  // exactement le signal qu'on veut. Une lecture des RDV de plus par changement
+  // de profil, autant dire jamais.
   useEffect(() => {
     if (step === 4 && date && dureeTotal > 0 && pro) loadSlots()
-  }, [step, date, rdvVersion])
+  }, [step, date, rdvVersion, pro])
 
   async function loadSlots() {
     if (!pro || dureeTotal === 0 || !date) return
