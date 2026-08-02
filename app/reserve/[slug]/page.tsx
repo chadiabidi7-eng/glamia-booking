@@ -681,77 +681,88 @@ export default function ReservationPage() {
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
 
-  // ── Realtime : sync horaires dès que la pro les modifie dans Glamia ──
+  // ── Rafraîchissement : relire régulièrement plutôt qu'écouter ─────────────
+  //
+  // La page écoutait les changements en direct (`postgres_changes`) sur le
+  // profil et les rendez-vous. Cette écoute exige le droit de LIRE ces tables
+  // avec la clé publique — exactement ce qu'on a fermé. Elle était donc déjà
+  // muette côté rendez-vous.
+  //
+  // On relit à la place : toutes les 45 secondes tant que la page est visible,
+  // et immédiatement au retour sur l'onglet. Moins immédiat qu'une écoute,
+  // mais ça ne demande aucun droit de lecture, et la vraie sûreté est
+  // ailleurs — le guichet de création refuse un créneau devenu indisponible,
+  // même si la grille affichée date.
+  //
+  // Rien ne tourne quand l'onglet est en arrière-plan : une page de résa
+  // laissée ouverte trois jours ne doit pas interroger le serveur pour rien.
   useEffect(() => {
     if (!pro?.id) return
-    const channel = supabase
-      .channel(`horaires-${pro.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${pro.id}` },
-        (payload) => {
-          if (payload.new?.horaires || payload.new?.creneaux_bloques !== undefined || payload.new?.horaires_specifiques !== undefined || payload.new?.planning_variable !== undefined) {
-            console.log('[Realtime] profil mis à jour')
-            setPro(prev => {
-              if (!prev) return prev
-              return {
-                ...prev,
-                ...(payload.new?.horaires ? { horaires: payload.new.horaires } : {}),
-                creneaux_bloques: Array.isArray(payload.new?.creneaux_bloques) ? payload.new.creneaux_bloques : prev.creneaux_bloques,
-                ...(payload.new?.horaires_specifiques !== undefined ? { horaires_specifiques: payload.new.horaires_specifiques ?? {} } : {}),
-                ...(payload.new?.planning_variable !== undefined ? { planning_variable: payload.new.planning_variable === true } : {}),
-              }
-            })
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'rendez_vous', filter: `pro_id=eq.${pro.id}` },
-        () => {
-          console.log('[Realtime] agenda mis à jour')
-          setRdvVersion(v => v + 1)
-        }
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [pro?.id])
+
+    const rafraichir = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const rep = await fetch('/api/pro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug }),
+        })
+        if (!rep.ok) return
+        const d = await rep.json()
+        if (d.etat !== 'ok' || !d.pro) return
+        setPro(prev => prev ? {
+          ...prev,
+          horaires: d.pro.horaires ?? prev.horaires,
+          creneaux_bloques: Array.isArray(d.pro.creneaux_bloques) ? d.pro.creneaux_bloques : prev.creneaux_bloques,
+          horaires_specifiques: (d.pro.horaires_specifiques && typeof d.pro.horaires_specifiques === 'object') ? d.pro.horaires_specifiques : prev.horaires_specifiques,
+          planning_variable: d.pro.planning_variable === true,
+        } : prev)
+        // Force le recalcul des créneaux : un RDV a pu être pris entretemps.
+        setRdvVersion(v => v + 1)
+      } catch { /* réseau : on retentera au tour suivant */ }
+    }
+
+    const minuteur = window.setInterval(rafraichir, 45_000)
+    document.addEventListener('visibilitychange', rafraichir)
+    return () => {
+      window.clearInterval(minuteur)
+      document.removeEventListener('visibilitychange', rafraichir)
+    }
+  }, [pro?.id, slug])
 
   async function loadPro() {
     setPageState('loading')
     try {
-      // 1. Chercher par colonne slug (order by created_at pour prendre le profil original si doublons)
-      const { data: bySlugArr, error: errSlug } = await supabase
-        .from('profiles')
-        .select(COLONNES_PUBLIQUES)
-        .eq('slug', slug)
-        .order('created_at', { ascending: true })
-        .limit(1)
+      // Un seul appel. Le serveur cherche par slug, applique le repli si
+      // besoin, refuse de trancher en cas d'ambiguïté, et ne renvoie qu'une
+      // pro. La page ne voit plus jamais les autres.
+      const rep = await fetch('/api/pro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      })
+      if (!rep.ok) throw new Error('api/pro')
+      const d = await rep.json()
 
-      if (errSlug) throw errSlug
-      let found: any = bySlugArr?.[0] ?? null
+      if (d.etat === 'introuvable') { setPageState('notfound'); return }
 
-      // 2. Fallback : matching par slug normalisé (prenom-nom ou pseudo-nom)
-      if (!found) {
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select(COLONNES_PUBLIQUES)
-          .order('created_at', { ascending: true })
-
-        if (error) throw error
-
-        const normalized = normalizeStr(slug)
-        found = profiles?.find(p => {
-          const fromPrenom = normalizeStr(`${p.prenom}-${p.nom}`)
-          const fromPseudo = p.pseudo ? normalizeStr(`${p.pseudo}-${p.nom}`) : null
-          return fromPrenom === normalized || fromPseudo === normalized
+      if (d.etat === 'ferme') {
+        // Page fermée (abonnement expiré) : on garde de quoi afficher son nom
+        // et ses réseaux, rien de plus.
+        setPro({
+          id: '', prenom: d.pro?.prenom ?? '', nom: '',
+          pseudo: d.pro?.pseudo ?? undefined,
+          horaires: DEFAULT_HORAIRES, creneaux_bloques: [], horaires_specifiques: {},
+          planning_variable: false,
+          instagram: d.pro?.instagram ?? undefined,
+          tiktok: d.pro?.tiktok ?? undefined,
+          snapchat: d.pro?.snapchat ?? undefined,
         })
+        setPageState('blocked')
+        return
       }
 
-      if (!found) {
-        setPageState('notfound'); return
-      }
-
+      const found = d.pro
       setPro({
         id:               found.id,
         prenom:           found.prenom,
@@ -770,25 +781,13 @@ export default function ReservationPage() {
         is_pro:           found.is_pro ?? false,
         devise:           found.devise ?? 'EUR',
       })
+      if (found.fidelite_config) setFideliteConfig(found.fidelite_config)
 
-      // Accès temps réel : abonnement actif OU essai en cours. Ne jamais se
-      // fier à is_pro seul — il n'est synchronisé qu'au lancement de l'app,
-      // les expirées jamais revenues le gardent à true (page ouverte à tort).
-      const accesActif = found.abonnement_actif === true
-        || (found.trial_ends_at && new Date(found.trial_ends_at) > new Date())
-      if (!accesActif) { setPageState('blocked'); return }
-
-      const { data: prestData } = await supabase
-        .from('prestations')
-        .select('data, ordre_categories')
-        .eq('pro_id', found.id)
-        .single()
-
-      if (prestData?.data) setCatalogue(prestData.data as CataloguePrestations)
-      if (prestData?.ordre_categories) setOrdreCategories(prestData.ordre_categories as string[])
+      if (d.catalogue) setCatalogue(d.catalogue as CataloguePrestations)
+      if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
       setPageState('ready')
     } catch (e) {
-      console.error(e)
+      console.error('[loadPro]', e)
       setPageState('notfound')
     }
   }
@@ -863,34 +862,15 @@ export default function ReservationPage() {
   }
 
   // ── Fidélité ────────────────────────────────
-  async function chargerFideliteConfig(proId: string) {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('fidelite_config')
-        .eq('id', proId)
-        .single()
-      setFideliteConfig(profile?.fidelite_config as any ?? null)
-    } catch (e) {
-      console.error('[chargerFideliteConfig]', e)
-    }
-  }
+  // La configuration fidélité arrive désormais AVEC le profil, en un seul
+  // appel au guichet. Plus rien à recharger ici : la fonction est gardée
+  // parce que ses appelants n'ont plus rien à faire non plus.
+  async function chargerFideliteConfig(_proId: string) { /* déjà chargée */ }
 
   async function chargerFidelite(proId: string, clienteId: string) {
     try {
-      // Config pro
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('fidelite_config')
-        .eq('id', proId)
-        .single()
-      if (profile?.fidelite_config) {
-        setFideliteConfig(profile.fidelite_config as any)
-      } else {
-        setFideliteConfig(null)
-        return
-      }
-      // Fiche cliente — par le guichet, qui revérifie le téléphone.
+      // La configuration est déjà là (chargée avec le profil). Reste la fiche
+      // de CETTE cliente — par le guichet, qui revérifie le téléphone.
       const rep = await fetch('/api/cliente/dossier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
