@@ -1602,36 +1602,10 @@ export default function ReservationPage() {
     const techniquesStr = techniquesSelectionnees.map(t => (t.quantite ?? 1) > 1 ? `${t.nom} ×${t.quantite}` : t.nom).join(', ')
 
     try {
-      // Re-vérification de dernière seconde : le créneau choisi est-il
-      // Toujours réservable ? La grille affichée peut dater de plusieurs
-      // minutes, et elle ne sait rien de ce que la pro a changé depuis. Le
-      // serveur relit l'état réel : autres rendez-vous, MAIS AUSSI créneaux
-      // bloqués, horaires et jours fermés — ce que cette vérification, faite
-      // ici en local, ne regardait pas.
-      let verifOk = false
-      let verifMessage = ''
-      try {
-        const r = await fetch('/api/rdv/verifier-creneau', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeTotal }),
-        })
-        const v = await r.json()
-        verifOk = r.ok && v?.ok === true
-        verifMessage = v?.message ?? ''
-      } catch {
-        verifOk = false
-      }
-      if (!verifOk) {
-        // Sans réponse claire du serveur, on ne devine pas : on renvoie au choix
-        // du créneau plutôt que d'enregistrer un rendez-vous peut-être impossible.
-        alert(verifMessage || 'Impossible de vérifier la disponibilité du créneau. Réessaie dans un instant.')
-        setHeure('')
-        setStep(4)
-        setRdvVersion(v => v + 1)
-        return
-      }
-
+      // La disponibilité du créneau n'est plus vérifiée ici : le guichet de
+      // création la contrôle lui-même, juste avant d'écrire. En deux appels
+      // séparés, quelqu'un pouvait prendre la place entre la vérification et
+      // l'insertion.
       let cId = clienteId
       let nouvelleCliente = false
       const telNormalized = normalizePhone(telephone)
@@ -1657,31 +1631,41 @@ export default function ReservationPage() {
         }
       }
 
-      const dateRdvISO = `${date}T${heure}:00.000Z`
-      const { data: nouveau, error: rdvErr } = await supabase
-        .from('rendez_vous')
-        .insert({
-          pro_id:     pro.id,
+      // Le serveur crée le rendez-vous et renvoie son identifiant. La page
+      // n'insère plus elle-même : l'insertion se terminait par une relecture
+      // de la ligne créée, et cette relecture exigeait le droit de lire toute
+      // la table.
+      const repCreation = await fetch('/api/rdv/creer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pro_id: pro.id,
           cliente_id: cId,
-          date:       dateRdvISO,
-          duree:      dureeTotal,
+          date, heure, duree: dureeTotal,
           specialite: categoriesStr,
-          technique:  techniquesStr,
+          technique: techniquesStr,
           techniques: techniquesSelectionnees,
-          prix:       prixFinal > 0 ? prixFinal : null,
-          statut:     'en_attente',
-          notes:      commentaire.trim() || null,
+          prix: prixFinal,
+          notes: commentaire.trim(),
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
           reduction_appliquee: reductionCliente
             ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
             : null,
-          source:     'booking',
-        })
-        .select('id')
-        .single()
+        }),
+      })
+      const creation = await repCreation.json()
 
-      if (rdvErr) throw rdvErr
+      // Créneau devenu indisponible entre l'affichage et la confirmation : on
+      // renvoie au choix de l'horaire, avec la raison.
+      if (!repCreation.ok || creation?.ok !== true) {
+        alert(creation?.message || "Ce créneau n'est plus disponible. Choisis-en un autre.")
+        setHeure('')
+        setStep(4)
+        setRdvVersion(v => v + 1)
+        return
+      }
+      const nouveau = { id: creation.id as string }
 
       // Fidélité — guichet serveur (chantier RLS) : vérifie le téléphone de la
       // cliente, puis applique TOUTE la logique tampon côté serveur (récompense
@@ -1808,7 +1792,7 @@ export default function ReservationPage() {
       // Envoi automatique rappel-confirmation si RDV < 24h
       // Sauf si le RDV est pris pour le jour même (même règle que le mobile)
       if (nouveau?.id) {
-        const heuresAvant = (new Date(dateRdvISO).getTime() - Date.now()) / (60 * 60 * 1000)
+        const heuresAvant = (new Date(`${date}T${heure}:00.000Z`).getTime() - Date.now()) / (60 * 60 * 1000)
         const estAujourdhui = date === new Date().toISOString().slice(0, 10)
         if (heuresAvant > 0 && heuresAvant <= 24 && !estAujourdhui) {
           try {
