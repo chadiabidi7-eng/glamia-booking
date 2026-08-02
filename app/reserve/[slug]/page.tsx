@@ -688,18 +688,24 @@ export default function ReservationPage() {
   // avec la clé publique — exactement ce qu'on a fermé. Elle était donc déjà
   // muette côté rendez-vous.
   //
-  // On relit à la place, à un rythme qui suit CE QUE FAIT la cliente : toutes
-  // les 10 secondes quand elle est devant la grille des créneaux — c'est là
-  // qu'une place peut lui passer sous le nez — et toutes les 60 secondes sur
-  // les autres étapes, où plus rien ne dépend de l'instant.
+  // On relit à la place, mais SEULEMENT là où ça sert :
   //
-  // Et immédiatement au retour sur l'onglet. Moins direct qu'une écoute, mais
-  // ça ne demande aucun droit de lecture, et la vraie sûreté est ailleurs : le
-  // guichet de création refuse un créneau devenu indisponible, même si la
-  // grille affichée date.
+  // - EN BOUCLE, toutes les 10 secondes, quand la cliente est devant la grille
+  //   des créneaux. C'est le seul endroit où une place peut lui passer sous le
+  //   nez pendant qu'elle hésite.
+  // - UNE FOIS à chaque changement d'étape. Inutile d'y revenir en boucle : le
+  //   calcul des créneaux et la vue mois se refont déjà d'eux-mêmes quand
+  //   l'étape change.
+  // - UNE FOIS au retour sur l'onglet.
+  //
+  // Rien ne tourne quand la page n'est pas visible. Moins direct qu'une écoute
+  // en continu, mais ça ne demande aucun droit de lecture — et la vraie sûreté
+  // est ailleurs : le guichet de création refuse un créneau devenu
+  // indisponible, même si la grille affichée date.
   //
   // Rien ne tourne quand l'onglet est en arrière-plan : une page de résa
   // laissée ouverte trois jours ne doit pas interroger le serveur pour rien.
+  const premierPassage = useRef(true)
   useEffect(() => {
     if (!pro?.id) return
 
@@ -726,11 +732,15 @@ export default function ReservationPage() {
       } catch { /* réseau : on retentera au tour suivant */ }
     }
 
-    const cadence = step === 4 ? 10_000 : 60_000
-    const minuteur = window.setInterval(rafraichir, cadence)
+    // Une relecture au changement d'étape — sauf tout au début, où la page
+    // vient déjà de charger le profil.
+    if (premierPassage.current) premierPassage.current = false
+    else rafraichir()
+
+    const minuteur = step === 4 ? window.setInterval(rafraichir, 10_000) : null
     document.addEventListener('visibilitychange', rafraichir)
     return () => {
-      window.clearInterval(minuteur)
+      if (minuteur) window.clearInterval(minuteur)
       document.removeEventListener('visibilitychange', rafraichir)
     }
   }, [pro?.id, slug, step])
