@@ -688,11 +688,15 @@ export default function ReservationPage() {
   // avec la clé publique — exactement ce qu'on a fermé. Elle était donc déjà
   // muette côté rendez-vous.
   //
-  // On relit à la place : toutes les 45 secondes tant que la page est visible,
-  // et immédiatement au retour sur l'onglet. Moins immédiat qu'une écoute,
-  // mais ça ne demande aucun droit de lecture, et la vraie sûreté est
-  // ailleurs — le guichet de création refuse un créneau devenu indisponible,
-  // même si la grille affichée date.
+  // On relit à la place, à un rythme qui suit CE QUE FAIT la cliente : toutes
+  // les 10 secondes quand elle est devant la grille des créneaux — c'est là
+  // qu'une place peut lui passer sous le nez — et toutes les 60 secondes sur
+  // les autres étapes, où plus rien ne dépend de l'instant.
+  //
+  // Et immédiatement au retour sur l'onglet. Moins direct qu'une écoute, mais
+  // ça ne demande aucun droit de lecture, et la vraie sûreté est ailleurs : le
+  // guichet de création refuse un créneau devenu indisponible, même si la
+  // grille affichée date.
   //
   // Rien ne tourne quand l'onglet est en arrière-plan : une page de résa
   // laissée ouverte trois jours ne doit pas interroger le serveur pour rien.
@@ -722,13 +726,14 @@ export default function ReservationPage() {
       } catch { /* réseau : on retentera au tour suivant */ }
     }
 
-    const minuteur = window.setInterval(rafraichir, 45_000)
+    const cadence = step === 4 ? 10_000 : 60_000
+    const minuteur = window.setInterval(rafraichir, cadence)
     document.addEventListener('visibilitychange', rafraichir)
     return () => {
       window.clearInterval(minuteur)
       document.removeEventListener('visibilitychange', rafraichir)
     }
-  }, [pro?.id, slug])
+  }, [pro?.id, slug, step])
 
   async function loadPro() {
     setPageState('loading')
