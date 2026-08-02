@@ -56,6 +56,25 @@ type Offre = {
 // `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
 const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, timezone, abonnement_actif, trial_ends_at'
 
+/**
+ * Les créneaux d'une ou plusieurs journées, calculés par le serveur.
+ *
+ * La page ne lit plus les rendez-vous : elle demande des heures libres et n'en
+ * apprend pas davantage. Ni qui occupe, ni pour quoi, ni à quel prix.
+ */
+async function creneauxServeur(
+  proId: string, duree: number, dates: string[], exclureRdv?: string,
+): Promise<Record<string, Slot[]>> {
+  const rep = await fetch('/api/creneaux', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv }),
+  })
+  if (!rep.ok) throw new Error('creneaux')
+  const { creneaux } = await rep.json()
+  return (creneaux ?? {}) as Record<string, Slot[]>
+}
+
 type ProInfo = {
   id: string
   prenom: string
@@ -871,14 +890,15 @@ export default function ReservationPage() {
         setFideliteConfig(null)
         return
       }
-      // Fiche cliente
-      const { data: fiche } = await supabase
-        .from('fidelite_clientes')
-        .select('tampons, cartes_completees, recompense_disponible')
-        .eq('pro_id', proId)
-        .eq('cliente_id', clienteId)
-        .single()
-      setFideliteFiche(fiche as any ?? null)
+      // Fiche cliente — par le guichet, qui revérifie le téléphone.
+      const rep = await fetch('/api/cliente/dossier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
+      })
+      if (!rep.ok) throw new Error('dossier')
+      const { fidelite } = await rep.json()
+      setFideliteFiche(fidelite ?? null)
     } catch (e) {
       console.error('[chargerFidelite]', e)
     }
@@ -888,18 +908,16 @@ export default function ReservationPage() {
   async function chargerRdvsAVenir(cId: string, proId: string) {
     setLoadingRdvs(true)
     try {
-      const now = new Date().toISOString()
-      const { data, error } = await supabase
-        .from('rendez_vous')
-        .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations')
-        .eq('cliente_id', cId)
-        .eq('pro_id', proId)
-        .gte('date', now)
-        .neq('statut', 'annule')
-        .order('date', { ascending: true })
-
-      if (error) throw error
-      setRdvsAVenir(data ?? [])
+      // Le guichet renvoie les rendez-vous de CETTE cliente, après avoir
+      // revérifié que le téléphone correspond bien à la fiche demandée.
+      const rep = await fetch('/api/cliente/dossier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pro_id: proId, cliente_id: cId, telephone }),
+      })
+      if (!rep.ok) throw new Error('dossier')
+      const { rdvs } = await rep.json()
+      setRdvsAVenir(rdvs ?? [])
     } catch (e) {
       console.error('[chargerRdvsAVenir] Erreur:', e)
     } finally {
@@ -1195,22 +1213,8 @@ export default function ReservationPage() {
       if (nouvelleDuree > rdv.duree) {
         const dateStr = (rdv.date as string).slice(0, 10)
         const heureActuelle = formatRdvHeure(rdv.date)
-        const { data: rdvs } = await supabase
-          .from('rendez_vous')
-          .select('id, date, duree, statut')
-          .eq('pro_id', pro.id)
-          .gte('date', `${dateStr}T00:00:00.000Z`)
-          .lte('date', `${dateStr}T23:59:59.999Z`)
-          .neq('statut', 'annule')
-        const autres = (rdvs ?? []).filter(r => r.id !== rdv.id).map(r => {
-          const d = new Date(r.date)
-          return {
-            heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
-            duree: r.duree,
-          }
-        })
-        const slots = generateSlots(dateStr, nouvelleDuree, pro.horaires, autres, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable)
-        const tient = slots.some(s => s.heure === heureActuelle && s.disponible)
+        const creneaux = await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
+        const tient = (creneaux[dateStr] ?? []).some(s => s.heure === heureActuelle && s.disponible)
         if (!tient) {
           // Le créneau actuel ne suffit plus → choix d'un nouvel horaire
           // (ouvrirReprog d'abord : il réinitialise modifPendingTechs)
@@ -1253,29 +1257,15 @@ export default function ReservationPage() {
     setReprogLoadingSlots(true)
     setReprogSlots([])
     try {
-      const { data: rdvs } = await supabase
-        .from('rendez_vous')
-        .select('id, date, duree, statut')
-        .eq('pro_id', pro.id)
-        .gte('date', `${dateStr}T00:00:00.000Z`)
-        .lte('date', `${dateStr}T23:59:59.999Z`)
-        .neq('statut', 'annule')
-
-      // Exclure le RDV en cours de modification : son propre créneau ne doit pas le bloquer
-      const rdvExistants = (rdvs ?? []).filter(r => r.id !== reprogRdvId).map(r => {
-        const d = new Date(r.date)
-        return {
-          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
-          duree: r.duree,
-        }
-      })
-
       // Durée effective : celle des nouvelles prestations si une modification est en cours
       const dureeEffective = modifPendingTechs
         ? modifPendingTechs.reduce((s, t) => s + t.duree, 0)
         : rdv.duree
 
-      setReprogSlots(generateSlots(dateStr, dureeEffective, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
+      // Le RDV qu'on déplace est exclu côté serveur : son propre créneau ne
+      // doit pas se bloquer lui-même.
+      const creneaux = await creneauxServeur(pro.id, dureeEffective, [dateStr], reprogRdvId ?? undefined)
+      setReprogSlots(creneaux[dateStr] ?? [])
       // 'start' et non 'center' : sur petit iPhone la grille dépasse l'écran,
       // un centrage couperait la date et le haut des créneaux
       scrollVers(reprogSlotsRef, 'start')
@@ -1457,32 +1447,12 @@ export default function ReservationPage() {
     setLoadingSlots(true)
     setSlots([])
     try {
-      const { data: rdvs, error: rdvsErr } = await supabase
-        .from('rendez_vous')
-        .select('date, duree, statut')
-        .eq('pro_id', pro.id)
-        .gte('date', `${date}T00:00:00.000Z`)
-        .lte('date', `${date}T23:59:59.999Z`)
-        .neq('statut', 'annule')
-
-      // Lecture impossible → on ne propose RIEN plutôt que d'afficher
-      // tous les créneaux libres (risque de double réservation)
-      if (rdvsErr) {
-        console.error('[loadSlots] Lecture RDV impossible:', rdvsErr)
-        return
-      }
-
-      const rdvExistants = (rdvs ?? []).map(r => {
-        const d = new Date(r.date)
-        return {
-          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
-          duree: r.duree,
-        }
-      })
-
-      setSlots(generateSlots(date, dureeTotal, pro.horaires, rdvExistants, pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable))
+      // Appel impossible → on ne propose RIEN plutôt que d'afficher tous les
+      // créneaux libres (risque de double réservation). Le catch s'en charge.
+      const creneaux = await creneauxServeur(pro.id, dureeTotal, [date])
+      setSlots(creneaux[date] ?? [])
     } catch (e) {
-      console.error(e)
+      console.error('[loadSlots]', e)
     } finally {
       setLoadingSlots(false)
     }
@@ -1514,44 +1484,30 @@ export default function ReservationPage() {
         const debut = buildDateStr(calYear, calMonth, 1)
         const fin = buildDateStr(calYear, calMonth, nbJours)
 
-        const { data: rdvs, error } = await supabase
-          .from('rendez_vous')
-          .select('date, duree, statut')
-          .eq('pro_id', pro.id)
-          .gte('date', `${debut}T00:00:00.000Z`)
-          .lte('date', `${fin}T23:59:59.999Z`)
-          .neq('statut', 'annule')
-
-        // Lecture impossible : on ne marque RIEN comme complet. Griser à tort
-        // fermerait la porte à des clientes qui pouvaient réserver.
-        if (error || annule) return
-
-        const parJour: Record<string, { heure: string; duree: number }[]> = {}
-        for (const r of rdvs ?? []) {
-          const d = new Date(r.date)
-          const cle = buildDateStr(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-          ;(parJour[cle] ??= []).push({
-            heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
-            duree: r.duree,
-          })
-        }
-
-        const complets = new Set<string>()
+        // Les jours off et passés ont déjà leur propre état : les marquer
+        // « complet » en plus brouillerait la légende. On ne les demande donc
+        // même pas au serveur.
         const maintenant = new Date()
         const debutDuJour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate())
+        const aTester: string[] = []
         for (let jour = 1; jour <= nbJours; jour++) {
           const dateStr = buildDateStr(calYear, calMonth, jour)
-          // Les jours off et passés ont déjà leur propre état : les marquer
-          // « complet » en plus brouillerait la légende.
           if (new Date(calYear, calMonth, jour) < debutDuJour) continue
           if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
           if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+          aTester.push(dateStr)
+        }
+        if (annule || aTester.length === 0) return
 
-          const dispo = generateSlots(
-            dateStr, dureeTotal, pro.horaires, parJour[dateStr] ?? [],
-            pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable,
-          ).some(s => s.disponible)
-          if (!dispo) complets.add(dateStr)
+        // Appel impossible : on ne marque RIEN comme complet. Griser à tort
+        // fermerait la porte à des clientes qui pouvaient réserver. Le catch
+        // laisse donc l'ensemble vide.
+        const creneaux = await creneauxServeur(pro.id, dureeTotal, aTester)
+        if (annule) return
+
+        const complets = new Set<string>()
+        for (const dateStr of aTester) {
+          if (!(creneaux[dateStr] ?? []).some(s => s.disponible)) complets.add(dateStr)
         }
         if (!annule) setJoursComplets(complets)
       } catch (e) {
@@ -1579,40 +1535,23 @@ export default function ReservationPage() {
       // « prendre le prochain créneau » rend le plus service.
       maxDate.setDate(maxDate.getDate() + HORIZON_PREMIER_CRENEAU)
 
-      const fromStr = buildDateStr(now.getFullYear(), now.getMonth(), now.getDate())
-      const toStr = buildDateStr(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
-
-      const { data: rdvs } = await supabase
-        .from('rendez_vous')
-        .select('date, duree, statut')
-        .eq('pro_id', pro.id)
-        .gte('date', `${fromStr}T00:00:00.000Z`)
-        .lte('date', `${toStr}T23:59:59.999Z`)
-        .neq('statut', 'annule')
-
-      const rdvsByDate: Record<string, { heure: string; duree: number }[]> = {}
-      for (const r of rdvs ?? []) {
-        const d = new Date(r.date)
-        const key = buildDateStr(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-        if (!rdvsByDate[key]) rdvsByDate[key] = []
-        rdvsByDate[key].push({
-          heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
-          duree: r.duree,
-        })
-      }
-
-      let trouve = false
+      // On n'interroge que les jours travaillés et non bloqués : sur 90 jours,
+      // ça évite de demander au serveur de calculer des dimanches fermés.
+      const aTester: string[] = []
       for (let i = 0; i <= HORIZON_PREMIER_CRENEAU; i++) {
         const d = new Date(now)
         d.setDate(d.getDate() + i)
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
-
         if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
         if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+        aTester.push(dateStr)
+      }
 
-        const daySlots = generateSlots(dateStr, dureeTotal, pro.horaires, rdvsByDate[dateStr] ?? [], pro.creneaux_bloques, pro.horaires_specifiques, pro.planning_variable)
-        const available = daySlots.find(s => s.disponible)
+      const creneaux = aTester.length ? await creneauxServeur(pro.id, dureeTotal, aTester) : {}
 
+      let trouve = false
+      for (const dateStr of aTester) {
+        const available = (creneaux[dateStr] ?? []).find(s => s.disponible)
         if (available) {
           setPremierCreneau({ date: dateStr, heure: available.heure })
           trouve = true
