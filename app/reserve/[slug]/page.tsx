@@ -49,6 +49,24 @@ type Offre = {
   created_at: string
 }
 
+// Les seules colonnes de `profiles` que cette page a le droit de lire.
+//
+// Elle interroge la base avec la CLÉ PUBLIQUE, celle qui est dans le code du
+// site et que tout le monde peut extraire. Un `select('*')` exposait donc, pour
+// les 537 profils, les adresses mail, les téléphones, les jetons de
+// notification et les dates d'abonnement — à qui savait les demander.
+//
+// Cette liste est le pendant, côté code, des droits accordés au rôle anonyme
+// en base. Les deux doivent rester d'accord : ajouter un champ ici sans
+// l'autoriser en base fait échouer TOUTE la requête, page blanche à la clé.
+// D'un seul tenant, sans tableau ni concaténation : le client Supabase déduit
+// la forme du résultat en LISANT ce texte. Un `join()` ou un `+` lui rendraient
+// un `string` quelconque dont il ne peut plus rien tirer, et tous les champs
+// deviendraient inconnus à la compilation.
+//
+// `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
+const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, timezone, abonnement_actif, trial_ends_at'
+
 type ProInfo = {
   id: string
   prenom: string
@@ -788,7 +806,7 @@ export default function ReservationPage() {
       // 1. Chercher par colonne slug (order by created_at pour prendre le profil original si doublons)
       const { data: bySlugArr, error: errSlug } = await supabase
         .from('profiles')
-        .select('*')
+        .select(COLONNES_PUBLIQUES)
         .eq('slug', slug)
         .order('created_at', { ascending: true })
         .limit(1)
@@ -800,7 +818,7 @@ export default function ReservationPage() {
       if (!found) {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select(COLONNES_PUBLIQUES)
           .order('created_at', { ascending: true })
 
         if (error) throw error
