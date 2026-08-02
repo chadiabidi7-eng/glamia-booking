@@ -1972,18 +1972,20 @@ export default function ReservationPage() {
         }
       }
 
-      // Demande d'appel : mention bien visible dans la notification
-      const mentionAppel = rappel ? `\n📞 ${clientePrenom} souhaite être rappelée !` : ''
+      // Demande de contact : mention bien visible dans la notification. Le mot
+      // suit celui de la case cochée par la cliente — elle a demandé à être
+      // « contactée », la pro doit lire la même chose, pas « rappelée ».
+      const mentionAppel = rappel ? `\n📞 ${clientePrenom} souhaite être contactée !` : ''
       if (nouvelleCliente) {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouvelle cliente · 📞 À rappeler' : '🌸 Nouvelle cliente !',
+          rappel ? '🌸 Nouvelle cliente · 📞 À contacter' : '🌸 Nouvelle cliente !',
           `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       } else {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouveau RDV · 📞 À rappeler' : '🌸 Nouveau RDV',
+          rappel ? '🌸 Nouveau RDV · 📞 À contacter' : '🌸 Nouveau RDV',
           `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
         )
       }
@@ -3686,7 +3688,16 @@ export default function ReservationPage() {
                 {rappel && <CheckCircle size={14} color="#fff" />}
               </div>
               <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.4 }}>
-                Souhaitez-vous être rappelée avant votre rendez-vous ?
+                {/* « Être rappelée » laissait entendre un appel téléphonique, et
+                    sans dire par qui. On nomme la pro : la cliente sait qui la
+                    contactera, et par quel moyen reste ouvert. Repli sans le nom
+                    si le profil n'a ni pseudo ni prénom. */}
+                {(() => {
+                  const nomPro = pro?.pseudo || pro?.prenom
+                  return nomPro
+                    ? `Souhaitez-vous être contactée par ${nomPro} avant votre rendez-vous ?`
+                    : 'Souhaitez-vous être contactée avant votre rendez-vous ?'
+                })()}
               </span>
             </label>
 
