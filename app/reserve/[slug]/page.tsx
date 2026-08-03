@@ -737,11 +737,17 @@ export default function ReservationPage() {
     if (premierPassage.current) premierPassage.current = false
     else rafraichir()
 
-    const minuteur = step === 4 ? window.setInterval(rafraichir, 10_000) : null
-    document.addEventListener('visibilitychange', rafraichir)
+    // Vingt secondes, et non dix : à dix, une cliente qui hésite trente
+    // secondes voyait la grille se refaire trois fois sous ses yeux.
+    const minuteur = step === 4 ? window.setInterval(rafraichir, 20_000) : null
+    // `visibilitychange` se déclenche AUSSI quand on quitte la page : sans ce
+    // test, on relisait une fois de trop, d'où l'impression de double
+    // rafraîchissement.
+    const auRetour = () => { if (document.visibilityState === 'visible') rafraichir() }
+    document.addEventListener('visibilitychange', auRetour)
     return () => {
       if (minuteur) window.clearInterval(minuteur)
-      document.removeEventListener('visibilitychange', rafraichir)
+      document.removeEventListener('visibilitychange', auRetour)
     }
   }, [pro?.id, slug, step])
 
@@ -1517,9 +1523,11 @@ export default function ReservationPage() {
 
   async function findPremierCreneau() {
     if (!pro || dureeTotal === 0) return
-    setLoadingPremierCreneau(true)
-    setPremierCreneau(null)
-    setAucunCreneauProche(false)
+    // On n'affiche « Recherche… » qu'à la PREMIÈRE fois. Sur un
+    // rafraîchissement, vider la carte la faisait disparaître puis
+    // réapparaître : la cliente voit clignoter, et croit à un bogue. On garde
+    // donc le résultat affiché pendant qu'on recalcule.
+    if (!premierCreneau && !aucunCreneauProche) setLoadingPremierCreneau(true)
 
     try {
       const now = new Date()
@@ -1554,6 +1562,7 @@ export default function ReservationPage() {
         }
       }
       // Rien trouvé : on le DIT, au lieu de faire disparaître la carte.
+      if (!trouve) setPremierCreneau(null)
       setAucunCreneauProche(!trouve)
     } catch (e) {
       console.error('[findPremierCreneau] Erreur:', e)
