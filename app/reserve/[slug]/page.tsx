@@ -768,6 +768,18 @@ export default function ReservationPage() {
     }
   }, [pro?.id, slug, step])
 
+  /** Prévient le téléphone de la pro, sans jamais faire attendre la cliente. */
+  function reveillerLaPro(slugPro: string) {
+    try {
+      fetch('https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/reveiller-calendrier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slugPro }),
+        keepalive: true,
+      }).catch(() => { /* le réveil est un bonus, jamais une condition */ })
+    } catch { /* idem */ }
+  }
+
   async function loadPro() {
     setPageState('loading')
     try {
@@ -824,6 +836,16 @@ export default function ReservationPage() {
       if (d.catalogue) setCatalogue(d.catalogue as CataloguePrestations)
       if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
       setPageState('ready')
+
+      // ON PRÉVIENT LE TÉLÉPHONE DE LA PRO qu'une cliente est là, pour qu'il
+      // relise son calendrier iPhone. Elle peut avoir bloqué son jeudi sans
+      // rouvrir Glamia depuis : sans ce signal, la grille affichée ici
+      // ignorerait ce blocage jusqu'à ce qu'elle ouvre son app.
+      //
+      // Le serveur ne réveille QUE cette pro-là, seulement si elle a relié son
+      // calendrier, et au plus une fois toutes les cinq minutes. On ne regarde
+      // même pas la réponse : la page de résa ne doit jamais dépendre de ça.
+      reveillerLaPro(slug)
     } catch (e) {
       console.error('[loadPro]', e)
       setPageState('notfound')
