@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       bloques: Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
       horairesSpec: (pro.horaires_specifiques ?? {}) as never,
       planningVar: pro.planning_variable === true,
+      // Le serveur tourne en temps universel : sans ça, le délai minimum se
+      // calculerait avec deux heures de retard sur l'heure réelle de la pro.
+      fuseau: pro.timezone ?? undefined,
     })
 
     if (!verdict.ok) {

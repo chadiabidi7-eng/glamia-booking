@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -77,6 +77,8 @@ export async function POST(req: NextRequest) {
         Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
         (pro.horaires_specifiques ?? {}) as never,
         pro.planning_variable === true,
+        // Idem : c'est l'heure CHEZ LA PRO qui décide, pas celle du serveur.
+        pro.timezone ?? undefined,
       )
     }
 

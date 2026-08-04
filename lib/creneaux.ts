@@ -64,6 +64,46 @@ export function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
   return bloques.some(b => b.touteLaJournee && isDateInPeriod(dateStr, b))
 }
 
+/** Le délai minimum entre l'instant présent et un rendez-vous réservable. */
+const DELAI_MINIMUM_MIN = 60
+
+/** Le fuseau de repli : la quasi-totalité des pros sont en France. */
+export const FUSEAU_DEFAUT = 'Europe/Paris'
+
+/**
+ * L'heure qu'il est CHEZ LA PRO, pas sur le serveur.
+ *
+ * Vercel tourne en temps universel. `new Date().getHours()` y renvoyait donc
+ * 8 quand il est 10 h à Paris, et le délai d'une heure était calculé à partir
+ * de 8 h : à 10 h 09, la page proposait encore 9 h 30. Chadi l'a constaté en
+ * essayant de réserver chez lui le 4 août 2026.
+ *
+ * En hiver l'écart n'est que d'une heure, l'été de deux — le défaut changeait
+ * d'ampleur avec la saison, ce qui le rendait d'autant plus difficile à voir.
+ */
+export function maintenantChezLaPro(fuseau: string = FUSEAU_DEFAUT): { date: string; minutes: number } {
+  let zone = fuseau || FUSEAU_DEFAUT
+  let parts: Record<string, string>
+  try {
+    parts = lire(zone)
+  } catch {
+    // Un fuseau inconnu ne doit pas faire tomber la page de réservation.
+    parts = lire(FUSEAU_DEFAUT)
+  }
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    minutes: Number(parts.hour) * 60 + Number(parts.minute),
+  }
+}
+
+function lire(zone: string): Record<string, string> {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  })
+  return Object.fromEntries(fmt.formatToParts(new Date()).map(x => [x.type, x.value]))
+}
+
 export function generateSlots(
   date: string,
   duree: number,
@@ -72,6 +112,7 @@ export function generateSlots(
   bloques: CreneauBloque[] = [],
   horairesSpec?: HorairesSpecifiques,
   planningVar?: boolean,
+  fuseau?: string,
 ): Slot[] {
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
@@ -106,9 +147,12 @@ export function generateSlots(
     .filter(b => b.date === date && !b.touteLaJournee && b.debut && b.fin)
     .map(b => ({ start: timeToMin(b.debut!), end: timeToMin(b.fin!) }))
 
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const limiteMin = date === todayStr ? now.getHours() * 60 + now.getMinutes() + 60 : 0
+  const maintenant = maintenantChezLaPro(fuseau)
+  // Une date déjà passée n'a plus aucun créneau. Sans ça, elle repassait par la
+  // branche « ce n'est pas aujourd'hui » et rouvrait toute la journée : la
+  // grille l'interdit à l'écran, mais le contrôle serveur l'aurait acceptée.
+  if (date < maintenant.date) return []
+  const limiteMin = date === maintenant.date ? maintenant.minutes + DELAI_MINIMUM_MIN : 0
 
   const slots: Slot[] = []
   for (const plage of plages) {
@@ -140,8 +184,9 @@ export function creneauReservable(args: {
   bloques?: CreneauBloque[]
   horairesSpec?: HorairesSpecifiques
   planningVar?: boolean
+  fuseau?: string
 }): { ok: true } | { ok: false; raison: string; message: string } {
-  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar } = args
+  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau } = args
 
   if (isDayBlocked(date, bloques)) {
     return { ok: false, raison: 'jour_bloque', message: "Cette journée n'est plus disponible. Choisis une autre date." }
@@ -150,7 +195,7 @@ export function creneauReservable(args: {
     return { ok: false, raison: 'jour_ferme', message: "Cette journée n'est plus ouverte à la réservation. Choisis une autre date." }
   }
 
-  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar)
+  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau)
   const slot = slots.find(s => s.heure === heure)
 
   // Absent de la grille : hors horaires, trop proche, ou durée qui déborde.
