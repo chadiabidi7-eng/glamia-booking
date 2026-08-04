@@ -750,7 +750,13 @@ export default function ReservationPage() {
     // restent affichés pendant le recalcul. La raison de ralentir a disparu,
     // et l'attente entre le moment où la pro bloque un créneau et celui où sa
     // cliente le voit disparaître passe de vingt secondes à cinq.
-    const minuteur = step === 4 ? window.setInterval(rafraichir, 5_000) : null
+    //
+    // SUR LES DEUX ÉCRANS, pas seulement sur les heures. La boucle ne tournait
+    // que devant la grille des créneaux : une pro qui bloquait ou rouvrait une
+    // JOURNÉE ENTIÈRE ne voyait pas la case changer de couleur dans le
+    // calendrier, qui ne se relisait qu'au changement d'étape. Les deux écrans
+    // vivent des mêmes données, ils doivent se rafraîchir tous les deux.
+    const minuteur = (step === 3 || step === 4) ? window.setInterval(rafraichir, 5_000) : null
     // `visibilitychange` se déclenche AUSSI quand on quitte la page : sans ce
     // test, on relisait une fois de trop, d'où l'impression de double
     // rafraîchissement.
