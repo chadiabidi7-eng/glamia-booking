@@ -120,7 +120,7 @@ type PropayInfo = {
   actif: boolean
   mode?: 'empreinte' | 'acompte' | 'total'
   acompte?: number        // centimes
-  frais?: number          // centimes (frais de réservation, mode acompte)
+  frais?: number          // toujours 0 depuis le 5 août : la pro absorbe les frais de carte
   total_cliente?: number  // centimes
   client_secret?: string
   stripe_account?: string
@@ -3648,10 +3648,15 @@ export default function ReservationPage() {
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
+                  {/* PLUS AUCUN FRAIS AJOUTÉ. Elle paie le montant affiché, à
+                      l'euro près : les frais de carte sont retenus sur le
+                      versement de la pro, comme partout ailleurs. Un montant
+                      qui surprend au moment de réserver, la cliente ne
+                      l'attribue pas à Stripe — elle l'attribue à sa pro. */}
                   {propay.mode === 'total'
-                    ? <>Réglée maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), rien à payer sur place.</>
+                    ? <>Réglée maintenant, rien à payer sur place.</>
                     : propay.mode === 'acompte'
-                      ? <>Payé maintenant (+{fmtCentimes(propay.frais ?? 0)} de frais de réservation), déduit du prix de ta prestation.</>
+                      ? <>Payé maintenant, déduit du prix de ta prestation.</>
                       : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
                 </p>
                 {/* Politique d'annulation mise en avant */}
@@ -3663,8 +3668,8 @@ export default function ReservationPage() {
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
-                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
-                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à 24 h avant le RDV</strong> — tu changes de plans ? Annule à plus de 24 h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement (les frais de réservation restent acquis). À moins de 24 h, la somme est conservée par la praticienne.</>}
+                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes(propay.acompte ?? 0)} pourront être prélevés.</>
+                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à 24 h avant le RDV</strong> — tu changes de plans ? Annule à plus de 24 h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement. À moins de 24 h, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>

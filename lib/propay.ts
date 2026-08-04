@@ -22,7 +22,24 @@ const supabaseAdmin = createClient(
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const SEUIL_TARDIVE_MS = 24 * 3600_000
-const COMMISSION_GLAMIA_PCT = 0.015
+// ── CE QUE LA CLIENTE PAIE EST EXACTEMENT CE QU'ON LUI A ANNONCÉ ──────────────
+// Décision de Chadi, 5 août 2026. Deux changements, une seule idée.
+//
+// LA COMMISSION GLAMIA DISPARAÎT. Elle rapportait 30 centimes sur un acompte de
+// 20 € — il aurait fallu 66 000 € encaissés par mois pour en tirer 1 000 €.
+// Surtout, elle contredisait la promesse écrite sur le paywall : « de sa carte
+// au tien, Glamia n'y touche jamais ». Le modèle, c'est l'abonnement.
+//
+// LES FRAIS STRIPE PASSENT À LA CHARGE DE LA PRO. Partout ailleurs dans le
+// commerce, c'est le commerçant qui paie les frais de carte — elle paie déjà
+// 1,5 à 2 % sur son terminal au salon. Faire payer la cliente était l'anomalie.
+//
+// ET SUR LE PRÉLÈVEMENT D'UNE EMPREINTE, C'EST PLUS QU'UNE QUESTION DE PRINCIPE.
+// Le message de rappel annonce « l'empreinte de 20 € sera prélevée ». En
+// prélever 20,87 contredit le consentement écrit — et un no-show est la
+// transaction la plus contestée qui soit. L'écart entre ce qu'elle a accepté et
+// ce qu'on lui prend, c'est son recours qu'on lui offre.
+// ─────────────────────────────────────────────────────────────────────────────
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
@@ -109,8 +126,8 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
         return { resultat: 'carte_manquante' }
       }
       const acompte = paiement.montant
-      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT)
-      const totalCliente = Math.ceil((acompte + STRIPE_FIXE_CENTIMES + commission) / (1 - STRIPE_PCT))
+      const commission = 0  // plus de commission Glamia
+      const totalCliente = acompte  // exactement ce qui lui a été annoncé
       try {
         const intent = await stripe.paymentIntents.create(
           {
@@ -120,7 +137,6 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
             payment_method: paiement.stripe_payment_method_id,
             off_session: true,
             confirm: true,
-            application_fee_amount: commission,
             metadata: { glamia_type: 'prelevement_annulation_tardive', glamia_paiement_id: paiement.id },
           },
           // idempotencyKey : un rejeu identique ne crée pas un 2e débit
