@@ -1859,6 +1859,7 @@ export default function ReservationPage() {
     .sort((a, b) => rangCategorie(a.nom) - rangCategorie(b.nom))
 
   const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
+  const todayStr = buildDateStr(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
 
   function isAtCurrentMonth() {
     return calYear === todayJs.getFullYear() && calMonth === todayJs.getMonth()
@@ -2666,7 +2667,8 @@ export default function ReservationPage() {
                                       onClick={() => { if (!isDisabled) reprogSelectDate(dateStr) }}
                                       disabled={isDisabled}
                                       style={{
-                                        aspectRatio: '1', borderRadius: '50%', border: 'none',
+                                        aspectRatio: '1', borderRadius: '50%', boxSizing: 'border-box',
+                                        border: `1.5px solid ${dateStr === todayStr && !isSelected ? PINK : 'transparent'}`,
                                         background: isSelected ? PINK : isOff && !isPast ? '#E3F2FD' : 'transparent',
                                         color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
                                         fontWeight: 500, fontSize: 13,
@@ -3185,6 +3187,7 @@ export default function ReservationPage() {
                     key={day}
                     day={day}
                     isSelected={isSelected}
+                    isToday={dateStr === todayStr}
                     isPast={isPast}
                     isOff={isOff && !isPast}
                     isComplet={isComplet}
@@ -3723,10 +3726,12 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 }
 
 function CalendarDay({
-  day, isSelected, isPast, isOff, isComplet, isDisabled, onClick,
+  day, isSelected, isToday, isPast, isOff, isComplet, isDisabled, onClick,
 }: {
   day: number
   isSelected: boolean
+  /** Aujourd'hui. Même repère que l'agenda de l'app : un cadre, rien de plus. */
+  isToday: boolean
   isPast: boolean
   isOff: boolean
   /** La pro travaille ce jour-là, mais plus une seule place pour cette durée. */
@@ -3766,7 +3771,11 @@ function CalendarDay({
       onMouseLeave={() => setHovered(false)}
       title={isOff ? 'Jour de repos' : isComplet ? 'Complet — être prévenue si une place se libère' : undefined}
       style={{
-        aspectRatio: '1', borderRadius: '50%', border: 'none',
+        aspectRatio: '1', borderRadius: '50%', boxSizing: 'border-box',
+        // Le cadre est toujours là, transparent la plupart du temps : sinon la
+        // case d'aujourd'hui serait la seule à porter une bordure, et elle
+        // sauterait de 3 pixels par rapport à ses voisines.
+        border: `1.5px solid ${isToday && !isSelected ? PINK : 'transparent'}`,
         background: bg, color, fontWeight: 500, fontSize: 14,
         cursor: isDisabled ? 'default' : 'pointer',
         transition: 'all 0.15s', display: 'flex', alignItems: 'center',
