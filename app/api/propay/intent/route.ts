@@ -13,9 +13,11 @@ import Stripe from 'stripe'
 // Montants en CENTIMES côté Stripe. Spec (13 juil. 2026) :
 // - acompte = % ou fixe (config pro), plafonné à 50 % du total ET 50 €
 // - mode empreinte : SetupIntent (0 € prélevé, carte enregistrée avec 3DS)
-// - mode acompte : PaymentIntent — la cliente paie acompte + frais de
-//   réservation (gross-up : frais Stripe + commission Glamia 1,5 %), la pro
-//   touche exactement le montant annoncé, frais Stripe retenus sur son versement.
+// - mode acompte : PaymentIntent — la cliente paie EXACTEMENT le montant
+//   annoncé. Les frais de carte sont retenus sur le versement de la pro, comme
+//   partout ailleurs dans le commerce. Et la loi française l'impose : facturer
+//   un supplément parce que la cliente paie par carte est interdit depuis 2018
+//   (code monétaire et financier, L.112-12).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabaseAdmin = createClient(
@@ -27,7 +29,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const PLAFOND_POURCENT = 50
 const PLAFOND_EUROS_CENTIMES = 50_00
-// Commission Glamia — passer à 0 pour la retirer (décision : 1,5 %, 13 juil.)
 // Frais Stripe standard cartes EU : 1,5 % + 0,25 €
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
