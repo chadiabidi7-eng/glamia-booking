@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
+import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
 import { libelleCategorie } from '@/lib/categorie-autre'
@@ -22,7 +23,12 @@ type Technique = { id: string; nom: string; active: boolean; prix: number; duree
 type CataloguePrestations = Record<string, Technique[]>
 
 // Technique sélectionnée avec catégorie embarquée (prix/duree unitaires ; quantite = nb d'exemplaires)
-type TechSelec = { categorie: string; nom: string; prix: number; duree: number; prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean; quantite?: number }
+type TechSelec = {
+  categorie: string; nom: string; prix: number; duree: number
+  prix_type?: 'fixe' | 'a_partir_de'; quantifiable?: boolean; quantite?: number
+  /** Posée par une réponse à une question — sert à la retirer si elle change d'avis. */
+  ajouteeParQuestion?: string
+}
 
 
 type Offre = {
@@ -541,6 +547,9 @@ export default function ReservationPage() {
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
+  // Les questions de la pro, et ce que la cliente y a répondu.
+  const [questions, setQuestions] = useState<QuestionResa[]>([])
+  const [reponses, setReponses] = useState<Record<string, string>>({})
   // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
   const [techniqueDepliee, setTechniqueDepliee] = useState<string | null>(null)
   // Visionneuse plein écran : toutes les photos de la technique + index affiché
@@ -698,6 +707,56 @@ export default function ReservationPage() {
   const [loadingJoursComplets, setLoadingJoursComplets] = useState(false)
 
   // ── Totaux calculés (toutes spécialités) ─────
+  // ── Les questions à poser, et ce qu'elles ajoutent ────────────────────────
+  const questionsEnCours = questionsAPoser(questions, techniquesSelectionnees)
+
+  /**
+   * Elle répond. La prestation de l'ancienne réponse s'en va, celle de la
+   * nouvelle arrive.
+   *
+   * ON RETIRE AVANT D'AJOUTER : sans ça, une cliente qui passe de « posés par
+   * toi » à « posés ailleurs » se retrouverait avec les deux déposes dans son
+   * panier, et un total qui n'a plus aucun sens.
+   */
+  const repondre = (question: QuestionResa, reponse: { id: string; effet: string; prestation?: { nom: string; prix: number; duree: number; categorie?: string } }) => {
+    setReponses(prev => ({ ...prev, [question.id]: reponse.id }))
+    setTechniquesSelectionnees(prev => {
+      const sansCelleDavant = prev.filter(t => t.ajouteeParQuestion !== question.id)
+      if (reponse.effet !== 'prestation' || !reponse.prestation) return sansCelleDavant
+      const p = reponse.prestation
+      // Déjà dans son panier parce qu'elle l'a choisie elle-même : on n'ajoute
+      // pas un doublon, elle paierait deux fois.
+      if (sansCelleDavant.some(t => t.nom === p.nom)) return sansCelleDavant
+      return [...sansCelleDavant, {
+        categorie: p.categorie ?? '', nom: p.nom, prix: p.prix, duree: p.duree,
+        ajouteeParQuestion: question.id,
+      }]
+    })
+  }
+
+  /**
+   * Elle change ses prestations : les réponses qui n'ont plus lieu d'être
+   * s'effacent, et ce qu'elles avaient ajouté avec elles.
+   *
+   * Sans ce ménage, une dépose ajoutée pour une pose gel resterait dans le
+   * panier après qu'elle a décoché la pose gel — payée pour rien.
+   */
+  useEffect(() => {
+    const vivantes = new Set(questionsEnCours.map(q => q.id))
+    const orphelines = Object.keys(reponses).filter(id => !vivantes.has(id))
+    if (orphelines.length === 0) return
+    setReponses(prev => {
+      const suite = { ...prev }
+      for (const id of orphelines) delete suite[id]
+      return suite
+    })
+    setTechniquesSelectionnees(prev => prev.filter(t => !t.ajouteeParQuestion || vivantes.has(t.ajouteeParQuestion)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionsEnCours.map(q => q.id).join(',')])
+
+  /** Toutes les questions ont-elles leur réponse ? Sinon, on ne passe pas. */
+  const questionsSansReponse = questionsEnCours.filter(q => !reponses[q.id])
+
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
   const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
   const prixTotal = offreAppliquee
@@ -893,6 +952,7 @@ export default function ReservationPage() {
       // pour dire à la cliente, AVANT qu'elle réserve, ce qui se passe si elle
       // annule à moins de 24 h. Le montant, lui, est décidé par le serveur.
       setAcompteActif(((found.acompte_config as { actif?: boolean } | null)?.actif) === true)
+      setQuestions(questionsDepuisProfil((found as { questions_resa?: unknown }).questions_resa))
 
       if (d.catalogue) setCatalogue(d.catalogue as CataloguePrestations)
       if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
@@ -3290,6 +3350,77 @@ export default function ReservationPage() {
                 })}
               </div>
             )}
+
+            {/* ── Les questions de la pro ──────────────────────────────────
+                ICI, ET PAS PLUS TARD. Si la réponse ajoute une dépose, la durée
+                du rendez-vous change — donc les créneaux disponibles changent.
+                Poser la question à la confirmation obligerait à tout recalculer
+                et à lui reprendre son horaire : le pire moment.
+
+                Dans la page, pas dans une fenêtre : une fenêtre se ferme d'un
+                réflexe, et la question se lit alors comme un obstacle plutôt
+                que comme la suite de son choix. */}
+            {questionsEnCours.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                {questionsEnCours.map(q => {
+                  const choisie = reponses[q.id]
+                  const reponseChoisie = q.reponses.find(r => r.id === choisie)
+                  return (
+                    <div key={q.id} style={{
+                      background: '#fff', border: `1.5px solid ${PINK}`, borderRadius: 16,
+                      padding: 16, marginBottom: 14,
+                    }}>
+                      <p style={{ margin: '0 0 12px', fontSize: 15.5, fontWeight: 700, color: '#1f2937', lineHeight: 1.4 }}>
+                        {q.texte}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {q.reponses.map(r => {
+                          const active = choisie === r.id
+                          return (
+                            <button
+                              key={r.id}
+                              onClick={() => repondre(q, r)}
+                              style={{
+                                textAlign: 'left', width: '100%', cursor: 'pointer',
+                                background: active ? PINK : '#fff',
+                                color: active ? '#fff' : '#374151',
+                                border: `1.5px solid ${active ? PINK : '#e5e7eb'}`,
+                                borderRadius: 12, padding: '12px 14px',
+                                fontSize: 14.5, fontWeight: 600, fontFamily: 'inherit',
+                                transition: 'all 0.15s',
+                              }}>
+                              {r.texte}
+                              {/* CE QUI S'AJOUTE SE VOIT, AVANT MÊME QU'ELLE CHOISISSE.
+                                  Une prestation glissée en douce se découvre au total :
+                                  elle abandonne, ou elle arrive fâchée. */}
+                              {r.effet === 'prestation' && r.prestation && (
+                                <span style={{
+                                  display: 'block', marginTop: 3, fontSize: 12, fontWeight: 500,
+                                  color: active ? 'rgba(255,255,255,0.9)' : '#9ca3af',
+                                }}>
+                                  + {r.prestation.nom} · {formatPrix(r.prestation.prix, pro?.devise)} · {formatDuree(r.prestation.duree)}
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {reponseChoisie?.effet === 'message' && reponseChoisie.message && (
+                        <div style={{
+                          marginTop: 12, background: '#FFF8E1', border: '1px solid #F5C27A',
+                          borderRadius: 12, padding: '11px 13px',
+                        }}>
+                          <p style={{ margin: 0, fontSize: 13.5, color: '#8a5a12', lineHeight: 1.45 }}>
+                            {reponseChoisie.message}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
           </div>
         )}
 
@@ -3960,6 +4091,11 @@ export default function ReservationPage() {
                 </div>
               ))}
             </div>
+            {questionsSansReponse.length > 0 && (
+              <p style={{ margin: '0 0 8px', fontSize: 12.5, color: PINK, fontWeight: 600, textAlign: 'center' }}>
+                Une question t&apos;attend juste au-dessus
+              </p>
+            )}
             {/* Total + Continuer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
@@ -3967,11 +4103,19 @@ export default function ReservationPage() {
                   <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</>
                 ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}
               </span>
+              {/* ON N'AVANCE PAS SANS AVOIR RÉPONDU. Une question qu'on peut
+                  sauter ne sert à rien : la dépose serait oubliée exactement
+                  comme avant. Et il y a toujours une réponse qui ne change
+                  rien — répondre ne coûte qu'un appui. */}
               <button
-                onClick={() => setStep(3)}
+                onClick={() => { if (questionsSansReponse.length === 0) setStep(3) }}
+                disabled={questionsSansReponse.length > 0}
+                title={questionsSansReponse.length > 0 ? 'Réponds à la question au-dessus' : undefined}
                 style={{
                   background: PINK, color: '#fff', fontWeight: 700, fontSize: 14,
-                  padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'pointer',
+                  padding: '10px 22px', borderRadius: 22, border: 'none',
+                  cursor: questionsSansReponse.length > 0 ? 'default' : 'pointer',
+                  opacity: questionsSansReponse.length > 0 ? 0.45 : 1,
                 }}
               >
                 Continuer →
