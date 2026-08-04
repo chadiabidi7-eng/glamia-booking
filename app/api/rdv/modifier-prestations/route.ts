@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { creneauReservable } from '@/lib/creneaux'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, nb_decalages, cliente:clientes(telephone)')
+    .select('id, date, statut, nb_decalages, pro_id, cliente:clientes(telephone)')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
@@ -84,6 +85,20 @@ export async function POST(req: NextRequest) {
     if (((rdv as { nb_decalages?: number }).nb_decalages ?? 0) >= MAX_DECALAGES) {
       return NextResponse.json({ error: 'decalage_max_atteint' }, { status: 403 })
     }
+    // LE CRÉNEAU EST-IL VRAIMENT LIBRE ? Ce guichet posait la nouvelle date
+    // sans jamais le demander. La grille affichée le cachait bien, mais elle
+    // vieillit dès qu'elle est dessinée : une page laissée ouverte, deux
+    // clientes en même temps, et plus rien ne disait non.
+    const refus = await creneauIndisponible(
+      rdv.pro_id as string,
+      rdv.id as string,
+      newDate,
+      body.duree as number,
+    )
+    if (refus) {
+      return NextResponse.json({ error: 'creneau_indisponible', message: refus }, { status: 409 })
+    }
+
     patch.date = newDate
     patch.statut = 'en_attente'
     patch.nb_decalages = ((rdv as { nb_decalages?: number }).nb_decalages ?? 0) + 1
@@ -96,4 +111,55 @@ export async function POST(req: NextRequest) {
   if (updErr) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
 
   return NextResponse.json({ success: true })
+}
+
+/**
+ * Le créneau visé est-il réellement réservable ? Renvoie le motif du refus, ou
+ * `null` si tout va bien. Mêmes règles que pour une réservation neuve :
+ * horaires, journées fermées, créneaux bloqués — calendrier iPhone compris —,
+ * planning variable, délai minimum, et les autres rendez-vous du jour.
+ */
+async function creneauIndisponible(
+  proId: string, rdvId: string, nouvelleDate: string, duree: number,
+): Promise<string | null> {
+  const jour = nouvelleDate.slice(0, 10)
+  const heure = nouvelleDate.slice(11, 16)
+
+  const { data: pro } = await supabaseAdmin
+    .from('profiles')
+    .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
+    .eq('id', proId)
+    .maybeSingle()
+  // Profil illisible : on ne bloque pas une cliente sur une panne de lecture.
+  if (!pro) return null
+
+  const { data: autres } = await supabaseAdmin
+    .from('rendez_vous')
+    .select('date, duree')
+    .eq('pro_id', proId)
+    .gte('date', `${jour}T00:00:00.000Z`)
+    .lte('date', `${jour}T23:59:59.999Z`)
+    .neq('statut', 'annule')
+    // Son propre rendez-vous ne doit pas lui barrer la route.
+    .neq('id', rdvId)
+
+  const verdict = creneauReservable({
+    date: jour,
+    heure,
+    duree,
+    horaires: ((pro as any).horaires ?? {}) as never,
+    rdvExistants: (autres ?? []).map(r => {
+      const d = new Date(r.date)
+      return {
+        heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+        duree: r.duree,
+      }
+    }),
+    bloques: Array.isArray((pro as any).creneaux_bloques) ? (pro as any).creneaux_bloques : [],
+    horairesSpec: ((pro as any).horaires_specifiques ?? {}) as never,
+    planningVar: (pro as any).planning_variable === true,
+    fuseau: (pro as any).timezone ?? undefined,
+  })
+
+  return verdict.ok ? null : verdict.message
 }
