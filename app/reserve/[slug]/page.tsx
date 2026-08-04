@@ -612,6 +612,8 @@ export default function ReservationPage() {
   // n'aide personne à choisir. `slots` garde tout, il sert aux calculs.
   const slotsLibres = slots.filter(s => s.disponible)
   const [loadingSlots, setLoadingSlots] = useState(false)
+  /** L'heure qu'elle avait choisie et qui vient de lui passer sous le nez. */
+  const [creneauPerdu, setCreneauPerdu] = useState<string | null>(null)
   const [heure,        setHeure]        = useState('')
   // Incrémenté par le realtime quand l'agenda de la pro change → recharge les créneaux
   const [rdvVersion,   setRdvVersion]   = useState(0)
@@ -743,9 +745,12 @@ export default function ReservationPage() {
     if (premierPassage.current) premierPassage.current = false
     else if (step !== 4) rafraichir()
 
-    // Vingt secondes, et non dix : à dix, une cliente qui hésite trente
-    // secondes voyait la grille se refaire trois fois sous ses yeux.
-    const minuteur = step === 4 ? window.setInterval(rafraichir, 20_000) : null
+    // CINQ SECONDES. C'était vingt, pour espacer un clignotement — la grille
+    // s'effaçait avant chaque relecture. Ce défaut est corrigé : les créneaux
+    // restent affichés pendant le recalcul. La raison de ralentir a disparu,
+    // et l'attente entre le moment où la pro bloque un créneau et celui où sa
+    // cliente le voit disparaître passe de vingt secondes à cinq.
+    const minuteur = step === 4 ? window.setInterval(rafraichir, 5_000) : null
     // `visibilitychange` se déclenche AUSSI quand on quitte la page : sans ce
     // test, on relisait une fois de trop, d'où l'impression de double
     // rafraîchissement.
@@ -1463,8 +1468,19 @@ export default function ReservationPage() {
       // Appel impossible → on ne propose RIEN plutôt que d'afficher tous les
       // créneaux libres (risque de double réservation). Le catch s'en charge.
       const creneaux = await creneauxServeur(pro.id, dureeTotal, [date])
-      setSlots(creneaux[date] ?? [])
+      const frais = creneaux[date] ?? []
+      setSlots(frais)
       jourDesSlots.current = date
+
+      // SON CRÉNEAU VIENT-IL DE PARTIR ? Elle a choisi 14 h 30, une autre
+      // cliente l'a pris, ou la pro l'a bloqué. Sans ce contrôle, elle ne
+      // l'apprenait qu'à la confirmation, après avoir rempli tout le reste.
+      // On la ramène sur la grille et on lui dit, tant qu'il est tôt.
+      if (heure && !frais.some(c => c.heure === heure && c.disponible)) {
+        setHeure('')
+        setCreneauPerdu(heure)
+        setStep(4)
+      }
     } catch (e) {
       console.error('[loadSlots]', e)
     } finally {
@@ -3249,6 +3265,15 @@ export default function ReservationPage() {
               Durée totale : {formatDuree(dureeTotal)}
             </p>
 
+            {creneauPerdu && (
+              <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '11px 13px', marginBottom: 16, textAlign: 'left' }}>
+                <AlertCircle size={17} color="#B42318" style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ margin: 0, color: '#B42318', fontSize: 13.5, lineHeight: 1.45 }}>
+                  Le créneau de {creneauPerdu} vient d&apos;être pris. Choisissez-en un autre.
+                </p>
+              </div>
+            )}
+
             {loadingSlots ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <p style={{ color: PINK, fontWeight: 600 }}>Chargement des créneaux...</p>
@@ -3333,7 +3358,7 @@ export default function ReservationPage() {
                 {slotsLibres.map(s => (
                   <button
                     key={s.heure}
-                    onClick={() => { setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
+                    onClick={() => { setCreneauPerdu(null); setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
