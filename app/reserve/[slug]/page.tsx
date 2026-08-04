@@ -734,8 +734,14 @@ export default function ReservationPage() {
 
     // Une relecture au changement d'étape — sauf tout au début, où la page
     // vient déjà de charger le profil.
+    //
+    // ET SAUF EN ARRIVANT SUR LA GRILLE DES CRÉNEAUX. Là, le calcul des
+    // créneaux vient DÉJÀ d'interroger le serveur avec l'état frais du profil.
+    // Relire par-dessus recréait l'objet profil, ce qui relançait le calcul une
+    // seconde fois : la cliente voyait la grille se dessiner, disparaître, et
+    // se redessiner. C'est ce que Chadi a constaté le 4 août en ouvrant un jour.
     if (premierPassage.current) premierPassage.current = false
-    else rafraichir()
+    else if (step !== 4) rafraichir()
 
     // Vingt secondes, et non dix : à dix, une cliente qui hésite trente
     // secondes voyait la grille se refaire trois fois sous ses yeux.
@@ -1438,15 +1444,27 @@ export default function ReservationPage() {
     if (step === 4 && date && dureeTotal > 0 && pro) loadSlots()
   }, [step, date, rdvVersion, pro])
 
+  // Le jour auquel appartient la grille affichée. Sert à distinguer un vrai
+  // changement de jour d'un simple recalcul.
+  const jourDesSlots = useRef<string>('')
+
   async function loadSlots() {
     if (!pro || dureeTotal === 0 || !date) return
-    setLoadingSlots(true)
-    setSlots([])
+    // ON NE VIDE QUE SI ON CHANGE DE JOUR. Toutes les vingt secondes, le
+    // recalcul effaçait la grille avant de la refaire : la cliente voyait ses
+    // créneaux disparaître sous ses yeux pendant qu'elle hésitait. Ils restent
+    // maintenant affichés pendant qu'on recalcule.
+    const nouveauJour = jourDesSlots.current !== date
+    if (nouveauJour) {
+      setLoadingSlots(true)
+      setSlots([])
+    }
     try {
       // Appel impossible → on ne propose RIEN plutôt que d'afficher tous les
       // créneaux libres (risque de double réservation). Le catch s'en charge.
       const creneaux = await creneauxServeur(pro.id, dureeTotal, [date])
       setSlots(creneaux[date] ?? [])
+      jourDesSlots.current = date
     } catch (e) {
       console.error('[loadSlots]', e)
     } finally {
