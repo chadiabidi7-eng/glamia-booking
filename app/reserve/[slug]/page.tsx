@@ -842,9 +842,13 @@ export default function ReservationPage() {
             ? { type: found.reduction_type, valeur: Number(found.reduction_valeur), restants: found.reduction_rdv_restants ?? null }
             : null
         )
+        // ON ATTEND SON DOSSIER AVANT DE L'AFFICHER. Sinon la carte de fidélité
+        // se dessinait vide — zéro tampon, puisque la fiche n'était pas encore
+        // arrivée — puis se remplissait d'un coup. Court, mais elle voyait sa
+        // carte remise à zéro sous ses yeux. Le temps d'attente, lui, ne change
+        // pas : c'est le même aller-retour, simplement attendu.
+        await chargerDossier(pro.id, found.id)
         setPhoneStatus('known')
-        chargerRdvsAVenir(found.id, pro.id)
-        chargerFidelite(pro.id, found.id)
       } else {
         setClienteId(null)
         setClientePrenom('')
@@ -888,39 +892,30 @@ export default function ReservationPage() {
   // parce que ses appelants n'ont plus rien à faire non plus.
   async function chargerFideliteConfig(_proId: string) { /* déjà chargée */ }
 
-  async function chargerFidelite(proId: string, clienteId: string) {
+  /**
+   * Sa fiche de fidélité ET ses rendez-vous à venir, en UN seul aller-retour.
+   *
+   * C'étaient deux appels au même guichet, avec exactement le même contenu :
+   * deux fois le même travail côté serveur, et deux réponses qui arrivaient
+   * l'une après l'autre — d'où l'affichage en deux temps.
+   */
+  async function chargerDossier(proId: string, clienteId: string) {
+    setLoadingRdvs(true)
     try {
-      // La configuration est déjà là (chargée avec le profil). Reste la fiche
-      // de CETTE cliente — par le guichet, qui revérifie le téléphone.
+      // Le guichet revérifie que le téléphone correspond bien à la fiche.
       const rep = await fetch('/api/cliente/dossier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite } = await rep.json()
+      const { fidelite, rdvs } = await rep.json()
       setFideliteFiche(fidelite ?? null)
-    } catch (e) {
-      console.error('[chargerFidelite]', e)
-    }
-  }
-
-  // ── RDVs à venir ─────────────────────────────
-  async function chargerRdvsAVenir(cId: string, proId: string) {
-    setLoadingRdvs(true)
-    try {
-      // Le guichet renvoie les rendez-vous de CETTE cliente, après avoir
-      // revérifié que le téléphone correspond bien à la fiche demandée.
-      const rep = await fetch('/api/cliente/dossier', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pro_id: proId, cliente_id: cId, telephone }),
-      })
-      if (!rep.ok) throw new Error('dossier')
-      const { rdvs } = await rep.json()
       setRdvsAVenir(rdvs ?? [])
     } catch (e) {
-      console.error('[chargerRdvsAVenir] Erreur:', e)
+      // Une panne du dossier ne doit pas empêcher de réserver : on la reconnaît
+      // quand même, simplement sans sa carte ni ses rendez-vous.
+      console.error('[chargerDossier]', e)
     } finally {
       setLoadingRdvs(false)
     }
