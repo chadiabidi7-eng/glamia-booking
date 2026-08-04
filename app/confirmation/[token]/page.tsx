@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
+import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
 
 // ─────────────────────────────────────────────
 // Types
@@ -25,6 +26,9 @@ type RdvInfo = {
   pro_devise: string | null
   pro_id: string
   horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
+  horaires_specifiques: HorairesSpecifiques | null
+  creneaux_bloques: CreneauBloque[]
+  planning_variable: boolean
   duree: number
   instructions: string | null
   inspirations: string[]
@@ -197,40 +201,13 @@ function formatDateFr(iso: string): string {
 }
 
 // ── Helpers décalage ────────────────────────
-type HorairesHebdo = Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }>
 type SlotInfo = { heure: string; disponible: boolean }
 
-function timeToMin(t: string) { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-function minToTime(m: number) { return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` }
-function isDayWorking(dateStr: string, horaires: HorairesHebdo) {
-  const h = horaires[new Date(dateStr + 'T00:00:00').getDay()]
-  return h?.actif === true || h?.active === true
-}
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
 function buildDateStr(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
-function generateSlots(
-  date: string, duree: number, horaires: HorairesHebdo,
-  rdvExistants: { heure: string; duree: number }[],
-): SlotInfo[] {
-  const h = horaires[new Date(date + 'T00:00:00').getDay()]
-  if (!h?.actif && !h?.active) return []
-  const debut = timeToMin(h.debut), fin = timeToMin(h.fin)
-  const taken = rdvExistants.map(r => ({ start: timeToMin(r.heure), end: timeToMin(r.heure) + r.duree }))
-  const now = new Date()
-  const todayStr = buildDateStr(now.getFullYear(), now.getMonth(), now.getDate())
-  const limiteMin = date === todayStr ? (now.getHours() * 60 + now.getMinutes() + 30) : 0
-  const slots: SlotInfo[] = []
-  for (let t = debut; t + duree <= fin; t += 30) {
-    if (date === todayStr && t < limiteMin) continue
-    const isTaken = taken.some(r => t < r.end && (t + duree) > r.start)
-    slots.push({ heure: minToTime(t), disponible: !isTaken })
-  }
-  return slots
-}
-
 const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MOIS_LONG = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -262,6 +239,8 @@ function ConfirmationPage() {
   const [decDate, setDecDate] = useState('')
   const [decHeure, setDecHeure] = useState('')
   const [decSlots, setDecSlots] = useState<SlotInfo[]>([])
+  /** Le refus du serveur, dit à la cliente sans la sortir de l'écran. */
+  const [decRefus, setDecRefus] = useState<string | null>(null)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
@@ -358,14 +337,17 @@ function ConfirmationPage() {
     if (!rdv) return
     setDecDate(dateStr)
     setDecHeure('')
+    setDecRefus(null)
     setLoadingSlots(true)
     try {
       const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}`)
       if (!res.ok) { setDecSlots([]); return }
       const info = await res.json()
-      const horaires = rdv.horaires ?? {}
-      const slots = generateSlots(dateStr, rdv.duree, horaires as HorairesHebdo, info.rdvs_jour ?? [])
-      setDecSlots(slots)
+      // Le serveur a calculé la grille avec TOUTES les règles : horaires,
+      // journées fermées, créneaux bloqués, planning variable, délai minimum.
+      // La page ne recalcule plus rien — c'était sa copie appauvrie des règles
+      // qui laissait proposer des créneaux en plein congé.
+      setDecSlots(info.slots ?? [])
     } catch {
       setDecSlots([])
     } finally {
@@ -383,7 +365,23 @@ function ConfirmationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'decaler', new_date: newDateISO }),
       })
-      if (!res.ok) { setState('error'); setActing(false); return }
+      if (!res.ok) {
+        // Un créneau pris entre-temps, ou une journée fermée depuis que la
+        // grille a été dessinée : on le lui DIT et on la laisse là, avec une
+        // grille à jour. L'écran d'erreur générique la mettait dehors, sans
+        // rien lui expliquer, avec son rendez-vous d'origine intact et aucun
+        // moyen de comprendre pourquoi.
+        let message = "Ce créneau n'est plus disponible. Choisis-en un autre."
+        try {
+          const refus = await res.json()
+          if (refus?.message) message = refus.message
+        } catch { /* réponse illisible : on garde la phrase générale */ }
+        setDecRefus(message)
+        setDecHeure('')
+        await handlePickDate(decDate)
+        setActing(false)
+        return
+      }
       setState('rescheduled')
     } catch {
       setState('error')
@@ -623,7 +621,9 @@ function ConfirmationPage() {
                     const dayDate = new Date(calYear, calMonth, day)
                     const today0Date = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate())
                     const isPast = dayDate < today0Date
-                    const isOff = !isDayWorking(dateStr, rdv.horaires as HorairesHebdo)
+                    const isOff =
+                      !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable)
+                      || isDayBlocked(dateStr, rdv.creneaux_bloques ?? [])
                     const isDisabled = isPast || isOff
                     const isSelected = decDate === dateStr
                     return (
@@ -649,6 +649,12 @@ function ConfirmationPage() {
                     <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, marginBottom: 10, marginTop: 0, textTransform: 'capitalize' }}>
                       {formatDateFr(decDate)}
                     </p>
+                    {decRefus && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+                        <AlertCircle size={16} color="#B42318" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <p style={{ margin: 0, color: '#B42318', fontSize: 13, lineHeight: 1.45 }}>{decRefus}</p>
+                      </div>
+                    )}
                     {loadingSlots ? (
                       <p style={{ color: PINK, fontSize: 14 }}>Chargement des créneaux...</p>
                     ) : decSlots.filter(s => s.disponible).length === 0 ? (

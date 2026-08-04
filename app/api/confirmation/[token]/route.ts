@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
 
 const MOIS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -48,7 +49,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -56,8 +57,14 @@ export async function GET(
   const heureStr = (data.date as string).slice(11, 16)
 
   // Créneaux existants pour une date spécifique (pour le décalage)
+  // LA GRILLE DU DÉCALAGE SE CALCULE ICI, plus dans le navigateur.
+  //
+  // La page en gardait sa propre version, qui ne connaissait que les horaires
+  // de la semaine et les autres rendez-vous. Elle ignorait donc les créneaux
+  // bloqués, les journées fermées, le planning variable et les évènements du
+  // calendrier iPhone : une cliente pouvait se décaler en plein congé.
   const slotsDate = req.nextUrl.searchParams.get('slots_date')
-  let rdvsJour: { heure: string; duree: number }[] = []
+  let slots: Slot[] = []
   if (slotsDate) {
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
@@ -66,14 +73,28 @@ export async function GET(
       .gte('date', `${slotsDate}T00:00:00.000Z`)
       .lte('date', `${slotsDate}T23:59:59.999Z`)
       .neq('statut', 'annule')
+      // Sans ça, SON PROPRE rendez-vous occuperait la place : elle ne pourrait
+      // plus reprendre son heure, ni celle d'à côté.
+      .neq('id', data.id)
 
-    rdvsJour = (rdvs ?? []).map(r => {
+    const rdvsJour = (rdvs ?? []).map(r => {
       const d = new Date(r.date)
       return {
         heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
         duree: r.duree,
       }
     })
+
+    slots = generateSlots(
+      slotsDate,
+      data.duree ?? 60,
+      ((pro as any)?.horaires ?? {}) as never,
+      rdvsJour,
+      Array.isArray((pro as any)?.creneaux_bloques) ? (pro as any).creneaux_bloques : [],
+      ((pro as any)?.horaires_specifiques ?? {}) as never,
+      (pro as any)?.planning_variable === true,
+      (pro as any)?.timezone ?? undefined,
+    )
   }
 
   return NextResponse.json({
@@ -97,7 +118,11 @@ export async function GET(
     duree: data.duree ?? 60,
     instructions: data.instructions ?? null,
     inspirations: (data.inspirations as string[] | null) ?? [],
-    rdvs_jour: rdvsJour,
+    slots,
+    // Ce qu'il faut au petit calendrier pour griser les bonnes journées.
+    horaires_specifiques: (pro as any)?.horaires_specifiques ?? null,
+    creneaux_bloques: Array.isArray((pro as any)?.creneaux_bloques) ? (pro as any).creneaux_bloques : [],
+    planning_variable: (pro as any)?.planning_variable === true,
   })
 }
 
@@ -117,7 +142,7 @@ export async function POST(
   // Vérifier que le RDV existe et que le token est valide
   const { data: rdv, error: fetchErr } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, duree, statut, token_expiration, cliente_id, pro_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -138,6 +163,62 @@ export async function POST(
 
     const oldDateStr = (rdv.date as string).slice(0, 10)
     const oldHeureStr = (rdv.date as string).slice(11, 16)
+
+    // ── LE VERROU ────────────────────────────────────────────────────────
+    //
+    // Jusqu'ici, décaler écrivait la nouvelle date TELLE QUELLE. Aucun
+    // contrôle : ni les horaires, ni les journées fermées, ni les créneaux
+    // bloqués, ni le délai minimum. La grille affichée les cachait bien, mais
+    // une grille est une PROPOSITION — elle vieillit dès qu'elle est dessinée.
+    // Une page laissée ouverte une heure, deux clientes qui s'y prennent en
+    // même temps, et plus rien ne disait non.
+    //
+    // C'est le même verrou que pour une réservation neuve, et il lit l'état
+    // RÉEL du profil au moment où elle valide.
+    const nouvelleDate = (newDate as string).slice(0, 10)
+    const nouvelleHeure = (newDate as string).slice(11, 16)
+
+    const { data: proRegles } = await supabaseAdmin
+      .from('profiles')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
+      .eq('id', rdv.pro_id)
+      .maybeSingle()
+
+    if (proRegles) {
+      const { data: autresRdvs } = await supabaseAdmin
+        .from('rendez_vous')
+        .select('date, duree')
+        .eq('pro_id', rdv.pro_id)
+        .gte('date', `${nouvelleDate}T00:00:00.000Z`)
+        .lte('date', `${nouvelleDate}T23:59:59.999Z`)
+        .neq('statut', 'annule')
+        .neq('id', rdv.id)
+
+      const verdict = creneauReservable({
+        date: nouvelleDate,
+        heure: nouvelleHeure,
+        duree: (rdv.duree as number) ?? 60,
+        horaires: ((proRegles as any).horaires ?? {}) as never,
+        rdvExistants: (autresRdvs ?? []).map(r => {
+          const d = new Date(r.date)
+          return {
+            heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
+            duree: r.duree,
+          }
+        }),
+        bloques: Array.isArray((proRegles as any).creneaux_bloques) ? (proRegles as any).creneaux_bloques : [],
+        horairesSpec: ((proRegles as any).horaires_specifiques ?? {}) as never,
+        planningVar: (proRegles as any).planning_variable === true,
+        fuseau: (proRegles as any).timezone ?? undefined,
+      })
+
+      if (!verdict.ok) {
+        return NextResponse.json(
+          { error: 'creneau_indisponible', raison: verdict.raison, message: verdict.message },
+          { status: 409 },
+        )
+      }
+    }
 
     const { error: updateErr } = await supabaseAdmin
       .from('rendez_vous')
