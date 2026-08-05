@@ -28,7 +28,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const PLAFOND_POURCENT = 50
 const PLAFOND_EUROS_CENTIMES = 50_00
 // Commission Glamia — passer à 0 pour la retirer (décision : 1,5 %, 13 juil.)
-const COMMISSION_GLAMIA_PCT = 0.015
+// LA COMMISSION GLAMIA EST À ZÉRO. Décision de Chadi, 5 août 2026.
+//
+// Elle rapportait 30 centimes sur un acompte de 20 € — il aurait fallu 66 000 €
+// encaissés par mois pour en tirer 1 000. Surtout, elle contredisait la
+// promesse écrite sur le paywall : « de sa carte au tien, Glamia n'y touche
+// jamais ». Le modèle, c'est l'abonnement : 19,99 € par mois, clair et
+// prévisible. Empiler une commission dessus, c'est le début d'une facture qu'on
+// ne comprend plus.
+//
+// LES FRAIS DE RÉSERVATION RESTENT, EUX, À LA CHARGE DE LA CLIENTE : ce sont
+// des frais de SERVICE — rappels automatiques, décalage en autonomie, photos
+// d'inspiration, carte de fidélité — et non le coût de la carte bancaire. La
+// page de réservation les détaille derrière un « i ».
+//
+// La constante reste plutôt que d'être supprimée : elle nomme l'endroit où la
+// règle vit, et le jour où elle changera, il n'y aura qu'un fichier à ouvrir.
+const COMMISSION_GLAMIA_PCT = 0
 // Frais Stripe standard cartes EU : 1,5 % + 0,25 €
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
