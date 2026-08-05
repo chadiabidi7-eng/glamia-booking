@@ -132,11 +132,7 @@ function Payer() {
             label={`${d.type === 'acompte' ? 'Acompte' : d.type === 'solde' ? 'Solde' : 'Prestation'}${d.prestation ? ` — ${d.prestation}` : ''}`}
             val={fmt(d.restant ?? 0)}
           />
-          {/* La ligne ne sort que s'il y a vraiment des frais. Depuis le 5 août
-              2026 la pro les absorbe : afficher « 0,00 € » laisserait croire
-              qu'on en a compté à la cliente. Les paiements d'avant gardent la
-              leur — un reçu doit rester fidèle à ce qui a été payé. */}
-          {(d.frais ?? 0) > 0 && <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0)} />}
+          <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>Total</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0)}</span>

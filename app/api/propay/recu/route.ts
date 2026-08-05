@@ -58,12 +58,7 @@ export async function GET(req: NextRequest) {
           libelle: `${p.type === 'acompte' ? 'Acompte' : p.type === 'solde' ? 'Solde' : 'Prestation'}${p.rdv?.technique ? ` — ${p.rdv.technique}` : ''}`,
           montant: restant,
         },
-        // LA LIGNE DE FRAIS NE SORT QUE S'IL Y EN A. Depuis le 5 août 2026, la
-        // pro absorbe les frais de carte : le reçu d'un paiement récent ne doit
-        // pas afficher « Frais de réservation : 0,00 € », qui laisserait croire
-        // qu'on lui en a compté. Les paiements d'avant gardent leur ligne, un
-        // reçu doit rester fidèle à ce qui a été payé ce jour-là.
-        ...(frais > 0 ? [{ libelle: 'Frais de réservation', montant: frais }] : []),
+        { libelle: 'Frais de réservation', montant: frais },
       ],
       total: restant + frais,
     })

@@ -21,25 +21,21 @@ const supabaseAdmin = createClient(
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-const SEUIL_TARDIVE_MS = 24 * 3600_000
-// ── CE QUE LA CLIENTE PAIE EST EXACTEMENT CE QU'ON LUI A ANNONCÉ ──────────────
-// Décision de Chadi, 5 août 2026. Deux changements, une seule idée.
-//
-// LA COMMISSION GLAMIA DISPARAÎT. Elle rapportait 30 centimes sur un acompte de
-// 20 € — il aurait fallu 66 000 € encaissés par mois pour en tirer 1 000 €.
-// Surtout, elle contredisait la promesse écrite sur le paywall : « de sa carte
-// au tien, Glamia n'y touche jamais ». Le modèle, c'est l'abonnement.
-//
-// LES FRAIS STRIPE PASSENT À LA CHARGE DE LA PRO. Partout ailleurs dans le
-// commerce, c'est le commerçant qui paie les frais de carte — elle paie déjà
-// 1,5 à 2 % sur son terminal au salon. Faire payer la cliente était l'anomalie.
-//
-// ET SUR LE PRÉLÈVEMENT D'UNE EMPREINTE, C'EST PLUS QU'UNE QUESTION DE PRINCIPE.
-// Le message de rappel annonce « l'empreinte de 20 € sera prélevée ». En
-// prélever 20,87 contredit le consentement écrit — et un no-show est la
-// transaction la plus contestée qui soit. L'écart entre ce qu'elle a accepté et
-// ce qu'on lui prend, c'est son recours qu'on lui offre.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Le délai en dessous duquel une annulation n'est plus remboursée.
+ *
+ * C'EST LA PRO QUI LE CHOISIT — 24 ou 48 heures. 48 h convient aux prestations
+ * longues : une pose complète qui saute la veille au soir ne se remplace pas,
+ * alors qu'un rendez-vous d'une demi-heure se recase.
+ *
+ * Repli sur 24 h quand rien n'est réglé : c'est la règle historique, et aucune
+ * pro ne doit voir son seuil changer sous ses pieds.
+ */
+function seuilTardiveMs(config: unknown): number {
+  const heures = (config as { delai_annulation?: number } | null)?.delai_annulation
+  return (heures === 48 ? 48 : 24) * 3600_000
+}
+const COMMISSION_GLAMIA_PCT = 0.015
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
@@ -86,6 +82,11 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     if (!compte) return { resultat: 'compte_introuvable' }
     const stripeAccount = compte.account_id
 
+    // Le seuil est celui que LA PRO a réglé — 24 ou 48 heures.
+    const { data: reglages } = await supabaseAdmin
+      .from('profiles').select('acompte_config').eq('id', paiement.pro_id).maybeSingle()
+    const SEUIL_TARDIVE_MS = seuilTardiveMs((reglages as { acompte_config?: unknown } | null)?.acompte_config)
+
     // Grâce C5 : si la PRO a déplacé le RDV dans les dernières 24 h, l'annulation
     // de la cliente n'est PAS tardive — elle ne doit pas être prélevée pour un
     // déplacement qu'elle n'a pas décidé (même si le nouveau créneau est < 24 h).
@@ -126,8 +127,8 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
         return { resultat: 'carte_manquante' }
       }
       const acompte = paiement.montant
-      const commission = 0  // plus de commission Glamia
-      const totalCliente = acompte  // exactement ce qui lui a été annoncé
+      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT)
+      const totalCliente = Math.ceil((acompte + STRIPE_FIXE_CENTIMES + commission) / (1 - STRIPE_PCT))
       try {
         const intent = await stripe.paymentIntents.create(
           {
@@ -137,6 +138,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
             payment_method: paiement.stripe_payment_method_id,
             off_session: true,
             confirm: true,
+            application_fee_amount: commission,
             metadata: { glamia_type: 'prelevement_annulation_tardive', glamia_paiement_id: paiement.id },
           },
           // idempotencyKey : un rejeu identique ne crée pas un 2e débit

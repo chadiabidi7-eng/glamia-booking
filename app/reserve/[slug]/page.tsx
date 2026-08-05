@@ -120,7 +120,8 @@ type PropayInfo = {
   actif: boolean
   mode?: 'empreinte' | 'acompte' | 'total'
   acompte?: number        // centimes
-  frais?: number          // toujours 0 depuis le 5 août : la pro absorbe les frais de carte
+  frais?: number          // centimes (frais de réservation, mode acompte)
+  delai_annulation?: number // 24 ou 48 — choisi par la pro
   total_cliente?: number  // centimes
   client_secret?: string
   stripe_account?: string
@@ -642,6 +643,7 @@ export default function ReservationPage() {
   // ── Glamia Pay : empreinte/acompte à la confirmation ──
   const [propay, setPropay] = useState<PropayInfo | null>(null)
   const [propayConsent, setPropayConsent] = useState(false)
+  const [fraisExpliques, setFraisExpliques] = useState(false)
   const propayRef = useRef<PropayHandle>(null)
   // La pro demande-t-elle un acompte ? Sert à n'afficher l'avertissement
   // d'annulation à moins de 24 h que si un paiement a pu être engagé.
@@ -3648,17 +3650,57 @@ export default function ReservationPage() {
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
-                  {/* PLUS AUCUN FRAIS AJOUTÉ. Elle paie le montant affiché, à
-                      l'euro près : les frais de carte sont retenus sur le
-                      versement de la pro, comme partout ailleurs. Un montant
-                      qui surprend au moment de réserver, la cliente ne
-                      l'attribue pas à Stripe — elle l'attribue à sa pro. */}
                   {propay.mode === 'total'
                     ? <>Réglée maintenant, rien à payer sur place.</>
                     : propay.mode === 'acompte'
                       ? <>Payé maintenant, déduit du prix de ta prestation.</>
-                      : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>}
+                      : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de {propay.delai_annulation ?? 24} h.</>}
                 </p>
+
+                {/* ── LES FRAIS DE RÉSERVATION, ET CE QU'ILS PAIENT ──────────
+                    Un montant sans explication passe pour une taxe. Le « i »
+                    dit ce que la cliente reçoit en échange : les rappels, la
+                    possibilité de décaler seule, ses photos d'inspiration, sa
+                    carte de fidélité. C'est un frais de SERVICE — encore
+                    faut-il nommer le service.
+
+                    Replié par défaut : celle qui s'en moque ne doit pas avoir
+                    à le lire. Celle qui se demande « c'est quoi ce montant ? »
+                    trouve la réponse en un appui, sans quitter la page. */}
+                {(propay.frais ?? 0) > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <button
+                      onClick={() => setFraisExpliques(v => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, background: 'none',
+                        border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
+                        fontSize: 12, color: PINK, fontWeight: 600,
+                      }}>
+                      <span style={{
+                        width: 15, height: 15, borderRadius: 8, border: `1.2px solid ${PINK}`,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 800, flexShrink: 0,
+                      }}>i</span>
+                      + {fmtCentimes(propay.frais ?? 0)} de frais de réservation
+                    </button>
+                    {fraisExpliques && (
+                      <div style={{
+                        marginTop: 8, background: '#FDF3F8', border: `1px solid ${PINK}33`,
+                        borderRadius: 12, padding: '11px 13px',
+                      }}>
+                        <p style={{ margin: '0 0 7px', fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                          Ils couvrent le service de réservation en ligne :
+                        </p>
+                        <ul style={{ margin: 0, paddingLeft: 17, fontSize: 12.5, color: '#4b5563', lineHeight: 1.65 }}>
+                          <li>les rappels automatiques avant ton rendez-vous</li>
+                          <li>décaler, modifier ou annuler toi-même, sans appeler</li>
+                          <li>envoyer tes photos d&apos;inspiration à ta praticienne</li>
+                          <li>ta carte de fidélité, qui se remplit toute seule</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Politique d'annulation mise en avant */}
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: 8,
@@ -3668,8 +3710,8 @@ export default function ReservationPage() {
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
-                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à 24 h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes(propay.acompte ?? 0)} pourront être prélevés.</>
-                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à 24 h avant le RDV</strong> — tu changes de plans ? Annule à plus de 24 h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement. À moins de 24 h, la somme est conservée par la praticienne.</>}
+                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
+                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — tu changes de plans ? Annule à plus de {propay.delai_annulation ?? 24} h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement (les frais de réservation restent acquis). À moins de {propay.delai_annulation ?? 24} h, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>

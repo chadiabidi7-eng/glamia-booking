@@ -13,11 +13,9 @@ import Stripe from 'stripe'
 // Montants en CENTIMES côté Stripe. Spec (13 juil. 2026) :
 // - acompte = % ou fixe (config pro), plafonné à 50 % du total ET 50 €
 // - mode empreinte : SetupIntent (0 € prélevé, carte enregistrée avec 3DS)
-// - mode acompte : PaymentIntent — la cliente paie EXACTEMENT le montant
-//   annoncé. Les frais de carte sont retenus sur le versement de la pro, comme
-//   partout ailleurs dans le commerce. Et la loi française l'impose : facturer
-//   un supplément parce que la cliente paie par carte est interdit depuis 2018
-//   (code monétaire et financier, L.112-12).
+// - mode acompte : PaymentIntent — la cliente paie acompte + frais de
+//   réservation (gross-up : frais Stripe + commission Glamia 1,5 %), la pro
+//   touche l'acompte plein. Commission via application_fee_amount.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabaseAdmin = createClient(
@@ -29,6 +27,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const PLAFOND_POURCENT = 50
 const PLAFOND_EUROS_CENTIMES = 50_00
+// Commission Glamia — passer à 0 pour la retirer (décision : 1,5 %, 13 juil.)
+const COMMISSION_GLAMIA_PCT = 0.015
 // Frais Stripe standard cartes EU : 1,5 % + 0,25 €
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
@@ -43,24 +43,12 @@ export function calculerAcompte(totalCentimes: number, config: Config): number {
   return Math.max(0, Math.min(brut, Math.round(totalCentimes * PLAFOND_POURCENT / 100), PLAFOND_EUROS_CENTIMES))
 }
 
-/**
- * LA CLIENTE PAIE EXACTEMENT LE MONTANT ANNONCÉ. Plus de gross-up.
- *
- * Avant, on ajoutait par-dessus les frais Stripe et 1,5 % de commission : un
- * acompte de 20 € se présentait à 20,87 € sur la page de réservation. Ce
- * montant bizarre, la cliente ne l'attribue pas à Stripe — elle l'attribue à sa
- * pro, au moment précis où elle décide de réserver.
- *
- * Les frais Stripe sont désormais retenus sur le versement de la pro, comme
- * partout ailleurs dans le commerce : elle paie déjà 1,5 à 2 % sur son terminal
- * au salon. Et la commission Glamia disparaît — le modèle, c'est l'abonnement.
- *
- * La fonction reste, plutôt que de la supprimer partout : elle nomme l'endroit
- * où la règle vit, et le jour où elle changera, il n'y aura qu'un fichier à
- * ouvrir. Décision de Chadi, 5 août 2026.
- */
+// Gross-up : la cliente paie total_cliente pour que la pro touche l'acompte
+// plein après frais Stripe et commission. total*(1-pct) = acompte + fixe + com
 export function calculerTotalCliente(acompteCentimes: number): { commission: number; totalCliente: number; frais: number } {
-  return { commission: 0, totalCliente: acompteCentimes, frais: 0 }
+  const commission = Math.round(acompteCentimes * COMMISSION_GLAMIA_PCT)
+  const totalCliente = Math.ceil((acompteCentimes + STRIPE_FIXE_CENTIMES + commission) / (1 - STRIPE_PCT))
+  return { commission, totalCliente, frais: totalCliente - acompteCentimes }
 }
 
 export async function POST(req: NextRequest) {
@@ -145,6 +133,7 @@ export async function POST(req: NextRequest) {
       const { frais: fraisPrelevement } = calculerTotalCliente(acompte)
       return NextResponse.json({
         actif: true, mode, acompte, frais: fraisPrelevement, total_cliente: 0,
+        delai_annulation: (config as { delai_annulation?: number }).delai_annulation === 48 ? 48 : 24,
         client_secret: setup.client_secret, stripe_account: stripeAccount, intent_id: setup.id,
       })
     }
@@ -163,12 +152,15 @@ export async function POST(req: NextRequest) {
         setup_future_usage: 'off_session',
         // Carte uniquement (Apple Pay/Google Pay inclus via wallet 'card')
         payment_method_types: ['card'],
+        application_fee_amount: commission,
         metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais), glamia_cfg: glamiaCfg },
       },
       { stripeAccount },
     )
     return NextResponse.json({
       actif: true, mode, acompte, frais, total_cliente: totalCliente,
+      // Le délai choisi par la pro — la cliente doit le lire AVANT de réserver.
+      delai_annulation: (config as { delai_annulation?: number }).delai_annulation === 48 ? 48 : 24,
       client_secret: paiement.client_secret, stripe_account: stripeAccount, intent_id: paiement.id,
     })
   } catch (e) {
