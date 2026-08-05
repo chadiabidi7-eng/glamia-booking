@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { reglagesPay } from '@/lib/pays-stripe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — création de l'intent à l'étape de confirmation de la résa.
@@ -45,7 +46,13 @@ const PLAFOND_EUROS_CENTIMES = 50_00
 // La constante reste plutôt que d'être supprimée : elle nomme l'endroit où la
 // règle vit, et le jour où elle changera, il n'y aura qu'un fichier à ouvrir.
 const COMMISSION_GLAMIA_PCT = 0
-// Frais Stripe standard cartes EU : 1,5 % + 0,25 €
+// LES FRAIS NE SONT PLUS LES MÊMES PARTOUT. Ils dépendent du pays de la caisse
+// de la pro : 1,5 % + 0,25 € en zone euro (mesuré), 2,9 % + 0,30 au Canada et en
+// Suisse (tarif publié). Voir lib/pays-stripe.ts.
+//
+// Ces deux constantes restent comme REPLI, et rien d'autre : une caisse ouverte
+// avant le 5 août 2026 n'a pas de pays enregistré, et elle est forcément
+// française — c'était écrit en dur.
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
@@ -109,11 +116,20 @@ export function calculerAcompte(totalCentimes: number, config: Reglage): number 
   return Math.max(0, Math.min(brut, Math.round(totalCentimes * PLAFOND_POURCENT / 100), PLAFOND_EUROS_CENTIMES))
 }
 
-// Gross-up : la cliente paie total_cliente pour que la pro touche l'acompte
-// plein après frais Stripe et commission. total*(1-pct) = acompte + fixe + com
-export function calculerTotalCliente(acompteCentimes: number): { commission: number; totalCliente: number; frais: number } {
+// Majoration : la cliente paie `totalCliente` pour que la pro touche l'acompte
+// PLEIN une fois les frais retirés. total × (1 − pct) = acompte + fixe.
+//
+// Le taux dépend du pays de la caisse. `pays` absent → tarif européen, qui était
+// le seul appliqué jusqu'au 5 août 2026.
+export function calculerTotalCliente(
+  acompteCentimes: number,
+  pays?: string | null,
+): { commission: number; totalCliente: number; frais: number } {
+  const { fraisPct, fraisFixe } = pays
+    ? reglagesPay(pays)
+    : { fraisPct: STRIPE_PCT, fraisFixe: STRIPE_FIXE_CENTIMES }
   const commission = Math.round(acompteCentimes * COMMISSION_GLAMIA_PCT)
-  const totalCliente = Math.ceil((acompteCentimes + STRIPE_FIXE_CENTIMES + commission) / (1 - STRIPE_PCT))
+  const totalCliente = Math.ceil((acompteCentimes + fraisFixe + commission) / (1 - fraisPct))
   return { commission, totalCliente, frais: totalCliente - acompteCentimes }
 }
 
@@ -134,7 +150,7 @@ export async function POST(req: NextRequest) {
   // Config + compte Stripe de la pro
   const [{ data: profil }, { data: compte }] = await Promise.all([
     supabaseAdmin.from('profiles').select('acompte_config, pro_pay_actif, trial_ends_at, abonnement_actif').eq('id', proId).maybeSingle(),
-    supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled').eq('pro_id', proId).maybeSingle(),
+    supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled, pays, devise').eq('pro_id', proId).maybeSingle(),
   ])
 
   // Glamia Pay = abonnement Glamia Pro Pay OU essai gratuit en cours (l'essai
@@ -175,6 +191,12 @@ export async function POST(req: NextRequest) {
   }
 
   const stripeAccount = compte.account_id
+  // LE PAYS ET LA MONNAIE DE LA CAISSE. Une pro suisse encaisse des francs, une
+  // Canadienne des dollars — et leurs frais ne sont pas ceux de la zone euro.
+  // Caisse ouverte avant le 5 août 2026 : les colonnes sont vides, on retombe
+  // sur la France et l'euro, ce qui était le seul cas possible à l'époque.
+  const paysCaisse = (compte.pays as string | null) ?? 'FR'
+  const devise = ((compte.devise as string | null) ?? 'eur').toLowerCase()
 
   // Config figée dans l'intent : la vérification anti-fraude de /lier doit
   // recalculer l'acompte attendu avec le réglage EN VIGUEUR AU PAIEMENT, pas
@@ -208,16 +230,16 @@ export async function POST(req: NextRequest) {
       // n'est débité aujourd'hui, mais la cliente doit savoir que l'empreinte
       // serait prélevée majorée de ces frais (transparence, même formule que
       // stripe-acompte action prelever). total_cliente reste 0 : rien maintenant.
-      const { frais: fraisPrelevement } = calculerTotalCliente(acompte)
+      const { frais: fraisPrelevement } = calculerTotalCliente(acompte, paysCaisse)
       return NextResponse.json({
-        actif: true, mode, acompte, frais: fraisPrelevement, total_cliente: 0,
+        actif: true, mode, acompte, frais: fraisPrelevement, total_cliente: 0, devise,
         delai_annulation: (config as { delai_annulation?: number }).delai_annulation === 48 ? 48 : 24,
         client_secret: setup.client_secret, stripe_account: stripeAccount, intent_id: setup.id,
       })
     }
 
     // Acompte réel OU prestation complète : payé maintenant + frais de résa
-    const { commission, totalCliente, frais } = calculerTotalCliente(acompte)
+    const { commission, totalCliente, frais } = calculerTotalCliente(acompte, paysCaisse)
     const customer = await stripe.customers.create(
       { metadata: { glamia_pro_id: proId } },
       { stripeAccount },
@@ -225,7 +247,7 @@ export async function POST(req: NextRequest) {
     const paiement = await stripe.paymentIntents.create(
       {
         amount: totalCliente,
-        currency: 'eur',
+        currency: devise,
         customer: customer.id,
         setup_future_usage: 'off_session',
         // Carte uniquement (Apple Pay/Google Pay inclus via wallet 'card')
@@ -236,7 +258,7 @@ export async function POST(req: NextRequest) {
       { stripeAccount },
     )
     return NextResponse.json({
-      actif: true, mode, acompte, frais, total_cliente: totalCliente,
+      actif: true, mode, acompte, frais, total_cliente: totalCliente, devise,
       // Le délai choisi par la pro — la cliente doit le lire AVANT de réserver.
       delai_annulation: (config as { delai_annulation?: number }).delai_annulation === 48 ? 48 : 24,
       client_secret: paiement.client_secret, stripe_account: stripeAccount, intent_id: paiement.id,

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { reglagesPay } from './pays-stripe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — traitement automatique d'une ANNULATION de RDV côté cliente.
@@ -52,6 +53,9 @@ function seuilTardiveMs(config: unknown): number {
 // La constante reste plutôt que d'être supprimée : elle nomme l'endroit où la
 // règle vit, et le jour où elle changera, il n'y aura qu'un fichier à ouvrir.
 const COMMISSION_GLAMIA_PCT = 0
+// Repli seul : les vrais taux viennent du pays de la caisse (lib/pays-stripe.ts).
+// Une caisse ouverte avant le 5 août 2026 n'a pas de pays enregistré — elle est
+// forcément française, c'était écrit en dur.
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
@@ -92,11 +96,18 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
 
     const { data: compte } = await supabaseAdmin
       .from('stripe_comptes')
-      .select('account_id')
+      .select('account_id, pays, devise')
       .eq('pro_id', paiement.pro_id)
       .maybeSingle()
     if (!compte) return { resultat: 'compte_introuvable' }
     const stripeAccount = compte.account_id
+    // Le prélèvement d'un lapin se fait dans la monnaie de la caisse, majoré au
+    // taux du pays — sinon une pro suisse verrait partir des euros, et la
+    // majoration calculée à 1,5 % ne couvrirait pas les 2,9 % réellement pris.
+    const devise = ((compte.devise as string | null) ?? 'eur').toLowerCase()
+    const taux = compte.pays
+      ? reglagesPay(compte.pays as string)
+      : { fraisPct: STRIPE_PCT, fraisFixe: STRIPE_FIXE_CENTIMES }
 
     // Le seuil est celui que LA PRO a réglé — 24 ou 48 heures.
     const { data: reglages } = await supabaseAdmin
@@ -144,12 +155,12 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       }
       const acompte = paiement.montant
       const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT)
-      const totalCliente = Math.ceil((acompte + STRIPE_FIXE_CENTIMES + commission) / (1 - STRIPE_PCT))
+      const totalCliente = Math.ceil((acompte + taux.fraisFixe + commission) / (1 - taux.fraisPct))
       try {
         const intent = await stripe.paymentIntents.create(
           {
             amount: totalCliente,
-            currency: 'eur',
+            currency: devise,
             customer: paiement.stripe_customer_id,
             payment_method: paiement.stripe_payment_method_id,
             off_session: true,

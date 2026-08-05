@@ -126,6 +126,7 @@ type PropayInfo = {
   client_secret?: string
   stripe_account?: string
   intent_id?: string
+  devise?: string         // la monnaie de la caisse de la pro
 }
 
 type PropayHandle = { confirmer: () => Promise<{ ok: boolean; intentId?: string; erreur?: string }> }
@@ -140,7 +141,12 @@ function getStripePromise(compte: string) {
 }
 
 /** Centimes → « 24 € » ou « 24,50 € ». Les montants Stripe sont en centimes. */
-const fmtCentimes = (c: number) => `${(c / 100).toFixed(2).replace('.', ',').replace(',00', '')} €`
+// LES MONTANTS DE L'ACOMPTE S'AFFICHENT DANS LA MONNAIE DE LA PRO. Ce
+// formateur écrivait « € » quoi qu'il arrive : la cliente d'une pro suisse
+// lisait « 20 € » pour 20 francs. Le symbole vient du paiement lui-même —
+// c'est le serveur qui l'annonce, à partir de la caisse de la pro.
+const fmtCentimes = (c: number, sym = '€') =>
+  `${(c / 100).toFixed(2).replace('.', ',').replace(',00', '')} ${sym}`
 
 const PINK = '#C2779E'
 const PINK_LIGHT = '#F9EEF4'
@@ -642,6 +648,9 @@ export default function ReservationPage() {
   const slotsLibres = slots.filter(s => s.disponible)
   // ── Glamia Pay : empreinte/acompte à la confirmation ──
   const [propay, setPropay] = useState<PropayInfo | null>(null)
+  // La monnaie de la caisse de la pro, telle que le serveur l'annonce. Repli
+  // sur la devise affichée du salon, puis sur l'euro.
+  const symPropay = symboleDevise(propay?.devise?.toUpperCase() ?? pro?.devise ?? 'EUR')
   const [propayConsent, setPropayConsent] = useState(false)
   const [fraisExpliques, setFraisExpliques] = useState(false)
   const propayRef = useRef<PropayHandle>(null)
@@ -3649,7 +3658,7 @@ export default function ReservationPage() {
                 {/* Montant centré sous le titre — jamais coupé */}
                 <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
                   <span style={{ color: PINK, fontSize: 22, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                    {fmtCentimes(propay.acompte ?? 0)}
+                    {fmtCentimes(propay.acompte ?? 0, symPropay)}
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px', lineHeight: 1.45 }}>
@@ -3684,7 +3693,7 @@ export default function ReservationPage() {
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 10, fontWeight: 800, flexShrink: 0,
                       }}>i</span>
-                      + {fmtCentimes(propay.frais ?? 0)} de frais de réservation
+                      + {fmtCentimes(propay.frais ?? 0, symPropay)} de frais de réservation
                     </button>
                     {fraisExpliques && (
                       <div style={{
@@ -3713,8 +3722,8 @@ export default function ReservationPage() {
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
-                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0))} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0)} de frais).</>
-                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — tu changes de plans ? Annule à plus de {propay.delai_annulation ?? 24} h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0)} te revient intégralement (les frais de réservation restent acquis). À moins de {propay.delai_annulation ?? 24} h, la somme est conservée par la praticienne.</>}
+                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0), symPropay)} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0, symPropay)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0, symPropay)} de frais).</>
+                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — tu changes de plans ? Annule à plus de {propay.delai_annulation ?? 24} h et {propay.mode === 'total' ? 'ton paiement' : 'ton acompte'} de {fmtCentimes(propay.acompte ?? 0, symPropay)} te revient intégralement (les frais de réservation restent acquis). À moins de {propay.delai_annulation ?? 24} h, la somme est conservée par la praticienne.</>}
                   </span>
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
@@ -3751,8 +3760,8 @@ export default function ReservationPage() {
                   />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
-                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0)} en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>
-                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0)} maintenant, conservés si absence ou annulation à moins de 24 h.</>}
+                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0, symPropay)} en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>
+                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0, symPropay)} maintenant, conservés si absence ou annulation à moins de 24 h.</>}
                   </span>
                 </label>
               </div>

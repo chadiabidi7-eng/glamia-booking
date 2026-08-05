@@ -7,6 +7,12 @@ const SYMBOLES: Record<string, string> = {
   XOF: 'FCFA', XAF: 'FCFA', HTG: 'G', CDF: 'FC', MGA: 'Ar',
   MRU: 'UM', GNF: 'FG', RWF: 'FRw', BIF: 'FBu', DJF: 'Fdj', KMF: 'CF',
   SCR: 'SR', MUR: 'Rs', LBP: 'LL', XPF: 'XPF', VUV: 'VT', EGP: 'LE',
+  // Ajout du 5 août 2026 — les monnaies des 42 pays où Glamia Pay peut ouvrir
+  // une caisse. Sans elles, une cliente britannique voyait « € » sur son
+  // acompte en livres.
+  GBP: '£', USD: '$', SEK: 'kr', NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč',
+  RON: 'lei', AUD: '$', NZD: '$', SGD: '$', HKD: 'HK$', MYR: 'RM', THB: '฿',
+  MXN: '$', JPY: '¥', HUF: 'Ft', BGN: 'лв',
 };
 
 /** Symbole d'une devise (repli € si code inconnu). */
