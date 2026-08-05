@@ -1574,7 +1574,10 @@ export default function ReservationPage() {
     fetch('/api/propay/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pro_id: pro.id, total, total_plein: totalPlein }),
+      // Le numéro sert AU SERVEUR à savoir si elle est déjà venue chez cette
+      // pro : certaines demandent une simple empreinte à leurs fidèles et un
+      // acompte à une inconnue. La page ne décide rien — elle transmet.
+      body: JSON.stringify({ pro_id: pro.id, total, total_plein: totalPlein, telephone }),
     })
       .then(r => r.json())
       .then((d: PropayInfo) => setPropay(d))

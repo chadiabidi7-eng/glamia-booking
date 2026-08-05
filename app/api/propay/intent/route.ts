@@ -49,10 +49,60 @@ const COMMISSION_GLAMIA_PCT = 0
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
-type Config = { actif?: boolean; mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
+type Reglage = { mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
+type Config = Reglage & { actif?: boolean; nouvelles?: Reglage | null }
+
+function normalizePhone(tel: string): string {
+  let n = (tel ?? '').replace(/[\s\-.()]/g, '')
+  if (n.startsWith('+33')) n = '0' + n.slice(3)
+  if (n.startsWith('0033')) n = '0' + n.slice(4)
+  return n
+}
+
+/**
+ * Cette cliente est-elle déjà venue chez cette pro ?
+ *
+ * LA QUESTION SE POSE AU SERVEUR, JAMAIS AU NAVIGATEUR. Si la page envoyait
+ * « je suis une habituée », il suffirait de le dire pour éviter l'acompte.
+ * Le navigateur n'envoie qu'un numéro ; c'est ici qu'on décide.
+ *
+ * EST HABITUÉE CELLE QUI EST DÉJÀ VENUE — un rendez-vous passé, non annulé.
+ * Pas celle qui en a simplement un de prévu : tant qu'elle n'est pas venue,
+ * rien ne dit qu'elle viendra, et c'est précisément ce que l'acompte couvre.
+ *
+ * AU MOINDRE DOUTE, ON LA TRAITE EN HABITUÉE : numéro absent, panne de
+ * lecture, numéro trop court. Le réglage « nouvelles » est toujours le plus
+ * exigeant des deux — se tromper dans ce sens demande trop d'argent à une
+ * fidèle, l'inverse en demande simplement moins à une inconnue.
+ */
+async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise<boolean> {
+  if (typeof telephone !== 'string') return false
+  const cible = normalizePhone(telephone)
+  if (cible.length < 9) return false
+  try {
+    const { data: clientes, error } = await supabaseAdmin
+      .from('clientes').select('id, telephone').eq('pro_id', proId)
+    if (error) return false
+    // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
+    const fiche = (clientes ?? []).find(c => normalizePhone(c.telephone as string) === cible)
+    if (!fiche) return true
+
+    const { count, error: e2 } = await supabaseAdmin
+      .from('rendez_vous')
+      .select('id', { count: 'exact', head: true })
+      .eq('cliente_id', fiche.id)
+      .eq('pro_id', proId)
+      .neq('statut', 'annule')
+      .lt('date', new Date().toISOString())
+    if (e2) return false
+    return (count ?? 0) === 0
+  } catch {
+    return false
+  }
+}
 
 // Acompte plafonné, en centimes
-export function calculerAcompte(totalCentimes: number, config: Config): number {
+export function calculerAcompte(totalCentimes: number, config: Reglage): number {
   const brut = config.type === 'fixe'
     ? Math.round((config.valeur ?? 0) * 100)
     : Math.round(totalCentimes * (config.valeur ?? 0) / 100)
@@ -68,7 +118,7 @@ export function calculerTotalCliente(acompteCentimes: number): { commission: num
 }
 
 export async function POST(req: NextRequest) {
-  let body: { pro_id?: unknown; total?: unknown; total_plein?: unknown }
+  let body: { pro_id?: unknown; total?: unknown; total_plein?: unknown; telephone?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -99,10 +149,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ actif: false })
   }
 
+  // ── LE RÉGLAGE DES NOUVELLES CLIENTES ──────────────────────────────────────
+  // La pro peut demander davantage à qui ne connaît pas encore son salon : une
+  // simple empreinte à ses fidèles, un acompte à une inconnue. Quand elle n'a
+  // rien réglé de particulier (`nouvelles` absent), tout le monde a la même
+  // règle et on ne va même pas lire le fichier clientes.
+  const nouvelle = config.nouvelles ? await estUneNouvelleCliente(proId, body.telephone) : false
+  const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
+
   const totalCentimes = Math.round(totalEuros * 100)
   const totalPleinCentimes = Math.round(Math.max(totalEuros, Number(body.total_plein) || 0) * 100)
   const mode: 'empreinte' | 'acompte' | 'total' =
-    config.mode === 'acompte' ? 'acompte' : config.mode === 'total' ? 'total' : 'empreinte'
+    regle.mode === 'acompte' ? 'acompte' : regle.mode === 'total' ? 'total' : 'empreinte'
   // RDV OFFERT par la fidélité (prix ~0) — décision Chadi 18 juil. (Q2) :
   // - mode EMPREINTE : on pose quand même une empreinte, calculée sur le prix
   //   PLEIN (dédommagement no-show réel), pas sur le prix offert.
@@ -110,7 +168,7 @@ export async function POST(req: NextRequest) {
   const rdvOffert = totalCentimes < 100
   const baseCalcul = (mode === 'empreinte' && rdvOffert) ? totalPleinCentimes : totalCentimes
   // Paiement total : la base est le prix complet ; sinon l'acompte plafonné
-  const acompte = mode === 'total' ? totalCentimes : calculerAcompte(baseCalcul, config)
+  const acompte = mode === 'total' ? totalCentimes : calculerAcompte(baseCalcul, regle)
   if (acompte < 100) {
     // Moins d'1 € (prestation gratuite/quasi, ou acompte sur RDV offert) : pas de carte
     return NextResponse.json({ actif: false })
@@ -122,7 +180,11 @@ export async function POST(req: NextRequest) {
   // recalculer l'acompte attendu avec le réglage EN VIGUEUR AU PAIEMENT, pas
   // celui du moment de la liaison — sinon une pro qui change sa config entre
   // les deux fait rejeter un paiement légitime déjà encaissé (faille C9).
-  const glamiaCfg = JSON.stringify({ type: config.type ?? 'pourcent', valeur: config.valeur ?? 0 })
+  //
+  // C'EST LA RÈGLE EFFECTIVEMENT APPLIQUÉE qu'on fige, pas celle des habituées :
+  // sinon un acompte de nouvelle cliente serait recalculé au tarif des fidèles
+  // et rejeté comme frauduleux alors qu'il vient d'être encaissé.
+  const glamiaCfg = JSON.stringify({ type: regle.type ?? 'pourcent', valeur: regle.valeur ?? 0 })
 
   try {
     if (mode === 'empreinte') {
