@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     // 1. Par la colonne slug — indexée, instantanée quel que soit l'effectif.
     const { data: exact } = await supabaseAdmin
       .from('profiles')
-      .select(`${CHAMPS_PUBLICS}, abonnement_actif, trial_ends_at`)
+      .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
       .eq('slug', slug)
       .order('created_at', { ascending: true })
       .limit(1)
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       const cible = normaliser(slug)
       const { data: tous } = await supabaseAdmin
         .from('profiles')
-        .select(`${CHAMPS_PUBLICS}, abonnement_actif, trial_ends_at`)
+        .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
         .order('created_at', { ascending: true })
 
       const candidats = (tous ?? []).filter(p => {
@@ -81,11 +81,23 @@ export async function POST(req: NextRequest) {
     // La page ne s'ouvre que si l'abonnement est actif ou l'essai en cours.
     // Ne jamais se fier à `is_pro` seul : il n'est synchronisé qu'au lancement
     // de l'app, les expirées jamais revenues le gardent à true.
+    //
+    // GLAMIA PRO PAY OUVRE LA PAGE À LUI SEUL. C'est l'abonnement le plus cher —
+    // payer 19,99 € ne peut pas donner moins que payer 14,99 €. En théorie le
+    // webhook lève `abonnement_actif` en même temps que `pro_pay_actif`, donc
+    // cette deuxième condition ne sert jamais. Mais le jour où les deux
+    // divergent — resynchro ratée, événement perdu, correction à la main —
+    // c'est une abonnée payante dont la page de réservation se ferme, et elle
+    // perd des rendez-vous sans comprendre pourquoi. Constaté le 5 août 2026
+    // sur le compte de développement : pro_pay_actif à vrai, abonnement_actif
+    // à faux. Deux verrous valent mieux qu'un sur la porte qui fait vivre les
+    // pros.
     const accesActif = pro.abonnement_actif === true
+      || pro.pro_pay_actif === true
       || (pro.trial_ends_at && new Date(pro.trial_ends_at as string) > new Date())
 
-    // Ces deux champs servaient à décider ici : ils ne sortent pas.
-    const { abonnement_actif: _a, trial_ends_at: _t, ...profil } = pro as Record<string, unknown>
+    // Ces trois champs servaient à décider ici : ils ne sortent pas.
+    const { abonnement_actif: _a, pro_pay_actif: _p, trial_ends_at: _t, ...profil } = pro as Record<string, unknown>
 
     if (!accesActif) return NextResponse.json({ etat: 'ferme', pro: { pseudo: profil.pseudo, prenom: profil.prenom, instagram: profil.instagram, tiktok: profil.tiktok, snapchat: profil.snapchat } })
 
