@@ -6,6 +6,7 @@ import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
+import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
@@ -93,6 +94,7 @@ type ProInfo = {
   message_accueil?: string
   adresse?: string
   is_pro?: boolean
+  categorie_autre_nom?: string | null
   devise?: string
 }
 
@@ -2712,8 +2714,11 @@ export default function ReservationPage() {
                                           border: 'none', cursor: 'pointer', textAlign: 'left',
                                         }}>
                                         <SpecialiteIcon specialite={s.nom} size={20} />
+                                        {/* LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE.
+                                            Sa cliente lisait « Autre » là où la pro
+                                            avait écrit « Réflexologie plantaire ». */}
                                         <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK : '#1f2937' }}>
-                                          {s.nom}
+                                          {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                                         </span>
                                         {nbSelec > 0 && (
                                           <span style={{

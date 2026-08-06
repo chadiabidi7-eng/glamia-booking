@@ -147,3 +147,15 @@ export function raisonIndisponible(pays: string | null | undefined): string | nu
 export function centimesParUnite(devise: string): number {
   return ['jpy', 'krw', 'vnd', 'xof', 'xaf', 'xpf', 'clp'].includes(devise.toLowerCase()) ? 1 : 100;
 }
+
+/**
+ * La monnaie que la caisse d'une pro de ce pays encaissera.
+ *
+ * CE N'EST PAS UN CHOIX. Stripe l'impose à partir du pays du compte : une
+ * caisse suisse encaisse des francs, une caisse canadienne des dollars, et on
+ * ne peut pas lui demander autre chose. On l'affiche donc à la pro comme une
+ * conséquence, pas comme une option.
+ */
+export function deviseDuPays(pays: string | null | undefined): string {
+  return reglagesPay(pays).devise.toUpperCase();
+}
