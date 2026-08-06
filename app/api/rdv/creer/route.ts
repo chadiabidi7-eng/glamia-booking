@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
         notes: body.notes || null,
         demande_rappel: body.demande_rappel === true,
         fidelite_appliquee: body.fidelite_appliquee ?? null,
+        reponses_questions: Array.isArray(body.reponses_questions) && body.reponses_questions.length > 0
+          ? body.reponses_questions
+          : null,
         reduction_appliquee: body.reduction_appliquee ?? null,
         source: 'booking',
       })
