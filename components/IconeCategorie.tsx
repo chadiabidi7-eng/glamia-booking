@@ -21,14 +21,15 @@ type Props = {
 }
 
 export default function IconeCategorie({ categorie, icone, size = 28 }: Props) {
-  if (categorie !== CATEGORIE_AUTRE || !iconeValide(icone)) {
+  const choisie = typeof icone === 'string' && iconeValide(icone) ? icone : null
+  if (categorie !== CATEGORIE_AUTRE || !choisie) {
     return <SpecialiteIcon specialite={categorie} size={size} />
   }
 
   // Le nom rangé désigne un composant de la bibliothèque. Il a été vérifié,
   // mais on se garde d'un nom devenu obsolète après une mise à jour : mieux
   // vaut l'ancien dessin qu'une page qui tombe.
-  const Trait = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>>)[icone]
+  const Trait = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>>)[choisie]
   if (!Trait) return <SpecialiteIcon specialite={categorie} size={size} />
 
   return (
