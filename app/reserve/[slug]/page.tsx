@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
+import IconeCategorie from '@/components/IconeCategorie'
+import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
@@ -91,6 +93,8 @@ type ProInfo = {
   message_accueil?: string
   adresse?: string
   is_pro?: boolean
+  categorie_autre_nom?: string | null
+  categorie_autre_icone?: string | null
   devise?: string
 }
 
@@ -830,6 +834,11 @@ export default function ReservationPage() {
         adresse:          found.adresse ?? undefined,
         is_pro:           found.is_pro ?? false,
         devise:           found.devise ?? 'EUR',
+        // Cette page ne recopie pas le profil reçu : elle le REBÂTIT champ par
+        // champ. Tout champ oublié ici est jeté en silence — le serveur
+        // l'envoie, la page le perd, et rien ne le signale.
+        categorie_autre_nom: found.categorie_autre_nom ?? null,
+        categorie_autre_icone: found.categorie_autre_icone ?? null,
       })
       if (found.fidelite_config) setFideliteConfig(found.fidelite_config)
 
@@ -1213,7 +1222,9 @@ export default function ReservationPage() {
               adresse: pro.adresse || '',
               techniques: techs.map(t => ({
                 nom: t.nom,
-                specialite: t.categorie,
+                // Le mail porte le nom choisi par la pro : sans ça, la cliente
+                // lit « Réflexologie » sur la page et « Autre » dans le mail.
+                specialite: libelleCategorie(t.categorie, pro?.categorie_autre_nom),
                 prix: t.prix,
                 duree_minutes: t.duree,
               })),
@@ -1391,7 +1402,7 @@ export default function ReservationPage() {
                 adresse: pro.adresse || '',
                 techniques: [{
                   nom: rdvReprog.technique,
-                  specialite: rdvReprog.specialite,
+                  specialite: libelleCategorie(rdvReprog.specialite, pro?.categorie_autre_nom),
                   prix: rdvReprog.prix ?? 0,
                   duree_minutes: rdvReprog.duree,
                 }],
@@ -2038,8 +2049,8 @@ export default function ReservationPage() {
             {techniquesSelectionnees.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><SpecialiteIcon specialite={t.categorie} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
-                  <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
+                  <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
                   {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
@@ -2575,9 +2586,9 @@ export default function ReservationPage() {
                                           padding: '11px 12px', background: nbSelec > 0 ? PINK_LIGHT : '#fff',
                                           border: 'none', cursor: 'pointer', textAlign: 'left',
                                         }}>
-                                        <SpecialiteIcon specialite={s.nom} size={20} />
+                                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} size={20} />
                                         <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK : '#1f2937' }}>
-                                          {s.nom}
+                                          {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                                         </span>
                                         {nbSelec > 0 && (
                                           <span style={{
@@ -2970,9 +2981,9 @@ export default function ReservationPage() {
                           border: 'none', cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <SpecialiteIcon specialite={s.nom} size={24} />
+                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} size={24} />
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
-                          {s.nom}
+                          {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                         </span>
                         {nbSelec > 0 && (
                           <span style={{
@@ -3456,7 +3467,7 @@ export default function ReservationPage() {
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
-                          <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{t.categorie}</p>
+                          <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
                           {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
@@ -3666,7 +3677,7 @@ export default function ReservationPage() {
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', display: 'block' }}>
                       {t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
                     </span>
-                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{t.categorie}</span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}

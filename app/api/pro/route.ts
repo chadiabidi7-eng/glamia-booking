@@ -27,7 +27,7 @@ const supabaseAdmin = createClient(
 
 // Les seuls champs qui sortent. Tout le reste — mail, téléphone, jeton de
 // notification, dates d'abonnement — ne quitte pas le serveur.
-const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, timezone'
+const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, timezone, categorie_autre_nom, categorie_autre_icone'
 
 function normaliser(s: string) {
   return (s ?? '')
