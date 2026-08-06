@@ -879,6 +879,11 @@ export default function ReservationPage() {
         adresse:          found.adresse ?? undefined,
         is_pro:           found.is_pro ?? false,
         devise:           found.devise ?? 'EUR',
+        // LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE « AUTRE ». Cette page ne
+        // recopie pas le profil reçu : elle le REBÂTIT champ par champ. Tout
+        // champ oublié ici est jeté en silence — le serveur l'envoie, la page
+        // le perd, et rien ne le signale. C'est ce qui est arrivé à ce nom.
+        categorie_autre_nom: found.categorie_autre_nom ?? null,
       })
       if (found.fidelite_config) setFideliteConfig(found.fidelite_config)
       // La pro demande-t-elle un acompte ou une empreinte ? On ne s'en sert que
