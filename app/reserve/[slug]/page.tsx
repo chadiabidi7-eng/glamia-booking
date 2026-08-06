@@ -6,6 +6,7 @@ import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
+import IconeCategorie from '@/components/IconeCategorie'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import {
@@ -95,6 +96,7 @@ type ProInfo = {
   adresse?: string
   is_pro?: boolean
   categorie_autre_nom?: string | null
+  categorie_autre_icone?: string | null
   devise?: string
 }
 
@@ -884,6 +886,7 @@ export default function ReservationPage() {
         // champ oublié ici est jeté en silence — le serveur l'envoie, la page
         // le perd, et rien ne le signale. C'est ce qui est arrivé à ce nom.
         categorie_autre_nom: found.categorie_autre_nom ?? null,
+        categorie_autre_icone: found.categorie_autre_icone ?? null,
       })
       if (found.fidelite_config) setFideliteConfig(found.fidelite_config)
       // La pro demande-t-elle un acompte ou une empreinte ? On ne s'en sert que
@@ -2181,7 +2184,7 @@ export default function ReservationPage() {
             {techniquesSelectionnees.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><SpecialiteIcon specialite={t.categorie} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                 </div>
                 <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
@@ -2718,7 +2721,7 @@ export default function ReservationPage() {
                                           padding: '11px 12px', background: nbSelec > 0 ? PINK_LIGHT : '#fff',
                                           border: 'none', cursor: 'pointer', textAlign: 'left',
                                         }}>
-                                        <SpecialiteIcon specialite={s.nom} size={20} />
+                                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} size={20} />
                                         {/* LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE.
                                             Sa cliente lisait « Autre » là où la pro
                                             avait écrit « Réflexologie plantaire ». */}
@@ -3116,7 +3119,7 @@ export default function ReservationPage() {
                           border: 'none', cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <SpecialiteIcon specialite={s.nom} size={24} />
+                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} size={24} />
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
                           {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                         </span>
