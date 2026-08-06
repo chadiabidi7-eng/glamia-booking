@@ -1882,6 +1882,18 @@ export default function ReservationPage() {
           notes: commentaire.trim(),
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
+          // CE QU'ELLE A RÉPONDU PART AVEC LE RENDEZ-VOUS. Sans ça, la réponse
+          // sert à ajouter la dépose puis disparaît — alors qu'« ongles posés
+          // ailleurs » dit à la pro ce qu'elle doit préparer, et pourquoi ça
+          // prendra plus de temps. On recopie la question ET la réponse en
+          // clair : la pro peut les renommer ou les supprimer ensuite, un
+          // rendez-vous passé doit rester lisible.
+          reponses_questions: questionsEnCours
+            .filter(q => reponses[q.id])
+            .map(q => ({
+              question: q.texte,
+              reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
+            })),
           reduction_appliquee: reductionCliente
             ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
             : null,
