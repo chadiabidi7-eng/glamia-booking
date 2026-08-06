@@ -1274,7 +1274,11 @@ export default function ReservationPage() {
               adresse: pro.adresse || '',
               techniques: techs.map(t => ({
                 nom: t.nom,
-                specialite: t.categorie,
+                // Le mail porte le nom que la pro a choisi. Il reçoit la
+                // spécialité d'ici, pas de la base : sans cette traduction, la
+                // cliente lisait « Autre » dans sa confirmation alors que la
+                // page affichait « Réflexologie ».
+                specialite: libelleCategorie(t.categorie, pro?.categorie_autre_nom),
                 prix: t.prix,
                 duree_minutes: t.duree,
               })),
@@ -1452,7 +1456,7 @@ export default function ReservationPage() {
                 adresse: pro.adresse || '',
                 techniques: [{
                   nom: rdvReprog.technique,
-                  specialite: rdvReprog.specialite,
+                  specialite: libelleCategorie(rdvReprog.specialite, pro?.categorie_autre_nom),
                   prix: rdvReprog.prix ?? 0,
                   duree_minutes: rdvReprog.duree,
                 }],

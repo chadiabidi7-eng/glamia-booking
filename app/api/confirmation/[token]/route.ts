@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
 
@@ -271,7 +272,7 @@ export async function POST(
       if (cliente?.email) {
         const { data: proInfo } = await supabaseAdmin
           .from('profiles')
-          .select('prenom, nom, pseudo, adresse, devise')
+          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom')
           .eq('id', rdv.pro_id)
           .maybeSingle()
 
@@ -303,7 +304,9 @@ export async function POST(
               adresse: proInfo?.adresse || '',
               techniques: rdvFull ? [{
                 nom: rdvFull.technique ?? '',
-                specialite: rdvFull.specialite ?? '',
+                // Le nom que la pro a donné à sa catégorie. Sans ça, sa
+                // cliente lit « Autre » dans le mail de son rendez-vous décalé.
+                specialite: libelleCategorie(rdvFull.specialite ?? '', (proInfo as { categorie_autre_nom?: string | null } | null)?.categorie_autre_nom),
                 prix: rdvFull.prix ?? 0,
                 duree_minutes: rdvFull.duree ?? 60,
               }] : [],
