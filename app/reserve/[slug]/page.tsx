@@ -486,6 +486,12 @@ export default function ReservationPage() {
   const [ordreCategories, setOrdreCategories] = useState<string[]>([])
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
+  // ── LE REFUS DE CARTE NE PASSE PLUS PAR UNE BOÎTE DU NAVIGATEUR ───────────
+  // Une alerte système grise, sur une page de réservation soignée, ressemble à
+  // une panne du site plutôt qu'à un refus de banque. C'est le premier moment
+  // où une cliente renonce — et l'ancien message se contentait de constater,
+  // sans dire que son créneau était toujours là ni qu'elle pouvait réessayer.
+  const [refusCarte, setRefusCarte] = useState<string | null>(null)
 
   // ── Navigation ───────────────────────────────
   const [step, setStep] = useState(1)
@@ -1808,6 +1814,7 @@ export default function ReservationPage() {
 
   async function handleConfirm() {
     if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
+    setRefusCarte(null)
     setSubmitting(true)
 
     const categories    = [...new Set(techniquesSelectionnees.map(t => t.categorie))]
@@ -1833,7 +1840,7 @@ export default function ReservationPage() {
         }
         const resultat = await propayRef.current?.confirmer()
         if (!resultat?.ok) {
-          if (resultat?.erreur) alert(resultat.erreur)
+          setRefusCarte(resultat?.erreur ?? 'Le paiement n\'a pas abouti.')
           return
         }
         propayIntentId = resultat.intentId ?? null
@@ -4053,6 +4060,37 @@ export default function ReservationPage() {
                 })()}
               </span>
             </label>
+
+            {/* ── LA CARTE A ÉTÉ REFUSÉE ──────────────────────────────────
+                Posé JUSTE AU-DESSUS DU BOUTON, là où elle regarde déjà, et non
+                dans une boîte qui recouvre la page.
+
+                On garde le motif exact de la banque — « carte refusée »,
+                « provision insuffisante » : elle en a besoin pour savoir quoi
+                faire. Mais on ajoute ce que l'ancienne alerte taisait, et qui
+                décide de tout : SON CRÉNEAU EST TOUJOURS LÀ. Sans cette phrase,
+                elle croit avoir tout perdu et referme la page. */}
+            {refusCarte && (
+              <div
+                role="alert"
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 11,
+                  background: PINK_LIGHT, border: `1.5px solid ${PINK}`,
+                  borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+                }}>
+                <span style={{
+                  flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: PINK,
+                  color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: '22px', textAlign: 'center',
+                }}>!</span>
+                <div>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: PINK }}>{refusCarte}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280', lineHeight: 1.55 }}>
+                    Ton créneau est toujours réservé pour toi. Essaie une autre carte,
+                    ou reviens dans un moment.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={handleConfirm}
