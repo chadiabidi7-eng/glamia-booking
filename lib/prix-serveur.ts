@@ -155,10 +155,10 @@ export async function remisesVerifiees(
     return { prix: prixPanier, fidelite: null, reduction: null }
   }
 
-  const [{ data: fiche }, { data: cliente }] = await Promise.all([
+  const [{ data: fiche }, { data: cliente }, { data: pro }] = await Promise.all([
     supabaseAdmin
       .from('fidelite_clientes')
-      .select('recompense_disponible')
+      .select('recompense_disponible, tampons')
       .eq('pro_id', proId)
       .eq('cliente_id', clienteId)
       .maybeSingle(),
@@ -167,10 +167,29 @@ export async function remisesVerifiees(
       .select('reduction_type, reduction_valeur, reduction_rdv_restants')
       .eq('id', clienteId)
       .maybeSingle(),
+    supabaseAdmin
+      .from('profiles')
+      .select('fidelite_config')
+      .eq('id', proId)
+      .maybeSingle(),
   ])
+
+  // ── DEUX FAÇONS D'AVOIR DROIT À SA RÉCOMPENSE ────────────────────────────
+  // Je n'en avais vu qu'une, et le rendez-vous offert s'est retrouvé à payer un
+  // acompte. Il y a la récompense DÉJÀ ACQUISE (rangée sur sa fiche), et celle
+  // que CE rendez-vous fait gagner — le 10e tampon donne droit au 10e
+  // rendez-vous, pas au suivant. La page applique les deux ; le serveur n'en
+  // vérifiait qu'une, donc il facturait ce qui était offert.
+  const config = (pro?.fidelite_config ?? null) as
+    { active?: boolean; paliers?: { position?: number; type?: string; valeur?: number }[] } | null
+  const prochainTampon = ((fiche?.tampons as number | null) ?? 0) + 1
+  const palierAtteint = config?.active
+    ? (config.paliers ?? []).find(p => p.position === prochainTampon) ?? null
+    : null
 
   const fidelite: Remise = veutFidelite
     ? ((fiche?.recompense_disponible ?? null) as Remise)
+      ?? (palierAtteint ? { type: palierAtteint.type, valeur: palierAtteint.valeur } : null)
     : null
 
   const reduction: Remise = veutReduction
