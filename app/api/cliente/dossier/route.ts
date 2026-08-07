@@ -59,6 +59,43 @@ export async function POST(req: NextRequest) {
       .neq('statut', 'annule')
       .order('date', { ascending: true })
 
+    // ── CE QU'ELLE A DÉJÀ VERSÉ, ET CE QU'ELLE PERDRAIT ─────────────────────
+    // La page doit pouvoir la prévenir AVANT qu'elle annule : passé le délai
+    // fixé par la pro, son acompte ne lui revient pas. Le lui apprendre après
+    // coup, c'est la meilleure façon de se faire détester.
+    //
+    // On ne renvoie que le strict nécessaire : le montant, ce que c'est, et le
+    // délai. Jamais l'identifiant du paiement ni rien qui touche à la carte.
+    const idsRdv = (rdvs ?? []).map(r => r.id as string)
+    const { data: paiements } = idsRdv.length
+      ? await supabaseAdmin
+          .from('paiements')
+          .select('rdv_id, type, mode, montant, statut')
+          .in('rdv_id', idsRdv)
+          .in('statut', ['acompte_paye', 'paye', 'empreinte_posee'])
+      : { data: [] as { rdv_id: string; type: string; mode: string | null; montant: number; statut: string }[] }
+
+    const { data: reglages } = await supabaseAdmin
+      .from('profiles').select('acompte_config').eq('id', pro_id).maybeSingle()
+    const delaiAnnulation =
+      (reglages?.acompte_config as { delai_annulation?: number } | null)?.delai_annulation === 48 ? 48 : 24
+
+    const parRdv = new Map((paiements ?? []).map(p => [p.rdv_id as string, p]))
+    const rdvsAvecPaiement = (rdvs ?? []).map(r => {
+      const p = parRdv.get(r.id as string)
+      return {
+        ...r,
+        paiement: p
+          ? {
+              montant: p.montant as number,
+              // « empreinte » = rien n'a été débité, la carte est seulement
+              // gardée ; « acompte » ou « total » = l'argent est déjà parti.
+              nature: p.statut === 'empreinte_posee' ? 'empreinte' : (p.type as string),
+            }
+          : null,
+      }
+    })
+
     const { data: fidelite } = await supabaseAdmin
       .from('fidelite_clientes')
       .select('tampons, cartes_completees, recompense_disponible')
@@ -66,7 +103,7 @@ export async function POST(req: NextRequest) {
       .eq('cliente_id', cliente_id)
       .maybeSingle()
 
-    return NextResponse.json({ rdvs: rdvs ?? [], fidelite: fidelite ?? null })
+    return NextResponse.json({ rdvs: rdvsAvecPaiement, fidelite: fidelite ?? null, delai_annulation: delaiAnnulation })
   } catch (e) {
     console.error('[cliente/dossier] erreur', e)
     return NextResponse.json({ error: 'erreur_interne' }, { status: 500 })

@@ -119,6 +119,8 @@ type RdvAVenir = {
   techniques: { nom: string; prix: number; duree: number; categorie?: string; quantite?: number }[] | null
   offre_id: string | null
   inspirations: string[] | null
+  /** Ce qu'elle a déjà versé pour ce rendez-vous, s'il y a lieu. */
+  paiement: { montant: number; nature: string } | null
 }
 
 
@@ -509,6 +511,9 @@ export default function ReservationPage() {
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
+  // Le délai fixé par la pro : au-delà, l'annulation est remboursée ; en deçà,
+  // la somme lui reste. La cliente doit le savoir AVANT de confirmer.
+  const [delaiAnnulation,   setDelaiAnnulation]    = useState(24)
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
 
   // ── Inspirations sur un RDV existant (bouton « Mes inspirations ») ──
@@ -1075,9 +1080,10 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite, rdvs } = await rep.json()
+      const { fidelite, rdvs, delai_annulation } = await rep.json()
       setFideliteFiche(fidelite ?? null)
       setRdvsAVenir(rdvs ?? [])
+      if (typeof delai_annulation === 'number') setDelaiAnnulation(delai_annulation)
     } catch (e) {
       // Une panne du dossier ne doit pas empêcher de réserver : on la reconnaît
       // quand même, simplement sans sa carte ni ses rendez-vous.
@@ -1179,10 +1185,38 @@ export default function ReservationPage() {
     }
   }
 
+  /**
+   * Annuler, en sachant ce que ça coûte.
+   *
+   * ELLE L'APPRENAIT APRÈS COUP. La question ne disait rien de l'argent : elle
+   * annulait, et découvrait plus tard que son acompte ne revenait pas. Passé le
+   * délai fixé par la pro — 24 ou 48 heures — la somme lui reste, et c'est
+   * exactement ce qu'il faut dire AVANT, pas après.
+   *
+   * L'empreinte se dit autrement : rien n'a été débité, mais le montant PEUT
+   * l'être. On ne lui annonce pas un prélèvement qui n'aura peut-être pas lieu.
+   */
   function confirmerAnnulation(rdv: RdvAVenir) {
     const dateLabel  = formatRdvDate(rdv.date)
     const heureLabel = formatRdvHeure(rdv.date)
-    if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?`)) {
+    const heuresAvant = (new Date(rdv.date).getTime() - Date.now()) / 3_600_000
+    const tardive = heuresAvant < delaiAnnulation
+
+    let avertissement = ''
+    if (rdv.paiement) {
+      const somme = fmtCentimes(rdv.paiement.montant, symPropay)
+      if (rdv.paiement.nature === 'empreinte') {
+        avertissement = tardive
+          ? `\n\nVous annulez à moins de ${delaiAnnulation} h du rendez-vous : ${somme} pourront être prélevés sur votre carte.`
+          : `\n\nVous annulez à plus de ${delaiAnnulation} h : rien ne sera prélevé, votre empreinte est libérée.`
+      } else {
+        avertissement = tardive
+          ? `\n\nVous annulez à moins de ${delaiAnnulation} h du rendez-vous : vos ${somme} ne seront pas remboursés.`
+          : `\n\nVous annulez à plus de ${delaiAnnulation} h : vos ${somme} vous seront remboursés.`
+      }
+    }
+
+    if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?${avertissement}`)) {
       handleAnnulerRdv(rdv.id)
     }
   }
