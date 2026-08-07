@@ -3971,9 +3971,15 @@ export default function ReservationPage() {
                     style={{ marginTop: 1, width: 22, height: 22, flexShrink: 0, accentColor: PINK }}
                   />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                    {/* LE DÉLAI EST CELUI DE LA PRO, PAS UN 24 ÉCRIT EN DUR.
+                        Il l'était ici, et nulle part ailleurs : l'encadré du
+                        dessus annonçait 48 h, et la case à cocher — celle qui
+                        vaut consentement, la seule qui engage vraiment la
+                        cliente — en promettait 24. Deux règles contradictoires
+                        sur le même écran, dont la plus engageante était fausse. */}
                     {propay.mode === 'empreinte'
-                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0, symPropay)} en cas d&apos;absence ou d&apos;annulation à moins de 24 h.</>
-                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0, symPropay)} maintenant, conservés si absence ou annulation à moins de 24 h.</>}
+                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0, symPropay)} en cas d&apos;absence ou d&apos;annulation à moins de {propay.delai_annulation ?? 24} h.</>
+                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0, symPropay)} maintenant, conservés si absence ou annulation à moins de {propay.delai_annulation ?? 24} h.</>}
                   </span>
                 </label>
               </div>
