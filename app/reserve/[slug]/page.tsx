@@ -4488,7 +4488,6 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
     // `confirmer()` comme d'habitude : on lui rend l'identifiant déjà obtenu
     // plutôt que de redemander un paiement qui vient d'être fait.
     const dejaRegleRef = useRef<string | null>(null)
-    const [debugPortefeuilles, setDebugPortefeuilles] = useState('')
 
     useImperativeHandle(ref, () => ({
       async confirmer() {
@@ -4524,28 +4523,7 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
             Apple Pay sur iPhone, Google Pay sur Android, rien ailleurs — le
             composant décide seul et ne s'affiche pas s'il n'a rien à proposer.
             Le formulaire de carte reste dessous pour toutes les autres. */}
-        {/* ── POURQUOI LE BOUTON N'APPARAÎT PAS ────────────────────────────
-            Quand aucun portefeuille n'est disponible, le composant ne dessine
-            rien — et ne dit pas pourquoi. Impossible de distinguer « Safari
-            refuse », « aucune carte dans le Wallet » et « domaine non déclaré ».
-
-            Avec ?debug=1 dans l'adresse, on écrit ce que Stripe répond
-            réellement. Invisible pour les clientes, décisif pour nous. */}
-        {debugPortefeuilles && (
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 8px', fontFamily: 'monospace' }}>
-            portefeuilles : {debugPortefeuilles}
-          </p>
-        )}
         <ExpressCheckoutElement
-          onReady={({ availablePaymentMethods }) => {
-            const dispo = availablePaymentMethods
-              ? Object.entries(availablePaymentMethods).filter(([, v]) => v).map(([k]) => k).join(', ')
-              : ''
-            console.log('[glamia-pay] portefeuilles disponibles :', dispo || 'aucun')
-            if (typeof window !== 'undefined' && window.location.search.includes('debug=1')) {
-              setDebugPortefeuilles(dispo || 'aucun')
-            }
-          }}
           options={{
             buttonHeight: 48,
             paymentMethods: { applePay: 'auto', googlePay: 'auto', link: 'never' },
