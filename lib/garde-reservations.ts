@@ -32,12 +32,29 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
+// ── LES SEUILS, RELEVÉS APRÈS UN PREMIER JEU TROP SERRÉ ────────────────────
+// Les premiers chiffres ont bloqué Chadi en une heure de tests, ce qui veut
+// dire qu'ils auraient bloqué de vraies clientes. Trois situations ordinaires
+// que j'avais sous-estimées :
+//
+//   — LE SALON PARTAGE UN SEUL ACCÈS INTERNET. Une pro qui prend les rendez-
+//     vous de ses clientes depuis la tablette du salon, ou des clientes qui
+//     réservent depuis le wifi d'un centre commercial, sortent toutes par la
+//     même porte. Vingt réservations dans l'heure n'a rien d'anormal.
+//   — UNE RÉSERVATION QUI RATE SE REFAIT. Carte refusée, créneau pris entre-
+//     temps, page rechargée : la même personne compte plusieurs fois pour un
+//     seul rendez-vous.
+//   — UNE PRO QUI OUVRE SES DISPONIBILITÉS reçoit une vague en quelques
+//     minutes. C'est le bon jour pour elle, pas le moment de fermer la porte.
+//
+// On vise l'automate, pas la journée chargée. Un seuil trop bas fait perdre de
+// vrais rendez-vous — plus cher que le mal qu'on soigne.
 /** Un même téléphone : au-delà, c'est qu'on insiste. */
-const MAX_PAR_TELEPHONE = 6
-/** Une même provenance : couvre le salon qui réserve pour plusieurs clientes. */
-const MAX_PAR_SOURCE = 20
+const MAX_PAR_TELEPHONE = 15
+/** Une même provenance : le salon et son wifi partagé tiennent largement. */
+const MAX_PAR_SOURCE = 60
 /** Une même pro : au-delà, ce n'est plus une journée, c'est une attaque. */
-const MAX_PAR_PRO = 40
+const MAX_PAR_PRO = 120
 const FENETRE_MINUTES = 60
 
 const empreinte = (v: string) => createHash('sha256').update(v).digest('hex').slice(0, 32)
@@ -57,6 +74,14 @@ export async function gardeReservation(
   entetes: Headers,
 ): Promise<Verdict> {
   try {
+    // ── LES COMPTES D'ESSAI NE SONT JAMAIS COMPTÉS ──────────────────────────
+    // Chadi passe ses journées à réserver sur son propre lien pour éprouver
+    // l'app : il atteint en une heure ce qu'une vraie pro atteint en un mois.
+    // Une garde qui l'empêche de tester coûte plus qu'elle ne protège.
+    const { data: profil } = await supabaseAdmin
+      .from('profiles').select('compte_test').eq('id', proId).maybeSingle()
+    if (profil?.compte_test === true) return { ok: true }
+
     // L'adresse d'origine telle que la voit l'hébergeur. Absente en local, et
     // falsifiable — d'où le second garde-fou sur le téléphone.
     const source = entetes.get('x-forwarded-for')?.split(',')[0]?.trim()
