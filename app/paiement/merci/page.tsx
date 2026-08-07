@@ -10,16 +10,9 @@ import { useSearchParams } from 'next/navigation'
 
 const PINK = '#C2779E'
 
-const fmt = (c: number) => `${(c / 100).toFixed(2).replace('.', ',')} €`
-
-type Recu = {
-  statut: string
-  numero?: string
-  date?: string
-  pro?: string
-  lignes?: { libelle: string; montant: number }[]
-  total?: number
-}
+// La facture n'est plus fabriquée ici : elle arrive toute faite, dans la monnaie
+// de la caisse de la pro. L'euro écrit en dur à cet endroit était le défaut.
+type Recu = { statut: string; html?: string }
 
 export default function MerciWrapper() {
   return (
@@ -96,38 +89,19 @@ function PageMerci() {
         </p>
       </div>
 
-      {/* Facture */}
-      <div style={{
-        width: '100%', maxWidth: 420, background: '#fff', borderRadius: 18,
-        border: `1.5px solid ${PINK}55`, padding: '22px 22px 18px',
-        boxShadow: '0 4px 20px rgba(194,119,158,0.12)',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: PINK, letterSpacing: 0.6 }}>Glamia</span>
-          <span style={{ fontSize: 11, color: '#9ca3af' }}>Facture n° {recu.numero}</span>
-        </div>
-        <p style={{ fontSize: 12.5, color: '#6b7280', margin: '0 0 14px' }}>
-          {recu.pro ? <>{recu.pro} · </> : null}
-          {recu.date ? new Date(recu.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
-        </p>
+      {/* ── LA FACTURE, CELLE DU MAIL ET AUCUNE AUTRE ────────────────────────
+          Cette page en dessinait une deuxième, avec ses propres lignes et
+          l'euro écrit en dur : la même prestation réglée en francs s'affichait
+          en euros ici et en francs dans le mail reçu juste après. Il manquait
+          aussi le détail des prestations et les remises accordées.
 
-        <div style={{ borderTop: '1px solid #F3E8EF' }}>
-          {(recu.lignes ?? []).map((l, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3E8EF' }}>
-              <span style={{ fontSize: 13.5, color: '#374151' }}>{l.libelle}</span>
-              <span style={{ fontSize: 13.5, fontWeight: 600, color: '#374151' }}>{fmt(l.montant)}</span>
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 2px' }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: PINK }}>Total payé</span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: PINK }}>{fmt(recu.total ?? 0)}</span>
-          </div>
-        </div>
-
-        <p style={{ fontSize: 10.5, color: '#b8aeb4', margin: '14px 0 0', textAlign: 'center' }}>
-          Paiement sécurisé · Glamia Pay
-        </p>
-      </div>
+          Deux modèles censés dire la même chose finissent toujours par
+          diverger. Il n'y en a donc plus qu'un, fabriqué par la fonction qui
+          l'envoie par mail, affiché ici tel quel. */}
+      <div
+        style={{ width: '100%', maxWidth: 560 }}
+        dangerouslySetInnerHTML={{ __html: recu.html ?? '' }}
+      />
 
       <button
         className="no-print"

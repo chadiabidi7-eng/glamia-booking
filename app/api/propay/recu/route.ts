@@ -2,9 +2,20 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Glamia Pay — données de la facture (page /paiement/merci).
-// GET ?token=<paiement_id>  → détail prestation + frais + total, une fois payé.
-// Construit depuis la ligne `paiements` (pas de mention Stripe/Glamia côté frais).
+// Glamia Pay — LA facture de la cliente (page /paiement/merci).
+//
+// GET ?token=<paiement_id> → { statut, html }
+//
+// CE FICHIER EN DESSINAIT UNE DEUXIÈME, et c'était l'erreur. Il refaisait ses
+// propres lignes, son propre total, avec l'euro écrit en dur : la même
+// prestation réglée en francs s'affichait en euros à l'écran et en francs dans
+// le mail reçu juste après. Il manquait aussi le détail des prestations et les
+// remises accordées, que le mail montrait.
+//
+// Deux modèles censés dire la même chose finissent toujours par diverger —
+// celui-ci était déjà parti. On ne garde donc plus qu'un seul document : celui
+// du mail. Cette route va le chercher tel quel et le renvoie à la page, qui
+// l'affiche sans rien y ajouter.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabaseAdmin = createClient(
@@ -39,29 +50,25 @@ export async function GET(req: NextRequest) {
 
     if (p.statut !== 'paye') return NextResponse.json({ statut: 'en_attente' })
 
-    const { data: pro } = await supabaseAdmin
-      .from('profiles')
-      .select('pseudo, prenom, nom')
-      .eq('id', p.pro_id)
-      .maybeSingle()
-    const nomPro = pro?.pseudo || [pro?.prenom, pro?.nom].filter(Boolean).join(' ') || ''
-
-    const restant = p.montant
-    const frais = p.frais_reservation ?? 0
-    return NextResponse.json({
-      statut: 'paye',
-      numero: token.slice(-8).toUpperCase(),
-      date: p.created_at,
-      pro: nomPro,
-      lignes: [
-        {
-          libelle: `${p.type === 'acompte' ? 'Acompte' : p.type === 'solde' ? 'Solde' : 'Prestation'}${p.rdv?.technique ? ` — ${p.rdv.technique}` : ''}`,
-          montant: restant,
+    // La facture est fabriquée à un seul endroit : la fonction qui l'envoie
+    // par mail. On lui demande la même, en HTML, au lieu de la refaire ici.
+    const rendu = await fetch(
+      'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/envoyer-facture',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
         },
-        { libelle: 'Frais de réservation', montant: frais },
-      ],
-      total: restant + frais,
-    })
+        body: JSON.stringify({ paiement_id: token, action: 'html' }),
+      },
+    )
+    if (!rendu.ok) {
+      console.error('[api/propay/recu] facture non rendue', rendu.status, await rendu.text())
+      return NextResponse.json({ error: 'facture_indisponible' }, { status: 502 })
+    }
+
+    return NextResponse.json({ statut: 'paye', html: await rendu.text() })
   } catch (e) {
     console.error('[api/propay/recu]', e)
     return NextResponse.json({ error: 'erreur' }, { status: 500 })
