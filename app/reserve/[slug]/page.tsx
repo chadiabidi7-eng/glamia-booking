@@ -3,7 +3,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
@@ -4107,6 +4107,19 @@ export default function ReservationPage() {
                     mode={propay.mode ?? 'empreinte'}
                     nom={`${clientePrenom.trim()} ${clienteNom.trim()}`.trim()}
                     email={clienteEmail.trim()}
+                    // ── LE BOUTON APPLE PAY / GOOGLE PAY ────────────────────
+                    // Il paie AVANT que le rendez-vous existe, comme le
+                    // formulaire de carte : même ordre, mêmes garanties. Une
+                    // fois la carte validée, on enchaîne sur la réservation
+                    // exactement comme si elle avait appuyé sur « Confirmer ».
+                    consentementDonne={propayConsent}
+                    surRefusConsentement={() => alert(
+                      (propay.mode ?? 'empreinte') === 'acompte'
+                        ? "Coche la case d'acceptation de l'acompte avant de payer."
+                        : (propay.mode === 'total'
+                          ? "Coche la case d'acceptation du paiement avant de payer."
+                          : "Coche la case d'autorisation d'empreinte bancaire avant de payer."))}
+                    surPaiementPortefeuille={() => { handleConfirm() }}
                   />
                 </Elements>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
@@ -4458,13 +4471,27 @@ export default function ReservationPage() {
 // ─── Glamia Pay : Payment Element + confirmation exposée au parent ───────────
 // Doit vivre SOUS le provider <Elements> ; le parent déclenche confirmer()
 // depuis le bouton Réserver (la carte est validée AVANT la création du RDV).
-const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' | 'total'; nom: string; email: string }>(
-  function BlocGlamiaPay({ mode, nom, email }, ref) {
+const BlocGlamiaPay = forwardRef<PropayHandle, {
+  mode: 'empreinte' | 'acompte' | 'total'
+  nom: string
+  email: string
+  consentementDonne: boolean
+  surRefusConsentement: () => void
+  surPaiementPortefeuille: () => void
+}>(
+  function BlocGlamiaPay({ mode, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille }, ref) {
     const stripeJs = useStripe()
     const elements = useElements()
+    // ── CE QUE LE PORTEFEUILLE A DÉJÀ RÉGLÉ ─────────────────────────────────
+    // Apple Pay et Google Pay paient depuis LEUR bouton, avant que le
+    // rendez-vous existe. La suite de la réservation appelle ensuite
+    // `confirmer()` comme d'habitude : on lui rend l'identifiant déjà obtenu
+    // plutôt que de redemander un paiement qui vient d'être fait.
+    const dejaRegleRef = useRef<string | null>(null)
 
     useImperativeHandle(ref, () => ({
       async confirmer() {
+        if (dejaRegleRef.current) return { ok: true, intentId: dejaRegleRef.current }
         if (!stripeJs || !elements) {
           return { ok: false, erreur: "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie." }
         }
@@ -4488,7 +4515,52 @@ const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' |
       },
     }), [stripeJs, elements, mode, nom, email])
 
-    return <PaymentElement options={{
+    const billingWallet = { name: nom || undefined, email: email || undefined }
+
+    return (
+      <>
+        {/* ── LE BOUTON DU TÉLÉPHONE, AU-DESSUS DE LA CARTE ──────────────────
+            Apple Pay sur iPhone, Google Pay sur Android, rien ailleurs — le
+            composant décide seul et ne s'affiche pas s'il n'a rien à proposer.
+            Le formulaire de carte reste dessous pour toutes les autres. */}
+        <ExpressCheckoutElement
+          options={{
+            buttonHeight: 48,
+            paymentMethods: { applePay: 'auto', googlePay: 'auto', link: 'never' },
+          }}
+          // LA CASE DOIT ÊTRE COCHÉE AVANT DE PAYER. Le bouton d'un portefeuille
+          // règle en deux secondes : sans ce contrôle, la cliente paierait avant
+          // d'avoir accepté quoi que ce soit. `resolve()` non appelé = le
+          // portefeuille ne s'ouvre pas.
+          onClick={({ resolve }) => {
+            if (!consentementDonne) { surRefusConsentement(); return }
+            resolve({ business: { name: 'Glamia' } })
+          }}
+          onConfirm={async () => {
+            if (!stripeJs || !elements) return
+            const commun = { elements, redirect: 'if_required' as const }
+            if (mode === 'empreinte') {
+              const { error, setupIntent } = await stripeJs.confirmSetup({
+                ...commun,
+                confirmParams: { payment_method_data: { billing_details: billingWallet } },
+              })
+              if (error || !setupIntent) return
+              dejaRegleRef.current = setupIntent.id
+            } else {
+              const { error, paymentIntent } = await stripeJs.confirmPayment({
+                ...commun,
+                confirmParams: { payment_method_data: { billing_details: billingWallet } },
+              })
+              if (error || !paymentIntent) return
+              dejaRegleRef.current = paymentIntent.id
+            }
+            // La carte est validée : on enchaîne sur la création du rendez-vous,
+            // exactement comme si elle avait appuyé sur « Confirmer ».
+            surPaiementPortefeuille()
+          }}
+        />
+
+        <PaymentElement options={{
       layout: 'tabs',
       // On ne collecte pas nom/email dans l'UI (fournis au confirm) → supprime
       // l'invite Link « enregistre tes infos pour tes prochains paiements ».
@@ -4506,8 +4578,12 @@ const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' |
       //
       // Il faut AUSSI que le domaine soit déclaré chez Apple sur la caisse de la
       // pro. C'est fait à l'ouverture de sa caisse, côté serveur.
-      wallets: { applePay: 'auto', googlePay: 'auto' },
-    }} />
+      // Les portefeuilles ont leur propre bouton au-dessus : les répéter ici
+      // ferait deux Apple Pay sur le même écran.
+      wallets: { applePay: 'never', googlePay: 'never' },
+        }} />
+      </>
+    )
   },
 )
 
