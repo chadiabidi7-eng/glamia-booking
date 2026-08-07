@@ -1711,7 +1711,16 @@ export default function ReservationPage() {
       // Le numéro sert AU SERVEUR à savoir si elle est déjà venue chez cette
       // pro : certaines demandent une simple empreinte à leurs fidèles et un
       // acompte à une inconnue. La page ne décide rien — elle transmet.
-      body: JSON.stringify({ pro_id: pro.id, total, total_plein: totalPlein, telephone }),
+      // Le DÉTAIL du panier part avec, pour que le serveur recalcule le prix
+      // lui-même : `total` ne lui sert plus que de repli si le catalogue est
+      // illisible. Les remises sont réclamées, pas fixées — leur valeur est
+      // relue dans la fiche de la cliente.
+      body: JSON.stringify({
+        pro_id: pro.id, total, total_plein: totalPlein, telephone,
+        techniques: techniquesSelectionnees,
+        fidelite_appliquee: recompenseFidelite ?? null,
+        reduction_appliquee: reductionCliente ?? null,
+      }),
     })
       .then(r => r.json())
       .then((d: PropayInfo) => setPropay(d))

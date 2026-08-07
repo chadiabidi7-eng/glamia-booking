@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, minToTime } from '@/lib/creneaux'
+import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — créer une réservation.
@@ -72,25 +73,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ...verdict, ok: false }, { status: 409 })
     }
 
+    // ── LE PRIX EST RECALCULÉ, JAMAIS RECOPIÉ ───────────────────────────────
+    // Il arrivait du navigateur et s'enregistrait tel quel. Réserver un
+    // microblading à 250 en déclarant 20 suffisait à ne payer qu'un acompte de
+    // 3 — et la fiche de la pro affichait 20, elle ne voyait rien avant le jour
+    // même. Le catalogue de la pro fait foi.
+    //
+    // Panier introuvable ou prestation désactivée : on refuse. Ce que le
+    // navigateur raconte ne correspond alors à rien de réel, et laisser passer
+    // reviendrait à accepter n'importe quel prix.
+    const reel = await prixReelDuPanier(pro_id, body.techniques)
+    if (Array.isArray(body.techniques) && body.techniques.length > 0 && !reel) {
+      console.error('[rdv/creer] panier refusé', pro_id, JSON.stringify(body.techniques).slice(0, 300))
+      return NextResponse.json({ ok: false, raison: 'prestation_inconnue' }, { status: 409 })
+    }
+
+    // Les remises demandées sont relues chez la pro : le navigateur peut en
+    // vouloir une, il ne peut pas en fixer la valeur.
+    const remises = reel
+      ? await remisesVerifiees(pro_id, cliente_id, reel.prix, body.fidelite_appliquee, body.reduction_appliquee)
+      : null
+
     const { data: cree, error } = await supabaseAdmin
       .from('rendez_vous')
       .insert({
         pro_id,
         cliente_id,
         date: `${date}T${heure}:00.000Z`,
-        duree,
+        duree: reel?.duree ?? duree,
         specialite: body.specialite ?? null,
         technique: body.technique ?? null,
-        techniques: body.techniques ?? [],
-        prix: typeof body.prix === 'number' && body.prix > 0 ? body.prix : null,
+        techniques: reel?.techniques ?? body.techniques ?? [],
+        prix: remises ? remises.prix : (typeof body.prix === 'number' && body.prix > 0 ? body.prix : null),
         statut: 'en_attente',
         notes: body.notes || null,
         demande_rappel: body.demande_rappel === true,
-        fidelite_appliquee: body.fidelite_appliquee ?? null,
+        fidelite_appliquee: remises ? remises.fidelite : (body.fidelite_appliquee ?? null),
         reponses_questions: Array.isArray(body.reponses_questions) && body.reponses_questions.length > 0
           ? body.reponses_questions
           : null,
-        reduction_appliquee: body.reduction_appliquee ?? null,
+        reduction_appliquee: remises ? remises.reduction : (body.reduction_appliquee ?? null),
         source: 'booking',
       })
       .select('id')

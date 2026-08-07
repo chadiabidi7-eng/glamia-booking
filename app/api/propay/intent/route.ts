@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { reglagesPay } from '@/lib/pays-stripe'
@@ -82,6 +83,17 @@ function normalizePhone(tel: string): string {
  * exigeant des deux — se tromper dans ce sens demande trop d'argent à une
  * fidèle, l'inverse en demande simplement moins à une inconnue.
  */
+/** L'identifiant de la cliente derrière ce numéro, pour relire ses remises. */
+async function ficheClienteParTelephone(proId: string, telephone: unknown): Promise<string | null> {
+  if (typeof telephone !== 'string') return null
+  const cible = normalizePhone(telephone)
+  if (cible.length < 9) return null
+  const { data: clientes } = await supabaseAdmin
+    .from('clientes').select('id, telephone').eq('pro_id', proId)
+  // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
+  return (clientes ?? []).find(c => normalizePhone(c.telephone as string) === cible)?.id ?? null
+}
+
 async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise<boolean> {
   if (typeof telephone !== 'string') return false
   const cible = normalizePhone(telephone)
@@ -134,7 +146,10 @@ export function calculerTotalCliente(
 }
 
 export async function POST(req: NextRequest) {
-  let body: { pro_id?: unknown; total?: unknown; total_plein?: unknown; telephone?: unknown }
+  let body: {
+    pro_id?: unknown; total?: unknown; total_plein?: unknown; telephone?: unknown
+    techniques?: unknown; fidelite_appliquee?: unknown; reduction_appliquee?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -173,8 +188,35 @@ export async function POST(req: NextRequest) {
   const nouvelle = config.nouvelles ? await estUneNouvelleCliente(proId, body.telephone) : false
   const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
 
-  const totalCentimes = Math.round(totalEuros * 100)
-  const totalPleinCentimes = Math.round(Math.max(totalEuros, Number(body.total_plein) || 0) * 100)
+  // ── L'ACOMPTE SE CALCULE SUR LE VRAI PRIX ────────────────────────────────
+  // Il se calculait sur le total envoyé par le navigateur. Déclarer 20 pour un
+  // microblading à 250 suffisait à ne verser qu'un acompte de 3 : la pro
+  // sécurisait presque rien, et en mode paiement complet la cliente réglait 20
+  // pour une prestation à 250.
+  //
+  // On recalcule donc le panier depuis le catalogue de la pro, et les remises
+  // depuis sa fiche cliente. Le navigateur choisit les prestations, il ne dit
+  // plus ce qu'elles valent.
+  //
+  // SANS PANIER LISIBLE, on retombe sur le total annoncé : les anciennes
+  // versions de la page n'envoient pas le détail, et une pro dont l'acompte
+  // cesserait de s'afficher perdrait des réservations pour un chantier de
+  // sécurité. La création du rendez-vous, elle, refuse — c'est là que l'argent
+  // s'engage vraiment.
+  const panier = await prixReelDuPanier(proId, body.techniques)
+  let prixServeur: number | null = panier?.prix ?? null
+  if (panier) {
+    const fiche = await ficheClienteParTelephone(proId, body.telephone)
+    const remises = await remisesVerifiees(
+      proId, fiche, panier.prix, body.fidelite_appliquee, body.reduction_appliquee,
+    )
+    prixServeur = remises.prix
+  }
+
+  const totalCentimes = Math.round((prixServeur ?? totalEuros) * 100)
+  const totalPleinCentimes = panier
+    ? Math.round(panier.prix * 100)
+    : Math.round(Math.max(totalEuros, Number(body.total_plein) || 0) * 100)
   const mode: 'empreinte' | 'acompte' | 'total' =
     regle.mode === 'acompte' ? 'acompte' : regle.mode === 'total' ? 'total' : 'empreinte'
   // RDV OFFERT par la fidélité (prix ~0) — décision Chadi 18 juil. (Q2) :
