@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
-      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations')
+      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le')
       .eq('cliente_id', cliente_id)
       .eq('pro_id', pro_id)
       .gte('date', new Date().toISOString())

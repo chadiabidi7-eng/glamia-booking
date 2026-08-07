@@ -121,6 +121,8 @@ type RdvAVenir = {
   inspirations: string[] | null
   /** Ce qu'elle a déjà versé pour ce rendez-vous, s'il y a lieu. */
   paiement: { montant: number; nature: string } | null
+  /** Quand la PRO a déplacé ce rendez-vous. Suspend le délai d'annulation. */
+  date_change_pro_le?: string | null
 }
 
 
@@ -1200,7 +1202,16 @@ export default function ReservationPage() {
     const dateLabel  = formatRdvDate(rdv.date)
     const heureLabel = formatRdvHeure(rdv.date)
     const heuresAvant = (new Date(rdv.date).getTime() - Date.now()) / 3_600_000
-    const tardive = heuresAvant < delaiAnnulation
+    // ── LA MÊME GRÂCE QUE LE SERVEUR APPLIQUE VRAIMENT ────────────────────
+    // Si la pro a rapproché le rendez-vous, la cliente n'est pas pénalisée :
+    // ce n'est pas elle qui a bougé. Le serveur le savait déjà et remboursait
+    // — mais cet écran l'avertissait quand même qu'elle perdrait son argent.
+    // Elle renonçait donc à annuler, ou annulait la peur au ventre, pour un
+    // avertissement que les faits démentaient.
+    const deplacePro = rdv.date_change_pro_le
+      ? (Date.now() - new Date(rdv.date_change_pro_le).getTime()) / 3_600_000 < delaiAnnulation
+      : false
+    const tardive = !deplacePro && heuresAvant < delaiAnnulation
 
     let avertissement = ''
     if (rdv.paiement) {
