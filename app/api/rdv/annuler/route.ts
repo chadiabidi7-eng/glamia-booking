@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { traiterAnnulationPropay } from '@/lib/propay'
 import { NextRequest, NextResponse } from 'next/server'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,10 +59,24 @@ export async function POST(req: NextRequest) {
     .neq('statut', 'annule')
   if (updErr) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
 
-  // 2) Volet paiement — VOLONTAIREMENT ABSENT sur la ligne 2.3, qui est la
-  // version sans Glamia Pay. Sur la branche `dev` (3.0), cette étape appelle
-  // traiterAnnulationPropay() pour libérer/rembourser. À réintroduire lors de
-  // la fusion du Pay, surtout pas à recopier ici.
+  // ── 2) LE VOLET PAIEMENT ───────────────────────────────────────────────
+  // Il était absent, et c'est ce qui manquait le plus. Ce fichier vient de la
+  // ligne 2.3, celle SANS Glamia Pay : un commentaire disait de le
+  // réintroduire à la fusion, et personne ne l'a fait. Résultat, une cliente
+  // qui annulait depuis sa page de réservation n'était JAMAIS remboursée —
+  // même en annulant une semaine à l'avance. Son argent restait chez la pro
+  // sans que ni l'une ni l'autre ne le sache. Constaté par Chadi le 7 août
+  // 2026 sur deux annulations d'essai.
+  //
+  // On ne bloque pas l'annulation là-dessus : le rendez-vous est déjà annulé
+  // au-dessus, et il doit le rester même si le remboursement échoue. Le cron
+  // de réconciliation rattrapera ce qui n'a pas abouti.
+  try {
+    const { resultat } = await traiterAnnulationPropay(rdvId)
+    console.log('[api/rdv/annuler] paiement :', rdvId, resultat)
+  } catch (e) {
+    console.error('[api/rdv/annuler] paiement non traité :', rdvId, e)
+  }
 
   // 3) Restaurer la carte de fidélité (défaire le tampon / la récompense de ce RDV)
   try {
