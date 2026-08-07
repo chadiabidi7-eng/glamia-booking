@@ -148,7 +148,11 @@ function Payer() {
         </Elements>
 
         <p style={{ fontSize: 11, color: '#9a8f95', textAlign: 'center', marginTop: 12, lineHeight: 1.4 }}>
-          Les cartes émises hors zone euro peuvent entraîner des frais plus élevés.
+          {/* « hors zone euro » ne veut rien dire pour la cliente d'une pro
+              suisse ou canadienne : sa carte locale est parfaitement normale
+              chez elle. Ce qui coûte plus cher, c'est une carte d'un AUTRE pays
+              que celui de la praticienne — quel que soit ce pays. */}
+          Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés.
         </p>
         <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>
           Paiement sécurisé · Glamia Pay

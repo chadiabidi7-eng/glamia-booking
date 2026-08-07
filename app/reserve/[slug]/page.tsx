@@ -4089,7 +4089,7 @@ export default function ReservationPage() {
                   <span>Paiement sécurisé par Stripe — l&apos;argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.</span>
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
-                  Les cartes émises hors zone euro peuvent entraîner des frais plus élevés. En réglant, tu acceptes les{' '}
+                  Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés. En réglant, tu acceptes les{' '}
                   <a href="https://booking.glamia.pro/cgu" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>conditions d&apos;utilisation</a>.
                 </p>
                 <Elements
