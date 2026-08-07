@@ -269,7 +269,18 @@ export async function POST(req: NextRequest) {
           usage: 'off_session',
           // Carte uniquement (Apple Pay/Google Pay passent par 'card' en wallet)
           // — pas de Bancontact/Klarna/iDEAL
-          payment_method_types: ['card'],
+          // ── POURQUOI PLUS DE LISTE FIGÉE ────────────────────────────────
+          // Avec `payment_method_types: ['card']`, le composant Stripe n'affiche
+          // que le formulaire de carte : Apple Pay et Google Pay ne sortent pas.
+          // C'est ce qui manquait le 7 août — le domaine était déclaré, le
+          // fichier en place, et rien n'apparaissait.
+          //
+          // `allow_redirects: 'never'` garde le comportement actuel : seuls les
+          // moyens qui se règlent SANS quitter la page. Pas de virement, pas de
+          // paiement en trois fois qui emmènerait la cliente ailleurs au milieu
+          // de sa réservation — juste la carte et les portefeuilles du
+          // téléphone.
+          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
           metadata: { glamia_pro_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte), glamia_cfg: glamiaCfg },
         },
         { stripeAccount },
@@ -299,7 +310,9 @@ export async function POST(req: NextRequest) {
         customer: customer.id,
         setup_future_usage: 'off_session',
         // Carte uniquement (Apple Pay/Google Pay inclus via wallet 'card')
-        payment_method_types: ['card'],
+        // Même raison que pour l'empreinte : une liste figée sur « card »
+        // empêche Apple Pay et Google Pay d'apparaître.
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
         application_fee_amount: commission,
         metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais), glamia_cfg: glamiaCfg },
       },
