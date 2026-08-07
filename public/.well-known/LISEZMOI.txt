@@ -1,0 +1,13 @@
+apple-developer-merchantid-domain-association
+─────────────────────────────────────────────
+
+Ce fichier prouve à Apple que ce domaine nous appartient. Sans lui, Apple refuse
+le domaine et le bouton Apple Pay ne s'affiche JAMAIS — silencieusement, sans le
+moindre message : c'est exactement ce qui s'est passé le 7 août 2026.
+
+Il vient de Stripe (https://stripe.com/files/apple-pay/...) et vaut pour tous les
+domaines. Ne pas le renommer, ne pas lui ajouter d'extension : Apple le réclame à
+cette adresse exacte.
+
+Il doit rester accessible SANS authentification. Un domaine protégé par un mot de
+passe ou un accès restreint échoue à la vérification, même si le fichier est là.
