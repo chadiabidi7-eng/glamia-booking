@@ -3856,6 +3856,28 @@ export default function ReservationPage() {
               </div>
             </div>
 
+            {/* ── LA PLACE EST RÉSERVÉE AVANT MÊME DE SAVOIR QUOI Y METTRE ──
+                Le cadre de l'acompte surgissait au bout d'une seconde, une fois
+                la réponse du serveur arrivée — et poussait tout ce qu'il y avait
+                dessous. La cliente lisait son récapitulatif, et l'écran sautait.
+                Sur la dernière étape, juste avant de sortir sa carte, c'est le
+                pire moment pour donner l'impression que la page hésite.
+
+                On occupe donc la place tout de suite, avec un cadre au repos de
+                la même taille. Il n'y a plus de saut : le contenu se pose dans
+                un emplacement qui l'attendait déjà. */}
+            {propay === null && (
+              <div style={{
+                background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 60%)',
+                border: `1.5px solid ${PINK}44`,
+                borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
+                minHeight: 148,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 13, color: '#9ca3af' }}>Un instant…</span>
+              </div>
+            )}
+
             {/* ── Glamia Pay : empreinte bancaire / acompte ── */}
             {propay?.actif && propay.client_secret && propay.stripe_account && (
               <div style={{
