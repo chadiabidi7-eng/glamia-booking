@@ -1969,6 +1969,9 @@ export default function ReservationPage() {
         body: JSON.stringify({
           pro_id: pro.id,
           cliente_id: cId,
+          // Sert UNIQUEMENT à la garde contre les réservations en masse, qui
+          // n'en garde qu'une empreinte — jamais le numéro en clair.
+          telephone: telNormalized,
           date, heure, duree: dureeTotal,
           specialite: categoriesStr,
           technique: techniquesStr,
@@ -2011,6 +2014,16 @@ export default function ReservationPage() {
               body: JSON.stringify({ pro_id: pro.id, intent_id: propayIntentId }),
             })
           } catch (e) { console.error('[glamia-pay] remboursement du créneau perdu :', e) }
+        }
+        // ── « TROP DE RÉSERVATIONS » N'EST PAS « CRÉNEAU PERDU » ────────────
+        // Renvoyer au choix de l'horaire n'a aucun sens ici : le créneau est
+        // libre, c'est le rythme qui a alerté. Une cliente qu'on renvoie
+        // choisir une autre heure recommencerait indéfiniment sans comprendre.
+        if (creation?.raison === 'trop_de_reservations') {
+          alert(propayIntentId
+            ? "Trop de réservations depuis cet appareil en peu de temps. Ton paiement vient d'être annulé — réessaie dans une heure, ou appelle directement ta praticienne."
+            : "Trop de réservations depuis cet appareil en peu de temps. Réessaie dans une heure, ou appelle directement ta praticienne.")
+          return
         }
         alert(propayIntentId
           ? (creation?.message ? `${creation.message} Ton paiement vient d'être annulé.` : "Ce créneau n'est plus disponible. Ton paiement vient d'être annulé — choisis un autre horaire.")

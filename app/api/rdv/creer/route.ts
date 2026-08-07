@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, minToTime } from '@/lib/creneaux'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { gardeReservation } from '@/lib/garde-reservations'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — créer une réservation.
@@ -33,6 +34,20 @@ export async function POST(req: NextRequest) {
 
     if (!pro_id || !cliente_id || !date || !heure || typeof duree !== 'number' || duree <= 0) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
+    }
+
+    // ── LA GARDE CONTRE LES RÉSERVATIONS EN MASSE ───────────────────────────
+    // Posée avant toute écriture. La page est publique et sans limite d'appels :
+    // rien n'empêchait de remplir la semaine d'une pro de faux rendez-vous, et
+    // ses vraies clientes ne trouvaient plus une seule place.
+    //
+    // Les seuils sont larges — une cliente qui réserve pour elle, sa sœur et sa
+    // mère passe sans s'en apercevoir. On ne vise pas l'usage inhabituel, on
+    // vise l'automate.
+    const garde = await gardeReservation(pro_id, (body as { telephone?: unknown }).telephone, req.headers)
+    if (garde.ok === false) {
+      console.warn('[rdv/creer] garde :', garde.raison, pro_id)
+      return NextResponse.json({ ok: false, raison: garde.raison }, { status: 429 })
     }
 
     const { data: pro } = await supabaseAdmin
