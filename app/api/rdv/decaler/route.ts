@@ -82,5 +82,28 @@ export async function POST(req: NextRequest) {
     .neq('statut', 'annule')
   if (updErr) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
 
+  // ── 3) LA TRACE ÉCRITE POUR LA CLIENTE ─────────────────────────────────
+  // Elle annulait, et ne recevait rien. Aucune preuve que c'était pris en
+  // compte, aucun mot sur l'acompte qu'elle avait avancé — donc un message à
+  // sa pro pour le demander. Ce mail rend ce message inutile.
+  //
+  // ENVOYÉ EN DERNIER, une fois le paiement traité : c'est ce qui décide de ce
+  // qu'il raconte (remboursé, conservé, ou empreinte libérée). L'envoyer plus
+  // tôt le ferait mentir.
+  //
+  // Un échec d'envoi ne remet rien en cause : l'annulation, elle, a eu lieu.
+  try {
+    await fetch('https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rdv-cliente-mail', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ rdv_id: rdvId, motif: 'decale' }),
+    })
+  } catch (e) {
+    console.error('[api/rdv/decale] mail cliente non envoyé :', rdvId, e)
+  }
+
   return NextResponse.json({ success: true })
 }
