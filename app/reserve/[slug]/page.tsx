@@ -15,6 +15,7 @@ import {
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag } from 'lucide-react'
+import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 
 // ─────────────────────────────────────────────
 // Types
@@ -745,7 +746,13 @@ export default function ReservationPage() {
 
   // ── Totaux calculés (toutes spécialités) ─────
   // ── Les questions à poser, et ce qu'elles ajoutent ────────────────────────
-  const questionsEnCours = questionsAPoser(questions, techniquesSelectionnees)
+  // Éteint pour la 2.5 — voir lib/chantiers.ts. On coupe ici, à la source :
+  // aucune question à poser, donc rien à afficher, rien à répondre, rien à
+  // joindre au rendez-vous. Les questions déjà enregistrées par les pros
+  // restent en base, intactes, et reviendront le jour où on rallume.
+  const questionsEnCours = QUESTIONS_RESA_ACTIVES
+    ? questionsAPoser(questions, techniquesSelectionnees)
+    : []
 
   /**
    * Elle répond. La prestation de l'ancienne réponse s'en va, celle de la
