@@ -80,11 +80,14 @@ export async function POST(req: NextRequest) {
 
   const { data: compte } = await supabaseAdmin
     .from('stripe_comptes')
-    .select('account_id')
+    .select('account_id, devise')
     .eq('pro_id', proId)
     .maybeSingle()
   if (!compte) return NextResponse.json({ error: 'compte_introuvable' }, { status: 404 })
   const stripeAccount = compte.account_id
+  // Caisse ouverte avant le 5 août : la colonne est vide, et c'était forcément
+  // l'euro à l'époque.
+  const devisePro = ((compte.devise as string | null) ?? 'eur').toLowerCase()
 
   try {
     if (intentId.startsWith('seti_')) {
@@ -111,6 +114,12 @@ export async function POST(req: NextRequest) {
         stripe_customer_id: typeof setup.customer === 'string' ? setup.customer : setup.customer?.id ?? null,
         stripe_payment_method_id: typeof setup.payment_method === 'string' ? setup.payment_method : setup.payment_method?.id ?? null,
         stripe_setup_intent_id: setup.id,
+        // ── LA MONNAIE VIENT DE LA CAISSE ──────────────────────────────────
+        // La colonne valait « euro » par défaut et personne ne l'a jamais
+        // remplie : une pro suisse enregistrait ses francs comme des euros. Le
+        // mail d'annulation lisait cette colonne et annonçait « 20 € versés »
+        // pour 20 CHF. Constaté le 7 août.
+        devise: devisePro,
         historique: [{ quand: new Date().toISOString(), evenement: 'empreinte_posee', detail: 'consentement à la résa' }],
       })
       if (error) {
@@ -156,6 +165,8 @@ export async function POST(req: NextRequest) {
       stripe_customer_id: typeof paiement.customer === 'string' ? paiement.customer : paiement.customer?.id ?? null,
       stripe_payment_method_id: typeof paiement.payment_method === 'string' ? paiement.payment_method : paiement.payment_method?.id ?? null,
       stripe_payment_intent_id: paiement.id,
+      // La monnaie réellement encaissée, annoncée par Stripe lui-même.
+      devise: (paiement.currency ?? devisePro).toLowerCase(),
       historique: [{ quand: new Date().toISOString(), evenement: 'acompte_paye', detail: `total cliente ${paiement.amount} c` }],
     }).select('id').single()
     if (error) {
