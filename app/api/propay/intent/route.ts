@@ -95,6 +95,23 @@ async function ficheClienteParTelephone(proId: string, telephone: unknown): Prom
 }
 
 async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise<boolean> {
+  // ── EST NOUVELLE CELLE QUE LA PAGE NE RECONNAÎT PAS ─────────────────────────
+  // La règle regardait si elle était DÉJÀ VENUE — un rendez-vous passé, non
+  // annulé. Vue de la cliente, ça ne correspondait à rien : elle tape son
+  // numéro, la page la reconnaît et pré-remplit tout, et on lui demandait
+  // quand même le tarif des inconnues.
+  //
+  // La règle est donc celle qu'elle vit : présente dans le fichier de la pro,
+  // c'est une habituée ; absente, elle doit saisir nom, prénom et adresse, et
+  // c'est une nouvelle. Décision de Chadi, 7 août 2026.
+  //
+  // CE QU'ON PERD, ET C'EST ASSUMÉ : une cliente qui a réservé une fois puis
+  // n'est jamais venue est désormais traitée en habituée. C'était précisément
+  // ce que l'ancienne règle couvrait.
+  //
+  // AU MOINDRE DOUTE, HABITUÉE. Numéro absent, illisible, panne de lecture : le
+  // tarif des nouvelles est toujours le plus exigeant des deux, et se tromper
+  // dans ce sens demanderait trop d'argent à une fidèle.
   if (typeof telephone !== 'string') return false
   const cible = normalizePhone(telephone)
   if (cible.length < 9) return false
@@ -103,18 +120,7 @@ async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise
       .from('clientes').select('id, telephone').eq('pro_id', proId)
     if (error) return false
     // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
-    const fiche = (clientes ?? []).find(c => normalizePhone(c.telephone as string) === cible)
-    if (!fiche) return true
-
-    const { count, error: e2 } = await supabaseAdmin
-      .from('rendez_vous')
-      .select('id', { count: 'exact', head: true })
-      .eq('cliente_id', fiche.id)
-      .eq('pro_id', proId)
-      .neq('statut', 'annule')
-      .lt('date', new Date().toISOString())
-    if (e2) return false
-    return (count ?? 0) === 0
+    return !(clientes ?? []).some(c => normalizePhone(c.telephone as string) === cible)
   } catch {
     return false
   }
