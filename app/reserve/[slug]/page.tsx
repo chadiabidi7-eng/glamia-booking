@@ -4493,6 +4493,20 @@ const BlocGlamiaPay = forwardRef<PropayHandle, { mode: 'empreinte' | 'acompte' |
       // On ne collecte pas nom/email dans l'UI (fournis au confirm) → supprime
       // l'invite Link « enregistre tes infos pour tes prochains paiements ».
       fields: { billingDetails: { name: 'never', email: 'never' } },
+      // ── APPLE PAY ET GOOGLE PAY, QUAND L'APPAREIL LES A ─────────────────────
+      // Le bouton s'affiche tout seul selon le téléphone : Apple Pay sur iPhone,
+      // Google Pay sur Android, rien sur un ordinateur qui n'a ni l'un ni
+      // l'autre. Le formulaire de carte reste dessous pour toutes les autres.
+      //
+      // CE QU'IL FAUT SAVOIR : Apple n'autorise son bouton que dans Safari. Une
+      // cliente qui ouvre le lien depuis Instagram ou TikTok arrive dans le
+      // mini-navigateur de l'application et ne le verra pas — elle aura le
+      // formulaire de carte, comme avant. C'est le cas le plus fréquent, les
+      // pros mettant leur lien dans leur bio.
+      //
+      // Il faut AUSSI que le domaine soit déclaré chez Apple sur la caisse de la
+      // pro. C'est fait à l'ouverture de sa caisse, côté serveur.
+      wallets: { applePay: 'auto', googlePay: 'auto' },
     }} />
   },
 )

@@ -205,6 +205,8 @@ function Formulaire({ token, total, nom, email }: { token: string; total: number
   return (
     <>
       <PaymentElement options={{
+            // Apple Pay / Google Pay selon l'appareil, comme sur la page de résa.
+            wallets: { applePay: 'auto', googlePay: 'auto' },
         layout: 'tabs',
         // On ne collecte pas nom/email (fournis au confirm) → supprime l'invite
         // Link. Uniquement si on a l'email, sinon on laisse Stripe collecter.
