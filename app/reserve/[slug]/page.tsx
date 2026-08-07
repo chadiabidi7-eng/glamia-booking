@@ -549,6 +549,14 @@ export default function ReservationPage() {
   // ── Offres ──────────────────────────────────
   const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
   const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
+  // ── CE QUI A ÉTÉ RÉGLÉ, GARDÉ POUR LA PAGE DE CONFIRMATION ────────────────
+  // `propay` est remis à zéro dès qu'on quitte l'étape 5. La dernière page ne
+  // parlait donc que des prestations et du total — pas un mot sur l'acompte que
+  // la cliente venait de verser, ni sur l'empreinte prise sur sa carte. Elle
+  // n'avait aucune trace écrite du seul moment où de l'argent a bougé.
+  const [propayRegle, setPropayRegle] = useState<
+    { mode: 'empreinte' | 'acompte' | 'total'; montant: number; frais: number } | null
+  >(null)
 
   // ── Fidélité ─────────────────────────────────
   const [fideliteConfig, setFideliteConfig] = useState<{ active: boolean; nb_ronds: number; paliers: { position: number; type: string; valeur: number }[] } | null>(null)
@@ -772,6 +780,11 @@ export default function ReservationPage() {
 
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
   const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
+  /** Cette prestation est-elle couverte par le pack appliqué ? */
+  const estDansPack = (t: { categorie: string; nom: string }) =>
+    !!offreAppliquee && Object.entries(catalogue).some(([cat, techs]) =>
+      cat === t.categorie && techs.some(x => offreAppliquee.prestations_ids.includes(x.id) && x.nom === t.nom))
+
   const prixTotal = offreAppliquee
     ? offreAppliquee.prix_promo + techniquesSelectionnees.reduce((s, t) => {
         // Trouver si cette technique fait partie de l'offre
@@ -1898,6 +1911,11 @@ export default function ReservationPage() {
           return
         }
         propayIntentId = resultat.intentId ?? null
+        setPropayRegle({
+          mode: propay.mode ?? 'acompte',
+          montant: propay.acompte ?? 0,
+          frais: propay.frais ?? 0,
+        })
       }
 
       let cId = clienteId
@@ -2324,11 +2342,37 @@ export default function ReservationPage() {
                   <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                 </div>
-                <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
-                  {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                {/* ── DANS UN PACK, LE PRIX À L'UNITÉ N'EXISTE PLUS ──────────
+                    Chaque prestation affichait son tarif normal, et le total en
+                    bas montrait le prix du pack. Les lignes ne s'additionnaient
+                    donc pas au total : la cliente comptait, tombait sur autre
+                    chose, et n'avait aucun moyen de comprendre l'écart — rien
+                    ne disait qu'un pack était appliqué.
+
+                    Une prestation comprise dans le pack porte donc « Compris
+                    dans le pack », et le pack a sa propre ligne, avec son prix.
+                    Les prestations ajoutées EN DEHORS gardent le leur. */}
+                <span style={{ fontSize: 13, color: estDansPack(t) ? PINK : '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2, fontWeight: estDansPack(t) ? 600 : 400 }}>
+                  {estDansPack(t)
+                    ? <>Compris dans le pack · {formatDuree(t.duree * (t.quantite ?? 1))}</>
+                    : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}</>}
                 </span>
               </div>
             ))}
+            {/* Le pack porte son nom et son prix : sans cette ligne, le total
+                paraissait sorti de nulle part. */}
+            {offreAppliquee && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', flexShrink: 0 }}>{offreAppliquee.type === 'pack' ? 'PACK' : 'PROMO'}</span>
+                  <span style={{ fontSize: 13, color: PINK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offreAppliquee.nom}</span>
+                </span>
+                <span style={{ fontSize: 13, color: PINK, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {formatPrix(offreAppliquee.prix_promo, pro?.devise)}
+                </span>
+              </div>
+            )}
+
             {/* Fidélité appliquée */}
             {recompenseFidelite && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
@@ -2359,6 +2403,39 @@ export default function ReservationPage() {
               </span>
             </div>
           </div>
+
+          {/* ── L'ARGENT QUI A BOUGÉ, ÉCRIT NOIR SUR BLANC ──────────────────
+              Cette page ne montrait que les prestations et le total. La cliente
+              venait de verser un acompte, ou de laisser une empreinte sur sa
+              carte, et rien ne le disait : elle refermait la page sans aucune
+              trace de la seule chose qui engage son argent. */}
+          {propayRegle && (
+            <div style={{
+              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 60%)',
+              border: `1.5px solid ${PINK}`, borderRadius: 14,
+              padding: '13px 14px', textAlign: 'left', marginBottom: 16,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>
+                  {propayRegle.mode === 'empreinte' ? 'Empreinte bancaire'
+                    : propayRegle.mode === 'total' ? 'Prestation réglée' : 'Acompte versé'}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: PINK, whiteSpace: 'nowrap' }}>
+                  {fmtCentimes(propayRegle.montant + (propayRegle.mode === 'empreinte' ? 0 : propayRegle.frais), symPropay)}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '6px 0 0', lineHeight: 1.5 }}>
+                {propayRegle.mode === 'empreinte'
+                  ? <>Rien n&apos;a été débité. Votre carte est simplement enregistrée, et ne sera prélevée qu&apos;en cas d&apos;absence ou d&apos;annulation tardive.</>
+                  : <>Déduit du prix de votre prestation. Il vous reste {formatPrix(Math.max(0, prixFinal - propayRegle.montant / 100), pro?.devise)} à régler sur place.</>}
+              </p>
+              {propayRegle.mode !== 'empreinte' && propayRegle.frais > 0 && (
+                <p style={{ fontSize: 11, color: '#9ca3af', margin: '4px 0 0' }}>
+                  Dont {fmtCentimes(propayRegle.frais, symPropay)} de frais de réservation.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Adresse — uniquement sur la page de confirmation, style discret */}
           {pro?.adresse && (
