@@ -14,7 +14,7 @@ import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag } from 'lucide-react'
 
 // ─────────────────────────────────────────────
 // Types
@@ -181,6 +181,22 @@ const DEFAULT_HORAIRES: HorairesHebdo = {
 }
 
 const GLAMIA_PINK = '#D4537E'
+// ── LE BADGE DES OFFRES, IDENTIQUE À CELUI DE L'APP ──────────────────────────
+// Violet pour un pack, rose pour une promotion. La pro voit ces deux couleurs
+// dans son app depuis toujours ; en inventer d'autres ici obligerait sa cliente
+// et elle à parler de deux choses qui ne se ressemblent pas.
+const VIOLET_PACK = '#7B1FA2'
+const BadgeOffre = ({ pack, petit = false }: { pack: boolean; petit?: boolean }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
+    background: pack ? VIOLET_PACK : PINK, color: '#fff',
+    borderRadius: 6, fontSize: petit ? 8.5 : 10, fontWeight: 700,
+    padding: petit ? '1px 5px' : '3px 8px', letterSpacing: '0.02em',
+  }}>
+    {pack ? <Package size={petit ? 9 : 12} color="#fff" /> : <Tag size={petit ? 9 : 12} color="#fff" />}
+    {pack ? 'PACK' : 'PROMO'}
+  </span>
+)
 
 const MOIS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -2339,7 +2355,14 @@ export default function ReservationPage() {
             {techniquesSelectionnees.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}><IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} size={16} />{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} size={16} />
+                    {/* Le badge suffit à dire que la prestation est comprise :
+                        une phrase en plus sur chaque ligne alourdissait pour
+                        redire ce que la couleur montre déjà. */}
+                    {estDansPack(t) && <BadgeOffre pack={offreAppliquee?.type === 'pack'} petit />}
+                    {t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
+                  </p>
                   <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                 </div>
                 {/* ── DANS UN PACK, LE PRIX À L'UNITÉ N'EXISTE PLUS ──────────
@@ -2352,9 +2375,11 @@ export default function ReservationPage() {
                     Une prestation comprise dans le pack porte donc « Compris
                     dans le pack », et le pack a sa propre ligne, avec son prix.
                     Les prestations ajoutées EN DEHORS gardent le leur. */}
-                <span style={{ fontSize: 13, color: estDansPack(t) ? PINK : '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2, fontWeight: estDansPack(t) ? 600 : 400 }}>
+                <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', marginLeft: 8, paddingTop: 2 }}>
+                  {/* Dans un pack, le prix à l'unité n'existe plus : l'afficher
+                      empêchait les lignes de s'additionner au total. */}
                   {estDansPack(t)
-                    ? <>Compris dans le pack · {formatDuree(t.duree * (t.quantite ?? 1))}</>
+                    ? formatDuree(t.duree * (t.quantite ?? 1))
                     : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}</>}
                 </span>
               </div>
@@ -2364,10 +2389,10 @@ export default function ReservationPage() {
             {offreAppliquee && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', flexShrink: 0 }}>{offreAppliquee.type === 'pack' ? 'PACK' : 'PROMO'}</span>
-                  <span style={{ fontSize: 13, color: PINK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offreAppliquee.nom}</span>
+                  <BadgeOffre pack={offreAppliquee.type === 'pack'} />
+                  <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offreAppliquee.nom}</span>
                 </span>
-                <span style={{ fontSize: 13, color: PINK, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK, fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {formatPrix(offreAppliquee.prix_promo, pro?.devise)}
                 </span>
               </div>
