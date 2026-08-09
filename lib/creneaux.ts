@@ -35,6 +35,17 @@ export type Slot = { heure: string; disponible: boolean }
 /** Pas entre deux créneaux proposés, en minutes. */
 export const INTERVAL = 30
 
+// ── LES HEURES PROPOSÉES TOMBENT SUR UN QUART D'HEURE ──────────────────────
+// « Journée pleine » repart de la fin du rendez-vous précédent. Une prestation
+// de 35 minutes donnait donc 20h35, la suivante 21h10 : des heures bricolées,
+// que personne n'annonce à une cliente. On remonte au quart d'heure suivant —
+// 20h45, 21h15. On perd quelques minutes, on gagne une heure présentable.
+//
+// ON REMONTE, JAMAIS ON NE DESCEND : arrondir vers le bas ferait commencer la
+// cliente avant que la précédente soit partie.
+const PAS_ROND = 15
+const auQuartSuivant = (min: number) => Math.ceil(min / PAS_ROND) * PAS_ROND
+
 export function timeToMin(t: string) {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -200,8 +211,10 @@ export function generateSlots(
       // Le premier départ possible. Si la plage a déjà commencé, on repart de
       // maintenant plutôt que de ne rien proposer du tout : sinon une pro dont
       // la soirée démarre à 18h n'aurait plus aucun créneau passé 18h01.
+      // Le début de SA plage n'est jamais arrondi : ouvrir à 18h05, c'est
+      // recevoir à 18h05. On n'arrondit que les heures qu'on déduit.
       const debut = limiteMin > plage.start
-        ? Math.ceil(limiteMin / INTERVAL) * INTERVAL
+        ? auQuartSuivant(limiteMin)
         : plage.start
 
       // Les points d'accroche : le début, et la fin de ce qui occupe déjà la
@@ -210,10 +223,12 @@ export function generateSlots(
       // compris : c'est l'heure à laquelle elle peut vraiment recevoir.
       const bornes = new Set<number>([debut])
       for (const r of taken) {
-        if (r.end + prep > debut && r.end + prep < plage.end) bornes.add(r.end + prep)
+        const t = auQuartSuivant(r.end + prep)
+        if (t > debut && t < plage.end) bornes.add(t)
       }
       for (const r of blockedRanges) {
-        if (r.end > debut && r.end < plage.end) bornes.add(r.end)
+        const t = auQuartSuivant(r.end)
+        if (t > debut && t < plage.end) bornes.add(t)
       }
 
       for (const t of [...bornes].sort((a, b) => a - b)) {
