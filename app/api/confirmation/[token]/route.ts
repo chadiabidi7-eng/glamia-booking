@@ -50,7 +50,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -95,6 +95,8 @@ export async function GET(
       ((pro as any)?.horaires_specifiques ?? {}) as never,
       (pro as any)?.planning_variable === true,
       (pro as any)?.timezone ?? undefined,
+      (pro as any)?.creneaux_a_la_suite === true,
+      (pro as any)?.temps_preparation ?? 0,
     )
   }
 
@@ -181,7 +183,7 @@ export async function POST(
 
     const { data: proRegles } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -210,6 +212,8 @@ export async function POST(
         bloques: Array.isArray((proRegles as any).creneaux_bloques) ? (proRegles as any).creneaux_bloques : [],
         horairesSpec: ((proRegles as any).horaires_specifiques ?? {}) as never,
         planningVar: (proRegles as any).planning_variable === true,
+        aLaSuite: (proRegles as any).creneaux_a_la_suite === true,
+        preparation: (proRegles as any).temps_preparation ?? 0,
         fuseau: (proRegles as any).timezone ?? undefined,
       })
 

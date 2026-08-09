@@ -113,6 +113,8 @@ export function generateSlots(
   horairesSpec?: HorairesSpecifiques,
   planningVar?: boolean,
   fuseau?: string,
+  aLaSuite?: boolean,
+  preparation = 0,
 ): Slot[] {
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
@@ -154,14 +156,80 @@ export function generateSlots(
   if (date < maintenant.date) return []
   const limiteMin = date === maintenant.date ? maintenant.minutes + DELAI_MINIMUM_MIN : 0
 
+  // ── LE TEMPS DE PRÉPARATION ENTRE DEUX CLIENTES ──────────────────────────
+  // La pro ne passe pas d'une cliente à l'autre sans respirer : ranger,
+  // désinfecter, préparer le poste. On élargit donc chaque rendez-vous existant
+  // de ce délai, des deux côtés — un nouveau rendez-vous ne peut ni finir juste
+  // avant, ni commencer juste après.
+  //
+  // Le délai ne vaut QU'ENTRE DEUX RENDEZ-VOUS. Il ne mord ni sur le début ni
+  // sur la fin de sa plage : ouvrir à 18h veut dire recevoir à 18h. Et il ne
+  // s'applique pas aux évènements de son calendrier — un déjeuner n'est pas une
+  // cliente à préparer.
+  const prep = Math.max(0, preparation)
+  const libre = (t: number) => {
+    const end = t + duree
+    return !taken.some(r => t < r.end + prep && end + prep > r.start)
+        && !blockedRanges.some(r => t < r.end && end > r.start)
+  }
+
+  // ── « JOURNÉE PLEINE » : LES RENDEZ-VOUS SE POSENT BOUT À BOUT ────────────
+  //
+  // Remonté par une pro le 9 août 2026. Elle ouvre sa soirée de 18h à 22h30
+  // pour travailler d'affilée ; la grille y proposait huit départs. Il suffit
+  // qu'une cliente prenne une heure à 21h pour couper la soirée en deux — et le
+  // trou de 18h à 21h ne se remplit plus. Elle attend chez elle.
+  //
+  // ON NE PROPOSE PLUS QU'UNE HEURE À LA FOIS : le début de la plage, puis la
+  // fin du dernier rendez-vous pris. Sa plage n'affiche que 18h. Si la première
+  // cliente ne reste qu'une heure, le créneau suivant devient 19h — et
+  // seulement 19h. La soirée se remplit d'affilée, ou s'arrête, mais elle n'est
+  // jamais éparpillée.
+  //
+  // POURQUOI PAS UNE LISTE D'HEURES CHOISIES À LA MAIN, ce qu'elle demandait :
+  // des heures fixes ne garantissent rien. Avec 18h et 20h affichés, une
+  // cliente prend 20h pour une heure, une autre 18h pour une heure, et la
+  // soirée est trouée exactement comme avant.
+  //
+  // ON NE MONTRE QUE CE QUI EST RÉSERVABLE. Ailleurs la grille affiche aussi
+  // les heures occupées, en grisé ; ici l'intérêt est justement la liste
+  // courte — une heure grisée n'apprendrait rien et ferait douter.
+  if (aLaSuite) {
+    const slots: Slot[] = []
+    for (const plage of plages) {
+      // Le premier départ possible. Si la plage a déjà commencé, on repart de
+      // maintenant plutôt que de ne rien proposer du tout : sinon une pro dont
+      // la soirée démarre à 18h n'aurait plus aucun créneau passé 18h01.
+      const debut = limiteMin > plage.start
+        ? Math.ceil(limiteMin / INTERVAL) * INTERVAL
+        : plage.start
+
+      // Les points d'accroche : le début, et la fin de ce qui occupe déjà la
+      // plage — rendez-vous comme évènements du calendrier.
+      // On repart de la fin du rendez-vous précédent, temps de préparation
+      // compris : c'est l'heure à laquelle elle peut vraiment recevoir.
+      const bornes = new Set<number>([debut])
+      for (const r of taken) {
+        if (r.end + prep > debut && r.end + prep < plage.end) bornes.add(r.end + prep)
+      }
+      for (const r of blockedRanges) {
+        if (r.end > debut && r.end < plage.end) bornes.add(r.end)
+      }
+
+      for (const t of [...bornes].sort((a, b) => a - b)) {
+        if (t + duree > plage.end) continue
+        if (!libre(t)) continue
+        slots.push({ heure: minToTime(t), disponible: true })
+      }
+    }
+    return slots
+  }
+
   const slots: Slot[] = []
   for (const plage of plages) {
     for (let t = plage.start; t + duree <= plage.end; t += INTERVAL) {
       if (limiteMin > 0 && t < limiteMin) continue
-      const end = t + duree
-      const isTaken = taken.some(r => t < r.end && end > r.start)
-      const isBlocked = blockedRanges.some(r => t < r.end && end > r.start)
-      slots.push({ heure: minToTime(t), disponible: !isTaken && !isBlocked })
+      slots.push({ heure: minToTime(t), disponible: libre(t) })
     }
   }
   return slots
@@ -185,8 +253,10 @@ export function creneauReservable(args: {
   horairesSpec?: HorairesSpecifiques
   planningVar?: boolean
   fuseau?: string
+  aLaSuite?: boolean
+  preparation?: number
 }): { ok: true } | { ok: false; raison: string; message: string } {
-  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau } = args
+  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation } = args
 
   if (isDayBlocked(date, bloques)) {
     return { ok: false, raison: 'jour_bloque', message: "Cette journée n'est plus disponible. Choisis une autre date." }
@@ -195,7 +265,7 @@ export function creneauReservable(args: {
     return { ok: false, raison: 'jour_ferme', message: "Cette journée n'est plus ouverte à la réservation. Choisis une autre date." }
   }
 
-  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau)
+  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation)
   const slot = slots.find(s => s.heure === heure)
 
   // Absent de la grille : hors horaires, trop proche, ou durée qui déborde.
