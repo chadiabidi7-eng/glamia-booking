@@ -36,7 +36,7 @@ export type Slot = { heure: string; disponible: boolean }
 export const INTERVAL = 30
 
 // ── LES HEURES PROPOSÉES TOMBENT SUR UN QUART D'HEURE ──────────────────────
-// « Journée pleine » repart de la fin du rendez-vous précédent. Une prestation
+// « Rendez-vous empilés » repart de la fin du rendez-vous précédent. Une prestation
 // de 35 minutes donnait donc 20h35, la suivante 21h10 : des heures bricolées,
 // que personne n'annonce à une cliente. On remonte au quart d'heure suivant —
 // 20h45, 21h15. On perd quelques minutes, on gagne une heure présentable.
@@ -184,7 +184,7 @@ export function generateSlots(
         && !blockedRanges.some(r => t < r.end && end > r.start)
   }
 
-  // ── « JOURNÉE PLEINE » : LES RENDEZ-VOUS SE POSENT BOUT À BOUT ────────────
+  // ── « RENDEZ-VOUS EMPILÉS » : LES RENDEZ-VOUS SE POSENT BOUT À BOUT ────────────
   //
   // Remonté par une pro le 9 août 2026. Elle ouvre sa soirée de 18h à 22h30
   // pour travailler d'affilée ; la grille y proposait huit départs. Il suffit
