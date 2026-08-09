@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 import { traiterAnnulationPropay } from '@/lib/propay'
 import { journaliserOrphelin } from '@/lib/orphelins'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — filet de réconciliation (18 juil. 2026).
@@ -103,7 +102,7 @@ export async function POST(req: NextRequest) {
     const account_id = c.account_id as string
     const pro_id = c.pro_id as string
     try {
-      const list = await stripe.paymentIntents.list(
+      const list = await stripe().paymentIntents.list(
         { limit: 100, created: { gte: debutFenetre } },
         { stripeAccount: account_id },
       )
@@ -129,12 +128,12 @@ export async function POST(req: NextRequest) {
         try {
           const chargeId = typeof pi.latest_charge === 'string' ? pi.latest_charge : pi.latest_charge?.id
           if (chargeId) {
-            const ch = await stripe.charges.retrieve(chargeId, {}, { stripeAccount: account_id })
+            const ch = await stripe().charges.retrieve(chargeId, {}, { stripeAccount: account_id })
             dejaRembourse = (ch.amount_refunded ?? 0) > 0
           }
         } catch (e) { console.error('[reconciliation] charge', pi.id, e) }
         if (!dejaRembourse) {
-          await stripe.refunds.create(
+          await stripe().refunds.create(
             { payment_intent: pi.id },
             { stripeAccount: account_id, idempotencyKey: `orphelin_remb_${pi.id}` },
           )

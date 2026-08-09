@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 import { reglagesPay } from './pays-stripe'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +20,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 /**
  * Le délai en dessous duquel une annulation n'est plus remboursée.
@@ -157,7 +156,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT)
       const totalCliente = Math.ceil((acompte + taux.fraisFixe + commission) / (1 - taux.fraisPct))
       try {
-        const intent = await stripe.paymentIntents.create(
+        const intent = await stripe().paymentIntents.create(
           {
             amount: totalCliente,
             currency: devise,
@@ -215,7 +214,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
       const resteARembourser = paiement.montant - dejaRembourse
       if (resteARembourser > 0) {
         try {
-          await stripe.refunds.create(
+          await stripe().refunds.create(
             { payment_intent: paiement.stripe_payment_intent_id, amount: resteARembourser, refund_application_fee: false },
             { stripeAccount, idempotencyKey: `annul_remb_${paiement.id}_${dejaRembourse}` },
           )

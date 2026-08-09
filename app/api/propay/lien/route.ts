@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 import { libererEmpreintesRdv } from '../../stripe/webhook/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,7 +19,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -95,7 +94,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ statut: p.statut })
     }
 
-    const intent = await stripe.paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
+    const intent = await stripe().paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
     if (intent.status === 'succeeded') return NextResponse.json({ statut: 'paye' })
 
     const restant = p.montant
@@ -133,7 +132,7 @@ export async function POST(req: NextRequest) {
     if (p.statut === 'paye') return NextResponse.json({ statut: 'paye' })
     if (!p.stripe_payment_intent_id) return NextResponse.json({ statut: p.statut })
 
-    const intent = await stripe.paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
+    const intent = await stripe().paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
     if (intent.status !== 'succeeded') return NextResponse.json({ statut: 'en_attente' })
 
     // Bascule conditionnelle → une seule notif (idempotent avec verifier_pro / webhook)

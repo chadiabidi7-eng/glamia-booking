@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — webhook Stripe (endpoint « Connect » : événements des
@@ -18,7 +19,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // Prestation entièrement réglée → l'empreinte posée à la résa n'a plus lieu
 // d'être : libération automatique, trace conservée (« Empreinte libérée »).
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event
   try {
     const brut = await req.text()
-    event = stripe.webhooks.constructEvent(brut, signature, secret)
+    event = stripe().webhooks.constructEvent(brut, signature, secret)
   } catch (e) {
     console.error('[stripe/webhook] Signature invalide:', (e as Error).message)
     return NextResponse.json({ error: 'signature_invalide' }, { status: 400 })

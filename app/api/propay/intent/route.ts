@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 import { reglagesPay } from '@/lib/pays-stripe'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,7 +26,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const PLAFOND_POURCENT = 50
 const PLAFOND_EUROS_CENTIMES = 50_00
@@ -260,11 +260,11 @@ export async function POST(req: NextRequest) {
   try {
     if (mode === 'empreinte') {
       // Carte enregistrée avec 3DS, prélèvement futur possible hors session
-      const customer = await stripe.customers.create(
+      const customer = await stripe().customers.create(
         { metadata: { glamia_pro_id: proId } },
         { stripeAccount },
       )
-      const setup = await stripe.setupIntents.create(
+      const setup = await stripe().setupIntents.create(
         {
           customer: customer.id,
           usage: 'off_session',
@@ -300,11 +300,11 @@ export async function POST(req: NextRequest) {
 
     // Acompte réel OU prestation complète : payé maintenant + frais de résa
     const { commission, totalCliente, frais } = calculerTotalCliente(acompte, paysCaisse)
-    const customer = await stripe.customers.create(
+    const customer = await stripe().customers.create(
       { metadata: { glamia_pro_id: proId } },
       { stripeAccount },
     )
-    const paiement = await stripe.paymentIntents.create(
+    const paiement = await stripe().paymentIntents.create(
       {
         amount: totalCliente,
         currency: devise,

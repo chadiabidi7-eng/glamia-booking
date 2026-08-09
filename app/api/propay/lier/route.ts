@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { stripe } from '@/lib/stripe-serveur'
 import { calculerAcompte } from '../intent/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,7 +18,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: NextRequest) {
   let body: { pro_id?: unknown; rdv_id?: unknown; intent_id?: unknown }
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   try {
     if (intentId.startsWith('seti_')) {
       // ── Empreinte : SetupIntent réussi ──
-      const setup = await stripe.setupIntents.retrieve(intentId, {}, { stripeAccount })
+      const setup = await stripe().setupIntents.retrieve(intentId, {}, { stripeAccount })
       if (setup.status !== 'succeeded' || setup.metadata?.glamia_pro_id !== proId) {
         return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
       }
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Acompte réel : PaymentIntent réussi ──
-    const paiement = await stripe.paymentIntents.retrieve(intentId, {}, { stripeAccount })
+    const paiement = await stripe().paymentIntents.retrieve(intentId, {}, { stripeAccount })
     if (paiement.status !== 'succeeded' || paiement.metadata?.glamia_pro_id !== proId) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       // Paiement capturé mais non rattachable → on le rembourse : ne jamais
       // garder d'argent sans ligne de suivi (C7/C8).
       try {
-        await stripe.refunds.create(
+        await stripe().refunds.create(
           { payment_intent: paiement.id },
           { stripeAccount, idempotencyKey: `lier_remb_${paiement.id}` },
         )
