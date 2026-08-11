@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     // Panier introuvable ou prestation désactivée : on refuse. Ce que le
     // navigateur raconte ne correspond alors à rien de réel, et laisser passer
     // reviendrait à accepter n'importe quel prix.
-    const reel = await prixReelDuPanier(pro_id, body.techniques)
+    const reel = await prixReelDuPanier(pro_id, body.techniques, body.offre_id)
     if (Array.isArray(body.techniques) && body.techniques.length > 0 && !reel) {
       console.error('[rdv/creer] panier refusé', pro_id, JSON.stringify(body.techniques).slice(0, 300))
       return NextResponse.json({ ok: false, raison: 'prestation_inconnue' }, { status: 409 })

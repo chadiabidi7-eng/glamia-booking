@@ -154,7 +154,8 @@ export function calculerTotalCliente(
 export async function POST(req: NextRequest) {
   let body: {
     pro_id?: unknown; total?: unknown; total_plein?: unknown; telephone?: unknown
-    techniques?: unknown; fidelite_appliquee?: unknown; reduction_appliquee?: unknown
+    techniques?: unknown; offre_id?: unknown
+    fidelite_appliquee?: unknown; reduction_appliquee?: unknown
   }
   try {
     body = await req.json()
@@ -210,7 +211,7 @@ export async function POST(req: NextRequest) {
   // cesserait de s'afficher perdrait des réservations pour un chantier de
   // sécurité. La création du rendez-vous, elle, refuse — c'est là que l'argent
   // s'engage vraiment.
-  const panier = await prixReelDuPanier(proId, body.techniques)
+  const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id)
   let prixServeur: number | null = panier?.prix ?? null
   if (panier) {
     const fiche = await ficheClienteParTelephone(proId, body.telephone)

@@ -1754,6 +1754,10 @@ export default function ReservationPage() {
       body: JSON.stringify({
         pro_id: pro.id, total, total_plein: totalPlein, telephone,
         techniques: techniquesSelectionnees,
+        // La promotion est RÉCLAMÉE, pas chiffrée : le serveur relit son tarif
+        // chez la pro. Sans cette ligne il repart du catalogue et l'acompte se
+        // calcule sur un prix que la cliente n'a jamais vu.
+        offre_id: offreAppliquee?.id ?? null,
         fidelite_appliquee: recompenseFidelite ?? null,
         reduction_appliquee: reductionCliente ?? null,
       }),
@@ -1983,6 +1987,7 @@ export default function ReservationPage() {
           specialite: categoriesStr,
           technique: techniquesStr,
           techniques: techniquesSelectionnees,
+          offre_id: offreAppliquee?.id ?? null,
           prix: prixFinal,
           notes: commentaire.trim(),
           demande_rappel: rappel,

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — repli quand une offre (pack) n'a pas pu s'appliquer à une
@@ -33,7 +34,9 @@ export async function POST(req: NextRequest) {
   const prix = typeof body.prix === 'number' && body.prix > 0 ? body.prix : null
 
   const { data: rdv } = await supabaseAdmin
-    .from('rendez_vous').select('id, cliente:clientes(telephone)').eq('id', rdvId).maybeSingle()
+    .from('rendez_vous')
+    .select('id, pro_id, cliente_id, techniques, fidelite_appliquee, reduction_appliquee, cliente:clientes(telephone)')
+    .eq('id', rdvId).maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
 
   const telRdv = (rdv as { cliente?: { telephone?: string } }).cliente?.telephone
@@ -41,8 +44,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
   }
 
+  // LE PRIX DE REPLI SE RECALCULE ICI AUSSI. Le navigateur envoyait la somme
+  // brute du catalogue : la fidélité et la réduction de la cliente sautaient
+  // avec la promotion, alors qu'elles n'y sont pour rien. Elle perdait ses
+  // remises parce qu'un quota d'offre était atteint.
+  const reel = await prixReelDuPanier(rdv.pro_id, rdv.techniques)
+  const remises = reel
+    ? await remisesVerifiees(
+        rdv.pro_id, rdv.cliente_id, reel.prix, rdv.fidelite_appliquee, rdv.reduction_appliquee)
+    : null
+  const prixRepli = remises ? remises.prix : prix
+
   const { error: updErr } = await supabaseAdmin
-    .from('rendez_vous').update({ prix, offre_id: null }).eq('id', rdvId)
+    .from('rendez_vous').update({ prix: prixRepli, offre_id: null }).eq('id', rdvId)
   if (updErr) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
 
   return NextResponse.json({ success: true })

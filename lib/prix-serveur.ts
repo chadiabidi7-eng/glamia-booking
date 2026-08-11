@@ -29,6 +29,23 @@ import { createClient } from '@supabase/supabase-js'
 // Ils comptent pour leur montant affiché. C'est le prix annoncé à la cliente,
 // donc celui sur lequel l'acompte doit se calculer ; la pro ajuste ensuite dans
 // sa fiche, comme elle le fait déjà aujourd'hui.
+//
+// ── ET LES PACKS ET PROMOTIONS ───────────────────────────────────────────────
+// CONSTATÉ LE 11 AOÛT 2026, sur le premier vrai paiement. Une pose à 60 vendue
+// 45 en promotion, moins 5 de réduction cliente : la page annonçait 40, la base
+// enregistrait 55. Ce calcul-ci repartait du catalogue et n'appliquait que la
+// fidélité et la réduction — le tarif de la promotion n'entrait nulle part.
+//
+// Ce n'est pas un chiffre mal affiché. En paiement intégral, la cliente aurait
+// réglé 55 pour une prestation vendue 40 ; en acompte au pourcentage, l'acompte
+// se calculait sur 55. Et la pro, elle, lisait « prestation à 55 € » sur sa
+// fiche et aurait encaissé le reste dessus.
+//
+// L'offre est donc relue chez la pro, comme le reste : le navigateur dit
+// LAQUELLE il réclame, jamais ce qu'elle vaut. Elle doit être à elle, active,
+// non archivée et dans ses dates — sinon on l'ignore et on reste au catalogue.
+// Le quota et le « une fois par téléphone » restent à `apply_offer_to_rdv`, qui
+// tranche au moment de l'écriture.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabaseAdmin = createClient(
@@ -43,6 +60,7 @@ export type TechniqueDemandee = {
 }
 
 type PrestationCatalogue = {
+  id?: string
   nom?: string
   prix?: number
   duree?: number
@@ -68,6 +86,7 @@ export type PrixReel = {
 export async function prixReelDuPanier(
   proId: string,
   demandees: unknown,
+  offreDemandee?: unknown,
 ): Promise<PrixReel | null> {
   if (!Array.isArray(demandees) || demandees.length === 0) return null
 
@@ -79,6 +98,13 @@ export async function prixReelDuPanier(
 
   const catalogue = (data?.data ?? null) as Record<string, PrestationCatalogue[]> | null
   if (!catalogue) return null
+
+  const offre = await offreValide(proId, offreDemandee)
+  /** Cette prestation est-elle couverte par l'offre ? (même test que la page :
+      l'offre désigne des identifiants, le panier des noms.) */
+  const couverte = (nom: string, categorie: string) =>
+    !!offre && (catalogue[categorie] ?? []).some(
+      p => (p?.nom ?? '').trim() === nom && !!p?.id && offre.prestations_ids.includes(p.id))
 
   const retenues: PrixReel['techniques'] = []
   for (const brute of demandees as TechniqueDemandee[]) {
@@ -108,10 +134,52 @@ export async function prixReelDuPanier(
     })
   }
 
+  // Le tarif de l'offre REMPLACE celui des prestations qu'elle couvre ; ce qui
+  // a été ajouté à côté reste au catalogue. C'est mot pour mot le calcul de la
+  // page de réservation, pour que les deux annoncent le même chiffre.
+  const prix = offre
+    ? offre.prix_promo + retenues.reduce(
+        (t, p) => t + (couverte(p.nom, p.categorie) ? 0 : p.prix * p.quantite), 0)
+    : retenues.reduce((t, p) => t + p.prix * p.quantite, 0)
+
   return {
-    prix: retenues.reduce((t, p) => t + p.prix * p.quantite, 0),
+    prix,
     duree: retenues.reduce((t, p) => t + p.duree * p.quantite, 0),
     techniques: retenues,
+  }
+}
+
+/**
+ * L'offre réclamée, si elle est bien à cette pro et utilisable aujourd'hui.
+ *
+ * On ne vérifie pas ici le quota ni le « une seule fois par téléphone » :
+ * `apply_offer_to_rdv` les tranche au moment de l'écriture, sous verrou, et
+ * retire l'offre du rendez-vous si elle ne passe pas.
+ */
+async function offreValide(
+  proId: string,
+  offreDemandee: unknown,
+): Promise<{ prix_promo: number; prestations_ids: string[] } | null> {
+  if (typeof offreDemandee !== 'string' || !/^[0-9a-f-]{36}$/i.test(offreDemandee)) return null
+
+  const { data } = await supabaseAdmin
+    .from('offres')
+    .select('prix_promo, prestations_ids, active, archived_at, date_debut, date_fin')
+    .eq('id', offreDemandee)
+    .eq('pro_id', proId)
+    .maybeSingle()
+  if (!data || data.active !== true || data.archived_at) return null
+
+  const aujourdhui = new Date().toISOString().slice(0, 10)
+  if (data.date_debut && aujourdhui < String(data.date_debut).slice(0, 10)) return null
+  if (data.date_fin && aujourdhui > String(data.date_fin).slice(0, 10)) return null
+
+  const prix = Number(data.prix_promo)
+  if (!Number.isFinite(prix) || prix < 0) return null
+
+  return {
+    prix_promo: prix,
+    prestations_ids: Array.isArray(data.prestations_ids) ? data.prestations_ids.map(String) : [],
   }
 }
 
