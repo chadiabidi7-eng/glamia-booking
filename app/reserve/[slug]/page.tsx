@@ -3978,6 +3978,132 @@ export default function ReservationPage() {
               </div>
             </div>
 
+            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
+            <div style={{
+              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
+              border: `1.5px solid ${PINK}55`,
+              borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span style={{
+                  width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles size={15} color="#fff" />
+                </span>
+                <label style={{ ...S.label, marginBottom: 0 }}>Tes inspirations 💅</label>
+              </div>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
+                Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
+                Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {inspirations.map((src, i) => (
+                <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
+                  <img
+                    src={src}
+                    alt={`Inspiration ${i + 1}`}
+                    style={{ width: 88, height: 88, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block' }}
+                  />
+                  <button
+                    onClick={() => setInspirations(prev => prev.filter((_, j) => j !== i))}
+                    aria-label="Supprimer cette photo"
+                    style={{
+                      position: 'absolute', top: -7, right: -7, width: 22, height: 22,
+                      borderRadius: 11, border: '2px solid #fff', background: '#1f2937',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    <X size={12} color="#fff" />
+                  </button>
+                </div>
+              ))}
+              {inspirations.length < 3 && (
+                <>
+                  {/* Prendre une photo — ouvre directement l'appareil photo */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <Camera size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? 'Un instant…' : 'Prendre'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  {/* Importer depuis la galerie (sélection multiple) */}
+                  <label style={{
+                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
+                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
+                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
+                  }}>
+                    <ImagePlus size={20} color={PINK} />
+                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
+                      {compressionEnCours ? 'Un instant…' : 'Importer'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleAjoutInspiration}
+                      disabled={compressionEnCours}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </>
+              )}
+              </div>
+            </div>
+
+            <label style={S.label}>Commentaire (optionnel)</label>
+            <textarea
+              value={commentaire}
+              onChange={e => setCommentaire(e.target.value)}
+              placeholder="Informations supplémentaires pour votre praticienne..."
+              rows={3}
+              style={{ ...S.input, resize: 'none', marginBottom: 16 }}
+            />
+
+            <label
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                padding: 16, borderRadius: 16, border: '1.5px solid #e5e7eb',
+                background: '#fff', marginBottom: 24,
+              }}
+              onClick={() => setRappel(r => !r)}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 6, border: `2px solid ${rappel ? PINK : '#d1d5db'}`,
+                background: rappel ? PINK : 'transparent', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s',
+              }}>
+                {rappel && <CheckCircle size={14} color="#fff" />}
+              </div>
+              <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.4 }}>
+                {/* « Être rappelée » laissait entendre un appel téléphonique, et
+                    sans dire par qui. On nomme la pro : la cliente sait qui la
+                    contactera, et par quel moyen reste ouvert. Repli sans le nom
+                    si le profil n'a ni pseudo ni prénom. */}
+                {(() => {
+                  const nomPro = pro?.pseudo || pro?.prenom
+                  return nomPro
+                    ? `Souhaitez-vous être contactée par ${nomPro} avant votre rendez-vous ?`
+                    : 'Souhaitez-vous être contactée avant votre rendez-vous ?'
+                })()}
+              </span>
+            </label>
+
             {/* ── LA PLACE EST RÉSERVÉE AVANT MÊME DE SAVOIR QUOI Y METTRE ──
                 Le cadre de l'acompte surgissait au bout d'une seconde, une fois
                 la réponse du serveur arrivée — et poussait tout ce qu'il y avait
@@ -4151,132 +4277,6 @@ export default function ReservationPage() {
               </div>
             )}
 
-
-            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
-            <div style={{
-              background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
-              border: `1.5px solid ${PINK}55`,
-              borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <span style={{
-                  width: 30, height: 30, borderRadius: '50%', background: PINK, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Sparkles size={15} color="#fff" />
-                </span>
-                <label style={{ ...S.label, marginBottom: 0 }}>Tes inspirations 💅</label>
-              </div>
-              <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
-                Montre à {pro?.prenom || 'ta praticienne'} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).
-                Pas d'inspi sous la main ? Tu pourras aussi les ajouter plus tard, depuis le lien de gestion de ta résa.
-              </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {inspirations.map((src, i) => (
-                <div key={i} style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
-                  <img
-                    src={src}
-                    alt={`Inspiration ${i + 1}`}
-                    style={{ width: 88, height: 88, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e5e7eb', display: 'block' }}
-                  />
-                  <button
-                    onClick={() => setInspirations(prev => prev.filter((_, j) => j !== i))}
-                    aria-label="Supprimer cette photo"
-                    style={{
-                      position: 'absolute', top: -7, right: -7, width: 22, height: 22,
-                      borderRadius: 11, border: '2px solid #fff', background: '#1f2937',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', padding: 0,
-                    }}
-                  >
-                    <X size={12} color="#fff" />
-                  </button>
-                </div>
-              ))}
-              {inspirations.length < 3 && (
-                <>
-                  {/* Prendre une photo — ouvre directement l'appareil photo */}
-                  <label style={{
-                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
-                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
-                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
-                  }}>
-                    <Camera size={20} color={PINK} />
-                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Prendre'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleAjoutInspiration}
-                      disabled={compressionEnCours}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                  {/* Importer depuis la galerie (sélection multiple) */}
-                  <label style={{
-                    width: 88, height: 88, borderRadius: 12, border: '1.5px dashed #d1d5db',
-                    background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
-                    flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
-                  }}>
-                    <ImagePlus size={20} color={PINK} />
-                    <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Importer'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleAjoutInspiration}
-                      disabled={compressionEnCours}
-                      style={{ display: 'none' }}
-                    />
-                  </label>
-                </>
-              )}
-              </div>
-            </div>
-
-            <label style={S.label}>Commentaire (optionnel)</label>
-            <textarea
-              value={commentaire}
-              onChange={e => setCommentaire(e.target.value)}
-              placeholder="Informations supplémentaires pour votre praticienne..."
-              rows={3}
-              style={{ ...S.input, resize: 'none', marginBottom: 16 }}
-            />
-
-            <label
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                padding: 16, borderRadius: 16, border: '1.5px solid #e5e7eb',
-                background: '#fff', marginBottom: 24,
-              }}
-              onClick={() => setRappel(r => !r)}
-            >
-              <div style={{
-                width: 22, height: 22, borderRadius: 6, border: `2px solid ${rappel ? PINK : '#d1d5db'}`,
-                background: rappel ? PINK : 'transparent', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s',
-              }}>
-                {rappel && <CheckCircle size={14} color="#fff" />}
-              </div>
-              <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.4 }}>
-                {/* « Être rappelée » laissait entendre un appel téléphonique, et
-                    sans dire par qui. On nomme la pro : la cliente sait qui la
-                    contactera, et par quel moyen reste ouvert. Repli sans le nom
-                    si le profil n'a ni pseudo ni prénom. */}
-                {(() => {
-                  const nomPro = pro?.pseudo || pro?.prenom
-                  return nomPro
-                    ? `Souhaitez-vous être contactée par ${nomPro} avant votre rendez-vous ?`
-                    : 'Souhaitez-vous être contactée avant votre rendez-vous ?'
-                })()}
-              </span>
-            </label>
 
             {/* ── LA CARTE A ÉTÉ REFUSÉE ──────────────────────────────────
                 Posé JUSTE AU-DESSUS DU BOUTON, là où elle regarde déjà, et non
