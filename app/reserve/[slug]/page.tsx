@@ -601,8 +601,8 @@ export default function ReservationPage() {
 
   const onglets = [
     aAvis && { cle: 'avis' as const, nom: 'Avis' },
-    aAdresse && { cle: 'adresse' as const, nom: 'Adresse' },
     aAccueil && { cle: 'accueil' as const, nom: 'Accueil' },
+    aAdresse && { cle: 'adresse' as const, nom: 'Adresse' },
   ].filter(Boolean) as { cle: 'avis' | 'adresse' | 'accueil'; nom: string }[]
 
   // Le premier onglet disponible, si celui en cours n'existe pas pour cette pro.
