@@ -927,6 +927,23 @@ export default function ReservationPage() {
     }
   }, [pro?.id, slug, step])
 
+  // ── LA VISITE, COMPTÉE UNE FOIS ────────────────────────────────────────
+  // Une pro partage son lien sans jamais savoir s'il est ouvert. Vingt visites
+  // et deux rendez-vous, ce n'est pas le même problème que deux visites et deux
+  // rendez-vous : dans un cas la page ne convainc pas, dans l'autre le lien ne
+  // circule pas.
+  //
+  // On ne garde qu'un NOMBRE par pro et par jour — aucune adresse, aucun
+  // mouchard, rien qui identifie la visiteuse. Et un échec ne doit jamais
+  // empêcher une réservation : c'est un compteur, pas une étape.
+  const visiteComptee = useRef(false)
+  useEffect(() => {
+    if (!pro?.id || visiteComptee.current) return
+    visiteComptee.current = true
+    supabase.rpc('compter_visite', { p_pro: pro.id })
+      .then(({ error }) => { if (error) console.error('[visite]', error.message) })
+  }, [pro?.id])
+
   /** Prévient le téléphone de la pro, sans jamais faire attendre la cliente. */
   function reveillerLaPro(slugPro: string) {
     try {
