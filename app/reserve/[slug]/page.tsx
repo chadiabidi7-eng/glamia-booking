@@ -759,7 +759,7 @@ export default function ReservationPage() {
           <span
             aria-label={c.oui ? 'oui' : 'non'}
             style={{
-              width: 12, height: 12, borderRadius: 6, flex: 'none',
+              width: 10, height: 10, borderRadius: 5, flex: 'none',
               background: c.oui ? '#4CAF6D' : '#D0736B',
             }}
           />
