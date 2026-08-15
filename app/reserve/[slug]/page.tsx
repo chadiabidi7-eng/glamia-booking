@@ -3152,13 +3152,20 @@ export default function ReservationPage() {
         {/* ── Bannière pro ── */}
         <style>{`
           @keyframes glamiaHalo {
-            0%   { box-shadow: 0 0 0 0 rgba(212,83,126,0.30), 0 3px 22px rgba(160,90,125,0.09) }
-            55%  { box-shadow: 0 0 0 9px rgba(212,83,126,0),  0 3px 22px rgba(160,90,125,0.09) }
-            100% { box-shadow: 0 0 0 0 rgba(212,83,126,0),    0 3px 22px rgba(160,90,125,0.09) }
+            0%    { border-color: ${GLAMIA_PINK};
+                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
+            22%   { border-color: #FF4FA5;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
+            41%   { border-color: #FF8FC6;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.22), 0 3px 22px rgba(160,90,125,0.09) }
+            62%   { border-color: #FF4FA5;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
+            100%  { border-color: ${GLAMIA_PINK};
+                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
           }
           .glamia-cadre-actif {
             box-shadow: 0 3px 22px rgba(160,90,125,0.09);
-            animation: glamiaHalo 1.9s ease-out 3;
+            animation: glamiaHalo 1.6s ease-in-out 2;
           }
           @media (prefers-reduced-motion: reduce) {
             .glamia-cadre-actif { animation: none }
@@ -3234,7 +3241,7 @@ export default function ReservationPage() {
         {step === 1 && (
           <div>
             <div className="glamia-cadre-actif" style={{
-              background: '#fff', border: `1.5px solid ${GLAMIA_PINK}`,
+              background: '#fff', border: `2px solid ${GLAMIA_PINK}`,
               borderRadius: 20, padding: '20px 18px 18px',
             }}>
             <h2 style={{ ...S.h2, marginBottom: 4 }}>Bonjour !</h2>
