@@ -3907,7 +3907,7 @@ export default function ReservationPage() {
             )}
             </div>
 
-            {blocVitrine}
+            {phoneStatus === 'idle' && blocVitrine}
           </div>
         )}
 
