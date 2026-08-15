@@ -592,30 +592,33 @@ export default function ReservationPage() {
   // ─────────────────────────────────────────────────────────────────────────
   const lames: {
     cle: 'avis' | 'ou' | 'savoir'
-    icone: React.ReactNode; titre: string; corps: React.ReactNode
+    titre: string; corps: React.ReactNode
   }[] = []
 
   if (vitrine?.avis_actifs && (vitrine?.nb_avis ?? 0) > 0) {
     const dernier = vitrine.avis[0]
     lames.push({
       cle: 'avis',
-      icone: <Star size={15} color={GLAMIA_PINK} fill={GLAMIA_PINK} />,
       titre: 'Avis clientes',
       corps: (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: '#2D2D2D', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+            <span style={{
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontSize: 40, color: '#2D2D2D', lineHeight: 1, letterSpacing: -1,
+            }}>
               {String(vitrine.note).replace('.', ',')}
             </span>
             <span style={{ fontSize: 14, color: GLAMIA_PINK, letterSpacing: 1 }}>
               {'★'.repeat(Math.round(vitrine.note ?? 0))}
               <span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - Math.round(vitrine.note ?? 0))}</span>
             </span>
-            <span style={{ fontSize: 12.5, color: '#8A8A9A' }}>{vitrine.nb_avis} avis</span>
+            <span style={{ fontSize: 12.5, color: '#A79DAB' }}>{vitrine.nb_avis} avis</span>
           </div>
           {dernier?.texte && (
             <p style={{
-              fontSize: 13, color: '#4A444E', lineHeight: 1.45, margin: '8px 0 0',
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontSize: 14.5, color: '#4A444E', lineHeight: 1.5, margin: '10px 0 0',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>«&nbsp;{dernier.texte}&nbsp;»</p>
           )}
@@ -627,15 +630,21 @@ export default function ReservationPage() {
   if (lieu.length > 0 || vitrine?.adresse.exacte) {
     lames.push({
       cle: 'ou',
-      icone: <MapPin size={15} color={GLAMIA_PINK} />,
       titre: 'Où je suis',
       corps: (
         <>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#2D2D2D', margin: 0 }}>
+          <p style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            fontSize: 17, fontWeight: 600, color: '#2D2D2D', margin: 0,
+          }}>
+            <MapPin size={16} color={GLAMIA_PINK} />
             {vitrine?.adresse.exacte || vitrine?.adresse.ville}
           </p>
           {vitrine?.adresse.acces && (
-            <p style={{ fontSize: 13, color: '#8A8A9A', margin: '5px 0 0' }}>{vitrine.adresse.acces}</p>
+            <p style={{ fontSize: 13.5, color: '#8A8A9A', margin: '6px 0 0 23px' }}>{vitrine.adresse.acces}</p>
+          )}
+          {attente && (
+            <p style={{ fontSize: 12.5, color: '#B4A8B0', margin: '6px 0 0 23px' }}>{attente}</p>
           )}
         </>
       ),
@@ -645,7 +654,6 @@ export default function ReservationPage() {
   if (conditions.length > 0) {
     lames.push({
       cle: 'savoir',
-      icone: <Info size={15} color={GLAMIA_PINK} />,
       titre: 'Bon à savoir',
       corps: (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -671,6 +679,9 @@ export default function ReservationPage() {
   // Le défilement automatique, tant que personne n'a touché.
   useEffect(() => {
     if (carrouselFige || lames.length < 2 || carteOuverte) return
+    // Un défilement automatique chez quelqu'un qui a demandé moins d'animations
+    // n'est pas un détail : c'est une gêne, parfois un malaise.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const t = setInterval(() => setLame(v => (v + 1) % lames.length), 4500)
     return () => clearInterval(t)
   }, [carrouselFige, lames.length, carteOuverte])
@@ -759,18 +770,11 @@ export default function ReservationPage() {
               <div
                 onClick={() => { figer(); setCarteOuverte(carteOuverte === l.cle ? null : l.cle) }}
                 style={{
-                  background: 'linear-gradient(135deg, #FFFDFE 0%, #FDF4F9 100%)',
-                  border: '1px solid #F2DDE9', borderRadius: 18,
-                  padding: '14px 16px', minHeight: 96, cursor: 'pointer',
+                  background: '#fff',
+                  border: '1px solid #F1E7EC', borderRadius: 18,
+                  padding: '16px 18px', minHeight: 104, cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', justifyContent: 'center',
                 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                  {l.icone}
-                  <span style={{
-                    fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
-                    color: '#8E4E72',
-                  }}>{l.titre}</span>
-                </div>
                 {l.corps}
               </div>
             </div>
