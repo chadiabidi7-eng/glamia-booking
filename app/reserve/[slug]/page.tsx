@@ -846,7 +846,7 @@ export default function ReservationPage() {
   const blocReglement = aReglement && (
     <div style={{
       background: '#FFF9FC', border: '1px solid #F2DDE9', borderRadius: 14,
-      padding: '14px 16px', marginBottom: 18,
+      padding: '14px 16px', marginBottom: 26,
     }}>
       <p style={{
         fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
@@ -3240,6 +3240,8 @@ export default function ReservationPage() {
 
         {step === 1 && (
           <div>
+            {phoneStatus === 'idle' && blocReglement}
+
             <div className="glamia-cadre-actif" style={{
               background: '#fff', border: `2px solid ${GLAMIA_PINK}`,
               borderRadius: 20, padding: '20px 18px 18px',
@@ -3962,7 +3964,6 @@ export default function ReservationPage() {
             )}
             </div>
 
-            {phoneStatus === 'idle' && blocReglement}
             {phoneStatus === 'idle' && blocVitrine}
           </div>
         )}
