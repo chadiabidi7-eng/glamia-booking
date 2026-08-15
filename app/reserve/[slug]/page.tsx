@@ -10,6 +10,7 @@ import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
+import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
