@@ -559,6 +559,8 @@ export default function ReservationPage() {
   // Le décalage du doigt pendant qu'on glisse : la carte suit la main, sinon
   // rien ne dit qu'on est en train de faire défiler.
   const [decalage, setDecalage] = useState(0)
+  // Le défilement s'arrête dès qu'elle choisit un onglet elle-même.
+  const [choisiALaMain, setChoisiALaMain] = useState(false)
   const departToucher = useRef<number | null>(null)
   // Les réponses au formulaire, et le refus s'il y en a un.
   const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
@@ -617,7 +619,7 @@ export default function ReservationPage() {
   // Le pas automatique. Sur les avis il passe d'un avis au suivant ; arrivé au
   // bout, il change d'onglet. Ailleurs, il change d'onglet au bout de 4,5 s.
   useEffect(() => {
-    if (onglets.length === 0 || visionneuse) return
+    if (choisiALaMain || onglets.length === 0 || visionneuse) return
     if (typeof window !== 'undefined'
       && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
@@ -629,7 +631,7 @@ export default function ReservationPage() {
       else if (surAvis) setAvisMontre(0)
     }, duree)
     return () => clearTimeout(t)
-  }, [onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
+  }, [choisiALaMain, onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
 
   /** Il n'y a un rail que sur les avis, et seulement s'il y en a plusieurs. */
   const peutGlisser = onglet === 'avis' && avisMontrables.length > 1
@@ -746,7 +748,7 @@ export default function ReservationPage() {
           return (
             <button
               key={o.cle}
-              onClick={() => { setOnglet(o.cle); setAvisMontre(0) }}
+              onClick={() => { setChoisiALaMain(true); setOnglet(o.cle); setAvisMontre(0) }}
               style={{
                 flex: 1, border: 'none', borderRadius: 10, padding: '9px 0', cursor: 'pointer',
                 background: actif ? '#fff' : 'transparent',
