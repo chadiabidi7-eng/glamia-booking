@@ -964,7 +964,7 @@ export default function ReservationPage() {
           ? 'une question' : `${questionsValides.length} questions`} à vous poser
         avant de fixer votre rendez-vous.
       </p>
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 26 }}>
         <button
           onClick={() => setFormulaireOuvert(true)}
           style={{
