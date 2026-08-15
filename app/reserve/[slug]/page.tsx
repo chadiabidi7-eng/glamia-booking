@@ -984,9 +984,12 @@ export default function ReservationPage() {
             padding: '14px 0',
             borderTop: index === 0 ? 'none' : '1px solid #F5EFF2',
           }}>
-            <p style={{ fontSize: 14, color: '#2D2D2D', margin: '0 0 10px', lineHeight: 1.4 }}>
+            <p style={{
+              fontSize: 14.5, fontWeight: 600, color: '#2D2D2D',
+              margin: '0 0 12px', lineHeight: 1.4, textAlign: 'center',
+            }}>
               {q.libelle}
-              {!q.obligatoire && <span style={{ color: '#A9A0AA', fontSize: 12 }}> · facultatif</span>}
+              {!q.obligatoire && <span style={{ color: '#A9A0AA', fontSize: 12, fontWeight: 400 }}> · facultatif</span>}
             </p>
 
             {q.type === 'texte' ? (
@@ -995,13 +998,16 @@ export default function ReservationPage() {
                 onChange={e => setReponsesFormulaire(prev => ({ ...prev, [q.id]: e.target.value.slice(0, 400) }))}
                 rows={3}
                 style={{
-                  width: '100%', boxSizing: 'border-box', border: '1px solid #EDE0E8',
-                  borderRadius: 11, padding: 10, fontSize: 14, fontFamily: 'inherit',
-                  color: '#2D2D2D', resize: 'vertical', outlineColor: GLAMIA_PINK,
+                  width: '100%', boxSizing: 'border-box', border: '1px solid #F0DCE8',
+                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 14,
+                  fontFamily: 'inherit', color: '#2D2D2D', resize: 'vertical',
+                  outlineColor: GLAMIA_PINK,
                 }}
               />
             ) : (
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              <div style={{
+                display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'center',
+              }}>
                 {(q.type === 'oui_non' ? ['Oui', 'Non'] : (q.options ?? []).filter(o => o.trim())).map(r => {
                   const choisi = donnee === r
                   return (
@@ -1009,11 +1015,12 @@ export default function ReservationPage() {
                       key={r}
                       onClick={() => repondreFormulaire(q, r)}
                       style={{
-                        border: `1px solid ${choisi ? GLAMIA_PINK : '#EDE0E8'}`,
-                        background: choisi ? GLAMIA_PINK : '#fff',
-                        color: choisi ? '#fff' : '#4A444E',
-                        borderRadius: 11, padding: '9px 15px', fontSize: 13.5,
+                        border: `1px solid ${choisi ? GLAMIA_PINK : '#F0DCE8'}`,
+                        background: choisi ? GLAMIA_PINK : '#FFF6FA',
+                        color: choisi ? '#fff' : '#8E4E72',
+                        borderRadius: 12, padding: '10px 18px', fontSize: 13.5,
                         fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'background .15s, color .15s, border-color .15s',
                       }}>
                       {r}
                     </button>
