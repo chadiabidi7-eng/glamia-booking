@@ -3179,7 +3179,7 @@ export default function ReservationPage() {
           }
           .glamia-cadre-actif {
             box-shadow: 0 3px 22px rgba(160,90,125,0.09);
-            animation: glamiaHalo 1.6s ease-in-out 2;
+            animation: glamiaHalo 1.6s ease-in-out 1;
           }
           @media (prefers-reduced-motion: reduce) {
             .glamia-cadre-actif { animation: none }
