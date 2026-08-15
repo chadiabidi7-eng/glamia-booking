@@ -550,10 +550,13 @@ export default function ReservationPage() {
     options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
   }
   const [vitrine, setVitrine] = useState<Vitrine | null>(null)
-  const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
-  // Le carrousel d'accueil : il défile tout seul jusqu'à ce qu'on le touche.
-  const [lame, setLame] = useState(0)
-  const [carrouselFige, setCarrouselFige] = useState(false)
+  // La visionneuse : les photos d'un avis, et celle qu'on regarde.
+  const [visionneuse, setVisionneuse] = useState<{ photos: string[]; index: number } | null>(null)
+  // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
+  // définitif dès qu'on y touche.
+  const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
+  const [avisMontre, setAvisMontre] = useState(0)
+  const [fige, setFige] = useState(false)
   const departToucher = useRef<number | null>(null)
   // Les réponses au formulaire, et le refus s'il y en a un.
   const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
@@ -573,202 +576,225 @@ export default function ReservationPage() {
   const attente = vitrine ? quandLAdresse(vitrine.adresse.moment) : null
 
   // ─────────────────────────────────────────────────────────────────────────
-  // LE CARROUSEL D'ACCUEIL.
+  // LE BANDEAU D'ACCUEIL — trois boutons, une seule carte.
   //
-  // Trois lames qui défilent toutes seules : les avis, le lieu, ce qu'il faut
-  // savoir. Une page de réservation est une vitrine — elle doit bouger un peu,
-  // sinon elle ressemble à un formulaire administratif et personne ne lit ce
-  // qu'il y a autour du champ.
+  // Avis, Adresse, Accueil. Le bouton touché commande ce que montre la carte
+  // en dessous : un seul endroit où regarder, jamais deux fois la même chose à
+  // deux endroits.
   //
-  // IL S'ARRÊTE DÈS QU'ON LE TOUCHE. Un carrousel qui continue de tourner
-  // pendant qu'on lit est une punition : au premier glissement, au premier
-  // point touché, il se fige pour de bon.
+  // TOUT DÉFILE, ET DANS L'ORDRE. Sur « Avis », les avis passent l'un après
+  // l'autre ; le dernier passé, on glisse vers « Adresse », puis « Accueil »,
+  // puis on recommence. Une page de réservation est une vitrine : elle doit
+  // bouger, sinon personne ne lit ce qu'il y a autour du champ.
   //
-  // ON PEUT LE FAIRE GLISSER À LA MAIN, et toucher une lame l'ouvre en entier
-  // juste en dessous. Le mouvement attire, le détail reste à la demande.
+  // ELLE S'ARRÊTE DÈS QU'ON LA TOUCHE. Un carrousel qui continue de tourner
+  // pendant qu'on lit est une punition.
   // ─────────────────────────────────────────────────────────────────────────
-  const lames: {
-    cle: 'avis' | 'ou' | 'savoir'
-    titre: string; fond: React.CSSProperties; corps: React.ReactNode
-  }[] = []
+  const avisMontrables = vitrine?.avis_actifs ? (vitrine?.avis ?? []) : []
+  const aAvis = avisMontrables.length > 0
+  const aAdresse = lieu.length > 0 || !!vitrine?.adresse.exacte
+  const aAccueil = conditions.length > 0
 
-  if (vitrine?.avis_actifs && (vitrine?.nb_avis ?? 0) > 0) {
-    // Le dernier avis qui porte une photo — c'est lui qui habille la lame.
-    const avecPhoto = vitrine.avis.find(a => a.photos.length > 0)
-    const dernier = avecPhoto ?? vitrine.avis[0]
-    const photo = avecPhoto?.photos[0]?.vignette
-    lames.push({
-      cle: 'avis',
-      titre: 'Avis clientes',
-      fond: photo
-        ? {
-            backgroundImage:
-              `linear-gradient(180deg, rgba(24,12,20,0.15) 0%, rgba(24,12,20,0.82) 68%), url(${photo})`,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-          }
-        : { background: '#FBF1F6', border: '1px solid #F1DCE8' },
-      corps: (
-        <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
-            <span style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
-              fontSize: 42, color: photo ? '#fff' : '#2D2D2D', lineHeight: 1, letterSpacing: -1,
-            }}>
-              {String(vitrine.note).replace('.', ',')}
-            </span>
-            <span style={{ fontSize: 14, color: photo ? '#FFD9E8' : GLAMIA_PINK, letterSpacing: 1 }}>
-              {'★'.repeat(Math.round(vitrine.note ?? 0))}
-              <span style={{ color: photo ? 'rgba(255,255,255,0.35)' : '#E7DBE3' }}>
-                {'★'.repeat(5 - Math.round(vitrine.note ?? 0))}
-              </span>
-            </span>
-            <span style={{ fontSize: 12.5, color: photo ? 'rgba(255,255,255,0.75)' : '#A79DAB' }}>
-              {vitrine.nb_avis} avis
-            </span>
-          </div>
-          {dernier?.texte && (
-            <p style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
-              fontSize: 15, color: photo ? '#fff' : '#4A444E', lineHeight: 1.5, margin: '10px 0 0',
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}>«&nbsp;{dernier.texte}&nbsp;»</p>
-          )}
-          <p style={{
-            fontSize: 12, color: photo ? 'rgba(255,255,255,0.7)' : '#A79DAB', margin: '6px 0 0',
-          }}>{dernier?.auteur}{dernier?.prestations ? ` · ${dernier.prestations}` : ''}</p>
-        </>
-      ),
-    })
-  }
+  const onglets = [
+    aAvis && { cle: 'avis' as const, nom: 'Avis' },
+    aAdresse && { cle: 'adresse' as const, nom: 'Adresse' },
+    aAccueil && { cle: 'accueil' as const, nom: 'Accueil' },
+  ].filter(Boolean) as { cle: 'avis' | 'adresse' | 'accueil'; nom: string }[]
 
-  if (lieu.length > 0 || vitrine?.adresse.exacte) {
-    lames.push({
-      cle: 'ou',
-      titre: 'Où je suis',
-      fond: { background: '#F4F1F7', border: '1px solid #E7E1EE' },
-      corps: (
-        <>
-          <p style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            fontSize: 17, fontWeight: 600, color: '#2D2D2D', margin: 0,
-          }}>
-            <MapPin size={16} color={GLAMIA_PINK} />
-            {vitrine?.adresse.exacte || vitrine?.adresse.ville}
-          </p>
-          {vitrine?.adresse.acces && (
-            <p style={{ fontSize: 13.5, color: '#8A8A9A', margin: '6px 0 0 23px' }}>{vitrine.adresse.acces}</p>
-          )}
-          {attente && (
-            <p style={{ fontSize: 12.5, color: '#B4A8B0', margin: '6px 0 0 23px' }}>{attente}</p>
-          )}
-        </>
-      ),
-    })
-  }
-
-  if (conditions.length > 0) {
-    lames.push({
-      cle: 'savoir',
-      titre: 'Bon à savoir',
-      fond: { background: '#F3F7F3', border: '1px solid #DFEBE0' },
-      corps: (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-          {conditions.map((c, i) => (
-            <span key={i} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
-              borderRadius: 9, padding: '5px 9px', fontSize: 12, fontWeight: 600,
-            }}>
-              {c.oui ? '✓' : '✕'} {c.libelle}
-            </span>
-          ))}
-
-        </div>
-      ),
-    })
-  }
-
-  // Le défilement automatique, tant que personne n'a touché.
+  // Le premier onglet disponible, si celui en cours n'existe pas pour cette pro.
   useEffect(() => {
-    if (carrouselFige || lames.length < 2) return
-    // Un défilement automatique chez quelqu'un qui a demandé moins d'animations
-    // n'est pas un détail : c'est une gêne, parfois un malaise.
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-    const t = setInterval(() => setLame(v => (v + 1) % lames.length), 4500)
-    return () => clearInterval(t)
-  }, [carrouselFige, lames.length])
+    if (onglets.length > 0 && !onglets.some(o => o.cle === onglet)) setOnglet(onglets[0].cle)
+  }, [onglets.length, onglet])
 
-  const figer = () => setCarrouselFige(true)
+  const ongletSuivant = () => {
+    const i = onglets.findIndex(o => o.cle === onglet)
+    setOnglet(onglets[(i + 1) % onglets.length].cle)
+    setAvisMontre(0)
+  }
 
-  const blocVitrine = lames.length > 0 && (
+  // Le pas automatique. Sur les avis il passe d'un avis au suivant ; arrivé au
+  // bout, il change d'onglet. Ailleurs, il change d'onglet au bout de 4,5 s.
+  useEffect(() => {
+    if (fige || onglets.length === 0 || visionneuse) return
+    if (typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    const surAvis = onglet === 'avis' && avisMontrables.length > 0
+    const duree = surAvis ? 3200 : 4500
+    const t = setTimeout(() => {
+      if (surAvis && avisMontre < avisMontrables.length - 1) setAvisMontre(v => v + 1)
+      else if (onglets.length > 1) ongletSuivant()
+      else if (surAvis) setAvisMontre(0)
+    }, duree)
+    return () => clearTimeout(t)
+  }, [fige, onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
+
+  const figer = () => setFige(true)
+
+  const glisser = (sens: 1 | -1) => {
+    figer()
+    if (onglet === 'avis' && avisMontrables.length > 1) {
+      setAvisMontre(v => (v + sens + avisMontrables.length) % avisMontrables.length)
+      return
+    }
+    const i = onglets.findIndex(o => o.cle === onglet)
+    setOnglet(onglets[(i + sens + onglets.length) % onglets.length].cle)
+  }
+
+  const contenuCarte = onglet === 'avis' ? (() => {
+    const a = avisMontrables[Math.min(avisMontre, avisMontrables.length - 1)]
+    if (!a) return null
+    return (
+      <div key={avisMontre} className="glamia-apparait">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+          <span style={{
+            width: 34, height: 34, borderRadius: 17, flexShrink: 0,
+            background: '#FBE9F2', color: '#8E4E72', display: 'grid', placeItems: 'center',
+            fontSize: 12, fontWeight: 800,
+          }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+            {a.prestations && (
+              <span style={{
+                display: 'block', fontSize: 11.5, color: '#A79DAB',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{a.prestations}</span>
+            )}
+          </span>
+          <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+            {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
+          </span>
+        </div>
+
+        {a.texte && (
+          <p style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: 15, lineHeight: 1.55, color: '#3F3A42', margin: 0,
+          }}>«&nbsp;{a.texte}&nbsp;»</p>
+        )}
+
+        {a.photos.length > 0 && (
+          <div style={{ display: 'flex', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
+            {a.photos.map((ph, j) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={j}
+                src={ph.vignette}
+                alt=""
+                onClick={() => { figer(); setVisionneuse({ photos: a.photos.map(p => p.pleine), index: j }) }}
+                style={{ width: 66, height: 66, objectFit: 'cover', borderRadius: 12, cursor: 'pointer' }}
+              />
+            ))}
+          </div>
+        )}
+
+        {a.reponse && (
+          <div style={{
+            background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
+            borderRadius: 9, padding: '8px 11px', marginTop: 11,
+          }}>
+            <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: 0 }}>{a.reponse}</p>
+          </div>
+        )}
+      </div>
+    )
+  })() : onglet === 'adresse' ? (
+    <div key="adresse" className="glamia-apparait">
+      <p style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 17, fontWeight: 600, color: '#2D2D2D', margin: 0,
+      }}>
+        <MapPin size={17} color={GLAMIA_PINK} />
+        {vitrine?.adresse.exacte || vitrine?.adresse.ville}
+      </p>
+      {vitrine?.adresse.acces && (
+        <p style={{ fontSize: 14, color: '#6B6470', margin: '8px 0 0 25px' }}>{vitrine.adresse.acces}</p>
+      )}
+      {attente && !vitrine?.adresse.exacte && (
+        <p style={{ fontSize: 12.5, color: '#A79DAB', margin: '8px 0 0 25px', lineHeight: 1.45 }}>{attente}</p>
+      )}
+    </div>
+  ) : (
+    <div key="accueil" className="glamia-apparait" style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+      {conditions.map((c, i) => (
+        <span key={i} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
+          borderRadius: 10, padding: '7px 11px', fontSize: 13, fontWeight: 600,
+        }}>
+          {c.oui ? '✓' : '✕'} {c.libelle}
+        </span>
+      ))}
+    </div>
+  )
+
+  const blocVitrine = onglets.length > 0 && (
     <div style={{ marginTop: 20 }}>
-      {/* Le remplissage de la barre : c'est lui qui donne le rythme, et il
-          repart de zéro à chaque lame. */}
       <style>{`
-        @keyframes glamiaRemplir { from { width: 0% } to { width: 100% } }
-        @keyframes glamiaMonter {
-          from { opacity: 0; transform: translateY(8px) }
+        @keyframes glamiaApparait {
+          from { opacity: 0; transform: translateY(6px) }
           to   { opacity: 1; transform: none }
         }
-        @media (prefers-reduced-motion: reduce) {
-          .glamia-lame, .glamia-jauge { animation: none !important }
-        }
+        .glamia-apparait { animation: glamiaApparait .4s ease both }
+        @media (prefers-reduced-motion: reduce) { .glamia-apparait { animation: none } }
       `}</style>
 
+      {/* Les trois boutons. Celui qui est allumé commande la carte. */}
+      <div style={{
+        display: 'flex', gap: 4, background: '#F4EEF1', borderRadius: 13, padding: 4,
+      }}>
+        {onglets.map(o => {
+          const actif = onglet === o.cle
+          return (
+            <button
+              key={o.cle}
+              onClick={() => { figer(); setOnglet(o.cle); setAvisMontre(0) }}
+              style={{
+                flex: 1, border: 'none', borderRadius: 10, padding: '9px 0', cursor: 'pointer',
+                background: actif ? '#fff' : 'transparent',
+                color: actif ? '#8E4E72' : '#8A8A9A',
+                fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
+                boxShadow: actif ? '0 1px 4px rgba(140,80,110,0.12)' : 'none',
+                transition: 'background .2s, color .2s',
+              }}>
+              {o.nom}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* La carte. Un seul endroit où regarder. */}
       <div
-        onTouchStart={e => { departToucher.current = e.touches[0].clientX; figer() }}
+        onTouchStart={e => { departToucher.current = e.touches[0].clientX }}
         onTouchEnd={e => {
           const depart = departToucher.current
           if (depart === null) return
           const ecart = e.changedTouches[0].clientX - depart
-          if (Math.abs(ecart) > 40) {
-            setLame(v => (v + (ecart < 0 ? 1 : -1) + lames.length) % lames.length)
-          }
+          if (Math.abs(ecart) > 40) glisser(ecart < 0 ? 1 : -1)
           departToucher.current = null
         }}
-        style={{ overflow: 'hidden', borderRadius: 20 }}>
-        <div style={{
-          display: 'flex',
-          transform: `translateX(-${lame * 100}%)`,
-          transition: 'transform .5s cubic-bezier(.22,.61,.36,1)',
+        style={{
+          background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
+          padding: '15px 16px', marginTop: 9, minHeight: 116,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
         }}>
-          {lames.map((l, i) => (
-            <div key={l.cle} style={{ flex: '0 0 100%', minWidth: 0 }}>
-              <div
-                className="glamia-lame"
-                style={{
-                  ...l.fond,
-                  borderRadius: 20, padding: '18px 20px', minHeight: 156,
-                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                  animation: i === lame ? 'glamiaMonter .45s ease both' : undefined,
-                }}>
-                {l.corps}
-              </div>
-            </div>
-          ))}
-        </div>
+        {contenuCarte}
       </div>
 
-      {lames.length > 1 && (
-        <div style={{ display: 'flex', gap: 5, marginTop: 11 }}>
-          {lames.map((l, i) => (
+      {/* Où l'on en est dans les avis — et rien du tout s'il n'y en a qu'un. */}
+      {onglet === 'avis' && avisMontrables.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 9 }}>
+          {avisMontrables.map((_, i) => (
             <button
-              key={l.cle}
-              onClick={() => { figer(); setLame(i) }}
-              aria-label={l.titre}
+              key={i}
+              onClick={() => { figer(); setAvisMontre(i) }}
+              aria-label={`Avis ${i + 1}`}
               style={{
-                flex: 1, height: 3, borderRadius: 2, border: 'none', padding: 0,
-                background: '#EFE4EA', cursor: 'pointer', overflow: 'hidden',
-              }}>
-              <span
-                className="glamia-jauge"
-                style={{
-                  display: 'block', height: '100%', borderRadius: 2, background: GLAMIA_PINK,
-                  width: i < lame ? '100%' : i > lame ? '0%' : (carrouselFige ? '100%' : undefined),
-                  animation: i === lame && !carrouselFige ? 'glamiaRemplir 4.5s linear forwards' : undefined,
-                }}
-              />
-            </button>
+                width: i === avisMontre ? 16 : 5, height: 5, borderRadius: 3, border: 'none', padding: 0,
+                background: i === avisMontre ? GLAMIA_PINK : '#E7DBE3', cursor: 'pointer',
+                transition: 'width .3s, background .3s',
+              }}
+            />
           ))}
         </div>
       )}
@@ -3046,15 +3072,58 @@ export default function ReservationPage() {
         {/* ────────────────────────────────────────
             STEP 1 — Identification
         ──────────────────────────────────────── */}
-        {photoOuverte && (
+        {visionneuse && (
           <div
-            onClick={() => setPhotoOuverte(null)}
+            onClick={() => setVisionneuse(null)}
+            onTouchStart={e => { departToucher.current = e.touches[0].clientX }}
+            onTouchEnd={e => {
+              const depart = departToucher.current
+              if (depart === null) return
+              const ecart = e.changedTouches[0].clientX - depart
+              if (Math.abs(ecart) > 40) {
+                e.stopPropagation()
+                setVisionneuse(v => v ? {
+                  ...v,
+                  index: (v.index + (ecart < 0 ? 1 : -1) + v.photos.length) % v.photos.length,
+                } : v)
+              }
+              departToucher.current = null
+            }}
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 90,
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.93)', zIndex: 90,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
             }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photoOuverte} alt="" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12 }} />
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 520, overflow: 'hidden', borderRadius: 14 }}>
+              <div style={{
+                display: 'flex',
+                transform: `translateX(-${visionneuse.index * 100}%)`,
+                transition: 'transform .35s cubic-bezier(.22,.61,.36,1)',
+              }}>
+                {visionneuse.photos.map((ph, i) => (
+                  <div key={i} style={{ flex: '0 0 100%', minWidth: 0, display: 'grid', placeItems: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ph} alt="" style={{ maxWidth: '100%', maxHeight: '72vh', borderRadius: 12 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {visionneuse.photos.length > 1 && (
+              <div style={{
+                position: 'absolute', bottom: 34, left: 0, right: 0,
+                display: 'flex', justifyContent: 'center', gap: 6,
+              }}>
+                {visionneuse.photos.map((_, i) => (
+                  <span key={i} style={{
+                    width: i === visionneuse.index ? 16 : 6, height: 6, borderRadius: 3,
+                    background: i === visionneuse.index ? '#fff' : 'rgba(255,255,255,0.4)',
+                    transition: 'width .3s, background .3s',
+                  }} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
