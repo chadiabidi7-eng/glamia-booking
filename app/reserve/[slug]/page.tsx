@@ -554,6 +554,10 @@ export default function ReservationPage() {
   // sort de l'écran.
   const [carteOuverte, setCarteOuverte] = useState<'avis' | 'ou' | 'savoir' | null>(null)
   const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
+  // Le carrousel d'accueil : il défile tout seul jusqu'à ce qu'on le touche.
+  const [lame, setLame] = useState(0)
+  const [carrouselFige, setCarrouselFige] = useState(false)
+  const departToucher = useRef<number | null>(null)
   // Les réponses au formulaire, et le refus s'il y en a un.
   const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
   const [refus, setRefus] = useState<{ question: string; reponse: string; message: string } | null>(null)
@@ -566,155 +570,236 @@ export default function ReservationPage() {
   // Une seule carte s'ouvre à la fois : deux dépliées et le champ du numéro
   // sort de l'écran.
   // ─────────────────────────────────────────────────────────────────────────
-  const CartePliee = ({
-    cle, titre, resume, icone, children,
-  }: {
-    cle: 'avis' | 'ou' | 'savoir'; titre: string; resume: React.ReactNode
-    icone: React.ReactNode; children: React.ReactNode
-  }) => {
-    const ouverte = carteOuverte === cle
-    return (
-      <div style={{
-        background: '#fff',
-        border: `1px solid ${ouverte ? '#EFD3E4' : '#F1EBEE'}`,
-        borderRadius: 16, marginBottom: 9, overflow: 'hidden',
-        boxShadow: ouverte ? '0 2px 14px rgba(140,80,110,0.07)' : 'none',
-        transition: 'border-color .15s, box-shadow .15s',
-      }}>
-        <button
-          onClick={() => setCarteOuverte(ouverte ? null : cle)}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-            background: 'none', border: 'none', padding: '12px 14px',
-            cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-          }}>
-          <span style={{
-            width: 34, height: 34, borderRadius: 12, flexShrink: 0,
-            background: '#FDF2F8', display: 'grid', placeItems: 'center',
-          }}>{icone}</span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: '#2D2D2D' }}>{titre}</span>
-            <span style={{
-              display: 'block', fontSize: 12.5, color: '#8A8A9A', marginTop: 1,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{resume}</span>
-          </span>
-          <span style={{
-            fontSize: 17, color: '#D3C3CE', flexShrink: 0,
-            transform: ouverte ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
-          }}>›</span>
-        </button>
-        {ouverte && (
-          <div style={{
-            padding: '12px 14px 14px', borderTop: '1px solid #F7F0F4', background: '#FFFDFE',
-          }}>{children}</div>
-        )}
-      </div>
-    )
-  }
-
   const conditions = conditionsAffichees(vitrine?.accueil)
   const aReglement = !!vitrine?.reglement?.trim()
   const lieu = [vitrine?.adresse.ville, vitrine?.adresse.acces].filter(Boolean) as string[]
   const attente = vitrine ? quandLAdresse(vitrine.adresse.moment) : null
 
-  const blocVitrine = vitrine && (
-    <div style={{ marginTop: 22 }}>
-      {vitrine.avis_actifs && vitrine.nb_avis > 0 && (
-        <CartePliee
-          cle="avis"
-          titre="Avis clientes"
-          icone={<Star size={17} color={GLAMIA_PINK} fill={GLAMIA_PINK} />}
-          resume={
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ color: GLAMIA_PINK, letterSpacing: 0.5 }}>
-                {'★'.repeat(Math.round(vitrine.note ?? 0))}
-                <span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - Math.round(vitrine.note ?? 0))}</span>
-              </span>
-              <span>{String(vitrine.note).replace('.', ',')} · {vitrine.nb_avis} avis</span>
+  // ─────────────────────────────────────────────────────────────────────────
+  // LE CARROUSEL D'ACCUEIL.
+  //
+  // Trois lames qui défilent toutes seules : les avis, le lieu, ce qu'il faut
+  // savoir. Une page de réservation est une vitrine — elle doit bouger un peu,
+  // sinon elle ressemble à un formulaire administratif et personne ne lit ce
+  // qu'il y a autour du champ.
+  //
+  // IL S'ARRÊTE DÈS QU'ON LE TOUCHE. Un carrousel qui continue de tourner
+  // pendant qu'on lit est une punition : au premier glissement, au premier
+  // point touché, il se fige pour de bon.
+  //
+  // ON PEUT LE FAIRE GLISSER À LA MAIN, et toucher une lame l'ouvre en entier
+  // juste en dessous. Le mouvement attire, le détail reste à la demande.
+  // ─────────────────────────────────────────────────────────────────────────
+  const lames: {
+    cle: 'avis' | 'ou' | 'savoir'
+    icone: React.ReactNode; titre: string; corps: React.ReactNode
+  }[] = []
+
+  if (vitrine?.avis_actifs && (vitrine?.nb_avis ?? 0) > 0) {
+    const dernier = vitrine.avis[0]
+    lames.push({
+      cle: 'avis',
+      icone: <Star size={15} color={GLAMIA_PINK} fill={GLAMIA_PINK} />,
+      titre: 'Avis clientes',
+      corps: (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: '#2D2D2D', lineHeight: 1 }}>
+              {String(vitrine.note).replace('.', ',')}
             </span>
-          }>
-          {vitrine.avis.map((a, i) => (
-            <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #F5EFF2', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
-                <span style={{ fontSize: 12, color: GLAMIA_PINK, letterSpacing: 1 }}>
-                  {'★'.repeat(a.note)}<span style={{ color: '#E3D8DF' }}>{'★'.repeat(5 - a.note)}</span>
-                </span>
-              </div>
-              {a.prestations && (
-                <p style={{ fontSize: 11.5, color: '#A9A0AA', margin: '2px 0 0' }}>{a.prestations}</p>
-              )}
-              {a.texte && (
-                <p style={{ fontSize: 13.5, lineHeight: 1.5, color: '#4A444E', margin: '6px 0 0' }}>{a.texte}</p>
-              )}
-              {a.photos.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                  {a.photos.map((ph, j) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={j}
-                      src={ph.vignette}
-                      alt=""
-                      onClick={() => setPhotoOuverte(ph.pleine)}
-                      style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }}
-                    />
-                  ))}
-                </div>
-              )}
-              {a.reponse && (
-                <div style={{
-                  background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
-                  borderRadius: 8, padding: '8px 10px', marginTop: 8,
+            <span style={{ fontSize: 14, color: GLAMIA_PINK, letterSpacing: 1 }}>
+              {'★'.repeat(Math.round(vitrine.note ?? 0))}
+              <span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - Math.round(vitrine.note ?? 0))}</span>
+            </span>
+            <span style={{ fontSize: 12.5, color: '#8A8A9A' }}>{vitrine.nb_avis} avis</span>
+          </div>
+          {dernier?.texte && (
+            <p style={{
+              fontSize: 13, color: '#4A444E', lineHeight: 1.45, margin: '8px 0 0',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>«&nbsp;{dernier.texte}&nbsp;»</p>
+          )}
+        </>
+      ),
+    })
+  }
+
+  if (lieu.length > 0 || vitrine?.adresse.exacte) {
+    lames.push({
+      cle: 'ou',
+      icone: <MapPin size={15} color={GLAMIA_PINK} />,
+      titre: 'Où je suis',
+      corps: (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#2D2D2D', margin: 0 }}>
+            {vitrine?.adresse.exacte || vitrine?.adresse.ville}
+          </p>
+          {vitrine?.adresse.acces && (
+            <p style={{ fontSize: 13, color: '#8A8A9A', margin: '5px 0 0' }}>{vitrine.adresse.acces}</p>
+          )}
+        </>
+      ),
+    })
+  }
+
+  if (conditions.length > 0) {
+    lames.push({
+      cle: 'savoir',
+      icone: <Info size={15} color={GLAMIA_PINK} />,
+      titre: 'Bon à savoir',
+      corps: (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {conditions.slice(0, 4).map((c, i) => (
+            <span key={i} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
+              borderRadius: 9, padding: '5px 9px', fontSize: 12, fontWeight: 600,
+            }}>
+              {c.oui ? '✓' : '✕'} {c.libelle}
+            </span>
+          ))}
+          {conditions.length > 4 && (
+            <span style={{ fontSize: 12, color: '#8A8A9A', alignSelf: 'center' }}>
+              +{conditions.length - 4}
+            </span>
+          )}
+        </div>
+      ),
+    })
+  }
+
+  // Le défilement automatique, tant que personne n'a touché.
+  useEffect(() => {
+    if (carrouselFige || lames.length < 2 || carteOuverte) return
+    const t = setInterval(() => setLame(v => (v + 1) % lames.length), 4500)
+    return () => clearInterval(t)
+  }, [carrouselFige, lames.length, carteOuverte])
+
+  const figer = () => setCarrouselFige(true)
+
+  const detail = carteOuverte === 'avis' ? (
+    <>
+      {vitrine?.avis.map((a, i) => (
+        <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #F5EFF2', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+            <span style={{ fontSize: 12, color: GLAMIA_PINK, letterSpacing: 1 }}>
+              {'★'.repeat(a.note)}<span style={{ color: '#E3D8DF' }}>{'★'.repeat(5 - a.note)}</span>
+            </span>
+          </div>
+          {a.prestations && <p style={{ fontSize: 11.5, color: '#A9A0AA', margin: '2px 0 0' }}>{a.prestations}</p>}
+          {a.texte && <p style={{ fontSize: 13.5, lineHeight: 1.5, color: '#4A444E', margin: '6px 0 0' }}>{a.texte}</p>}
+          {a.photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+              {a.photos.map((ph, j) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={j} src={ph.vignette} alt="" onClick={() => setPhotoOuverte(ph.pleine)}
+                  style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }} />
+              ))}
+            </div>
+          )}
+          {a.reponse && (
+            <div style={{ background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`, borderRadius: 8, padding: '8px 10px', marginTop: 8 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: '#8E4E72', margin: 0, letterSpacing: 0.5 }}>SA RÉPONSE</p>
+              <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: '3px 0 0' }}>{a.reponse}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  ) : carteOuverte === 'ou' ? (
+    <>
+      {vitrine?.adresse.exacte
+        ? <p style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: 0, whiteSpace: 'pre-line' }}>{vitrine.adresse.exacte}</p>
+        : (
+          <>
+            {lieu.map((l, i) => (
+              <p key={i} style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: i === 0 ? 0 : '4px 0 0' }}>{l}</p>
+            ))}
+            {attente && <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '8px 0 0' }}>{attente}</p>}
+          </>
+        )}
+    </>
+  ) : carteOuverte === 'savoir' ? (
+    <>
+      {conditions.map((c, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
+          <span style={{
+            width: 19, height: 19, borderRadius: 10, display: 'grid', placeItems: 'center',
+            background: c.oui ? '#E8F5E9' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
+            fontSize: 11, fontWeight: 800, flexShrink: 0,
+          }}>{c.oui ? '✓' : '✕'}</span>
+          <span style={{ fontSize: 14, color: '#2D2D2D' }}>{c.libelle}</span>
+        </div>
+      ))}
+    </>
+  ) : null
+
+  const blocVitrine = lames.length > 0 && (
+    <div style={{ marginTop: 20 }}>
+      <div
+        onTouchStart={e => { departToucher.current = e.touches[0].clientX; figer() }}
+        onTouchEnd={e => {
+          const depart = departToucher.current
+          if (depart === null) return
+          const ecart = e.changedTouches[0].clientX - depart
+          if (Math.abs(ecart) > 40) {
+            setLame(v => (v + (ecart < 0 ? 1 : -1) + lames.length) % lames.length)
+          }
+          departToucher.current = null
+        }}
+        style={{ overflow: 'hidden', borderRadius: 18 }}>
+        <div style={{
+          display: 'flex',
+          transform: `translateX(-${lame * 100}%)`,
+          transition: 'transform .45s cubic-bezier(.22,.61,.36,1)',
+        }}>
+          {lames.map(l => (
+            <div key={l.cle} style={{ flex: '0 0 100%', minWidth: 0 }}>
+              <div
+                onClick={() => { figer(); setCarteOuverte(carteOuverte === l.cle ? null : l.cle) }}
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDFE 0%, #FDF4F9 100%)',
+                  border: '1px solid #F2DDE9', borderRadius: 18,
+                  padding: '14px 16px', minHeight: 96, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
                 }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#8E4E72', margin: 0, letterSpacing: 0.5 }}>SA RÉPONSE</p>
-                  <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: '3px 0 0' }}>{a.reponse}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+                  {l.icone}
+                  <span style={{
+                    fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
+                    color: '#8E4E72',
+                  }}>{l.titre}</span>
                 </div>
-              )}
+                {l.corps}
+              </div>
             </div>
           ))}
-        </CartePliee>
-      )}
+        </div>
+      </div>
 
-      {(lieu.length > 0 || vitrine.adresse.exacte) && (
-        <CartePliee
-          cle="ou"
-          titre="Où je suis"
-          icone={<MapPin size={17} color={GLAMIA_PINK} />}
-          resume={vitrine.adresse.exacte || vitrine.adresse.ville || 'Voir les accès'}>
-          {vitrine.adresse.exacte
-            ? <p style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: 0, whiteSpace: 'pre-line' }}>{vitrine.adresse.exacte}</p>
-            : (
-              <>
-                {lieu.map((l, i) => (
-                  <p key={i} style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: i === 0 ? 0 : '4px 0 0' }}>{l}</p>
-                ))}
-                {attente && (
-                  <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '8px 0 0', fontStyle: 'italic' }}>{attente}</p>
-                )}
-              </>
-            )}
-        </CartePliee>
-      )}
-
-      {conditions.length > 0 && (
-        <CartePliee
-          cle="savoir"
-          titre="Bon à savoir"
-          icone={<Info size={17} color={GLAMIA_PINK} />}
-          resume={conditions.slice(0, 2).map(c => c.libelle).join(' · ')
-            + (conditions.length > 2 ? ` +${conditions.length - 2}` : '')}>
-          {conditions.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-              <span style={{
-                width: 19, height: 19, borderRadius: 10, display: 'grid', placeItems: 'center',
-                background: c.oui ? '#E8F5E9' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
-                fontSize: 11, fontWeight: 800, flexShrink: 0,
-              }}>{c.oui ? '✓' : '✕'}</span>
-              <span style={{ fontSize: 14, color: '#2D2D2D' }}>{c.libelle}</span>
-            </div>
+      {lames.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+          {lames.map((l, i) => (
+            <button
+              key={l.cle}
+              onClick={() => { figer(); setLame(i) }}
+              aria-label={l.titre}
+              style={{
+                width: i === lame ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0,
+                background: i === lame ? GLAMIA_PINK : '#E7DBE3', cursor: 'pointer',
+                transition: 'width .3s, background .3s',
+              }}
+            />
           ))}
-        </CartePliee>
+        </div>
+      )}
+
+      {detail && (
+        <div style={{
+          background: '#fff', border: '1px solid #F2DDE9', borderRadius: 16,
+          padding: 14, marginTop: 10,
+        }}>{detail}</div>
       )}
     </div>
   )
