@@ -48,6 +48,48 @@ async function pousserNotifPro(proId: string, title: string, body: string) {
   })
 }
 
+/**
+ * Note un paiement qui n'a, à cette seconde, aucune fiche en face.
+ *
+ * On ne retient que les paiements PASSÉS PAR GLAMIA — ceux qui portent notre
+ * marque. Un encaissement fait par la pro depuis son tableau de bord Stripe
+ * n'est pas un défaut : il ne nous regarde pas, et il n'a rien à faire dans
+ * les alertes.
+ */
+async function noterSiSansRendezVous(intent: Stripe.PaymentIntent) {
+  try {
+    const proId = intent.metadata?.glamia_pro_id
+    if (!proId) return
+
+    const { data: existante } = await supabaseAdmin
+      .from('paiements')
+      .select('id')
+      .eq('stripe_payment_intent_id', intent.id)
+      .maybeSingle()
+    if (existante) return
+
+    // `ignoreDuplicates` : Stripe rejoue ses avis, on ne veut qu'une ligne par
+    // paiement — et donc au plus une alerte.
+    await supabaseAdmin.from('paiements_orphelins').upsert(
+      {
+        stripe_intent_id: intent.id,
+        pro_id: proId,
+        montant: intent.amount ?? 0,
+        devise: (intent.currency ?? 'eur').toLowerCase(),
+        cause: 'mort_reseau',
+        statut: 'candidat',
+        rembourse: false,
+        notifie: false,
+      },
+      { onConflict: 'stripe_intent_id', ignoreDuplicates: true },
+    )
+  } catch (e) {
+    // Un filet qui tombe ne doit jamais empêcher le reste du webhook de faire
+    // son travail : l'argent d'une réservation normale passe avant l'alerte.
+    console.error('[stripe/webhook] candidat orphelin non noté :', e)
+  }
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!secret) {
@@ -102,6 +144,23 @@ export async function POST(req: NextRequest) {
       case 'payment_intent.succeeded': {
         // Paiement par lien (page maison) réglé → on crédite + on notifie la pro.
         const intent = event.data.object as Stripe.PaymentIntent
+
+        // ── UN PAIEMENT QUI N'A PAS DE RENDEZ-VOUS ─────────────────────────
+        // Le 15 août à 23 h 57, une cliente a payé 38,84 € et sa page s'est
+        // rechargée avant que la réservation soit enregistrée. L'argent est
+        // arrivé, le rendez-vous n'a jamais existé, et personne ne l'a su
+        // pendant douze heures.
+        //
+        // Cet avis-ci vient de Stripe, de serveur à serveur : il arrive même
+        // quand le téléphone de la cliente a lâché. C'est le seul témoin
+        // fiable, alors on l'écoute.
+        //
+        // ON NE SONNE PAS TOUT DE SUITE : dans une réservation normale, la
+        // fiche de paiement est écrite deux ou trois secondes APRÈS cet avis.
+        // On note un candidat, une vérification repasse une minute plus tard
+        // et classe sans bruit s'il a trouvé son rendez-vous entre-temps.
+        await noterSiSansRendezVous(intent)
+
         const { data: paiement } = await supabaseAdmin
           .from('paiements')
           .select('id, pro_id, rdv_id, montant, statut, historique, rdv:rendez_vous(cliente:clientes(prenom, nom))')
