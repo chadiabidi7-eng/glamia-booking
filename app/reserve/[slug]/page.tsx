@@ -742,16 +742,28 @@ export default function ReservationPage() {
     </div>
   )
 
+  // ── UNE LIGNE PAR CONDITION, UN POINT À DROITE ──────────────────────────
+  // Les étiquettes colorées se lisaient mal : chacune portait sa propre teinte
+  // de fond, la ligne devenait un patchwork et l'œil devait relire chaque mot
+  // pour savoir si c'était oui ou non. Empilées, les réponses s'alignent : le
+  // regard descend la colonne de points et sait tout de suite.
   const contenuAccueil = (
-    <div key="accueil" className="glamia-apparait" style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+    <div key="accueil" className="glamia-apparait">
       {conditions.map((c, i) => (
-        <span key={i} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
-          borderRadius: 10, padding: '7px 11px', fontSize: 13, fontWeight: 600,
+        <div key={i} style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '13px 2px',
+          borderTop: i === 0 ? 'none' : '1px solid #F1E9EE',
         }}>
-          {c.oui ? '✓' : '✕'} {c.libelle}
-        </span>
+          <span style={{ flex: 1, fontSize: 15, color: '#2D2D2D', lineHeight: 1.3 }}>{c.libelle}</span>
+          <span
+            aria-label={c.oui ? 'oui' : 'non'}
+            style={{
+              width: 12, height: 12, borderRadius: 6, flex: 'none',
+              background: c.oui ? '#4CAF6D' : '#D0736B',
+            }}
+          />
+        </div>
       ))}
     </div>
   )
