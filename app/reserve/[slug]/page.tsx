@@ -556,7 +556,9 @@ export default function ReservationPage() {
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
   const [avisMontre, setAvisMontre] = useState(0)
-  const [fige, setFige] = useState(false)
+  // Le décalage du doigt pendant qu'on glisse : la carte suit la main, sinon
+  // rien ne dit qu'on est en train de faire défiler.
+  const [decalage, setDecalage] = useState(0)
   const departToucher = useRef<number | null>(null)
   // Les réponses au formulaire, et le refus s'il y en a un.
   const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
@@ -615,7 +617,7 @@ export default function ReservationPage() {
   // Le pas automatique. Sur les avis il passe d'un avis au suivant ; arrivé au
   // bout, il change d'onglet. Ailleurs, il change d'onglet au bout de 4,5 s.
   useEffect(() => {
-    if (fige || onglets.length === 0 || visionneuse) return
+    if (onglets.length === 0 || visionneuse) return
     if (typeof window !== 'undefined'
       && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
@@ -627,12 +629,9 @@ export default function ReservationPage() {
       else if (surAvis) setAvisMontre(0)
     }, duree)
     return () => clearTimeout(t)
-  }, [fige, onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
-
-  const figer = () => setFige(true)
+  }, [onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
 
   const glisser = (sens: 1 | -1) => {
-    figer()
     if (onglet === 'avis' && avisMontrables.length > 1) {
       setAvisMontre(v => (v + sens + avisMontrables.length) % avisMontrables.length)
       return
@@ -641,64 +640,62 @@ export default function ReservationPage() {
     setOnglet(onglets[(i + sens + onglets.length) % onglets.length].cle)
   }
 
-  const contenuCarte = onglet === 'avis' ? (() => {
-    const a = avisMontrables[Math.min(avisMontre, avisMontrables.length - 1)]
-    if (!a) return null
-    return (
-      <div key={avisMontre} className="glamia-apparait">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
-          <span style={{
-            width: 34, height: 34, borderRadius: 17, flexShrink: 0,
-            background: '#FBE9F2', color: '#8E4E72', display: 'grid', placeItems: 'center',
-            fontSize: 12, fontWeight: 800,
-          }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
-            {a.prestations && (
-              <span style={{
-                display: 'block', fontSize: 11.5, color: '#A79DAB',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>{a.prestations}</span>
-            )}
-          </span>
-          <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
-            {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
-          </span>
-        </div>
-
-        {a.texte && (
-          <p style={{
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 15, lineHeight: 1.55, color: '#3F3A42', margin: 0,
-          }}>«&nbsp;{a.texte}&nbsp;»</p>
-        )}
-
-        {a.photos.length > 0 && (
-          <div style={{ display: 'flex', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
-            {a.photos.map((ph, j) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={j}
-                src={ph.vignette}
-                alt=""
-                onClick={() => { figer(); setVisionneuse({ photos: a.photos.map(p => p.pleine), index: j }) }}
-                style={{ width: 66, height: 66, objectFit: 'cover', borderRadius: 12, cursor: 'pointer' }}
-              />
-            ))}
-          </div>
-        )}
-
-        {a.reponse && (
-          <div style={{
-            background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
-            borderRadius: 9, padding: '8px 11px', marginTop: 11,
-          }}>
-            <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: 0 }}>{a.reponse}</p>
-          </div>
-        )}
+  const unAvis = (a: typeof avisMontrables[number]) => (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+        <span style={{
+          width: 34, height: 34, borderRadius: 17, flexShrink: 0,
+          background: '#FBE9F2', color: '#8E4E72', display: 'grid', placeItems: 'center',
+          fontSize: 12, fontWeight: 800,
+        }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+          {a.prestations && (
+            <span style={{
+              display: 'block', fontSize: 11.5, color: '#A79DAB',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{a.prestations}</span>
+          )}
+        </span>
+        <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+          {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
+        </span>
       </div>
-    )
-  })() : onglet === 'adresse' ? (
+
+      {a.texte && (
+        <p style={{
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          fontSize: 15, lineHeight: 1.55, color: '#3F3A42', margin: 0,
+        }}>«&nbsp;{a.texte}&nbsp;»</p>
+      )}
+
+      {a.photos.length > 0 && (
+        <div style={{ display: 'flex', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
+          {a.photos.map((ph, j) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={j}
+              src={ph.vignette}
+              alt=""
+              onClick={() => setVisionneuse({ photos: a.photos.map(p => p.pleine), index: j })}
+              style={{ width: 66, height: 66, objectFit: 'cover', borderRadius: 12, cursor: 'pointer' }}
+            />
+          ))}
+        </div>
+      )}
+
+      {a.reponse && (
+        <div style={{
+          background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
+          borderRadius: 9, padding: '8px 11px', marginTop: 11,
+        }}>
+          <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: 0 }}>{a.reponse}</p>
+        </div>
+      )}
+    </>
+  )
+
+  const contenuAdresse = (
     <div key="adresse" className="glamia-apparait">
       <p style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -714,7 +711,9 @@ export default function ReservationPage() {
         <p style={{ fontSize: 12.5, color: '#A79DAB', margin: '8px 0 0 25px', lineHeight: 1.45 }}>{attente}</p>
       )}
     </div>
-  ) : (
+  )
+
+  const contenuAccueil = (
     <div key="accueil" className="glamia-apparait" style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
       {conditions.map((c, i) => (
         <span key={i} style={{
@@ -748,7 +747,7 @@ export default function ReservationPage() {
           return (
             <button
               key={o.cle}
-              onClick={() => { figer(); setOnglet(o.cle); setAvisMontre(0) }}
+              onClick={() => { setOnglet(o.cle); setAvisMontre(0) }}
               style={{
                 flex: 1, border: 'none', borderRadius: 10, padding: '9px 0', cursor: 'pointer',
                 background: actif ? '#fff' : 'transparent',
@@ -766,19 +765,59 @@ export default function ReservationPage() {
       {/* La carte. Un seul endroit où regarder. */}
       <div
         onTouchStart={e => { departToucher.current = e.touches[0].clientX }}
+        onTouchMove={e => {
+          // La carte SUIT LE DOIGT. Sans ça, rien ne dit qu'on peut glisser :
+          // on tire, il ne se passe rien, on n'essaie plus.
+          const depart = departToucher.current
+          if (depart === null) return
+          setDecalage((e.touches[0].clientX - depart) * 0.55)
+        }}
         onTouchEnd={e => {
           const depart = departToucher.current
           if (depart === null) return
           const ecart = e.changedTouches[0].clientX - depart
+          setDecalage(0)
           if (Math.abs(ecart) > 40) glisser(ecart < 0 ? 1 : -1)
           departToucher.current = null
         }}
         style={{
-          background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
-          padding: '15px 16px', marginTop: 9, minHeight: 116,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          marginTop: 9,
+          borderRadius: 18, overflow: 'hidden',
         }}>
-        {contenuCarte}
+        {onglet === 'avis' ? (
+          // Le rail des avis : tous côte à côte, un morceau du suivant qui
+          // dépasse. C'est ce dépassement qui annonce qu'il y en a d'autres.
+          <div style={{
+            display: 'flex', gap: 10,
+            transform: `translateX(calc(-${avisMontre * 92}% + ${decalage}px))`,
+            transition: decalage === 0 ? 'transform .45s cubic-bezier(.22,.61,.36,1)' : 'none',
+          }}>
+            {avisMontrables.map((a, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: '0 0 90%', minWidth: 0,
+                  background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
+                  padding: '15px 16px', minHeight: 116,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  opacity: i === avisMontre ? 1 : 0.55,
+                  transition: 'opacity .35s',
+                }}>
+                {unAvis(a)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
+            padding: '15px 16px', minHeight: 116,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            transform: `translateX(${decalage}px)`,
+            transition: decalage === 0 ? 'transform .3s' : 'none',
+          }}>
+            {onglet === 'adresse' ? contenuAdresse : contenuAccueil}
+          </div>
+        )}
       </div>
 
       {/* Où l'on en est dans les avis — et rien du tout s'il n'y en a qu'un. */}
@@ -787,7 +826,7 @@ export default function ReservationPage() {
           {avisMontrables.map((_, i) => (
             <button
               key={i}
-              onClick={() => { figer(); setAvisMontre(i) }}
+              onClick={() => setAvisMontre(i)}
               aria-label={`Avis ${i + 1}`}
               style={{
                 width: i === avisMontre ? 16 : 5, height: 5, borderRadius: 3, border: 'none', padding: 0,
@@ -3130,8 +3169,14 @@ export default function ReservationPage() {
         {step === 1 && (
           <div>
             {blocReglement}
+            {blocVitrine}
 
-            <h2 style={S.h2}>Bonjour !</h2>
+            <div style={{
+              background: '#fff', border: `1.5px solid ${GLAMIA_PINK}22`,
+              borderRadius: 20, padding: '20px 18px 18px', marginTop: 34,
+              boxShadow: '0 3px 22px rgba(160,90,125,0.09)',
+            }}>
+            <h2 style={{ ...S.h2, marginBottom: 4 }}>Bonjour !</h2>
             <p style={S.sub}>Entrez votre numéro pour commencer.</p>
 
             <label style={S.label}>Téléphone</label>
@@ -3158,9 +3203,7 @@ export default function ReservationPage() {
               <button style={{ ...S.btn, opacity: 0.7 }} disabled>Vérification...</button>
             )}
 
-            {/* La vitrine, pliée. Elle vient APRÈS le champ et le bouton :
-                le geste qui compte reste en haut de l'écran. */}
-            {phoneStatus === 'idle' && blocVitrine}
+
 
             {phoneStatus === 'known' && (
               <div>
@@ -3866,6 +3909,7 @@ export default function ReservationPage() {
                 })()}
               </div>
             )}
+            </div>
           </div>
         )}
 
