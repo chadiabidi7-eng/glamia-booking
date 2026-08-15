@@ -530,6 +530,11 @@ export default function ReservationPage() {
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
+  // Ce sur quoi elle peut encore donner son avis : ses rendez-vous des trois
+  // derniers jours, ni annulés ni déjà notés.
+  const [avisAlaisser, setAvisAlaisser] = useState<
+    { token: string; date: string; prestations: string }[]
+  >([])
   // Le délai fixé par la pro : au-delà, l'annulation est remboursée ; en deçà,
   // la somme lui reste. La cliente doit le savoir AVANT de confirmer.
   const [delaiAnnulation,   setDelaiAnnulation]    = useState(24)
@@ -1118,9 +1123,10 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite, rdvs, delai_annulation } = await rep.json()
+      const { fidelite, rdvs, delai_annulation, avis_a_laisser } = await rep.json()
       setFideliteFiche(fidelite ?? null)
       setRdvsAVenir(rdvs ?? [])
+      setAvisAlaisser(avis_a_laisser ?? [])
       if (typeof delai_annulation === 'number') setDelaiAnnulation(delai_annulation)
     } catch (e) {
       // Une panne du dossier ne doit pas empêcher de réserver : on la reconnaît
@@ -2763,6 +2769,37 @@ export default function ReservationPage() {
                         {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {!loadingRdvs && avisAlaisser.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    {avisAlaisser.map(a => (
+                      <a
+                        key={a.token}
+                        href={`/avis/${a.token}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                          background: '#FFF6FA', border: '1.5px solid #F2D7E6',
+                          borderRadius: 16, padding: 14, marginBottom: 10,
+                        }}>
+                        <span style={{
+                          width: 40, height: 40, borderRadius: 20, background: '#fff',
+                          border: '1px solid #F2D7E6', display: 'grid', placeItems: 'center',
+                          fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
+                        }}>★</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: '#8E4E72' }}>
+                            Laisser un avis
+                          </span>
+                          <span style={{ display: 'block', fontSize: 12.5, color: '#A9819B', marginTop: 2 }}>
+                            {a.prestations ? `${a.prestations} · ` : ''}
+                            <span style={{ textTransform: 'capitalize' }}>{formatRdvDate(a.date)}</span>
+                          </span>
+                        </span>
+                        <span style={{ fontSize: 20, color: '#D9B9CC' }}>›</span>
+                      </a>
+                    ))}
                   </div>
                 )}
 
