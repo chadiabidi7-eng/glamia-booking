@@ -3165,7 +3165,7 @@ export default function ReservationPage() {
 
         {step === 1 && (
           <div>
-            {blocReglement}
+            {phoneStatus === 'idle' && blocReglement}
 
             <div style={{
               background: '#fff', border: `1.5px solid ${GLAMIA_PINK}`,
