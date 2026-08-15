@@ -728,7 +728,7 @@ export default function ReservationPage() {
   )
 
   const blocVitrine = onglets.length > 0 && (
-    <div style={{ marginTop: 20 }}>
+    <div style={{ marginTop: 30 }}>
       <style>{`
         @keyframes glamiaApparait {
           from { opacity: 0; transform: translateY(6px) }
@@ -3169,11 +3169,10 @@ export default function ReservationPage() {
         {step === 1 && (
           <div>
             {blocReglement}
-            {blocVitrine}
 
             <div style={{
-              background: '#fff', border: `1.5px solid ${GLAMIA_PINK}22`,
-              borderRadius: 20, padding: '20px 18px 18px', marginTop: 34,
+              background: '#fff', border: `1.5px solid ${GLAMIA_PINK}`,
+              borderRadius: 20, padding: '20px 18px 18px',
               boxShadow: '0 3px 22px rgba(160,90,125,0.09)',
             }}>
             <h2 style={{ ...S.h2, marginBottom: 4 }}>Bonjour !</h2>
@@ -3910,6 +3909,8 @@ export default function ReservationPage() {
               </div>
             )}
             </div>
+
+            {blocVitrine}
           </div>
         )}
 
