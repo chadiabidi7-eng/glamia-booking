@@ -15,7 +15,7 @@ import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 
 // ─────────────────────────────────────────────
@@ -567,31 +567,48 @@ export default function ReservationPage() {
   // sort de l'écran.
   // ─────────────────────────────────────────────────────────────────────────
   const CartePliee = ({
-    cle, titre, resume, children,
-  }: { cle: 'avis' | 'ou' | 'savoir'; titre: string; resume: string; children: React.ReactNode }) => {
+    cle, titre, resume, icone, children,
+  }: {
+    cle: 'avis' | 'ou' | 'savoir'; titre: string; resume: React.ReactNode
+    icone: React.ReactNode; children: React.ReactNode
+  }) => {
     const ouverte = carteOuverte === cle
     return (
       <div style={{
-        background: '#fff', border: '1px solid #EDE0E8', borderRadius: 14,
-        marginBottom: 8, overflow: 'hidden',
+        background: '#fff',
+        border: `1px solid ${ouverte ? '#EFD3E4' : '#F1EBEE'}`,
+        borderRadius: 16, marginBottom: 9, overflow: 'hidden',
+        boxShadow: ouverte ? '0 2px 14px rgba(140,80,110,0.07)' : 'none',
+        transition: 'border-color .15s, box-shadow .15s',
       }}>
         <button
           onClick={() => setCarteOuverte(ouverte ? null : cle)}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            background: 'none', border: 'none', padding: '13px 14px',
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            background: 'none', border: 'none', padding: '12px 14px',
             cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
           }}>
+          <span style={{
+            width: 34, height: 34, borderRadius: 12, flexShrink: 0,
+            background: '#FDF2F8', display: 'grid', placeItems: 'center',
+          }}>{icone}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: '#2D2D2D' }}>{titre}</span>
-            <span style={{ display: 'block', fontSize: 12.5, color: '#8A8A9A', marginTop: 2 }}>{resume}</span>
+            <span style={{
+              display: 'block', fontSize: 12.5, color: '#8A8A9A', marginTop: 1,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{resume}</span>
           </span>
           <span style={{
-            fontSize: 18, color: '#C9BCC4',
+            fontSize: 17, color: '#D3C3CE', flexShrink: 0,
             transform: ouverte ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
           }}>›</span>
         </button>
-        {ouverte && <div style={{ padding: '0 14px 14px' }}>{children}</div>}
+        {ouverte && (
+          <div style={{
+            padding: '12px 14px 14px', borderTop: '1px solid #F7F0F4', background: '#FFFDFE',
+          }}>{children}</div>
+        )}
       </div>
     )
   }
@@ -607,7 +624,16 @@ export default function ReservationPage() {
         <CartePliee
           cle="avis"
           titre="Avis clientes"
-          resume={`${String(vitrine.note).replace('.', ',')} sur ${vitrine.nb_avis} avis`}>
+          icone={<Star size={17} color={GLAMIA_PINK} fill={GLAMIA_PINK} />}
+          resume={
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ color: GLAMIA_PINK, letterSpacing: 0.5 }}>
+                {'★'.repeat(Math.round(vitrine.note ?? 0))}
+                <span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - Math.round(vitrine.note ?? 0))}</span>
+              </span>
+              <span>{String(vitrine.note).replace('.', ',')} · {vitrine.nb_avis} avis</span>
+            </span>
+          }>
           {vitrine.avis.map((a, i) => (
             <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #F5EFF2', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -654,6 +680,7 @@ export default function ReservationPage() {
         <CartePliee
           cle="ou"
           titre="Où je suis"
+          icone={<MapPin size={17} color={GLAMIA_PINK} />}
           resume={vitrine.adresse.exacte || vitrine.adresse.ville || 'Voir les accès'}>
           {vitrine.adresse.exacte
             ? <p style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: 0, whiteSpace: 'pre-line' }}>{vitrine.adresse.exacte}</p>
@@ -670,34 +697,42 @@ export default function ReservationPage() {
         </CartePliee>
       )}
 
-      {(conditions.length > 0 || aReglement) && (
+      {conditions.length > 0 && (
         <CartePliee
           cle="savoir"
           titre="Bon à savoir"
-          resume={[
-            conditions.length > 0 ? `${conditions.length} information${conditions.length > 1 ? 's' : ''}` : null,
-            aReglement ? 'règlement' : null,
-          ].filter(Boolean).join(' · ')}>
+          icone={<Info size={17} color={GLAMIA_PINK} />}
+          resume={conditions.slice(0, 2).map(c => c.libelle).join(' · ')
+            + (conditions.length > 2 ? ` +${conditions.length - 2}` : '')}>
           {conditions.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
               <span style={{
-                width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center',
+                width: 19, height: 19, borderRadius: 10, display: 'grid', placeItems: 'center',
                 background: c.oui ? '#E8F5E9' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
                 fontSize: 11, fontWeight: 800, flexShrink: 0,
               }}>{c.oui ? '✓' : '✕'}</span>
               <span style={{ fontSize: 14, color: '#2D2D2D' }}>{c.libelle}</span>
             </div>
           ))}
-          {aReglement && (
-            <p style={{
-              fontSize: 13.5, lineHeight: 1.55, color: '#4A444E', textAlign: 'justify',
-              margin: conditions.length > 0 ? '12px 0 0' : 0,
-              paddingTop: conditions.length > 0 ? 12 : 0,
-              borderTop: conditions.length > 0 ? '1px solid #F5EFF2' : 'none',
-            }}>{vitrine.reglement}</p>
-          )}
         </CartePliee>
       )}
+    </div>
+  )
+
+  // ── LE RÈGLEMENT ── en haut, en toutes lettres, jamais plié.
+  const blocReglement = aReglement && (
+    <div style={{
+      background: '#FFF9FC', border: '1px solid #F2DDE9', borderRadius: 14,
+      padding: '14px 16px', marginBottom: 18,
+    }}>
+      <p style={{
+        fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
+        color: '#8E4E72', margin: '0 0 7px',
+      }}>Règlement</p>
+      <p style={{
+        fontSize: 13.5, lineHeight: 1.6, color: '#4A444E',
+        textAlign: 'justify', margin: 0, whiteSpace: 'pre-line',
+      }}>{vitrine?.reglement}</p>
     </div>
   )
 
@@ -2910,6 +2945,15 @@ export default function ReservationPage() {
                 </>
               )}
             </div>
+
+            {/* Les réseaux, dans le coin. Un logo se reconnaît sans légende. */}
+            {hasSocials && (
+              <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
+                {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={26} />}
+                {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={26} />}
+                {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={26} />}
+              </div>
+            )}
           </div>
 
           {/* Progress bar */}
@@ -2935,24 +2979,12 @@ export default function ReservationPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
         {/* ── Bannière pro ── */}
-        {(pro?.message_accueil || hasSocials) && (
-          <div style={{ textAlign: 'center', marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid #f3f4f6' }}>
-            {pro?.message_accueil && (
-              <p style={{ fontSize: 16, color: PINK, fontStyle: 'italic', margin: hasSocials ? '0 0 20px' : '0', lineHeight: 1.6 }}>
-                {pro.message_accueil}
-              </p>
-            )}
-            {hasSocials && (
-              <div>
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>Retrouvez-moi sur les réseaux</p>
-                <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
-                  {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={36} />}
-                  {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={36} />}
-                  {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={36} />}
-                </div>
-              </div>
-            )}
-          </div>
+        {pro?.message_accueil && (
+          <p style={{
+            fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
+          }}>
+            {pro.message_accueil}
+          </p>
         )}
 
         {/* ────────────────────────────────────────
@@ -2972,6 +3004,8 @@ export default function ReservationPage() {
 
         {step === 1 && (
           <div>
+            {blocReglement}
+
             <h2 style={S.h2}>Bonjour !</h2>
             <p style={S.sub}>Entrez votre numéro pour commencer.</p>
 
