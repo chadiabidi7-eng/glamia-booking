@@ -949,18 +949,27 @@ export default function ReservationPage() {
   // Une cliente à qui on jette cinq questions sans prévenir se demande d'abord
   // pourquoi on l'interroge. On lui dit qui demande, et ce qu'on attend d'elle.
   const blocAnnonceFormulaire = !refus && questionsValides.length > 0 && !formulaireOuvert && (
-    <div style={{
-      background: '#FFF9FC', border: '1px solid #F2DDE9', borderRadius: 16,
-      padding: '15px 16px', marginTop: 18,
-    }}>
-      <p style={{ fontSize: 14.5, fontWeight: 700, color: '#2D2D2D', margin: 0 }}>
-        Quelques questions avant de réserver
+    <>
+      <p style={{
+        fontSize: 13.5, color: '#6B6470', lineHeight: 1.5,
+        margin: '14px 0 0', textAlign: 'center',
+      }}>
+        {pro?.pseudo || pro?.prenom} a {questionsValides.length === 1
+          ? 'une question' : `${questionsValides.length} questions`} à vous poser
+        avant de fixer votre rendez-vous.
       </p>
-      <p style={{ fontSize: 13.5, color: '#6B6470', margin: '6px 0 0', lineHeight: 1.5 }}>
-        {pro?.pseudo || pro?.prenom} a {questionsValides.length === 1 ? 'une question' : `${questionsValides.length} questions`} à
-        vous poser avant de fixer votre rendez-vous.
-      </p>
-    </div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+        <button
+          onClick={() => setFormulaireOuvert(true)}
+          style={{
+            border: 'none', borderRadius: 11, padding: '10px 20px',
+            background: GLAMIA_PINK, color: '#fff', fontSize: 13.5,
+            fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+          Répondre au formulaire
+        </button>
+      </div>
+    </>
   )
 
   const blocFormulaire = !refus && formulaireOuvert && questionsValides.length > 0 && (
@@ -1108,50 +1117,16 @@ export default function ReservationPage() {
   const identiteRemplie = !!clientePrenom.trim() && !!clienteNom.trim()
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())
 
-  const barreAction = (() => {
-    if (step !== 1) return null
-    if (phoneStatus !== 'known' && phoneStatus !== 'unknown') return null
-    if (reprogRdvId || modifRdvId) return null
-    // Refusée : il n'y a plus d'action à proposer, seulement à écrire à la pro.
-    if (refus) return null
-
-    const aRepondre = questionsValides.length > 0
-
-    let libelle: string
-    let action: () => void
-    let permis: boolean
-
-    if (aRepondre && !formulaireOuvert) {
-      libelle = 'Répondre au formulaire'
-      action = () => setFormulaireOuvert(true)
-      permis = phoneStatus === 'unknown' ? identiteRemplie : true
-    } else if (aRepondre && !formulaireComplet) {
-      libelle = 'Valider mes réponses'
-      action = () => {}
-      permis = false
-    } else {
-      libelle = repriseAttente ? 'Confirmer cette place' : 'Prendre rendez-vous'
-      action = () => setStep(repriseAttente ? 5 : 2)
-      permis = phoneStatus === 'unknown' ? identiteRemplie : true
-    }
-
-    return (
-      <div style={{
-        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40,
-        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(10px)',
-        borderTop: '1px solid #F1E7EC', padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
-      }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <button
-            onClick={() => { if (permis) action() }}
-            disabled={!permis}
-            style={{ ...S.btn, margin: 0, opacity: permis ? 1 : 0.45 }}>
-            {libelle}
-          </button>
-        </div>
-      </div>
-    )
-  })()
+  // Le bouton qui emmène au rendez-vous. Il ne paraît qu'une fois le
+  // formulaire ouvert — ou s'il n'y a pas de formulaire du tout.
+  const boutonRendezVous = !refus && (formulaireOuvert || questionsValides.length === 0) && (
+    <button
+      onClick={() => { if (formulaireComplet) setStep(repriseAttente ? 5 : 2) }}
+      disabled={!formulaireComplet}
+      style={{ ...S.btn, marginTop: 22, opacity: formulaireComplet ? 1 : 0.45 }}>
+      {repriseAttente ? 'Confirmer cette place' : 'Prendre rendez-vous'}
+    </button>
+  )
 
   useEffect(() => {
     if (repriseFaite.current || !pro || Object.keys(catalogue).length === 0) return
@@ -3161,7 +3136,7 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : step === 1 ? '120px' : '80px'}` }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
         {/* ── Bannière pro ── */}
         {pro?.message_accueil && (
@@ -3270,12 +3245,15 @@ export default function ReservationPage() {
 
             {phoneStatus === 'known' && (
               <div>
-                <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <User size={28} color={GLAMIA_PINK} />
-                  <div>
-                    <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
-                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
+                <div style={{ ...S.infoBox, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <User size={28} color={GLAMIA_PINK} />
+                    <div>
+                      <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
+                      <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
+                    </div>
                   </div>
+                  {blocAnnonceFormulaire}
                 </div>
 
                 {/* Réduction personnelle accordée par la pro */}
@@ -3793,9 +3771,9 @@ export default function ReservationPage() {
                     prestations : ces panneaux ont leur propre bouton de confirmation */}
                 {!reprogRdvId && !modifRdvId && (
                   <>
-                    {blocAnnonceFormulaire}
                     {blocFormulaire}
                     {blocRefus}
+                    {boutonRendezVous}
                   </>
                 )}
 
@@ -3909,9 +3887,10 @@ export default function ReservationPage() {
                   </div>
                 </div>
 
-                {blocAnnonceFormulaire}
+                {identiteRemplie && blocAnnonceFormulaire}
                 {blocFormulaire}
                 {blocRefus}
+                {identiteRemplie && boutonRendezVous}
 
                 {/* Carte de fidélité vierge pour nouvelle cliente */}
                 {fideliteConfig?.active && (
@@ -3958,7 +3937,6 @@ export default function ReservationPage() {
             </div>
 
             {phoneStatus === 'idle' && blocVitrine}
-            {barreAction}
           </div>
         )}
 
