@@ -900,35 +900,33 @@ export default function ReservationPage() {
   const blocRefus = refus && (
     <div style={{
       background: '#fff', border: '1.5px solid #F0D4CF', borderRadius: 16,
-      padding: 18, marginTop: 18,
+      padding: 18, marginTop: 18, marginBottom: 30,
     }}>
-      <p style={{ fontSize: 16, fontWeight: 700, color: '#2D2D2D', margin: 0, lineHeight: 1.45 }}>
-        {refus.message || 'Je ne peux pas vous recevoir pour cette demande.'}
+      <p style={{
+        fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
+        color: '#B4564C', margin: 0,
+      }}>Message de {pro?.pseudo || pro?.prenom}</p>
+
+      <p style={{
+        fontSize: 16, fontWeight: 600, color: '#2D2D2D',
+        margin: '8px 0 0', lineHeight: 1.5,
+      }}>
+        «&nbsp;{refus.message || 'Je ne peux pas vous recevoir pour cette demande.'}&nbsp;»
       </p>
-      <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '10px 0 0' }}>
+
+      <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '12px 0 0' }}>
         {refus.question} — vous avez répondu «&nbsp;{refus.reponse}&nbsp;»
       </p>
 
       {reseaux.length > 0 && (
         <>
-          <p style={{ fontSize: 13.5, color: '#4A444E', margin: '16px 0 8px' }}>
-            Écrivez-moi, on en parle&nbsp;:
+          <p style={{ fontSize: 13.5, color: '#4A444E', margin: '18px 0 10px' }}>
+            Écrivez-lui, vous en parlerez directement&nbsp;:
           </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {reseaux.map(r => (
-              <a
-                key={r.nom}
-                href={r.url(r.valeur as string)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none',
-                  background: '#FFF6FA', border: '1px solid #EDD9E6', borderRadius: 11,
-                  padding: '9px 13px', fontSize: 13, fontWeight: 700, color: '#8E4E72',
-                }}>
-                {r.nom}
-              </a>
-            ))}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={30} />}
+            {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={30} />}
+            {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={30} />}
           </div>
         </>
       )}
@@ -936,11 +934,13 @@ export default function ReservationPage() {
       <button
         onClick={() => { setRefus(null); setReponsesFormulaire({}) }}
         style={{
-          width: '100%', marginTop: 16, padding: '12px 0', borderRadius: 12,
-          border: '1px solid #EDE0E8', background: '#fff', cursor: 'pointer',
-          fontSize: 13.5, fontWeight: 700, color: '#8A8A9A', fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          width: '100%', marginTop: 20, padding: '13px 0', borderRadius: 12,
+          border: 'none', background: '#F1EBEE', cursor: 'pointer',
+          fontSize: 13.5, fontWeight: 700, color: '#4A444E', fontFamily: 'inherit',
         }}>
-        Revenir en arrière
+        <ChevronDown size={15} color="#4A444E" style={{ transform: 'rotate(90deg)' }} />
+        Modifier mes réponses
       </button>
     </div>
   )
@@ -981,12 +981,12 @@ export default function ReservationPage() {
         const donnee = reponsesFormulaire[q.id] ?? ''
         return (
           <div key={q.id} style={{
-            padding: '14px 0',
+            padding: '13px 0',
             borderTop: index === 0 ? 'none' : '1px solid #F5EFF2',
           }}>
             <p style={{
-              fontSize: 14.5, fontWeight: 600, color: '#2D2D2D',
-              margin: '0 0 12px', lineHeight: 1.4, textAlign: 'center',
+              fontSize: 13.5, fontWeight: 600, color: '#2D2D2D',
+              margin: '0 0 11px', lineHeight: 1.4, textAlign: 'center',
             }}>
               {q.libelle}
               {!q.obligatoire && <span style={{ color: '#A9A0AA', fontSize: 12, fontWeight: 400 }}> · facultatif</span>}
@@ -999,7 +999,7 @@ export default function ReservationPage() {
                 rows={3}
                 style={{
                   width: '100%', boxSizing: 'border-box', border: '1px solid #F0DCE8',
-                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 14,
+                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 13,
                   fontFamily: 'inherit', color: '#2D2D2D', resize: 'vertical',
                   outlineColor: GLAMIA_PINK,
                 }}
@@ -1018,7 +1018,7 @@ export default function ReservationPage() {
                         border: `1px solid ${choisi ? GLAMIA_PINK : '#F0DCE8'}`,
                         background: choisi ? GLAMIA_PINK : '#FFF6FA',
                         color: choisi ? '#fff' : '#8E4E72',
-                        borderRadius: 12, padding: '10px 18px', fontSize: 13.5,
+                        borderRadius: 12, padding: '9px 16px', fontSize: 12.5,
                         fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                         transition: 'background .15s, color .15s, border-color .15s',
                       }}>
