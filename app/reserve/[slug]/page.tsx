@@ -569,6 +569,26 @@ export default function ReservationPage() {
   const [choisiALaMain, setChoisiALaMain] = useState(false)
   // Le formulaire ne se montre pas tout seul : on l'annonce, elle l'ouvre.
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
+  // Le haut du formulaire : on y descend dès qu'il s'ouvre.
+  const hautFormulaire = useRef<HTMLDivElement | null>(null)
+
+  /**
+   * OUVRIR ET MONTRER, D'UN SEUL GESTE.
+   *
+   * Le formulaire s'ouvrait sous la ligne de flottaison : la cliente touchait
+   * le bouton, la page ne bougeait pas, et rien ne lui disait que les
+   * questions étaient arrivées plus bas. Elle croyait que le bouton n'avait
+   * pas marché.
+   *
+   * On attend un souffle que le navigateur ait dessiné les questions — sans
+   * ça, on viserait une hauteur qui n'existe pas encore.
+   */
+  const ouvrirFormulaire = () => {
+    setFormulaireOuvert(true)
+    setTimeout(() => {
+      hautFormulaire.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
   const departToucher = useRef<number | null>(null)
   // Les réponses au formulaire, et le refus s'il y en a un.
   const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
@@ -966,7 +986,7 @@ export default function ReservationPage() {
       </p>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 26 }}>
         <button
-          onClick={() => setFormulaireOuvert(true)}
+          onClick={ouvrirFormulaire}
           style={{
             border: 'none', borderRadius: 11, padding: '10px 20px',
             background: GLAMIA_PINK, color: '#fff', fontSize: 13.5,
@@ -979,7 +999,8 @@ export default function ReservationPage() {
   )
 
   const blocFormulaire = !refus && formulaireOuvert && questionsValides.length > 0 && (
-    <div style={{
+    <div ref={hautFormulaire} style={{
+      scrollMarginTop: 18,
       background: '#fff', border: '1px solid #EDE0E8', borderRadius: 16,
       marginTop: 18, padding: '4px 16px',
     }}>
