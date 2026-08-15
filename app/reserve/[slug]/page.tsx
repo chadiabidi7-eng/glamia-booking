@@ -622,7 +622,7 @@ export default function ReservationPage() {
       && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
     const surAvis = onglet === 'avis' && avisMontrables.length > 0
-    const duree = surAvis ? 3200 : 4500
+    const duree = surAvis ? 3000 : 4500
     const t = setTimeout(() => {
       if (surAvis && avisMontre < avisMontrables.length - 1) setAvisMontre(v => v + 1)
       else if (onglets.length > 1) ongletSuivant()
@@ -631,13 +631,12 @@ export default function ReservationPage() {
     return () => clearTimeout(t)
   }, [onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
 
+  /** Il n'y a un rail que sur les avis, et seulement s'il y en a plusieurs. */
+  const peutGlisser = onglet === 'avis' && avisMontrables.length > 1
+
   const glisser = (sens: 1 | -1) => {
-    if (onglet === 'avis' && avisMontrables.length > 1) {
-      setAvisMontre(v => (v + sens + avisMontrables.length) % avisMontrables.length)
-      return
-    }
-    const i = onglets.findIndex(o => o.cle === onglet)
-    setOnglet(onglets[(i + sens + onglets.length) % onglets.length].cle)
+    if (!peutGlisser) return
+    setAvisMontre(v => (v + sens + avisMontrables.length) % avisMontrables.length)
   }
 
   const unAvis = (a: typeof avisMontrables[number]) => (
@@ -764,7 +763,7 @@ export default function ReservationPage() {
 
       {/* La carte. Un seul endroit où regarder. */}
       <div
-        onTouchStart={e => { departToucher.current = e.touches[0].clientX }}
+        onTouchStart={e => { if (peutGlisser) departToucher.current = e.touches[0].clientX }}
         onTouchMove={e => {
           // La carte SUIT LE DOIGT. Sans ça, rien ne dit qu'on peut glisser :
           // on tire, il ne se passe rien, on n'essaie plus.
@@ -812,8 +811,6 @@ export default function ReservationPage() {
             background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
             padding: '15px 16px', minHeight: 116,
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            transform: `translateX(${decalage}px)`,
-            transition: decalage === 0 ? 'transform .3s' : 'none',
           }}>
             {onglet === 'adresse' ? contenuAdresse : contenuAccueil}
           </div>
