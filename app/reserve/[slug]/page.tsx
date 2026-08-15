@@ -550,9 +550,6 @@ export default function ReservationPage() {
     options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
   }
   const [vitrine, setVitrine] = useState<Vitrine | null>(null)
-  // Une seule carte ouverte à la fois : deux dépliées et le champ du numéro
-  // sort de l'écran.
-  const [carteOuverte, setCarteOuverte] = useState<'avis' | 'ou' | 'savoir' | null>(null)
   const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
   // Le carrousel d'accueil : il défile tout seul jusqu'à ce qu'on le touche.
   const [lame, setLame] = useState(0)
@@ -592,36 +589,53 @@ export default function ReservationPage() {
   // ─────────────────────────────────────────────────────────────────────────
   const lames: {
     cle: 'avis' | 'ou' | 'savoir'
-    titre: string; corps: React.ReactNode
+    titre: string; fond: React.CSSProperties; corps: React.ReactNode
   }[] = []
 
   if (vitrine?.avis_actifs && (vitrine?.nb_avis ?? 0) > 0) {
-    const dernier = vitrine.avis[0]
+    // Le dernier avis qui porte une photo — c'est lui qui habille la lame.
+    const avecPhoto = vitrine.avis.find(a => a.photos.length > 0)
+    const dernier = avecPhoto ?? vitrine.avis[0]
+    const photo = avecPhoto?.photos[0]?.vignette
     lames.push({
       cle: 'avis',
       titre: 'Avis clientes',
+      fond: photo
+        ? {
+            backgroundImage:
+              `linear-gradient(180deg, rgba(24,12,20,0.15) 0%, rgba(24,12,20,0.82) 68%), url(${photo})`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+          }
+        : { background: '#FBF1F6', border: '1px solid #F1DCE8' },
       corps: (
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
             <span style={{
               fontFamily: 'Georgia, "Times New Roman", serif',
-              fontSize: 40, color: '#2D2D2D', lineHeight: 1, letterSpacing: -1,
+              fontSize: 42, color: photo ? '#fff' : '#2D2D2D', lineHeight: 1, letterSpacing: -1,
             }}>
               {String(vitrine.note).replace('.', ',')}
             </span>
-            <span style={{ fontSize: 14, color: GLAMIA_PINK, letterSpacing: 1 }}>
+            <span style={{ fontSize: 14, color: photo ? '#FFD9E8' : GLAMIA_PINK, letterSpacing: 1 }}>
               {'★'.repeat(Math.round(vitrine.note ?? 0))}
-              <span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - Math.round(vitrine.note ?? 0))}</span>
+              <span style={{ color: photo ? 'rgba(255,255,255,0.35)' : '#E7DBE3' }}>
+                {'★'.repeat(5 - Math.round(vitrine.note ?? 0))}
+              </span>
             </span>
-            <span style={{ fontSize: 12.5, color: '#A79DAB' }}>{vitrine.nb_avis} avis</span>
+            <span style={{ fontSize: 12.5, color: photo ? 'rgba(255,255,255,0.75)' : '#A79DAB' }}>
+              {vitrine.nb_avis} avis
+            </span>
           </div>
           {dernier?.texte && (
             <p style={{
               fontFamily: 'Georgia, "Times New Roman", serif',
-              fontSize: 14.5, color: '#4A444E', lineHeight: 1.5, margin: '10px 0 0',
+              fontSize: 15, color: photo ? '#fff' : '#4A444E', lineHeight: 1.5, margin: '10px 0 0',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>«&nbsp;{dernier.texte}&nbsp;»</p>
           )}
+          <p style={{
+            fontSize: 12, color: photo ? 'rgba(255,255,255,0.7)' : '#A79DAB', margin: '6px 0 0',
+          }}>{dernier?.auteur}{dernier?.prestations ? ` · ${dernier.prestations}` : ''}</p>
         </>
       ),
     })
@@ -631,6 +645,7 @@ export default function ReservationPage() {
     lames.push({
       cle: 'ou',
       titre: 'Où je suis',
+      fond: { background: '#F4F1F7', border: '1px solid #E7E1EE' },
       corps: (
         <>
           <p style={{
@@ -655,9 +670,10 @@ export default function ReservationPage() {
     lames.push({
       cle: 'savoir',
       titre: 'Bon à savoir',
+      fond: { background: '#F3F7F3', border: '1px solid #DFEBE0' },
       corps: (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {conditions.slice(0, 4).map((c, i) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+          {conditions.map((c, i) => (
             <span key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
@@ -666,11 +682,7 @@ export default function ReservationPage() {
               {c.oui ? '✓' : '✕'} {c.libelle}
             </span>
           ))}
-          {conditions.length > 4 && (
-            <span style={{ fontSize: 12, color: '#8A8A9A', alignSelf: 'center' }}>
-              +{conditions.length - 4}
-            </span>
-          )}
+
         </div>
       ),
     })
@@ -678,76 +690,31 @@ export default function ReservationPage() {
 
   // Le défilement automatique, tant que personne n'a touché.
   useEffect(() => {
-    if (carrouselFige || lames.length < 2 || carteOuverte) return
+    if (carrouselFige || lames.length < 2) return
     // Un défilement automatique chez quelqu'un qui a demandé moins d'animations
     // n'est pas un détail : c'est une gêne, parfois un malaise.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const t = setInterval(() => setLame(v => (v + 1) % lames.length), 4500)
     return () => clearInterval(t)
-  }, [carrouselFige, lames.length, carteOuverte])
+  }, [carrouselFige, lames.length])
 
   const figer = () => setCarrouselFige(true)
 
-  const detail = carteOuverte === 'avis' ? (
-    <>
-      {vitrine?.avis.map((a, i) => (
-        <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #F5EFF2', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
-            <span style={{ fontSize: 12, color: GLAMIA_PINK, letterSpacing: 1 }}>
-              {'★'.repeat(a.note)}<span style={{ color: '#E3D8DF' }}>{'★'.repeat(5 - a.note)}</span>
-            </span>
-          </div>
-          {a.prestations && <p style={{ fontSize: 11.5, color: '#A9A0AA', margin: '2px 0 0' }}>{a.prestations}</p>}
-          {a.texte && <p style={{ fontSize: 13.5, lineHeight: 1.5, color: '#4A444E', margin: '6px 0 0' }}>{a.texte}</p>}
-          {a.photos.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              {a.photos.map((ph, j) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={j} src={ph.vignette} alt="" onClick={() => setPhotoOuverte(ph.pleine)}
-                  style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }} />
-              ))}
-            </div>
-          )}
-          {a.reponse && (
-            <div style={{ background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`, borderRadius: 8, padding: '8px 10px', marginTop: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#8E4E72', margin: 0, letterSpacing: 0.5 }}>SA RÉPONSE</p>
-              <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: '3px 0 0' }}>{a.reponse}</p>
-            </div>
-          )}
-        </div>
-      ))}
-    </>
-  ) : carteOuverte === 'ou' ? (
-    <>
-      {vitrine?.adresse.exacte
-        ? <p style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: 0, whiteSpace: 'pre-line' }}>{vitrine.adresse.exacte}</p>
-        : (
-          <>
-            {lieu.map((l, i) => (
-              <p key={i} style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: i === 0 ? 0 : '4px 0 0' }}>{l}</p>
-            ))}
-            {attente && <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '8px 0 0' }}>{attente}</p>}
-          </>
-        )}
-    </>
-  ) : carteOuverte === 'savoir' ? (
-    <>
-      {conditions.map((c, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-          <span style={{
-            width: 19, height: 19, borderRadius: 10, display: 'grid', placeItems: 'center',
-            background: c.oui ? '#E8F5E9' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
-            fontSize: 11, fontWeight: 800, flexShrink: 0,
-          }}>{c.oui ? '✓' : '✕'}</span>
-          <span style={{ fontSize: 14, color: '#2D2D2D' }}>{c.libelle}</span>
-        </div>
-      ))}
-    </>
-  ) : null
-
   const blocVitrine = lames.length > 0 && (
     <div style={{ marginTop: 20 }}>
+      {/* Le remplissage de la barre : c'est lui qui donne le rythme, et il
+          repart de zéro à chaque lame. */}
+      <style>{`
+        @keyframes glamiaRemplir { from { width: 0% } to { width: 100% } }
+        @keyframes glamiaMonter {
+          from { opacity: 0; transform: translateY(8px) }
+          to   { opacity: 1; transform: none }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .glamia-lame, .glamia-jauge { animation: none !important }
+        }
+      `}</style>
+
       <div
         onTouchStart={e => { departToucher.current = e.touches[0].clientX; figer() }}
         onTouchEnd={e => {
@@ -759,21 +726,21 @@ export default function ReservationPage() {
           }
           departToucher.current = null
         }}
-        style={{ overflow: 'hidden', borderRadius: 18 }}>
+        style={{ overflow: 'hidden', borderRadius: 20 }}>
         <div style={{
           display: 'flex',
           transform: `translateX(-${lame * 100}%)`,
-          transition: 'transform .45s cubic-bezier(.22,.61,.36,1)',
+          transition: 'transform .5s cubic-bezier(.22,.61,.36,1)',
         }}>
-          {lames.map(l => (
+          {lames.map((l, i) => (
             <div key={l.cle} style={{ flex: '0 0 100%', minWidth: 0 }}>
               <div
-                onClick={() => { figer(); setCarteOuverte(carteOuverte === l.cle ? null : l.cle) }}
+                className="glamia-lame"
                 style={{
-                  background: '#fff',
-                  border: '1px solid #F1E7EC', borderRadius: 18,
-                  padding: '16px 18px', minHeight: 104, cursor: 'pointer',
+                  ...l.fond,
+                  borderRadius: 20, padding: '18px 20px', minHeight: 156,
                   display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  animation: i === lame ? 'glamiaMonter .45s ease both' : undefined,
                 }}>
                 {l.corps}
               </div>
@@ -783,27 +750,27 @@ export default function ReservationPage() {
       </div>
 
       {lames.length > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 5, marginTop: 11 }}>
           {lames.map((l, i) => (
             <button
               key={l.cle}
               onClick={() => { figer(); setLame(i) }}
               aria-label={l.titre}
               style={{
-                width: i === lame ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0,
-                background: i === lame ? GLAMIA_PINK : '#E7DBE3', cursor: 'pointer',
-                transition: 'width .3s, background .3s',
-              }}
-            />
+                flex: 1, height: 3, borderRadius: 2, border: 'none', padding: 0,
+                background: '#EFE4EA', cursor: 'pointer', overflow: 'hidden',
+              }}>
+              <span
+                className="glamia-jauge"
+                style={{
+                  display: 'block', height: '100%', borderRadius: 2, background: GLAMIA_PINK,
+                  width: i < lame ? '100%' : i > lame ? '0%' : (carrouselFige ? '100%' : undefined),
+                  animation: i === lame && !carrouselFige ? 'glamiaRemplir 4.5s linear forwards' : undefined,
+                }}
+              />
+            </button>
           ))}
         </div>
-      )}
-
-      {detail && (
-        <div style={{
-          background: '#fff', border: '1px solid #F2DDE9', borderRadius: 16,
-          padding: 14, marginTop: 10,
-        }}>{detail}</div>
       )}
     </div>
   )
