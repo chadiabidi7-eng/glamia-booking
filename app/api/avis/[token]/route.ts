@@ -152,7 +152,9 @@ export async function POST(
     .from('clientes').select('prenom, nom').eq('id', rdv.cliente_id).maybeSingle()
 
   // ── LES PHOTOS ──
+  const aDeposer: { chemin: string; buffer: Buffer }[] = []
   const adresses: string[] = []
+
   for (let i = 0; i < photos.length; i++) {
     const paire = photos[i] as { pleine: string; vignette: string }
     for (const [suffixe, dataUrl] of [
@@ -164,16 +166,24 @@ export async function POST(
         return NextResponse.json({ error: 'photo_trop_lourde' }, { status: 400 })
       }
       const chemin = `${rdv.pro_id}/${rdv.id}/${i + 1}-${suffixe}.jpg`
-      const { error } = await supabaseAdmin.storage
-        .from('avis')
-        .upload(chemin, buffer, { contentType: 'image/jpeg', upsert: true })
-      if (error) {
-        console.error('[api/avis] upload :', chemin, error)
-        return NextResponse.json({ error: 'upload_failed' }, { status: 500 })
-      }
+      aDeposer.push({ chemin, buffer })
       if (suffixe === 'pleine') {
         adresses.push(supabaseAdmin.storage.from('avis').getPublicUrl(chemin).data.publicUrl)
       }
+    }
+  }
+
+  if (aDeposer.length > 0) {
+    const resultats = await Promise.all(
+      aDeposer.map(({ chemin, buffer }) =>
+        supabaseAdmin.storage
+          .from('avis')
+          .upload(chemin, buffer, { contentType: 'image/jpeg', upsert: true })),
+    )
+    const rate = resultats.findIndex(r => r.error)
+    if (rate >= 0) {
+      console.error('[api/avis] upload :', aDeposer[rate].chemin, resultats[rate].error)
+      return NextResponse.json({ error: 'upload_failed' }, { status: 500 })
     }
   }
 
@@ -196,6 +206,34 @@ export async function POST(
     }
     console.error('[api/avis] écriture :', ecriture)
     return NextResponse.json({ error: 'ecriture_failed' }, { status: 500 })
+  }
+
+  // La pro l'apprend tout de suite. Un avis qu'elle découvre trois jours plus
+  // tard, elle ne le partage plus et n'y répond plus : c'est le jour même
+  // qu'il vaut quelque chose. L'échec de la notification n'annule rien —
+  // l'avis est déjà écrit.
+  try {
+    const { data: profil } = await supabaseAdmin
+      .from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle()
+    if (profil?.push_token) {
+      const etoiles = '★'.repeat(note) + '☆'.repeat(5 - note)
+      const auteur = nomCourt(cliente?.prenom as string, cliente?.nom as string)
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: profil.push_token,
+          title: `Nouvel avis ${etoiles}`,
+          body: etat.prestations
+            ? `${auteur} t'a laissé un avis sur ${etat.prestations}.`
+            : `${auteur} t'a laissé un avis.`,
+          sound: 'default',
+          data: { type: 'avis' },
+        }),
+      })
+    }
+  } catch (e) {
+    console.error('[api/avis] notification :', e)
   }
 
   return NextResponse.json({ ok: true })

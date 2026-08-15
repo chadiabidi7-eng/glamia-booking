@@ -152,9 +152,9 @@ export default function PageAvis() {
             key={i}
             type="button"
             aria-label={`${i} étoile${i > 1 ? 's' : ''}`}
-            onClick={() => setNote(i)}
-            onMouseEnter={() => setSurvol(i)}
-            onMouseLeave={() => setSurvol(0)}
+            onPointerDown={() => { setNote(i); setSurvol(0) }}
+            onPointerEnter={e => { if (e.pointerType === 'mouse') setSurvol(i) }}
+            onPointerLeave={() => setSurvol(0)}
             style={{
               ...S.etoile,
               color: i <= (survol || note) ? ROSE : '#E3D8DF',
