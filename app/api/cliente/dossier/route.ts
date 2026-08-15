@@ -50,6 +50,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ rdvs: [], fidelite: null })
     }
 
+    // Lancé tout de suite, attendu tout à la fin.
+    const avisPromis = (async () => {
+    // ── CE SUR QUOI ELLE PEUT ENCORE DONNER SON AVIS ───────────────────────
+    // Un avis ne se demande pas par courrier : il se propose là où la cliente
+    // revient déjà, c'est-à-dire sur la page de sa praticienne, quand elle a
+    // donné son numéro. On lui montre ses rendez-vous des trois derniers
+    // jours, et rien d'autre.
+    //
+    // On ne renvoie que ce qu'il faut pour afficher un bouton — la date, la
+    // prestation, le jeton. Jamais le prix, jamais un identifiant de paiement.
+      const { data: pro } = await supabaseAdmin
+      .from('profiles').select('avis_actifs').eq('id', pro_id).maybeSingle()
+
+      let avisAProposer: { token: string; date: string; prestations: string }[] = []
+      if (pro?.avis_actifs !== false) {
+      const { data: passes } = await supabaseAdmin
+        .from('rendez_vous')
+        .select('id, date, duree, technique, techniques, token_confirmation')
+        .eq('cliente_id', cliente_id)
+        .eq('pro_id', pro_id)
+        .neq('statut', 'annule')
+        .lt('date', new Date().toISOString())
+        .gte('date', new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString())
+        .order('date', { ascending: false })
+
+      const deja = new Set<string>()
+      const idsPasses = (passes ?? []).map(r => r.id as string)
+      if (idsPasses.length) {
+        const { data: avisExistants } = await supabaseAdmin
+          .from('avis_clientes').select('rdv_id').in('rdv_id', idsPasses)
+        for (const a of avisExistants ?? []) deja.add(a.rdv_id as string)
+      }
+
+      avisAProposer = (passes ?? [])
+        .filter(r => {
+          if (deja.has(r.id as string)) return false
+          if (!r.token_confirmation) return false
+          // La fenêtre est comptée depuis la FIN du rendez-vous, comme côté
+          // serveur d'écriture : les deux doivent dire la même chose.
+          const fin = new Date(r.date as string).getTime() + ((r.duree as number) ?? 60) * 60 * 1000
+          return Date.now() <= fin + 72 * 3600 * 1000
+        })
+        .map(r => {
+          const listes = Array.isArray(r.techniques) ? (r.techniques as string[]) : []
+          return {
+            token: r.token_confirmation as string,
+            date: r.date as string,
+            prestations: (listes.length ? listes : [r.technique]).filter(Boolean).join(' · '),
+          }
+        })
+    }
+
+      return avisAProposer
+    })()
+
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
       .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le')
@@ -103,7 +158,12 @@ export async function POST(req: NextRequest) {
       .eq('cliente_id', cliente_id)
       .maybeSingle()
 
-    return NextResponse.json({ rdvs: rdvsAvecPaiement, fidelite: fidelite ?? null, delai_annulation: delaiAnnulation })
+    return NextResponse.json({
+      rdvs: rdvsAvecPaiement,
+      fidelite: fidelite ?? null,
+      delai_annulation: delaiAnnulation,
+      avis_a_laisser: await avisPromis,
+    })
   } catch (e) {
     console.error('[cliente/dossier] erreur', e)
     return NextResponse.json({ error: 'erreur_interne' }, { status: 500 })

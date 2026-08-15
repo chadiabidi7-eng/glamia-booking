@@ -10,11 +10,12 @@ import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
+import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 
 // ─────────────────────────────────────────────
@@ -490,8 +491,9 @@ function OffresSection({
 // Main Component
 // ─────────────────────────────────────────────
 const champAttente: React.CSSProperties = {
+  // 16 points, comme tous les champs : en dessous, Safari zoome à la touche.
   width: '100%', padding: '11px 13px', marginBottom: 10, borderRadius: 10,
-  border: '1px solid #e5e7eb', fontSize: 15, outline: 'none', boxSizing: 'border-box',
+  border: '1px solid #e5e7eb', fontSize: 16, outline: 'none', boxSizing: 'border-box',
 }
 
 export default function ReservationPage() {
@@ -529,7 +531,544 @@ export default function ReservationPage() {
   const [clienteEmail,  setClienteEmail]  = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+
+  // ── LA VITRINE ── ce que la page montre avant de réserver.
+  // Tout est là, mais tout est plié : la première étape reste celle où l'on
+  // entre son numéro, et ce geste ne doit pas être noyé sous des cartes.
+  type Vitrine = {
+    avis_actifs: boolean; note: number | null; nb_avis: number
+    avis: { auteur: string; note: number; texte: string | null; prestations: string | null
+            reponse: string | null; cree_le: string
+            photos: { vignette: string; pleine: string }[] }[]
+    adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
+    accueil: Record<string, boolean | null>
+    reglement: string | null
+    formulaire: { nouvelles: QuestionFormulaire[]; connues: QuestionFormulaire[] }
+    demander_inspirations: boolean
+  }
+  type QuestionFormulaire = {
+    id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
+    options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
+  }
+  const [vitrine, setVitrine] = useState<Vitrine | null>(null)
+  // La visionneuse : les photos d'un avis, et celle qu'on regarde.
+  const [visionneuse, setVisionneuse] = useState<{ photos: string[]; index: number } | null>(null)
+  // TOUT S'AFFICHE EN MÊME TEMPS. Le cadre du Bonjour arrivait le premier, la
+  // vitrine une seconde plus tard, et la page se réorganisait sous les yeux de
+  // la cliente au moment où elle allait toucher le champ. On attend donc que
+  // la vitrine soit là avant de dessiner quoi que ce soit.
+  const [vitrinePrete, setVitrinePrete] = useState(false)
+  // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
+  // définitif dès qu'on y touche.
+  const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
+  const [avisMontre, setAvisMontre] = useState(0)
+  // Le décalage du doigt pendant qu'on glisse : la carte suit la main, sinon
+  // rien ne dit qu'on est en train de faire défiler.
+  const [decalage, setDecalage] = useState(0)
+  // Le défilement s'arrête dès qu'elle choisit un onglet elle-même.
+  const [choisiALaMain, setChoisiALaMain] = useState(false)
+  // Le formulaire ne se montre pas tout seul : on l'annonce, elle l'ouvre.
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false)
+  // Le haut du formulaire : on y descend dès qu'il s'ouvre.
+  const hautFormulaire = useRef<HTMLDivElement | null>(null)
+
+  /**
+   * OUVRIR ET MONTRER, D'UN SEUL GESTE.
+   *
+   * Le formulaire s'ouvrait sous la ligne de flottaison : la cliente touchait
+   * le bouton, la page ne bougeait pas, et rien ne lui disait que les
+   * questions étaient arrivées plus bas. Elle croyait que le bouton n'avait
+   * pas marché.
+   *
+   * On attend un souffle que le navigateur ait dessiné les questions — sans
+   * ça, on viserait une hauteur qui n'existe pas encore.
+   */
+  const ouvrirFormulaire = () => {
+    setFormulaireOuvert(true)
+    setTimeout(() => {
+      hautFormulaire.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
+  const departToucher = useRef<number | null>(null)
+  // Les réponses au formulaire, et le refus s'il y en a un.
+  const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
+  const [refus, setRefus] = useState<{ question: string; reponse: string; message: string } | null>(null)
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LES CARTES DE LA VITRINE — pliées.
+  //
+  // Tout est là, rien n'encombre : une ligne par sujet, avec l'essentiel écrit
+  // dessus. La note se lit sans ouvrir, la ville aussi — c'est ce qui rassure.
+  // Une seule carte s'ouvre à la fois : deux dépliées et le champ du numéro
+  // sort de l'écran.
+  // ─────────────────────────────────────────────────────────────────────────
+  const conditions = conditionsAffichees(vitrine?.accueil)
+  const aReglement = !!vitrine?.reglement?.trim()
+  const lieu = [vitrine?.adresse.ville, vitrine?.adresse.acces].filter(Boolean) as string[]
+  const attente = vitrine ? quandLAdresse(vitrine.adresse.moment) : null
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LE BANDEAU D'ACCUEIL — trois boutons, une seule carte.
+  //
+  // Avis, Adresse, Accueil. Le bouton touché commande ce que montre la carte
+  // en dessous : un seul endroit où regarder, jamais deux fois la même chose à
+  // deux endroits.
+  //
+  // TOUT DÉFILE, ET DANS L'ORDRE. Sur « Avis », les avis passent l'un après
+  // l'autre ; le dernier passé, on glisse vers « Adresse », puis « Accueil »,
+  // puis on recommence. Une page de réservation est une vitrine : elle doit
+  // bouger, sinon personne ne lit ce qu'il y a autour du champ.
+  //
+  // ELLE S'ARRÊTE DÈS QU'ON LA TOUCHE. Un carrousel qui continue de tourner
+  // pendant qu'on lit est une punition.
+  // ─────────────────────────────────────────────────────────────────────────
+  const avisMontrables = vitrine?.avis_actifs ? (vitrine?.avis ?? []) : []
+  const aAvis = avisMontrables.length > 0
+  const aAdresse = lieu.length > 0 || !!vitrine?.adresse.exacte
+  const aAccueil = conditions.length > 0
+
+  const onglets = [
+    aAvis && { cle: 'avis' as const, nom: 'Avis' },
+    aAccueil && { cle: 'accueil' as const, nom: 'Accueil' },
+    aAdresse && { cle: 'adresse' as const, nom: 'Adresse' },
+  ].filter(Boolean) as { cle: 'avis' | 'adresse' | 'accueil'; nom: string }[]
+
+  // Le premier onglet disponible, si celui en cours n'existe pas pour cette pro.
+  useEffect(() => {
+    if (onglets.length > 0 && !onglets.some(o => o.cle === onglet)) setOnglet(onglets[0].cle)
+  }, [onglets.length, onglet])
+
+  const ongletSuivant = () => {
+    const i = onglets.findIndex(o => o.cle === onglet)
+    setOnglet(onglets[(i + 1) % onglets.length].cle)
+    setAvisMontre(0)
+  }
+
+  // Le pas automatique. Sur les avis il passe d'un avis au suivant ; arrivé au
+  // bout, il change d'onglet. Ailleurs, il change d'onglet au bout de 4,5 s.
+  useEffect(() => {
+    if (choisiALaMain || onglets.length === 0 || visionneuse) return
+    if (typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    const surAvis = onglet === 'avis' && avisMontrables.length > 0
+    const duree = surAvis ? 3000 : 4500
+    const t = setTimeout(() => {
+      if (surAvis && avisMontre < avisMontrables.length - 1) setAvisMontre(v => v + 1)
+      else if (onglets.length > 1) ongletSuivant()
+      else if (surAvis) setAvisMontre(0)
+    }, duree)
+    return () => clearTimeout(t)
+  }, [choisiALaMain, onglet, avisMontre, onglets.length, avisMontrables.length, visionneuse])
+
+  /** Il n'y a un rail que sur les avis, et seulement s'il y en a plusieurs. */
+  const peutGlisser = onglet === 'avis' && avisMontrables.length > 1
+
+  const glisser = (sens: 1 | -1) => {
+    if (!peutGlisser) return
+    setAvisMontre(v => (v + sens + avisMontrables.length) % avisMontrables.length)
+  }
+
+  const unAvis = (a: typeof avisMontrables[number]) => (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+        <span style={{
+          width: 34, height: 34, borderRadius: 17, flexShrink: 0,
+          background: '#FBE9F2', color: '#8E4E72', display: 'grid', placeItems: 'center',
+          fontSize: 12, fontWeight: 800,
+        }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+          {a.prestations && (
+            <span style={{
+              display: 'block', fontSize: 11.5, color: '#A79DAB',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{a.prestations}</span>
+          )}
+        </span>
+        <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+          {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
+        </span>
+      </div>
+
+      {a.texte && (
+        <p style={{
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          fontSize: 15, lineHeight: 1.55, color: '#3F3A42', margin: 0,
+        }}>«&nbsp;{a.texte}&nbsp;»</p>
+      )}
+
+      {a.photos.length > 0 && (
+        <div style={{ display: 'flex', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
+          {a.photos.map((ph, j) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={j}
+              src={ph.vignette}
+              alt=""
+              onClick={() => setVisionneuse({ photos: a.photos.map(p => p.pleine), index: j })}
+              style={{ width: 66, height: 66, objectFit: 'cover', borderRadius: 12, cursor: 'pointer' }}
+            />
+          ))}
+        </div>
+      )}
+
+      {a.reponse && (
+        <div style={{
+          background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
+          borderRadius: 9, padding: '8px 11px', marginTop: 11,
+        }}>
+          <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: 0 }}>{a.reponse}</p>
+        </div>
+      )}
+    </>
+  )
+
+  const contenuAdresse = (
+    <div key="adresse" className="glamia-apparait">
+      <p style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 17, fontWeight: 600, color: '#2D2D2D', margin: 0,
+      }}>
+        <MapPin size={17} color={GLAMIA_PINK} />
+        {vitrine?.adresse.exacte || vitrine?.adresse.ville}
+      </p>
+      {vitrine?.adresse.acces && (
+        <p style={{ fontSize: 14, color: '#6B6470', margin: '8px 0 0 25px' }}>{vitrine.adresse.acces}</p>
+      )}
+      {attente && !vitrine?.adresse.exacte && (
+        <p style={{ fontSize: 12.5, color: '#A79DAB', margin: '8px 0 0 25px', lineHeight: 1.45 }}>{attente}</p>
+      )}
+    </div>
+  )
+
+  const contenuAccueil = (
+    <div key="accueil" className="glamia-apparait" style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+      {conditions.map((c, i) => (
+        <span key={i} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: c.oui ? '#EDF7EE' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
+          borderRadius: 10, padding: '7px 11px', fontSize: 13, fontWeight: 600,
+        }}>
+          {c.oui ? '✓' : '✕'} {c.libelle}
+        </span>
+      ))}
+    </div>
+  )
+
+  const blocVitrine = onglets.length > 0 && (
+    <div style={{ marginTop: 30 }}>
+      <style>{`
+        @keyframes glamiaApparait {
+          from { opacity: 0; transform: translateY(6px) }
+          to   { opacity: 1; transform: none }
+        }
+        .glamia-apparait { animation: glamiaApparait .4s ease both }
+        @media (prefers-reduced-motion: reduce) { .glamia-apparait { animation: none } }
+      `}</style>
+
+      {/* Les trois boutons. Celui qui est allumé commande la carte. */}
+      <div style={{
+        display: 'flex', gap: 4, background: '#F4EEF1', borderRadius: 13, padding: 4,
+      }}>
+        {onglets.map(o => {
+          const actif = onglet === o.cle
+          return (
+            <button
+              key={o.cle}
+              onClick={() => { setChoisiALaMain(true); setOnglet(o.cle); setAvisMontre(0) }}
+              style={{
+                flex: 1, border: 'none', borderRadius: 10, padding: '9px 0', cursor: 'pointer',
+                background: actif ? '#fff' : 'transparent',
+                color: actif ? '#8E4E72' : '#8A8A9A',
+                fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
+                boxShadow: actif ? '0 1px 4px rgba(140,80,110,0.12)' : 'none',
+                transition: 'background .2s, color .2s',
+              }}>
+              {o.nom}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* La carte. Un seul endroit où regarder. */}
+      <div
+        onTouchStart={e => { if (peutGlisser) departToucher.current = e.touches[0].clientX }}
+        onTouchMove={e => {
+          // La carte SUIT LE DOIGT. Sans ça, rien ne dit qu'on peut glisser :
+          // on tire, il ne se passe rien, on n'essaie plus.
+          const depart = departToucher.current
+          if (depart === null) return
+          setDecalage((e.touches[0].clientX - depart) * 0.55)
+        }}
+        onTouchEnd={e => {
+          const depart = departToucher.current
+          if (depart === null) return
+          const ecart = e.changedTouches[0].clientX - depart
+          setDecalage(0)
+          if (Math.abs(ecart) > 40) glisser(ecart < 0 ? 1 : -1)
+          departToucher.current = null
+        }}
+        style={{
+          marginTop: 9,
+          borderRadius: 18, overflow: 'hidden',
+        }}>
+        {onglet === 'avis' ? (
+          // Le rail des avis : tous côte à côte, un morceau du suivant qui
+          // dépasse. C'est ce dépassement qui annonce qu'il y en a d'autres.
+          <div style={{
+            display: 'flex', gap: 10,
+            transform: `translateX(calc(-${avisMontre * 92}% + ${decalage}px))`,
+            transition: decalage === 0 ? 'transform .45s cubic-bezier(.22,.61,.36,1)' : 'none',
+          }}>
+            {avisMontrables.map((a, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: '0 0 90%', minWidth: 0,
+                  background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
+                  padding: '15px 16px', minHeight: 116,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                  opacity: i === avisMontre ? 1 : 0.55,
+                  transition: 'opacity .35s',
+                }}>
+                {unAvis(a)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            background: '#fff', border: '1px solid #F1E7EC', borderRadius: 18,
+            padding: '15px 16px', minHeight: 116,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          }}>
+            {onglet === 'adresse' ? contenuAdresse : contenuAccueil}
+          </div>
+        )}
+      </div>
+
+      {/* Où l'on en est dans les avis — et rien du tout s'il n'y en a qu'un. */}
+      {onglet === 'avis' && avisMontrables.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 9 }}>
+          {avisMontrables.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setAvisMontre(i)}
+              aria-label={`Avis ${i + 1}`}
+              style={{
+                width: i === avisMontre ? 16 : 5, height: 5, borderRadius: 3, border: 'none', padding: 0,
+                background: i === avisMontre ? GLAMIA_PINK : '#E7DBE3', cursor: 'pointer',
+                transition: 'width .3s, background .3s',
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  // ── LE RÈGLEMENT ── en haut, en toutes lettres, jamais plié.
+  const blocReglement = aReglement && (
+    <div style={{
+      background: '#FFF9FC', border: '1px solid #F2DDE9', borderRadius: 14,
+      padding: '14px 16px', marginBottom: 26,
+    }}>
+      <p style={{
+        fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
+        color: '#8E4E72', margin: '0 0 7px',
+      }}>Règlement</p>
+      <p style={{
+        fontSize: 13.5, lineHeight: 1.6, color: '#4A444E',
+        textAlign: 'justify', margin: 0, whiteSpace: 'pre-line',
+      }}>{vitrine?.reglement}</p>
+    </div>
+  )
+
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LE FORMULAIRE — posé DÈS LE DÉBUT, et pas après le choix du créneau.
+  //
+  // Une cliente qui ne peut pas être reçue doit l'apprendre tout de suite. Lui
+  // faire traverser cinq étapes pour lui dire non à la fin, c'est lui faire
+  // perdre son temps et laisser un mauvais souvenir de la pro.
+  //
+  // DEUX JEUX DE QUESTIONS : celles pour les clientes que la pro n'a pas dans
+  // son fichier, et celles pour les siennes. « Nouvelle » veut dire absente du
+  // fichier — pas « qui n'est jamais venue ».
+  //
+  // UNE RÉPONSE BLOQUANTE ARRÊTE TOUT sur place. Le serveur revérifiera à la
+  // création du rendez-vous : ici on informe, on ne décide pas.
+  // ─────────────────────────────────────────────────────────────────────────
+  const questionsPosees: QuestionFormulaire[] = (
+    phoneStatus === 'known' ? vitrine?.formulaire?.connues : vitrine?.formulaire?.nouvelles
+  ) ?? []
+
+  const questionsValides = questionsPosees.filter(q =>
+    q.libelle?.trim() && (q.type !== 'choix' || (q.options ?? []).filter(o => o.trim()).length >= 2))
+
+  const formulaireComplet = questionsValides
+    .filter(q => q.obligatoire)
+    .every(q => (reponsesFormulaire[q.id] ?? '').trim().length > 0)
+
+  const repondreFormulaire = (q: QuestionFormulaire, valeur: string) => {
+    setReponsesFormulaire(prev => ({ ...prev, [q.id]: valeur }))
+    if ((q.bloque ?? []).includes(valeur)) {
+      setRefus({ question: q.libelle, reponse: valeur, message: q.messageBlocage?.trim() || '' })
+    }
+  }
+
+  const reseaux = [
+    { nom: 'Instagram', valeur: pro?.instagram, url: (p: string) => `https://instagram.com/${p.replace('@', '')}` },
+    { nom: 'TikTok',    valeur: pro?.tiktok,    url: (p: string) => `https://tiktok.com/@${p.replace('@', '')}` },
+    { nom: 'Snapchat',  valeur: pro?.snapchat,  url: (p: string) => `https://snapchat.com/add/${p.replace('@', '')}` },
+  ].filter(r => (r.valeur ?? '').trim())
+
+  const blocRefus = refus && (
+    <div style={{
+      background: '#fff', border: '1.5px solid #F0D4CF', borderRadius: 16,
+      padding: 18, marginTop: 18, marginBottom: 30,
+    }}>
+      <p style={{
+        fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
+        color: '#B4564C', margin: 0,
+      }}>Message de {pro?.pseudo || pro?.prenom}</p>
+
+      <p style={{
+        fontSize: 16, fontWeight: 600, color: '#2D2D2D',
+        margin: '8px 0 0', lineHeight: 1.5,
+      }}>
+        «&nbsp;{refus.message || 'Je ne peux pas vous recevoir pour cette demande.'}&nbsp;»
+      </p>
+
+      <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '12px 0 0' }}>
+        {refus.question} — vous avez répondu «&nbsp;{refus.reponse}&nbsp;»
+      </p>
+
+      {reseaux.length > 0 && (
+        <>
+          <p style={{ fontSize: 13.5, color: '#4A444E', margin: '18px 0 10px' }}>
+            Écrivez-lui, vous en parlerez directement&nbsp;:
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={30} />}
+            {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={30} />}
+            {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={30} />}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => { setRefus(null); setReponsesFormulaire({}) }}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          width: '100%', marginTop: 20, padding: '13px 0', borderRadius: 12,
+          border: 'none', background: '#F1EBEE', cursor: 'pointer',
+          fontSize: 13.5, fontWeight: 700, color: '#4A444E', fontFamily: 'inherit',
+        }}>
+        <ChevronDown size={15} color="#4A444E" style={{ transform: 'rotate(90deg)' }} />
+        Modifier mes réponses
+      </button>
+    </div>
+  )
+
+  // ── L'ANNONCE ──
+  // Une cliente à qui on jette cinq questions sans prévenir se demande d'abord
+  // pourquoi on l'interroge. On lui dit qui demande, et ce qu'on attend d'elle.
+  const annonceFormulaire = (permis: boolean) => !refus && questionsValides.length > 0 && !formulaireOuvert && (
+    <>
+      <p style={{
+        fontSize: 13.5, color: '#6B6470', lineHeight: 1.5,
+        margin: '14px 0 0', textAlign: 'center',
+      }}>
+        {pro?.pseudo || pro?.prenom} a {questionsValides.length === 1
+          ? 'une question' : `${questionsValides.length} questions`} à vous poser
+        avant de fixer votre rendez-vous.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 26 }}>
+        <button
+          onClick={() => { if (permis) ouvrirFormulaire() }}
+          disabled={!permis}
+          style={{
+            border: 'none', borderRadius: 11, padding: '10px 20px',
+            background: GLAMIA_PINK, color: '#fff', fontSize: 13.5,
+            fontWeight: 700, cursor: permis ? 'pointer' : 'default',
+            fontFamily: 'inherit', opacity: permis ? 1 : 0.4,
+          }}>
+          Répondre au formulaire
+        </button>
+      </div>
+    </>
+  )
+
+  const blocFormulaire = !refus && formulaireOuvert && questionsValides.length > 0 && (
+    <div ref={hautFormulaire} style={{
+      scrollMarginTop: 96,
+      background: '#fff', border: '1px solid #EDE0E8', borderRadius: 16,
+      marginTop: 18, padding: '4px 16px',
+    }}>
+      {questionsValides.map((q, index) => {
+        const donnee = reponsesFormulaire[q.id] ?? ''
+        return (
+          <div key={q.id} style={{
+            padding: '13px 0',
+            borderTop: index === 0 ? 'none' : '1px solid #F5EFF2',
+          }}>
+            <p style={{
+              fontSize: 13.5, fontWeight: 600, color: '#2D2D2D',
+              margin: '0 0 11px', lineHeight: 1.4, textAlign: 'center',
+            }}>
+              {q.libelle}
+              {!q.obligatoire && <span style={{ color: '#A9A0AA', fontSize: 12, fontWeight: 400 }}> · facultatif</span>}
+            </p>
+
+            {q.type === 'texte' ? (
+              <textarea
+                value={donnee}
+                onChange={e => setReponsesFormulaire(prev => ({ ...prev, [q.id]: e.target.value.slice(0, 400) }))}
+                rows={3}
+                style={{
+                  width: '100%', boxSizing: 'border-box', border: '1px solid #F0DCE8',
+                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 16,
+                  fontFamily: 'inherit', color: '#2D2D2D', resize: 'vertical',
+                  outlineColor: GLAMIA_PINK,
+                }}
+              />
+            ) : (
+              <div style={{
+                display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'center',
+              }}>
+                {(q.type === 'oui_non' ? ['Oui', 'Non'] : (q.options ?? []).filter(o => o.trim())).map(r => {
+                  const choisi = donnee === r
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => repondreFormulaire(q, r)}
+                      style={{
+                        border: `1px solid ${choisi ? GLAMIA_PINK : '#F0DCE8'}`,
+                        background: choisi ? GLAMIA_PINK : '#FFF6FA',
+                        color: choisi ? '#fff' : '#8E4E72',
+                        borderRadius: 12, padding: '9px 16px', fontSize: 12.5,
+                        fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'background .15s, color .15s, border-color .15s',
+                      }}>
+                      {r}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
+  // Ce sur quoi elle peut encore donner son avis : ses rendez-vous des trois
+  // derniers jours, ni annulés ni déjà notés.
+  const [avisAlaisser, setAvisAlaisser] = useState<
+    { token: string; date: string; prestations: string }[]
+  >([])
   // Le délai fixé par la pro : au-delà, l'annulation est remboursée ; en deçà,
   // la somme lui reste. La cliente doit le savoir AVANT de confirmer.
   const [delaiAnnulation,   setDelaiAnnulation]    = useState(24)
@@ -613,6 +1152,23 @@ export default function ReservationPage() {
   // sans ça la cliente refait tout le parcours pour une place qui part vite.
   const repriseFaite = useRef(false)
   const [repriseAttente, setRepriseAttente] = useState(false)
+
+  const identiteRemplie = !!clientePrenom.trim() && !!clienteNom.trim()
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())
+
+  // Le bouton qui emmène au rendez-vous. Il ne paraît qu'une fois le
+  // formulaire ouvert — ou s'il n'y a pas de formulaire du tout.
+  const boutonRendezVous = (permis: boolean) => !refus && (formulaireOuvert || questionsValides.length === 0) && (
+    <button
+      onClick={() => { if (permis && formulaireComplet) setStep(repriseAttente ? 5 : 2) }}
+      disabled={!permis || !formulaireComplet}
+      style={{
+        ...S.btn, marginTop: 22, marginBottom: 30,
+        opacity: (permis && formulaireComplet) ? 1 : 0.45,
+      }}>
+      {repriseAttente ? 'Confirmer cette place' : 'Prendre rendez-vous'}
+    </button>
+  )
 
   useEffect(() => {
     if (repriseFaite.current || !pro || Object.keys(catalogue).length === 0) return
@@ -927,22 +1483,33 @@ export default function ReservationPage() {
     }
   }, [pro?.id, slug, step])
 
-  // ── LA VISITE, COMPTÉE UNE FOIS ────────────────────────────────────────
-  // Une pro partage son lien sans jamais savoir s'il est ouvert. Vingt visites
-  // et deux rendez-vous, ce n'est pas le même problème que deux visites et deux
-  // rendez-vous : dans un cas la page ne convainc pas, dans l'autre le lien ne
-  // circule pas.
-  //
-  // On ne garde qu'un NOMBRE par pro et par jour — aucune adresse, aucun
-  // mouchard, rien qui identifie la visiteuse. Et un échec ne doit jamais
-  // empêcher une réservation : c'est un compteur, pas une étape.
+  // ── LA VITRINE ──
+  // Chargée dès que la pro est connue. La visite n'est comptée qu'à la
+  // première ouverture : recharger la page ne doit pas gonfler le chiffre.
   const visiteComptee = useRef(false)
   useEffect(() => {
-    if (!pro?.id || visiteComptee.current) return
+    if (!pro?.id) return
+    const compter = !visiteComptee.current
     visiteComptee.current = true
-    supabase.rpc('compter_visite', { p_pro: pro.id })
-      .then(({ error }) => { if (error) console.error('[visite]', error.message) })
+    fetch('/api/pro/vitrine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pro_id: pro.id, compter }),
+    })
+      .then(r => r.json())
+      .then(d => { if (!d?.error) setVitrine(d as Vitrine) })
+      // Une vitrine qui ne charge pas ne doit pas empêcher de réserver.
+      .catch(e => console.error('[vitrine]', e))
+      .finally(() => setVitrinePrete(true))
   }, [pro?.id])
+
+  // Le filet de sécurité : si la vitrine tarde ou ne répond pas, la page
+  // s'ouvre quand même. Une réservation ne dépend pas d'un carrousel.
+  useEffect(() => {
+    if (vitrinePrete) return
+    const t = setTimeout(() => setVitrinePrete(true), 2500)
+    return () => clearTimeout(t)
+  }, [vitrinePrete])
 
   /** Prévient le téléphone de la pro, sans jamais faire attendre la cliente. */
   function reveillerLaPro(slugPro: string) {
@@ -1135,9 +1702,10 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite, rdvs, delai_annulation } = await rep.json()
+      const { fidelite, rdvs, delai_annulation, avis_a_laisser } = await rep.json()
       setFideliteFiche(fidelite ?? null)
       setRdvsAVenir(rdvs ?? [])
+      setAvisAlaisser(avis_a_laisser ?? [])
       if (typeof delai_annulation === 'number') setDelaiAnnulation(delai_annulation)
     } catch (e) {
       // Une panne du dossier ne doit pas empêcher de réserver : on la reconnaît
@@ -2015,12 +2583,18 @@ export default function ReservationPage() {
           // prendra plus de temps. On recopie la question ET la réponse en
           // clair : la pro peut les renommer ou les supprimer ensuite, un
           // rendez-vous passé doit rester lisible.
-          reponses_questions: questionsEnCours
-            .filter(q => reponses[q.id])
-            .map(q => ({
-              question: q.texte,
-              reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
-            })),
+          reponses_questions: [
+            ...questionsEnCours
+              .filter(q => reponses[q.id])
+              .map(q => ({
+                question: q.texte,
+                reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
+              })),
+            // Celles du formulaire de la pro, déjà en clair.
+            ...questionsValides
+              .filter(q => (reponsesFormulaire[q.id] ?? '').trim())
+              .map(q => ({ question: q.libelle, reponse: reponsesFormulaire[q.id].trim() })),
+          ],
           reduction_appliquee: reductionCliente
             ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
             : null,
@@ -2582,6 +3156,15 @@ export default function ReservationPage() {
                 </>
               )}
             </div>
+
+            {/* Les réseaux, dans le coin. Un logo se reconnaît sans légende. */}
+            {hasSocials && (
+              <div style={{ display: 'flex', gap: 9, flexShrink: 0 }}>
+                {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={26} />}
+                {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={26} />}
+                {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={26} />}
+              </div>
+            )}
           </div>
 
           {/* Progress bar */}
@@ -2607,32 +3190,103 @@ export default function ReservationPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
         {/* ── Bannière pro ── */}
-        {(pro?.message_accueil || hasSocials) && (
-          <div style={{ textAlign: 'center', marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid #f3f4f6' }}>
-            {pro?.message_accueil && (
-              <p style={{ fontSize: 16, color: PINK, fontStyle: 'italic', margin: hasSocials ? '0 0 20px' : '0', lineHeight: 1.6 }}>
-                {pro.message_accueil}
-              </p>
-            )}
-            {hasSocials && (
-              <div>
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', fontWeight: 500 }}>Retrouvez-moi sur les réseaux</p>
-                <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
-                  {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={36} />}
-                  {pro?.tiktok    && <SocialLink reseau="tiktok"    pseudo={pro.tiktok}    size={36} />}
-                  {pro?.snapchat  && <SocialLink reseau="snapchat"  pseudo={pro.snapchat}  size={36} />}
-                </div>
-              </div>
-            )}
-          </div>
+        <style>{`
+          @keyframes glamiaHalo {
+            0%    { border-color: ${GLAMIA_PINK};
+                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
+            22%   { border-color: #FF4FA5;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
+            41%   { border-color: #FF8FC6;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.22), 0 3px 22px rgba(160,90,125,0.09) }
+            62%   { border-color: #FF4FA5;
+                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
+            100%  { border-color: ${GLAMIA_PINK};
+                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
+          }
+          .glamia-cadre-actif {
+            box-shadow: 0 3px 22px rgba(160,90,125,0.09);
+            animation: glamiaHalo 1.6s ease-in-out 1;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .glamia-cadre-actif { animation: none }
+          }
+        `}</style>
+
+        {pro?.message_accueil && (
+          <p style={{
+            fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
+          }}>
+            {pro.message_accueil}
+          </p>
         )}
 
         {/* ────────────────────────────────────────
             STEP 1 — Identification
         ──────────────────────────────────────── */}
-        {step === 1 && (
+        {visionneuse && (
+          <div
+            onClick={() => setVisionneuse(null)}
+            onTouchStart={e => { departToucher.current = e.touches[0].clientX }}
+            onTouchEnd={e => {
+              const depart = departToucher.current
+              if (depart === null) return
+              const ecart = e.changedTouches[0].clientX - depart
+              if (Math.abs(ecart) > 40) {
+                e.stopPropagation()
+                setVisionneuse(v => v ? {
+                  ...v,
+                  index: (v.index + (ecart < 0 ? 1 : -1) + v.photos.length) % v.photos.length,
+                } : v)
+              }
+              departToucher.current = null
+            }}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.93)', zIndex: 90,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            }}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 520, overflow: 'hidden', borderRadius: 14 }}>
+              <div style={{
+                display: 'flex',
+                transform: `translateX(-${visionneuse.index * 100}%)`,
+                transition: 'transform .35s cubic-bezier(.22,.61,.36,1)',
+              }}>
+                {visionneuse.photos.map((ph, i) => (
+                  <div key={i} style={{ flex: '0 0 100%', minWidth: 0, display: 'grid', placeItems: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ph} alt="" style={{ maxWidth: '100%', maxHeight: '72vh', borderRadius: 12 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {visionneuse.photos.length > 1 && (
+              <div style={{
+                position: 'absolute', bottom: 34, left: 0, right: 0,
+                display: 'flex', justifyContent: 'center', gap: 6,
+              }}>
+                {visionneuse.photos.map((_, i) => (
+                  <span key={i} style={{
+                    width: i === visionneuse.index ? 16 : 6, height: 6, borderRadius: 3,
+                    background: i === visionneuse.index ? '#fff' : 'rgba(255,255,255,0.4)',
+                    transition: 'width .3s, background .3s',
+                  }} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 1 && vitrinePrete && (
           <div>
-            <h2 style={S.h2}>Bonjour !</h2>
+            {phoneStatus === 'idle' && blocReglement}
+
+            <div className="glamia-cadre-actif" style={{
+              background: '#fff', border: `2px solid ${GLAMIA_PINK}`,
+              borderRadius: 20, padding: '20px 18px 18px',
+            }}>
+            <h2 style={{ ...S.h2, marginBottom: 4 }}>Bonjour !</h2>
             <p style={S.sub}>Entrez votre numéro pour commencer.</p>
 
             <label style={S.label}>Téléphone</label>
@@ -2659,14 +3313,19 @@ export default function ReservationPage() {
               <button style={{ ...S.btn, opacity: 0.7 }} disabled>Vérification...</button>
             )}
 
+
+
             {phoneStatus === 'known' && (
               <div>
-                <div style={{ ...S.infoBox, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <User size={28} color={GLAMIA_PINK} />
-                  <div>
-                    <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
-                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
+                <div style={{ ...S.infoBox, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <User size={28} color={GLAMIA_PINK} />
+                    <div>
+                      <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
+                      <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Vous êtes bien reconnue.</p>
+                    </div>
                   </div>
+                  {annonceFormulaire(true)}
                 </div>
 
                 {/* Réduction personnelle accordée par la pro */}
@@ -2699,88 +3358,45 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                {/* Carte de fidélité */}
-                {fideliteConfig?.active && (
-                  <div style={{
-                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
-                    padding: 16, marginBottom: 20,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
-                      {/* Récompense du prochain RDV : existante ou palier atteint
-                          par le prochain passage — même logique que le prix */}
-                      {(() => {
-                        const tampons = fideliteFiche?.tampons ?? 0
-                        const prochaine = fideliteFiche?.recompense_disponible
-                          ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
-                          ?? null
-                        if (!prochaine) return null
-                        const label = prochaine.type === 'gratuit' ? 'Offert' : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
-                        return (
-                          <span style={{
-                            background: PINK, color: '#fff', borderRadius: 10,
-                            padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
-                          }}>
-                            {label} au prochain RDV
+                {!loadingRdvs && avisAlaisser.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    {avisAlaisser.map(a => (
+                      <a
+                        key={a.token}
+                        href={`/avis/${a.token}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                          background: '#FFF6FA', border: '1.5px solid #F2D7E6',
+                          borderRadius: 16, padding: 14, marginBottom: 10,
+                        }}>
+                        <span style={{
+                          width: 40, height: 40, borderRadius: 20, background: '#fff',
+                          border: '1px solid #F2D7E6', display: 'grid', placeItems: 'center',
+                          fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
+                        }}>★</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: '#8E4E72' }}>
+                            Laisser un avis
                           </span>
-                        )
-                      })()}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
-                        const pos = i + 1
-                        const tampons = fideliteFiche?.tampons ?? 0
-                        const estTamponné = pos <= tampons
-                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                            <div style={{
-                              width: 36, height: 36, borderRadius: 18,
-                              border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
-                              background: estTamponné ? PINK : '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {estTamponné && (
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                              )}
-                            </div>
-                            {palier ? (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
-                            ) : (
-                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {(() => {
-                      const tampons = fideliteFiche?.tampons ?? 0
-                      const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
-                      if (!prochainPalier) return null
-                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
-                      // « Encore 2 RDV avant -10 € » laissait croire que la
-                      // réduction tombait au rendez-vous SUIVANT le palier.
-                      // Elle tombe sur celui-là. On nomme donc le rendez-vous
-                      // concerné au lieu de compter ce qui reste avant.
-                      //
-                      // Même formulation que dans l'app, corrigée le matin
-                      // même : les deux écrans montrent la même carte à la
-                      // même personne, ils doivent dire la même chose.
-                      const n = prochainPalier.position - tampons
-                      return (
-                        <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          {n === 1 ? `Prochain RDV : ${label}` : `${label} sur ton ${n}e RDV`}
-                        </p>
-                      )
-                    })()}
-                    {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
-                      <p style={{ fontSize: 10, fontWeight: 700, color: '#C2779E', backgroundColor: '#FFF0F5', borderRadius: 10, padding: '2px 8px', textAlign: 'center', marginTop: 6, marginBottom: 0, display: 'inline-block' }}>
-                        {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
-                      </p>
-                    )}
+                          <span style={{ display: 'block', fontSize: 12.5, color: '#A9819B', marginTop: 2 }}>
+                            {a.prestations ? `${a.prestations} · ` : ''}
+                            <span style={{ textTransform: 'capitalize' }}>{formatRdvDate(a.date)}</span>
+                          </span>
+                        </span>
+                        <span style={{ fontSize: 20, color: '#D9B9CC' }}>›</span>
+                      </a>
+                    ))}
                   </div>
+                )}
+
+                {/* Masqué pendant une reprogrammation ou une modification de
+                    prestations : ces panneaux ont leur propre bouton de confirmation */}
+                {!reprogRdvId && !modifRdvId && (
+                  <>
+                    {blocFormulaire}
+                    {blocRefus}
+                    {boutonRendezVous(true)}
+                  </>
                 )}
 
                 {loadingRdvs ? (
@@ -2843,7 +3459,10 @@ export default function ReservationPage() {
                             </button>
                           )}
 
-                          {/* Ajouter / voir ses inspirations */}
+                          {/* Ajouter / voir ses inspirations — seulement si la
+                              pro les demande, ou s'il y en a déjà. */}
+                          {(vitrine?.demander_inspirations !== false
+                            || (rdv.inspirations?.length ?? 0) > 0) && (
                           <button
                             onClick={() => toggleInspis(rdv.id)}
                             style={{
@@ -2859,6 +3478,7 @@ export default function ReservationPage() {
                               ? 'Mes inspirations (3/3)'
                               : 'Ajouter mes inspirations'}
                           </button>
+                          )}
 
                           {/* ── Panneau inspirations ── */}
                           {inspiRdvId === rdv.id && (
@@ -3227,19 +3847,92 @@ export default function ReservationPage() {
                       ))}
                     </div>
                   </div>
-                ) : (
-                  <div style={{ ...S.card, textAlign: 'center', marginBottom: 20, color: '#9ca3af', fontSize: 14 }}>
-                    Aucun rendez-vous à venir.
+                ) : null}
+
+                {/* Carte de fidélité */}
+                {fideliteConfig?.active && (
+                  <div style={{
+                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
+                    padding: 16, marginBottom: 20,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>Carte de fidélité</span>
+                      {/* Récompense du prochain RDV : existante ou palier atteint
+                          par le prochain passage — même logique que le prix */}
+                      {(() => {
+                        const tampons = fideliteFiche?.tampons ?? 0
+                        const prochaine = fideliteFiche?.recompense_disponible
+                          ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
+                          ?? null
+                        if (!prochaine) return null
+                        const label = prochaine.type === 'gratuit' ? 'Offert' : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
+                        return (
+                          <span style={{
+                            background: PINK, color: '#fff', borderRadius: 10,
+                            padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
+                          }}>
+                            {label} au prochain RDV
+                          </span>
+                        )
+                      })()}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
+                        const pos = i + 1
+                        const tampons = fideliteFiche?.tampons ?? 0
+                        const estTamponné = pos <= tampons
+                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
+                        const palierLabel = palier ? (palier.type === 'gratuit' ? 'Offert' : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
+                        return (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: 18,
+                              border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
+                              background: estTamponné ? PINK : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {estTamponné && (
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                              )}
+                            </div>
+                            {palier ? (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
+                            ) : (
+                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {(() => {
+                      const tampons = fideliteFiche?.tampons ?? 0
+                      const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
+                      if (!prochainPalier) return null
+                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
+                      // « Encore 2 RDV avant -10 € » laissait croire que la
+                      // réduction tombait au rendez-vous SUIVANT le palier.
+                      // Elle tombe sur celui-là. On nomme donc le rendez-vous
+                      // concerné au lieu de compter ce qui reste avant.
+                      //
+                      // Même formulation que dans l'app, corrigée le matin
+                      // même : les deux écrans montrent la même carte à la
+                      // même personne, ils doivent dire la même chose.
+                      const n = prochainPalier.position - tampons
+                      return (
+                        <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
+                          {n === 1 ? `Prochain RDV : ${label}` : `${label} sur ton ${n}e RDV`}
+                        </p>
+                      )
+                    })()}
+                    {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#C2779E', backgroundColor: '#FFF0F5', borderRadius: 10, padding: '2px 8px', textAlign: 'center', marginTop: 6, marginBottom: 0, display: 'inline-block' }}>
+                        {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {/* Masqué pendant une reprogrammation ou une modification de
-                    prestations : ces panneaux ont leur propre bouton de confirmation */}
-                {!reprogRdvId && !modifRdvId && (
-                  <button onClick={() => setStep(repriseAttente ? 5 : 2)} style={S.btn}>
-                    {repriseAttente ? 'Confirmer cette place' : '+ Prendre un nouveau rendez-vous'}
-                  </button>
-                )}
               </div>
             )}
 
@@ -3265,6 +3958,11 @@ export default function ReservationPage() {
                     <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>Pour recevoir votre confirmation de RDV</p>
                   </div>
                 </div>
+
+                {annonceFormulaire(identiteRemplie)}
+                {blocFormulaire}
+                {blocRefus}
+                {boutonRendezVous(identiteRemplie)}
 
                 {/* Carte de fidélité vierge pour nouvelle cliente */}
                 {fideliteConfig?.active && (
@@ -3306,15 +4004,11 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(repriseAttente ? 5 : 2) }}
-                  disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
-                  style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) ? 0.5 : 1 }}
-                >
-                  Continuer →
-                </button>
               </div>
             )}
+            </div>
+
+            {phoneStatus === 'idle' && blocVitrine}
           </div>
         )}
 
@@ -4000,7 +4694,9 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
+            {/* Photos d'inspiration (optionnel) — encadré mis en valeur.
+                Affiché seulement si la pro les demande : c'est son réglage. */}
+            {vitrine?.demander_inspirations !== false && (
             <div style={{
               background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
               border: `1.5px solid ${PINK}55`,
@@ -4087,6 +4783,7 @@ export default function ReservationPage() {
               )}
               </div>
             </div>
+            )}
 
             <label style={S.label}>Commentaire (optionnel)</label>
             <textarea
@@ -4708,8 +5405,10 @@ const S: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
   },
   input: {
+    // 16 points, et jamais moins : en dessous, Safari zoome sur le champ dès
+    // qu'on le touche, et ne dézoome jamais.
     width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 16,
-    padding: '14px 16px', fontSize: 15, color: '#1f2937',
+    padding: '14px 16px', fontSize: 16, color: '#1f2937',
     outline: 'none', boxSizing: 'border-box', marginBottom: 12,
     background: '#fff', fontFamily: 'inherit',
   },
