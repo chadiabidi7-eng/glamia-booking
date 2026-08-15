@@ -553,6 +553,11 @@ export default function ReservationPage() {
   const [vitrine, setVitrine] = useState<Vitrine | null>(null)
   // La visionneuse : les photos d'un avis, et celle qu'on regarde.
   const [visionneuse, setVisionneuse] = useState<{ photos: string[]; index: number } | null>(null)
+  // TOUT S'AFFICHE EN MÊME TEMPS. Le cadre du Bonjour arrivait le premier, la
+  // vitrine une seconde plus tard, et la page se réorganisait sous les yeux de
+  // la cliente au moment où elle allait toucher le champ. On attend donc que
+  // la vitrine soit là avant de dessiner quoi que ce soit.
+  const [vitrinePrete, setVitrinePrete] = useState(false)
   // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
@@ -1469,7 +1474,16 @@ export default function ReservationPage() {
       .then(d => { if (!d?.error) setVitrine(d as Vitrine) })
       // Une vitrine qui ne charge pas ne doit pas empêcher de réserver.
       .catch(e => console.error('[vitrine]', e))
+      .finally(() => setVitrinePrete(true))
   }, [pro?.id])
+
+  // Le filet de sécurité : si la vitrine tarde ou ne répond pas, la page
+  // s'ouvre quand même. Une réservation ne dépend pas d'un carrousel.
+  useEffect(() => {
+    if (vitrinePrete) return
+    const t = setTimeout(() => setVitrinePrete(true), 2500)
+    return () => clearTimeout(t)
+  }, [vitrinePrete])
 
   /** Prévient le téléphone de la pro, sans jamais faire attendre la cliente. */
   function reveillerLaPro(slugPro: string) {
@@ -3238,7 +3252,7 @@ export default function ReservationPage() {
           </div>
         )}
 
-        {step === 1 && (
+        {step === 1 && vitrinePrete && (
           <div>
             {phoneStatus === 'idle' && blocReglement}
 
