@@ -1002,7 +1002,7 @@ export default function ReservationPage() {
 
   const blocFormulaire = !refus && formulaireOuvert && questionsValides.length > 0 && (
     <div ref={hautFormulaire} style={{
-      scrollMarginTop: 18,
+      scrollMarginTop: 96,
       background: '#fff', border: '1px solid #EDE0E8', borderRadius: 16,
       marginTop: 18, padding: '4px 16px',
     }}>
