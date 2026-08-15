@@ -491,8 +491,9 @@ function OffresSection({
 // Main Component
 // ─────────────────────────────────────────────
 const champAttente: React.CSSProperties = {
+  // 16 points, comme tous les champs : en dessous, Safari zoome à la touche.
   width: '100%', padding: '11px 13px', marginBottom: 10, borderRadius: 10,
-  border: '1px solid #e5e7eb', fontSize: 15, outline: 'none', boxSizing: 'border-box',
+  border: '1px solid #e5e7eb', fontSize: 16, outline: 'none', boxSizing: 'border-box',
 }
 
 export default function ReservationPage() {
@@ -999,7 +1000,7 @@ export default function ReservationPage() {
                 rows={3}
                 style={{
                   width: '100%', boxSizing: 'border-box', border: '1px solid #F0DCE8',
-                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 13,
+                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 16,
                   fontFamily: 'inherit', color: '#2D2D2D', resize: 'vertical',
                   outlineColor: GLAMIA_PINK,
                 }}
@@ -5336,8 +5337,10 @@ const S: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
   },
   input: {
+    // 16 points, et jamais moins : en dessous, Safari zoome sur le champ dès
+    // qu'on le touche, et ne dézoome jamais.
     width: '100%', border: '1.5px solid #e5e7eb', borderRadius: 16,
-    padding: '14px 16px', fontSize: 15, color: '#1f2937',
+    padding: '14px 16px', fontSize: 16, color: '#1f2937',
     outline: 'none', boxSizing: 'border-box', marginBottom: 12,
     background: '#fff', fontFamily: 'inherit',
   },
