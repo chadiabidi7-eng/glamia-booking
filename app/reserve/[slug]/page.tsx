@@ -973,13 +973,16 @@ export default function ReservationPage() {
   )
 
   const blocFormulaire = !refus && formulaireOuvert && questionsValides.length > 0 && (
-    <div style={{ marginTop: 18 }}>
-      {questionsValides.map(q => {
+    <div style={{
+      background: '#fff', border: '1px solid #EDE0E8', borderRadius: 16,
+      marginTop: 18, padding: '4px 16px',
+    }}>
+      {questionsValides.map((q, index) => {
         const donnee = reponsesFormulaire[q.id] ?? ''
         return (
           <div key={q.id} style={{
-            background: '#fff', border: '1px solid #EDE0E8', borderRadius: 14,
-            padding: 14, marginBottom: 8,
+            padding: '14px 0',
+            borderTop: index === 0 ? 'none' : '1px solid #F5EFF2',
           }}>
             <p style={{ fontSize: 14, color: '#2D2D2D', margin: '0 0 10px', lineHeight: 1.4 }}>
               {q.libelle}
