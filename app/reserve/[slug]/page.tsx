@@ -1126,7 +1126,7 @@ export default function ReservationPage() {
     <button
       onClick={() => { if (formulaireComplet) setStep(repriseAttente ? 5 : 2) }}
       disabled={!formulaireComplet}
-      style={{ ...S.btn, marginTop: 22, opacity: formulaireComplet ? 1 : 0.45 }}>
+      style={{ ...S.btn, marginTop: 22, marginBottom: 30, opacity: formulaireComplet ? 1 : 0.45 }}>
       {repriseAttente ? 'Confirmer cette place' : 'Prendre rendez-vous'}
     </button>
   )
@@ -3774,11 +3774,7 @@ export default function ReservationPage() {
                       ))}
                     </div>
                   </div>
-                ) : (
-                  <div style={{ ...S.card, textAlign: 'center', marginBottom: 20, color: '#9ca3af', fontSize: 14 }}>
-                    Aucun rendez-vous à venir.
-                  </div>
-                )}
+                ) : null}
 
                 {/* Carte de fidélité */}
                 {fideliteConfig?.active && (
