@@ -3150,6 +3150,21 @@ export default function ReservationPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
         {/* ── Bannière pro ── */}
+        <style>{`
+          @keyframes glamiaHalo {
+            0%   { box-shadow: 0 0 0 0 rgba(212,83,126,0.30), 0 3px 22px rgba(160,90,125,0.09) }
+            55%  { box-shadow: 0 0 0 9px rgba(212,83,126,0),  0 3px 22px rgba(160,90,125,0.09) }
+            100% { box-shadow: 0 0 0 0 rgba(212,83,126,0),    0 3px 22px rgba(160,90,125,0.09) }
+          }
+          .glamia-cadre-actif {
+            box-shadow: 0 3px 22px rgba(160,90,125,0.09);
+            animation: glamiaHalo 1.9s ease-out 3;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .glamia-cadre-actif { animation: none }
+          }
+        `}</style>
+
         {pro?.message_accueil && (
           <p style={{
             fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
@@ -3218,12 +3233,9 @@ export default function ReservationPage() {
 
         {step === 1 && (
           <div>
-            {phoneStatus === 'idle' && blocReglement}
-
-            <div style={{
+            <div className="glamia-cadre-actif" style={{
               background: '#fff', border: `1.5px solid ${GLAMIA_PINK}`,
               borderRadius: 20, padding: '20px 18px 18px',
-              boxShadow: '0 3px 22px rgba(160,90,125,0.09)',
             }}>
             <h2 style={{ ...S.h2, marginBottom: 4 }}>Bonjour !</h2>
             <p style={S.sub}>Entrez votre numéro pour commencer.</p>
@@ -3943,6 +3955,7 @@ export default function ReservationPage() {
             )}
             </div>
 
+            {phoneStatus === 'idle' && blocReglement}
             {phoneStatus === 'idle' && blocVitrine}
           </div>
         )}
