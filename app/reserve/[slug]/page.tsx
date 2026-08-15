@@ -3454,7 +3454,10 @@ export default function ReservationPage() {
                             </button>
                           )}
 
-                          {/* Ajouter / voir ses inspirations */}
+                          {/* Ajouter / voir ses inspirations — seulement si la
+                              pro les demande, ou s'il y en a déjà. */}
+                          {(vitrine?.demander_inspirations !== false
+                            || (rdv.inspirations?.length ?? 0) > 0) && (
                           <button
                             onClick={() => toggleInspis(rdv.id)}
                             style={{
@@ -3470,6 +3473,7 @@ export default function ReservationPage() {
                               ? 'Mes inspirations (3/3)'
                               : 'Ajouter mes inspirations'}
                           </button>
+                          )}
 
                           {/* ── Panneau inspirations ── */}
                           {inspiRdvId === rdv.id && (
@@ -4685,7 +4689,9 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            {/* Photos d'inspiration (optionnel) — encadré mis en valeur */}
+            {/* Photos d'inspiration (optionnel) — encadré mis en valeur.
+                Affiché seulement si la pro les demande : c'est son réglage. */}
+            {vitrine?.demander_inspirations !== false && (
             <div style={{
               background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 70%)',
               border: `1.5px solid ${PINK}55`,
@@ -4772,6 +4778,7 @@ export default function ReservationPage() {
               )}
               </div>
             </div>
+            )}
 
             <label style={S.label}>Commentaire (optionnel)</label>
             <textarea
