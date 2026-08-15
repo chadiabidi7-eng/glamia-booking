@@ -3317,6 +3317,16 @@ export default function ReservationPage() {
                   </div>
                 )}
 
+                {/* Masqué pendant une reprogrammation ou une modification de
+                    prestations : ces panneaux ont leur propre bouton de confirmation */}
+                {!reprogRdvId && !modifRdvId && (
+                  <>
+                    {blocFormulaire}
+                    {blocRefus}
+                    {boutonRendezVous}
+                  </>
+                )}
+
                 {loadingRdvs ? (
                   <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 16 }}>
                     Chargement de vos rendez-vous...
@@ -3765,16 +3775,6 @@ export default function ReservationPage() {
                   <div style={{ ...S.card, textAlign: 'center', marginBottom: 20, color: '#9ca3af', fontSize: 14 }}>
                     Aucun rendez-vous à venir.
                   </div>
-                )}
-
-                {/* Masqué pendant une reprogrammation ou une modification de
-                    prestations : ces panneaux ont leur propre bouton de confirmation */}
-                {!reprogRdvId && !modifRdvId && (
-                  <>
-                    {blocFormulaire}
-                    {blocRefus}
-                    {boutonRendezVous}
-                  </>
                 )}
 
                 {/* Carte de fidélité */}
