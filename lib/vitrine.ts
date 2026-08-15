@@ -16,14 +16,27 @@ export const CONDITIONS: { cle: string; libelle: string }[] = [
   { cle: 'animaux',      libelle: 'Animaux sur place' },
 ]
 
-/** Celles qui portent une réponse. Le reste n'existe pas pour la cliente. */
+/**
+ * Celles qui portent une réponse. Le reste n'existe pas pour la cliente.
+ *
+ * Les six du catalogue d'abord — l'ordre ne change jamais d'une pro à l'autre,
+ * c'est ce qui rend deux pages comparables en trois secondes. Puis celles que
+ * la pro a écrites elle-même, dans son ordre à elle : leur libellé voyage avec
+ * la réponse, sous une clé préfixée.
+ */
+const PREFIXE_PERSO = 'perso:'
+
 export function conditionsAffichees(
   accueil: Record<string, boolean | null> | null | undefined,
 ): { libelle: string; oui: boolean }[] {
   if (!accueil) return []
-  return CONDITIONS
+  const catalogue = CONDITIONS
     .filter(c => typeof accueil[c.cle] === 'boolean')
     .map(c => ({ libelle: c.libelle, oui: accueil[c.cle] === true }))
+  const siennes = Object.keys(accueil)
+    .filter(cle => cle.startsWith(PREFIXE_PERSO) && typeof accueil[cle] === 'boolean')
+    .map(cle => ({ libelle: cle.slice(PREFIXE_PERSO.length), oui: accueil[cle] === true }))
+  return [...catalogue, ...siennes]
 }
 
 /**

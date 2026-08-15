@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profil } = await supabaseAdmin
     .from('profiles')
-    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, demander_inspirations')
+    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations')
     .eq('id', proId)
     .maybeSingle()
 
@@ -117,7 +117,12 @@ export async function POST(req: NextRequest) {
     // permet d'arrêter la cliente tout de suite plutôt qu'après cinq étapes.
     // Le serveur revérifiera de toute façon à la création du rendez-vous —
     // l'affichage informe, il ne décide pas.
-    formulaire: profil.formulaire ?? { nouvelles: [], connues: [] },
+    // Éteint, on ne renvoie RIEN. Envoyer les questions en laissant le
+    // navigateur décider de ne pas les poser, c'est publier le formulaire d'une
+    // pro qui l'a justement fermé.
+    formulaire: profil.formulaire_actif === false
+      ? { nouvelles: [], connues: [] }
+      : (profil.formulaire ?? { nouvelles: [], connues: [] }),
     demander_inspirations: profil.demander_inspirations !== false,
   })
 }
