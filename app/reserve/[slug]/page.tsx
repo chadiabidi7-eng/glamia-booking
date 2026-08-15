@@ -522,6 +522,292 @@ export default function ReservationPage() {
     if (step !== 5) window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step])
 
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LES CARTES DE LA VITRINE — pliées.
+  //
+  // Tout est là, rien n'encombre : une ligne par sujet, avec l'essentiel écrit
+  // dessus. La note se lit sans ouvrir, la ville aussi — c'est ce qui rassure.
+  // Une seule carte s'ouvre à la fois : deux dépliées et le champ du numéro
+  // sort de l'écran.
+  // ─────────────────────────────────────────────────────────────────────────
+  const CartePliee = ({
+    cle, titre, resume, children,
+  }: { cle: 'avis' | 'ou' | 'savoir'; titre: string; resume: string; children: React.ReactNode }) => {
+    const ouverte = carteOuverte === cle
+    return (
+      <div style={{
+        background: '#fff', border: '1px solid #EDE0E8', borderRadius: 14,
+        marginBottom: 8, overflow: 'hidden',
+      }}>
+        <button
+          onClick={() => setCarteOuverte(ouverte ? null : cle)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+            background: 'none', border: 'none', padding: '13px 14px',
+            cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+          }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: '#2D2D2D' }}>{titre}</span>
+            <span style={{ display: 'block', fontSize: 12.5, color: '#8A8A9A', marginTop: 2 }}>{resume}</span>
+          </span>
+          <span style={{
+            fontSize: 18, color: '#C9BCC4',
+            transform: ouverte ? 'rotate(90deg)' : 'none', transition: 'transform .15s',
+          }}>›</span>
+        </button>
+        {ouverte && <div style={{ padding: '0 14px 14px' }}>{children}</div>}
+      </div>
+    )
+  }
+
+  const conditions = conditionsAffichees(vitrine?.accueil)
+  const aReglement = !!vitrine?.reglement?.trim()
+  const lieu = [vitrine?.adresse.ville, vitrine?.adresse.acces].filter(Boolean) as string[]
+  const attente = vitrine ? quandLAdresse(vitrine.adresse.moment) : null
+
+  const blocVitrine = vitrine && (
+    <div style={{ marginTop: 22 }}>
+      {vitrine.avis_actifs && vitrine.nb_avis > 0 && (
+        <CartePliee
+          cle="avis"
+          titre="Avis clientes"
+          resume={`${String(vitrine.note).replace('.', ',')} sur ${vitrine.nb_avis} avis`}>
+          {vitrine.avis.map((a, i) => (
+            <div key={i} style={{ borderTop: i === 0 ? 'none' : '1px solid #F5EFF2', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+                <span style={{ fontSize: 12, color: GLAMIA_PINK, letterSpacing: 1 }}>
+                  {'★'.repeat(a.note)}<span style={{ color: '#E3D8DF' }}>{'★'.repeat(5 - a.note)}</span>
+                </span>
+              </div>
+              {a.prestations && (
+                <p style={{ fontSize: 11.5, color: '#A9A0AA', margin: '2px 0 0' }}>{a.prestations}</p>
+              )}
+              {a.texte && (
+                <p style={{ fontSize: 13.5, lineHeight: 1.5, color: '#4A444E', margin: '6px 0 0' }}>{a.texte}</p>
+              )}
+              {a.photos.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {a.photos.map((ph, j) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={j}
+                      src={ph.vignette}
+                      alt=""
+                      onClick={() => setPhotoOuverte(ph.pleine)}
+                      style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }}
+                    />
+                  ))}
+                </div>
+              )}
+              {a.reponse && (
+                <div style={{
+                  background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
+                  borderRadius: 8, padding: '8px 10px', marginTop: 8,
+                }}>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: '#8E4E72', margin: 0, letterSpacing: 0.5 }}>SA RÉPONSE</p>
+                  <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: '3px 0 0' }}>{a.reponse}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </CartePliee>
+      )}
+
+      {(lieu.length > 0 || vitrine.adresse.exacte) && (
+        <CartePliee
+          cle="ou"
+          titre="Où je suis"
+          resume={vitrine.adresse.exacte || vitrine.adresse.ville || 'Voir les accès'}>
+          {vitrine.adresse.exacte
+            ? <p style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: 0, whiteSpace: 'pre-line' }}>{vitrine.adresse.exacte}</p>
+            : (
+              <>
+                {lieu.map((l, i) => (
+                  <p key={i} style={{ fontSize: 14, lineHeight: 1.5, color: '#2D2D2D', margin: i === 0 ? 0 : '4px 0 0' }}>{l}</p>
+                ))}
+                {attente && (
+                  <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '8px 0 0', fontStyle: 'italic' }}>{attente}</p>
+                )}
+              </>
+            )}
+        </CartePliee>
+      )}
+
+      {(conditions.length > 0 || aReglement) && (
+        <CartePliee
+          cle="savoir"
+          titre="Bon à savoir"
+          resume={[
+            conditions.length > 0 ? `${conditions.length} information${conditions.length > 1 ? 's' : ''}` : null,
+            aReglement ? 'règlement' : null,
+          ].filter(Boolean).join(' · ')}>
+          {conditions.map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+              <span style={{
+                width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center',
+                background: c.oui ? '#E8F5E9' : '#FBEBE8', color: c.oui ? '#2e7d32' : '#C0574C',
+                fontSize: 11, fontWeight: 800, flexShrink: 0,
+              }}>{c.oui ? '✓' : '✕'}</span>
+              <span style={{ fontSize: 14, color: '#2D2D2D' }}>{c.libelle}</span>
+            </div>
+          ))}
+          {aReglement && (
+            <p style={{
+              fontSize: 13.5, lineHeight: 1.55, color: '#4A444E', textAlign: 'justify',
+              margin: conditions.length > 0 ? '12px 0 0' : 0,
+              paddingTop: conditions.length > 0 ? 12 : 0,
+              borderTop: conditions.length > 0 ? '1px solid #F5EFF2' : 'none',
+            }}>{vitrine.reglement}</p>
+          )}
+        </CartePliee>
+      )}
+    </div>
+  )
+
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LE FORMULAIRE — posé DÈS LE DÉBUT, et pas après le choix du créneau.
+  //
+  // Une cliente qui ne peut pas être reçue doit l'apprendre tout de suite. Lui
+  // faire traverser cinq étapes pour lui dire non à la fin, c'est lui faire
+  // perdre son temps et laisser un mauvais souvenir de la pro.
+  //
+  // DEUX JEUX DE QUESTIONS : celles pour les clientes que la pro n'a pas dans
+  // son fichier, et celles pour les siennes. « Nouvelle » veut dire absente du
+  // fichier — pas « qui n'est jamais venue ».
+  //
+  // UNE RÉPONSE BLOQUANTE ARRÊTE TOUT sur place. Le serveur revérifiera à la
+  // création du rendez-vous : ici on informe, on ne décide pas.
+  // ─────────────────────────────────────────────────────────────────────────
+  const questionsPosees: QuestionFormulaire[] = (
+    phoneStatus === 'known' ? vitrine?.formulaire?.connues : vitrine?.formulaire?.nouvelles
+  ) ?? []
+
+  const questionsValides = questionsPosees.filter(q =>
+    q.libelle?.trim() && (q.type !== 'choix' || (q.options ?? []).filter(o => o.trim()).length >= 2))
+
+  const formulaireComplet = questionsValides
+    .filter(q => q.obligatoire)
+    .every(q => (reponsesFormulaire[q.id] ?? '').trim().length > 0)
+
+  const repondreFormulaire = (q: QuestionFormulaire, valeur: string) => {
+    setReponsesFormulaire(prev => ({ ...prev, [q.id]: valeur }))
+    if ((q.bloque ?? []).includes(valeur)) {
+      setRefus({ question: q.libelle, reponse: valeur, message: q.messageBlocage?.trim() || '' })
+    }
+  }
+
+  const reseaux = [
+    { nom: 'Instagram', valeur: pro?.instagram, url: (p: string) => `https://instagram.com/${p.replace('@', '')}` },
+    { nom: 'TikTok',    valeur: pro?.tiktok,    url: (p: string) => `https://tiktok.com/@${p.replace('@', '')}` },
+    { nom: 'Snapchat',  valeur: pro?.snapchat,  url: (p: string) => `https://snapchat.com/add/${p.replace('@', '')}` },
+  ].filter(r => (r.valeur ?? '').trim())
+
+  const blocRefus = refus && (
+    <div style={{
+      background: '#fff', border: '1.5px solid #F0D4CF', borderRadius: 16,
+      padding: 18, marginTop: 18,
+    }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: '#2D2D2D', margin: 0, lineHeight: 1.45 }}>
+        {refus.message || 'Je ne peux pas vous recevoir pour cette demande.'}
+      </p>
+      <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '10px 0 0' }}>
+        {refus.question} — vous avez répondu «&nbsp;{refus.reponse}&nbsp;»
+      </p>
+
+      {reseaux.length > 0 && (
+        <>
+          <p style={{ fontSize: 13.5, color: '#4A444E', margin: '16px 0 8px' }}>
+            Écrivez-moi, on en parle&nbsp;:
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {reseaux.map(r => (
+              <a
+                key={r.nom}
+                href={r.url(r.valeur as string)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none',
+                  background: '#FFF6FA', border: '1px solid #EDD9E6', borderRadius: 11,
+                  padding: '9px 13px', fontSize: 13, fontWeight: 700, color: '#8E4E72',
+                }}>
+                {r.nom}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => { setRefus(null); setReponsesFormulaire({}) }}
+        style={{
+          width: '100%', marginTop: 16, padding: '12px 0', borderRadius: 12,
+          border: '1px solid #EDE0E8', background: '#fff', cursor: 'pointer',
+          fontSize: 13.5, fontWeight: 700, color: '#8A8A9A', fontFamily: 'inherit',
+        }}>
+        Revenir en arrière
+      </button>
+    </div>
+  )
+
+  const blocFormulaire = !refus && questionsValides.length > 0 && (
+    <div style={{ marginTop: 18 }}>
+      <p style={{ fontSize: 14.5, fontWeight: 700, color: '#2D2D2D', margin: '0 0 12px' }}>
+        Avant de réserver
+      </p>
+      {questionsValides.map(q => {
+        const donnee = reponsesFormulaire[q.id] ?? ''
+        return (
+          <div key={q.id} style={{
+            background: '#fff', border: '1px solid #EDE0E8', borderRadius: 14,
+            padding: 14, marginBottom: 8,
+          }}>
+            <p style={{ fontSize: 14, color: '#2D2D2D', margin: '0 0 10px', lineHeight: 1.4 }}>
+              {q.libelle}
+              {!q.obligatoire && <span style={{ color: '#A9A0AA', fontSize: 12 }}> · facultatif</span>}
+            </p>
+
+            {q.type === 'texte' ? (
+              <textarea
+                value={donnee}
+                onChange={e => setReponsesFormulaire(prev => ({ ...prev, [q.id]: e.target.value.slice(0, 400) }))}
+                rows={3}
+                style={{
+                  width: '100%', boxSizing: 'border-box', border: '1px solid #EDE0E8',
+                  borderRadius: 11, padding: 10, fontSize: 14, fontFamily: 'inherit',
+                  color: '#2D2D2D', resize: 'vertical', outlineColor: GLAMIA_PINK,
+                }}
+              />
+            ) : (
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {(q.type === 'oui_non' ? ['Oui', 'Non'] : (q.options ?? []).filter(o => o.trim())).map(r => {
+                  const choisi = donnee === r
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => repondreFormulaire(q, r)}
+                      style={{
+                        border: `1px solid ${choisi ? GLAMIA_PINK : '#EDE0E8'}`,
+                        background: choisi ? GLAMIA_PINK : '#fff',
+                        color: choisi ? '#fff' : '#4A444E',
+                        borderRadius: 11, padding: '9px 15px', fontSize: 13.5,
+                        fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      {r}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
   // ── Step 1 : Identification ──────────────────
   const [telephone,     setTelephone]     = useState('')
   const [clientePrenom, setClientePrenom] = useState('')
@@ -529,6 +815,33 @@ export default function ReservationPage() {
   const [clienteEmail,  setClienteEmail]  = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
   const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+
+  // ── LA VITRINE ── ce que la page montre avant de réserver.
+  // Tout est là, mais tout est plié : la première étape reste celle où l'on
+  // entre son numéro, et ce geste ne doit pas être noyé sous des cartes.
+  type Vitrine = {
+    avis_actifs: boolean; note: number | null; nb_avis: number
+    avis: { auteur: string; note: number; texte: string | null; prestations: string | null
+            reponse: string | null; cree_le: string
+            photos: { vignette: string; pleine: string }[] }[]
+    adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
+    accueil: Record<string, boolean | null>
+    reglement: string | null
+    formulaire: { nouvelles: QuestionFormulaire[]; connues: QuestionFormulaire[] }
+    demander_inspirations: boolean
+  }
+  type QuestionFormulaire = {
+    id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
+    options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
+  }
+  const [vitrine, setVitrine] = useState<Vitrine | null>(null)
+  // Une seule carte ouverte à la fois : deux dépliées et le champ du numéro
+  // sort de l'écran.
+  const [carteOuverte, setCarteOuverte] = useState<'avis' | 'ou' | 'savoir' | null>(null)
+  const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
+  // Les réponses au formulaire, et le refus s'il y en a un.
+  const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
+  const [refus, setRefus] = useState<{ question: string; reponse: string; message: string } | null>(null)
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
   // Ce sur quoi elle peut encore donner son avis : ses rendez-vous des trois
   // derniers jours, ni annulés ni déjà notés.
@@ -931,6 +1244,25 @@ export default function ReservationPage() {
       document.removeEventListener('visibilitychange', auRetour)
     }
   }, [pro?.id, slug, step])
+
+  // ── LA VITRINE ──
+  // Chargée dès que la pro est connue. La visite n'est comptée qu'à la
+  // première ouverture : recharger la page ne doit pas gonfler le chiffre.
+  const visiteComptee = useRef(false)
+  useEffect(() => {
+    if (!pro?.id) return
+    const compter = !visiteComptee.current
+    visiteComptee.current = true
+    fetch('/api/pro/vitrine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pro_id: pro.id, compter }),
+    })
+      .then(r => r.json())
+      .then(d => { if (!d?.error) setVitrine(d as Vitrine) })
+      // Une vitrine qui ne charge pas ne doit pas empêcher de réserver.
+      .catch(e => console.error('[vitrine]', e))
+  }, [pro?.id])
 
   /** Prévient le téléphone de la pro, sans jamais faire attendre la cliente. */
   function reveillerLaPro(slugPro: string) {
@@ -2004,7 +2336,12 @@ export default function ReservationPage() {
           // prendra plus de temps. On recopie la question ET la réponse en
           // clair : la pro peut les renommer ou les supprimer ensuite, un
           // rendez-vous passé doit rester lisible.
-          reponses_questions: questionsEnCours
+          reponses_questions: [
+            ...questionsEnCours,
+            ...questionsValides
+              .filter(q => (reponsesFormulaire[q.id] ?? '').trim())
+              .map(q => ({ question: q.libelle, reponse: reponsesFormulaire[q.id].trim() })),
+          ]
             .filter(q => reponses[q.id])
             .map(q => ({
               question: q.texte,
@@ -2619,6 +2956,18 @@ export default function ReservationPage() {
         {/* ────────────────────────────────────────
             STEP 1 — Identification
         ──────────────────────────────────────── */}
+        {photoOuverte && (
+          <div
+            onClick={() => setPhotoOuverte(null)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 90,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photoOuverte} alt="" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12 }} />
+          </div>
+        )}
+
         {step === 1 && (
           <div>
             <h2 style={S.h2}>Bonjour !</h2>
@@ -2647,6 +2996,10 @@ export default function ReservationPage() {
             {phoneStatus === 'checking' && (
               <button style={{ ...S.btn, opacity: 0.7 }} disabled>Vérification...</button>
             )}
+
+            {/* La vitrine, pliée. Elle vient APRÈS le champ et le bouton :
+                le geste qui compte reste en haut de l'écran. */}
+            {phoneStatus === 'idle' && blocVitrine}
 
             {phoneStatus === 'known' && (
               <div>
@@ -3256,9 +3609,16 @@ export default function ReservationPage() {
                 {/* Masqué pendant une reprogrammation ou une modification de
                     prestations : ces panneaux ont leur propre bouton de confirmation */}
                 {!reprogRdvId && !modifRdvId && (
-                  <button onClick={() => setStep(repriseAttente ? 5 : 2)} style={S.btn}>
-                    {repriseAttente ? 'Confirmer cette place' : '+ Prendre un nouveau rendez-vous'}
-                  </button>
+                  <>
+                    {blocFormulaire}
+                    {blocRefus}
+                    <button
+                      onClick={() => { if (!refus && formulaireComplet) setStep(repriseAttente ? 5 : 2) }}
+                      disabled={!!refus || !formulaireComplet}
+                      style={{ ...S.btn, opacity: (!!refus || !formulaireComplet) ? 0.5 : 1 }}>
+                      {repriseAttente ? 'Confirmer cette place' : '+ Prendre un nouveau rendez-vous'}
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -3326,13 +3686,23 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => { if (clientePrenom.trim() && clienteNom.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) setStep(repriseAttente ? 5 : 2) }}
-                  disabled={!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())}
-                  style={{ ...S.btn, opacity: (!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) ? 0.5 : 1 }}
-                >
-                  Continuer →
-                </button>
+                {blocFormulaire}
+                {blocRefus}
+
+                {(() => {
+                  const identiteOk = !!clientePrenom.trim() && !!clienteNom.trim()
+                    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())
+                  const peut = identiteOk && !refus && formulaireComplet
+                  return (
+                    <button
+                      onClick={() => { if (peut) setStep(repriseAttente ? 5 : 2) }}
+                      disabled={!peut}
+                      style={{ ...S.btn, opacity: peut ? 1 : 0.5 }}
+                    >
+                      Continuer →
+                    </button>
+                  )
+                })()}
               </div>
             )}
           </div>
