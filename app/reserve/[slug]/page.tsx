@@ -523,6 +523,40 @@ export default function ReservationPage() {
     if (step !== 5) window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step])
 
+  // ── Step 1 : Identification ──────────────────
+  const [telephone,     setTelephone]     = useState('')
+  const [clientePrenom, setClientePrenom] = useState('')
+  const [clienteNom,    setClienteNom]    = useState('')
+  const [clienteEmail,  setClienteEmail]  = useState('')
+  const [clienteId,     setClienteId]     = useState<string | null>(null)
+  const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+
+  // ── LA VITRINE ── ce que la page montre avant de réserver.
+  // Tout est là, mais tout est plié : la première étape reste celle où l'on
+  // entre son numéro, et ce geste ne doit pas être noyé sous des cartes.
+  type Vitrine = {
+    avis_actifs: boolean; note: number | null; nb_avis: number
+    avis: { auteur: string; note: number; texte: string | null; prestations: string | null
+            reponse: string | null; cree_le: string
+            photos: { vignette: string; pleine: string }[] }[]
+    adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
+    accueil: Record<string, boolean | null>
+    reglement: string | null
+    formulaire: { nouvelles: QuestionFormulaire[]; connues: QuestionFormulaire[] }
+    demander_inspirations: boolean
+  }
+  type QuestionFormulaire = {
+    id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
+    options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
+  }
+  const [vitrine, setVitrine] = useState<Vitrine | null>(null)
+  // Une seule carte ouverte à la fois : deux dépliées et le champ du numéro
+  // sort de l'écran.
+  const [carteOuverte, setCarteOuverte] = useState<'avis' | 'ou' | 'savoir' | null>(null)
+  const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
+  // Les réponses au formulaire, et le refus s'il y en a un.
+  const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
+  const [refus, setRefus] = useState<{ question: string; reponse: string; message: string } | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────
   // LES CARTES DE LA VITRINE — pliées.
@@ -809,40 +843,6 @@ export default function ReservationPage() {
     </div>
   )
 
-  // ── Step 1 : Identification ──────────────────
-  const [telephone,     setTelephone]     = useState('')
-  const [clientePrenom, setClientePrenom] = useState('')
-  const [clienteNom,    setClienteNom]    = useState('')
-  const [clienteEmail,  setClienteEmail]  = useState('')
-  const [clienteId,     setClienteId]     = useState<string | null>(null)
-  const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
-
-  // ── LA VITRINE ── ce que la page montre avant de réserver.
-  // Tout est là, mais tout est plié : la première étape reste celle où l'on
-  // entre son numéro, et ce geste ne doit pas être noyé sous des cartes.
-  type Vitrine = {
-    avis_actifs: boolean; note: number | null; nb_avis: number
-    avis: { auteur: string; note: number; texte: string | null; prestations: string | null
-            reponse: string | null; cree_le: string
-            photos: { vignette: string; pleine: string }[] }[]
-    adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
-    accueil: Record<string, boolean | null>
-    reglement: string | null
-    formulaire: { nouvelles: QuestionFormulaire[]; connues: QuestionFormulaire[] }
-    demander_inspirations: boolean
-  }
-  type QuestionFormulaire = {
-    id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
-    options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
-  }
-  const [vitrine, setVitrine] = useState<Vitrine | null>(null)
-  // Une seule carte ouverte à la fois : deux dépliées et le champ du numéro
-  // sort de l'écran.
-  const [carteOuverte, setCarteOuverte] = useState<'avis' | 'ou' | 'savoir' | null>(null)
-  const [photoOuverte, setPhotoOuverte] = useState<string | null>(null)
-  // Les réponses au formulaire, et le refus s'il y en a un.
-  const [reponsesFormulaire, setReponsesFormulaire] = useState<Record<string, string>>({})
-  const [refus, setRefus] = useState<{ question: string; reponse: string; message: string } | null>(null)
   const [rdvsAVenir,        setRdvsAVenir]        = useState<RdvAVenir[]>([])
   // Ce sur quoi elle peut encore donner son avis : ses rendez-vous des trois
   // derniers jours, ni annulés ni déjà notés.
@@ -2338,16 +2338,17 @@ export default function ReservationPage() {
           // clair : la pro peut les renommer ou les supprimer ensuite, un
           // rendez-vous passé doit rester lisible.
           reponses_questions: [
-            ...questionsEnCours,
+            ...questionsEnCours
+              .filter(q => reponses[q.id])
+              .map(q => ({
+                question: q.texte,
+                reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
+              })),
+            // Celles du formulaire de la pro, déjà en clair.
             ...questionsValides
               .filter(q => (reponsesFormulaire[q.id] ?? '').trim())
               .map(q => ({ question: q.libelle, reponse: reponsesFormulaire[q.id].trim() })),
-          ]
-            .filter(q => reponses[q.id])
-            .map(q => ({
-              question: q.texte,
-              reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
-            })),
+          ],
           reduction_appliquee: reductionCliente
             ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
             : null,
