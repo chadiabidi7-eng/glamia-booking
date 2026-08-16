@@ -205,7 +205,19 @@ export function generateSlots(
   // ON NE MONTRE QUE CE QUI EST RÉSERVABLE. Ailleurs la grille affiche aussi
   // les heures occupées, en grisé ; ici l'intérêt est justement la liste
   // courte — une heure grisée n'apprendrait rien et ferait douter.
-  if (aLaSuite) {
+  //
+  // ── ET SEULEMENT EN PLANNING LIBRE ────────────────────────────────────────
+  // L'interrupteur ne s'affiche QUE dans le planning libre. Une pro qui
+  // repassait en planning habituel ne le voyait plus — mais il restait allumé
+  // en base, et sa page continuait de n'offrir qu'un créneau par plage. Elle
+  // n'avait aucun moyen de comprendre, ni même de le voir : le réglage avait
+  // disparu de son écran.
+  //
+  // Cinq pros étaient dans ce cas le 16 août 2026, avec un ou deux créneaux
+  // proposés par jour au lieu d'une grille entière. Le réglage reste enregistré
+  // — il lui revient si elle retourne au planning libre — mais il ne s'applique
+  // plus qu'à ce mode-là, celui où elle peut le voir et l'éteindre.
+  if (aLaSuite && planningVar) {
     const slots: Slot[] = []
     for (const plage of plages) {
       // Le premier départ possible. Si la plage a déjà commencé, on repart de
