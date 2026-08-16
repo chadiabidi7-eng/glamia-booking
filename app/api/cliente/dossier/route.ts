@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { prestationsLisibles } from '@/lib/nomsPrestations'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — ce qui appartient à UNE cliente : ses rendez-vous à venir
 // et sa carte de fidélité.
@@ -92,14 +94,11 @@ export async function POST(req: NextRequest) {
           const fin = new Date(r.date as string).getTime() + ((r.duree as number) ?? 60) * 60 * 1000
           return Date.now() <= fin + 72 * 3600 * 1000
         })
-        .map(r => {
-          const listes = Array.isArray(r.techniques) ? (r.techniques as string[]) : []
-          return {
-            token: r.token_confirmation as string,
-            date: r.date as string,
-            prestations: (listes.length ? listes : [r.technique]).filter(Boolean).join(' · '),
-          }
-        })
+        .map(r => ({
+          token: r.token_confirmation as string,
+          date: r.date as string,
+          prestations: prestationsLisibles(r.techniques, r.technique),
+        }))
     }
 
       return avisAProposer
