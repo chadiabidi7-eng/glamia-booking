@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { prestationsLisibles } from '@/lib/nomsPrestations'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // L'AVIS D'UNE CLIENTE, DÉPOSÉ DEPUIS SON LIEN DE RENDEZ-VOUS.
 //
@@ -74,9 +76,7 @@ async function lireEtat(token: string): Promise<Etat> {
     .from('profiles').select('pseudo, prenom, avis_actifs').eq('id', rdv.pro_id).maybeSingle()
   if (pro && pro.avis_actifs === false) return { ouvert: false, raison: 'ferme' }
 
-  const listes = Array.isArray(rdv.techniques) ? (rdv.techniques as string[]) : []
-  const prestations = (listes.length > 0 ? listes : [rdv.technique])
-    .filter(Boolean).join(' · ')
+  const prestations = prestationsLisibles(rdv.techniques, rdv.technique)
 
   return {
     ouvert: true,
