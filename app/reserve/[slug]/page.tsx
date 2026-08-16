@@ -269,6 +269,13 @@ function formatDateLong(dateStr: string) {
   })
 }
 
+/** « mardi 18 août » — l'année n'apprend rien quand c'est dans les trois mois. */
+function formatDateCourte(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  })
+}
+
 function formatRdvDate(isoStr: string) {
   const d = new Date(isoStr)
   const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
@@ -558,6 +565,9 @@ export default function ReservationPage() {
   // la cliente au moment où elle allait toucher le champ. On attend donc que
   // la vitrine soit là avant de dessiner quoi que ce soit.
   const [vitrinePrete, setVitrinePrete] = useState(false)
+  // La prochaine ouverture dans l'agenda de la pro. Cherchée dès l'ouverture,
+  // sans faire attendre la page : la ligne apparaît quand la réponse arrive.
+  const [prochaineDispo, setProchaineDispo] = useState<{ date: string; heure: string } | null>(null)
   // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
@@ -1513,6 +1523,26 @@ export default function ReservationPage() {
       // Une vitrine qui ne charge pas ne doit pas empêcher de réserver.
       .catch(e => console.error('[vitrine]', e))
       .finally(() => setVitrinePrete(true))
+  }, [pro?.id])
+
+  // ── LA PROCHAINE DISPONIBILITÉ ──
+  // C'est la question que se pose une cliente avant toute autre : est-ce que
+  // cette pro a de la place ? Elle devait choisir une prestation, ouvrir le
+  // calendrier et chercher pour l'apprendre. On lui répond dès l'arrivée.
+  useEffect(() => {
+    if (!pro?.id) return
+    let vivant = true
+    fetch('/api/pro/prochaine-dispo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pro_id: pro.id }),
+    })
+      .then(r => r.json())
+      .then(d => { if (vivant && d?.date && d?.heure) setProchaineDispo({ date: d.date, heure: d.heure }) })
+      // Une recherche qui échoue ne montre rien : mieux vaut pas d'information
+      // qu'une fausse.
+      .catch(e => console.error('[prochaine-dispo]', e))
+    return () => { vivant = false }
   }, [pro?.id])
 
   // Le filet de sécurité : si la vitrine tarde ou ne répond pas, la page
@@ -3292,6 +3322,28 @@ export default function ReservationPage() {
 
         {step === 1 && vitrinePrete && (
           <div>
+            {/* ── QUAND EST-CE QU'ELLE PEUT VENIR ─────────────────────────────
+                La première question d'une cliente, et la seule qui décide de
+                tout. Le point vert dit « c'est ouvert » avant même qu'on ait lu
+                la date. Rien ne s'affiche si l'agenda est plein sur trois mois :
+                une ligne vide inquiéterait plus qu'elle n'informerait. */}
+            {phoneStatus === 'idle' && prochaineDispo && (
+              <div className="glamia-apparait" style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                marginBottom: 14, fontSize: 14.5, color: '#4A424C',
+              }}>
+                <span style={{
+                  width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none',
+                }} />
+                <span>
+                  Prochaine dispo le{' '}
+                  <b style={{ color: '#2D2D2D' }}>{formatDateCourte(prochaineDispo.date)}</b>
+                  {' à '}
+                  <b style={{ color: '#2D2D2D' }}>{prochaineDispo.heure.replace(':', 'h')}</b>
+                </span>
+              </div>
+            )}
+
             {phoneStatus === 'idle' && blocReglement}
 
             <div className="glamia-cadre-actif" style={{
