@@ -5021,6 +5021,7 @@ export default function ReservationPage() {
                   <BlocGlamiaPay
                     ref={propayRef}
                     mode={propay.mode ?? 'empreinte'}
+                    clientSecret={propay.client_secret}
                     nom={`${clientePrenom.trim()} ${clienteNom.trim()}`.trim()}
                     email={clienteEmail.trim()}
                     // ── LE BOUTON APPLE PAY / GOOGLE PAY ────────────────────
@@ -5263,13 +5264,16 @@ export default function ReservationPage() {
 // depuis le bouton Réserver (la carte est validée AVANT la création du RDV).
 const BlocGlamiaPay = forwardRef<PropayHandle, {
   mode: 'empreinte' | 'acompte' | 'total'
+  /** Le laissez-passer du paiement en cours : il permet de REDEMANDER à Stripe
+      où en est l'argent quand la réponse s'est perdue. */
+  clientSecret: string
   nom: string
   email: string
   consentementDonne: boolean
   surRefusConsentement: () => void
   surPaiementPortefeuille: () => void
 }>(
-  function BlocGlamiaPay({ mode, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille }, ref) {
+  function BlocGlamiaPay({ mode, clientSecret, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille }, ref) {
     const stripeJs = useStripe()
     const elements = useElements()
     // ── CE QUE LE PORTEFEUILLE A DÉJÀ RÉGLÉ ─────────────────────────────────
@@ -5278,6 +5282,50 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
     // `confirmer()` comme d'habitude : on lui rend l'identifiant déjà obtenu
     // plutôt que de redemander un paiement qui vient d'être fait.
     const dejaRegleRef = useRef<string | null>(null)
+
+    // ── UN REFUS NE VEUT PAS DIRE QUE L'ARGENT N'EST PAS PARTI ───────────────
+    //
+    // Le 15 août à 23 h 56, une cliente a payé 38,84 €. La réponse de Stripe
+    // ne lui est jamais revenue — sa page s'était rechargée. L'écran a donc
+    // affiché « une erreur de traitement est survenue, essaie une autre carte »
+    // à quelqu'un qui venait d'être débitée. Elle a réappuyé deux fois ; Stripe
+    // a refusé les deux fois, précisément PARCE QUE c'était déjà payé. Et à
+    // chaque refus, le même message lui conseillait de sortir une autre carte.
+    //
+    // Le paiement ne se fait pas dans le téléphone : il se fait chez Stripe. Ce
+    // que le téléphone n'a pas entendu ne dit rien de ce qui s'est passé
+    // là-bas. Alors on demande. Si l'argent est parti, on continue la
+    // réservation comme si tout s'était bien déroulé.
+    //
+    // Deux façons de savoir, dans cet ordre : le refus de Stripe porte souvent
+    // l'état du paiement avec lui — c'est immédiat et gratuit. Sinon on
+    // l'interroge avec le laissez-passer du paiement.
+    const dejaAbouti = async (
+      erreur: { payment_intent?: { id: string; status: string }; setup_intent?: { id: string; status: string } } | undefined,
+    ): Promise<string | null> => {
+      // Un paiement « réussi », ou une empreinte « prête à être prélevée » :
+      // dans les deux cas la carte a fait son travail.
+      const abouti = (statut?: string) => statut === 'succeeded' || statut === 'requires_capture'
+
+      const porte = mode === 'empreinte' ? erreur?.setup_intent : erreur?.payment_intent
+      if (porte && abouti(porte.status)) return porte.id
+
+      if (!stripeJs || !clientSecret) return null
+      try {
+        if (mode === 'empreinte') {
+          const { setupIntent } = await stripeJs.retrieveSetupIntent(clientSecret)
+          return setupIntent && abouti(setupIntent.status) ? setupIntent.id : null
+        }
+        const { paymentIntent } = await stripeJs.retrievePaymentIntent(clientSecret)
+        return paymentIntent && abouti(paymentIntent.status) ? paymentIntent.id : null
+      } catch (e) {
+        // Injoignable : on ne peut rien affirmer, donc on laisse le refus tel
+        // quel. Mieux vaut un message d'échec qu'un rendez-vous créé sans
+        // argent.
+        console.error('[paiement] état réel indisponible :', e)
+        return null
+      }
+    }
 
     useImperativeHandle(ref, () => ({
       async confirmer() {
@@ -5293,17 +5341,25 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
             elements, redirect: 'if_required',
             confirmParams: { payment_method_data: { billing_details } },
           })
-          if (error || !setupIntent) return { ok: false, erreur: error?.message ?? "La carte n'a pas pu être validée." }
+          if (error || !setupIntent) {
+            const deja = await dejaAbouti(error)
+            if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
+            return { ok: false, erreur: error?.message ?? "La carte n'a pas pu être validée." }
+          }
           return { ok: true, intentId: setupIntent.id }
         }
         const { error, paymentIntent } = await stripeJs.confirmPayment({
           elements, redirect: 'if_required',
           confirmParams: { payment_method_data: { billing_details } },
         })
-        if (error || !paymentIntent) return { ok: false, erreur: error?.message ?? "Le paiement n'a pas abouti." }
+        if (error || !paymentIntent) {
+          const deja = await dejaAbouti(error)
+          if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
+          return { ok: false, erreur: error?.message ?? "Le paiement n'a pas abouti." }
+        }
         return { ok: true, intentId: paymentIntent.id }
       },
-    }), [stripeJs, elements, mode, nom, email])
+    }), [stripeJs, elements, mode, clientSecret, nom, email])
 
     const billingWallet = { name: nom || undefined, email: email || undefined }
 
@@ -5334,15 +5390,25 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
                 ...commun,
                 confirmParams: { payment_method_data: { billing_details: billingWallet } },
               })
-              if (error || !setupIntent) return
-              dejaRegleRef.current = setupIntent.id
+              if (error || !setupIntent) {
+                const deja = await dejaAbouti(error)
+                if (!deja) return
+                dejaRegleRef.current = deja
+              } else {
+                dejaRegleRef.current = setupIntent.id
+              }
             } else {
               const { error, paymentIntent } = await stripeJs.confirmPayment({
                 ...commun,
                 confirmParams: { payment_method_data: { billing_details: billingWallet } },
               })
-              if (error || !paymentIntent) return
-              dejaRegleRef.current = paymentIntent.id
+              if (error || !paymentIntent) {
+                const deja = await dejaAbouti(error)
+                if (!deja) return
+                dejaRegleRef.current = deja
+              } else {
+                dejaRegleRef.current = paymentIntent.id
+              }
             }
             // La carte est validée : on enchaîne sur la création du rendez-vous,
             // exactement comme si elle avait appuyé sur « Confirmer ».
