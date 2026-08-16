@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe-serveur'
 import { reglagesPay } from './pays-stripe'
+import { delaiAvant } from '@/lib/heure-pro'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — traitement automatique d'une ANNULATION de RDV côté cliente.
@@ -110,7 +111,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
 
     // Le seuil est celui que LA PRO a réglé — 24 ou 48 heures.
     const { data: reglages } = await supabaseAdmin
-      .from('profiles').select('acompte_config').eq('id', paiement.pro_id).maybeSingle()
+      .from('profiles').select('acompte_config, timezone').eq('id', paiement.pro_id).maybeSingle()
     const SEUIL_TARDIVE_MS = seuilTardiveMs((reglages as { acompte_config?: unknown } | null)?.acompte_config)
 
     // Grâce C5 : si la PRO a déplacé le RDV dans les dernières 24 h, l'annulation
@@ -119,7 +120,18 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
     const changeProRecent = (rdv as { date_change_pro_le?: string | null }).date_change_pro_le
       ? Date.now() - new Date((rdv as { date_change_pro_le: string }).date_change_pro_le).getTime() < SEUIL_TARDIVE_MS
       : false
-    const tardive = !changeProRecent && new Date(rdv.date).getTime() - Date.now() < SEUIL_TARDIVE_MS
+    // ── LE DÉLAI SE COMPTE CHEZ LA PRO, PAS À GREENWICH ─────────────────────
+    // L'heure du rendez-vous est enregistrée telle qu'elle s'affiche : « 14 h »
+    // sans dire 14 h où. La comparer directement à l'instant présent revenait à
+    // la lire comme une heure de Greenwich — six heures d'écart pour une pro de
+    // Toronto, deux pour La Réunion. À Toronto, la limite des 24 h tombait en
+    // réalité à 28 h, et une cliente qui annulait 26 h à l'avance se faisait
+    // prélever alors qu'elle était dans les temps.
+    //
+    // `date_change_pro_le` juste au-dessus n'a pas ce problème : c'est un vrai
+    // instant, enregistré par le serveur. On n'y touche pas.
+    const fuseauPro = (reglages as { timezone?: string | null } | null)?.timezone
+    const tardive = !changeProRecent && delaiAvant(rdv.date as string, fuseauPro) < SEUIL_TARDIVE_MS
     const historique = Array.isArray(paiement.historique) ? paiement.historique : []
     const maintenant = new Date().toISOString()
 
