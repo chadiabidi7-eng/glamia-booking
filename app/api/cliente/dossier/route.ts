@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     // On ne renvoie que ce qu'il faut pour afficher un bouton — la date, la
     // prestation, le jeton. Jamais le prix, jamais un identifiant de paiement.
       const { data: pro } = await supabaseAdmin
-      .from('profiles').select('avis_actifs').eq('id', pro_id).maybeSingle()
+      .from('profiles').select('avis_actifs, timezone').eq('id', pro_id).maybeSingle()
 
       let avisAProposer: { token: string; date: string; prestations: string }[] = []
       if (pro?.avis_actifs !== false) {
@@ -90,8 +91,11 @@ export async function POST(req: NextRequest) {
           if (deja.has(r.id as string)) return false
           if (!r.token_confirmation) return false
           // La fenêtre est comptée depuis la FIN du rendez-vous, comme côté
-          // serveur d'écriture : les deux doivent dire la même chose.
-          const fin = new Date(r.date as string).getTime() + ((r.duree as number) ?? 60) * 60 * 1000
+          // serveur d'écriture : les deux doivent dire la même chose — y
+          // compris sur le fuseau, sans quoi le bouton apparaît ici alors que
+          // la page d'avis répond « pas encore passé ».
+          const fin = instantReel(r.date as string, pro?.timezone as string | null).getTime()
+            + ((r.duree as number) ?? 60) * 60 * 1000
           return Date.now() <= fin + 72 * 3600 * 1000
         })
         .map(r => ({

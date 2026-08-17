@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,8 +44,20 @@ function nomCourt(prenom?: string | null, nom?: string | null): string {
 }
 
 /** Les dates sont stockées en heure murale : on les lit en UTC. */
-function finDuRdv(iso: string, dureeMin: number | null): number {
-  return new Date(iso).getTime() + (dureeMin ?? 60) * 60 * 1000
+/**
+ * LA FIN D'UN RENDEZ-VOUS, EN VRAI INSTANT.
+ *
+ * L'heure est enregistrée telle qu'elle s'affiche : « 13:00 » veut dire 13 h
+ * CHEZ LA PRO. La lire comme un instant de Greenwich décalait tout de deux
+ * heures en France l'été — et la cliente d'Ilana, le 17 août 2026, s'est vu
+ * répondre « le rendez-vous n'est pas encore passé » pendant les deux heures
+ * qui ont suivi son rendez-vous de 13 h.
+ *
+ * Aux Antilles, le décalage joue dans l'autre sens : la porte s'ouvrait quatre
+ * heures AVANT la fin du rendez-vous, et se refermait quatre heures trop tôt.
+ */
+function finDuRdv(heureAffichee: string, dureeMin: number | null, fuseau?: string | null): number {
+  return instantReel(heureAffichee, fuseau).getTime() + (dureeMin ?? 60) * 60 * 1000
 }
 
 type Etat =
@@ -61,7 +74,13 @@ async function lireEtat(token: string): Promise<Etat> {
   if (!rdv) return { ouvert: false, raison: 'inconnu' }
   if (rdv.statut === 'annule') return { ouvert: false, raison: 'annule' }
 
-  const fin = finDuRdv(rdv.date as string, rdv.duree as number | null)
+  // Le fuseau de la pro se lit d'abord : sans lui, l'heure du rendez-vous ne
+  // veut rien dire, et c'est elle qu'on s'apprête à comparer à maintenant.
+  const { data: pro } = await supabaseAdmin
+    .from('profiles').select('pseudo, prenom, avis_actifs, timezone').eq('id', rdv.pro_id).maybeSingle()
+  if (pro && pro.avis_actifs === false) return { ouvert: false, raison: 'ferme' }
+
+  const fin = finDuRdv(rdv.date as string, rdv.duree as number | null, pro?.timezone as string | null)
   const maintenant = Date.now()
   if (maintenant < fin) return { ouvert: false, raison: 'trop_tot' }
   if (maintenant > fin + FENETRE_MS) return { ouvert: false, raison: 'trop_tard' }
@@ -69,12 +88,6 @@ async function lireEtat(token: string): Promise<Etat> {
   const { data: existant } = await supabaseAdmin
     .from('avis_clientes').select('id').eq('rdv_id', rdv.id).maybeSingle()
   if (existant) return { ouvert: false, raison: 'deja' }
-
-  // Une pro qui a éteint les avis n'en reçoit pas : on ne collecte pas dans le
-  // vide, et on ne demande rien à sa cliente qui ne servira à personne.
-  const { data: pro } = await supabaseAdmin
-    .from('profiles').select('pseudo, prenom, avis_actifs').eq('id', rdv.pro_id).maybeSingle()
-  if (pro && pro.avis_actifs === false) return { ouvert: false, raison: 'ferme' }
 
   const prestations = prestationsLisibles(rdv.techniques, rdv.technique)
 
