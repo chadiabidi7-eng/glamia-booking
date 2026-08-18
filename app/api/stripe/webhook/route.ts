@@ -243,6 +243,49 @@ export async function POST(req: NextRequest) {
         break
       }
 
+      // ── LE VIREMENT VERS LE COMPTE EN BANQUE ────────────────────────────
+      // Le dernier maillon de la chaîne, et le seul qu'on ne regardait pas.
+      // Une pro dont le virement échoue ne l'apprend que devant son relevé —
+      // et nous jamais. On enregistre les trois moments : parti, arrivé, ou
+      // refusé. Un refus la prévient tout de suite, avec la raison de Stripe.
+      case 'payout.created':
+      case 'payout.paid':
+      case 'payout.failed':
+      case 'payout.canceled': {
+        const virement = event.data.object as Stripe.Payout
+        // Un virement de caisse arrive avec le compte connecté de la pro ;
+        // sans lui, c'est notre propre compte et ça ne nous regarde pas ici.
+        const compte = event.account
+        if (!compte) break
+
+        const { data: lien } = await supabaseAdmin
+          .from('stripe_comptes').select('pro_id').eq('account_id', compte).maybeSingle()
+
+        await supabaseAdmin.from('virements').upsert({
+          pro_id: lien?.pro_id ?? null,
+          account_id: compte,
+          payout_id: virement.id,
+          montant: virement.amount,
+          devise: virement.currency,
+          statut: virement.status,
+          arrive_le: virement.arrival_date
+            ? new Date(virement.arrival_date * 1000).toISOString().slice(0, 10)
+            : null,
+          motif_echec: virement.failure_message ?? virement.failure_code ?? null,
+          maj_le: new Date().toISOString(),
+        }, { onConflict: 'payout_id' })
+
+        if (event.type === 'payout.failed' && lien?.pro_id) {
+          await pousserNotifPro(
+            lien.pro_id,
+            'Ton virement n’est pas parti',
+            'Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.',
+          )
+        }
+        console.log(`[stripe/webhook] virement ${virement.status} — ${(virement.amount / 100).toFixed(2)} ${virement.currency} — ${compte}`)
+        break
+      }
+
       case 'payment_intent.payment_failed': {
         const paiement = event.data.object as Stripe.PaymentIntent
         console.warn('[stripe/webhook] Paiement échoué:', paiement.id, paiement.last_payment_error?.code)
