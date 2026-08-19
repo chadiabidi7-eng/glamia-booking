@@ -24,6 +24,11 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, extname } from 'path';
 
 const RACINE = new URL('..', import.meta.url).pathname;
+
+// L'ÉCRAN FONDATEUR RESTE EN FRANÇAIS. Personne d'autre que Chadi ne l'ouvre :
+// le traduire coûterait du temps et n'aiderait aucune pro.
+const HORS_COMPTE = ['/app/admin/'];
+
 const LANGUES = ['fr', 'en', 'es'];
 
 const aplatir = (objet, prefixe = '') =>
@@ -63,11 +68,13 @@ const parcourir = (dossier, exts = ['.tsx']) => readdirSync(dossier).flatMap(nom
     : exts.includes(extname(nom)) ? [chemin] : [];
 });
 
-const ecrans = [...parcourir(join(RACINE, 'app'), ['.tsx', '.ts']), ...parcourir(join(RACINE, 'components'), ['.tsx'])];
+const ecrans = [...parcourir(join(RACINE, 'app'), ['.tsx', '.ts']), ...parcourir(join(RACINE, 'components'), ['.tsx'])]
+  .filter(f => !HORS_COMPTE.some(h => f.includes(h)));
 
 // Ce qui ne se traduit pas : le nom de la marque, et le coin réservé aux
 // essais qu'aucune pro ne voit.
-const JAMAIS_TRADUIT = ['GLAMIA', 'Glamia', 'Dev'];
+const JAMAIS_TRADUIT = ['GLAMIA', 'Glamia', 'Dev', 'Admin'];
+
 // Le motif n'acceptait que les phrases commençant par une lettre : « ← Retour »
 // et « ＋ Ajouter une prestation » passaient donc à travers. On accepte
 // maintenant n'importe quel début, du moment qu'il y a des lettres dedans.

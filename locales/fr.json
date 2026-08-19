@@ -242,5 +242,20 @@
     "jourFerme": "Cette journée n'est plus ouverte à la réservation. Choisis une autre date.",
     "creneauRetire": "Ce créneau n'est plus proposé. Choisis-en un autre.",
     "creneauPris": "Ce créneau vient d'être pris 😔 Choisis-en un autre."
+  },
+  "aide": {
+    "titre": "Aide & assistance",
+    "intro": "Une question, un souci, une idée ? On est là pour vous aider. On lit et on répond à tout, généralement sous 24 à 48 heures (jours ouvrés).",
+    "nousContacter": "Nous contacter",
+    "ecrireEmail": "Écrire à contact@glamia.pro",
+    "ecrireInstagram": "Nous écrire sur Instagram (@glamia.officiel)",
+    "essaiDebut": "À l'installation, vous découvrez",
+    "essaiQuatorzeJours": "tout Glamia gratuitement pendant 14 jours",
+    "abonnementApple": "Les abonnements Glamia sont gérés par Apple. Pour modifier ou résilier : ouvrez",
+    "gererAbonnement": "Gérer ou résilier mon abonnement",
+    "bug": "J'ai un bug ou un souci de connexion",
+    "supprimerCompte": "Supprimer mon compte et mes données",
+    "vousEtesCliente": "Vous êtes cliente et vous avez pris rendez-vous ?",
+    "description": "Besoin d'aide avec Glamia ? Contactez-nous par email ou sur Instagram, et retrouvez les réponses aux questions les plus fréquentes."
   }
 }

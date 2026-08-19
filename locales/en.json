@@ -242,5 +242,20 @@
     "jourFerme": "That day is no longer open for booking. Please choose another date.",
     "creneauRetire": "That slot is no longer offered. Please choose another.",
     "creneauPris": "That slot has just been taken 😔 Please choose another."
+  },
+  "aide": {
+    "titre": "Help & support",
+    "intro": "A question, a problem, an idea? We're here to help. We read and answer everything, usually within 24 to 48 hours (working days).",
+    "nousContacter": "Contact us",
+    "ecrireEmail": "Email contact@glamia.pro",
+    "ecrireInstagram": "Message us on Instagram (@glamia.officiel)",
+    "essaiDebut": "When you install it, you get",
+    "essaiQuatorzeJours": "all of Glamia free for 14 days",
+    "abonnementApple": "Glamia subscriptions are managed by Apple. To change or cancel: open",
+    "gererAbonnement": "Manage or cancel my subscription",
+    "bug": "I have a bug or a login problem",
+    "supprimerCompte": "Delete my account and my data",
+    "vousEtesCliente": "Are you a client who has booked an appointment?",
+    "description": "Need help with Glamia? Contact us by email or on Instagram, and find answers to the most common questions."
   }
 }
