@@ -17,6 +17,8 @@ import {
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
+import { poserLangue, traduire } from '@/lib/i18n'
+import { poserPays } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
 // Types
@@ -66,7 +68,7 @@ type Offre = {
 // deviendraient inconnus à la compilation.
 //
 // `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
-const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, timezone, abonnement_actif, trial_ends_at'
+const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
 
 /**
  * Les créneaux d'une ou plusieurs journées, calculés par le serveur.
@@ -1598,6 +1600,11 @@ export default function ReservationPage() {
       }
 
       const found = d.pro
+      // LA PAGE PREND LA LANGUE DE LA PRO, pas celle du navigateur de la
+      // cliente : c'est sa vitrine, dans la langue de son marché. Voir
+      // lib/i18n.ts pour le raisonnement complet.
+      poserLangue(found.langue)
+      poserPays(found.pays)
       setPro({
         id:               found.id,
         prenom:           found.prenom,
