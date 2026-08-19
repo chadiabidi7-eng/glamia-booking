@@ -260,66 +260,123 @@
   },
   "cgu": {
     "titre": "Conditions Générales d'Utilisation",
-    "maj": "Dernière mise à jour : 29 mars 2026",
+    "maj": "Dernière mise à jour : 19 août 2026",
     "contact": "Pour toute question :",
     "sections": [
       {
-        "titre": "1. Objet",
+        "titre": "1. Qui nous sommes, et ce que couvrent ces conditions",
         "paragraphes": [
-          "Les présentes CGU régissent l'utilisation de l'application Glamia, destinée aux professionnels de la beauté pour la gestion de leurs rendez-vous et de leur clientèle."
+          "Glamia est une application de gestion de rendez-vous, de suivi de clientèle et d'encaissement, destinée aux professionnels de la beauté. Les présentes conditions forment un contrat entre vous et Glamia, et s'appliquent chaque fois que vous utilisez l'application, la page de réservation qu'elle publie pour vous, ou tout service qui s'y rattache (ci-après « le Service »).",
+          "Si vous n'acceptez pas ces conditions, n'utilisez pas le Service."
         ]
       },
       {
-        "titre": "2. Accès au service",
+        "titre": "2. Qui peut utiliser le Service",
         "paragraphes": [
-          "L'inscription à Glamia est réservée aux professionnels de la beauté. L'utilisateur s'engage à fournir des informations exactes lors de son inscription."
+          "Le Service est réservé à un usage professionnel par des professionnels de la beauté. En vous inscrivant, vous déclarez avoir au moins 18 ans, avoir le pouvoir d'engager votre activité, et utiliser le Service dans le cadre de votre activité professionnelle.",
+          "Vos clientes n'ont pas de compte : elles utilisent seulement la page de réservation que vous publiez."
         ]
       },
       {
-        "titre": "3. Compte utilisateur",
+        "titre": "3. Votre compte",
         "paragraphes": [
-          "Chaque utilisateur est responsable de la confidentialité de ses identifiants de connexion. Toute activité réalisée depuis son compte est présumée être de son fait."
+          "Vous êtes responsable de la confidentialité de vos identifiants et de tout ce qui est fait depuis votre compte. Prévenez-nous immédiatement si vous pensez qu'il a été utilisé sans votre accord.",
+          "Vous vous engagez à fournir des informations exactes à l'inscription et à les tenir à jour. Nous pouvons suspendre un compte dont les informations sont fausses ou trompeuses."
         ]
       },
       {
-        "titre": "4. Utilisation du service",
+        "titre": "4. Usage autorisé",
         "paragraphes": [
-          "L'utilisateur s'engage à utiliser Glamia conformément à sa destination : gestion de rendez-vous, suivi de clientèle et communication professionnelle. Tout usage abusif ou frauduleux pourra entraîner la suspension du compte."
+          "Vous vous engagez à utiliser le Service pour ce à quoi il sert : gérer vos rendez-vous, suivre vos clientes, et encaisser des prestations que vous réalisez réellement.",
+          "Vous ne devez pas :"
+        ],
+        "liste": [
+          "utiliser le Service de manière illicite, ou pour organiser quoi que ce soit d'illicite ;",
+          "y déposer un contenu illicite, injurieux, ou qui porte atteinte aux droits d'un tiers ;",
+          "tenter d'accéder aux données d'autres professionnelles ou de leurs clientes ;",
+          "copier, revendre, décompiler ou tenter d'extraire le code du Service ;",
+          "vous en servir pour envoyer des messages commerciaux non sollicités en violation de la loi."
         ]
       },
       {
-        "titre": "5. Données et vie privée",
+        "titre": "5. Les données de vos clientes — votre rôle et le nôtre",
         "paragraphes": [
-          "L'utilisateur est responsable des données personnelles de ses clientes qu'il saisit dans Glamia. Il s'engage à respecter le RGPD et à informer ses clientes de l'utilisation de leurs données.",
-          "Pour plus de détails, consultez notre {confidentialite}."
+          "C'est vous qui décidez quelles informations vous enregistrez sur vos clientes, et pourquoi. Au sens du RGPD, vous en êtes le RESPONSABLE DE TRAITEMENT, et Glamia agit comme votre SOUS-TRAITANT : nous les traitons sur vos instructions, pour faire fonctionner le Service.",
+          "Vous répondez d'avoir une base légale pour collecter et utiliser ces données, et d'en informer vos clientes. Nous répondons de leur sécurité et de ne les utiliser que pour faire tourner le Service.",
+          "Glamia est en revanche responsable de traitement pour VOS PROPRES données de compte : votre inscription, votre abonnement, votre utilisation de l'application.",
+          "Le détail de ce partage, exigé par l'article 28 du RGPD, figure dans notre {confidentialite}."
         ]
       },
       {
-        "titre": "6. Propriété intellectuelle",
+        "titre": "6. Les paiements",
         "paragraphes": [
-          "L'ensemble des éléments de l'application Glamia (design, code, marque, contenus) sont la propriété exclusive de Glamia. Toute reproduction est interdite sans autorisation."
+          "Glamia Pay vous permet de demander un acompte, de garder une empreinte bancaire, d'encaisser par carte et d'envoyer des liens de paiement. Les paiements sont traités par Stripe. Glamia n'est pas une banque et ne détient jamais votre argent : les fonds vont de votre cliente à votre propre compte connecté.",
+          "Vous restez responsable des prix que vous fixez, des conditions d'annulation et d'absence que vous affichez à vos clientes, des remboursements que vous devez, et de vos obligations fiscales et comptables.",
+          "Lorsque vous prélevez une empreinte pour une absence, vous devez avoir affiché les conditions à votre cliente AVANT qu'elle ne paie ou n'autorise sa carte. Les contestations bancaires opposent votre cliente et vous ; nous vous remettrons les traces dont nous disposons pour vous aider à y répondre."
         ]
       },
       {
-        "titre": "7. Limitation de responsabilité",
+        "titre": "7. Abonnement et facturation",
         "paragraphes": [
-          "Glamia met tout en œuvre pour assurer la disponibilité du service, mais ne peut garantir une disponibilité ininterrompue. Glamia ne saurait être tenue responsable des dommages indirects liés à l'utilisation du service."
+          "Les abonnements payants sont vendus par l'App Store et facturés par Apple. Les renouvellements, résiliations et remboursements suivent les règles d'Apple et les réglages de votre compte App Store, pas les nôtres.",
+          "Si votre abonnement s'interrompt, votre compte passe en mode restreint : vos données sont conservées, mais certaines fonctions s'arrêtent. Nous vous prévenons avant."
         ]
       },
       {
-        "titre": "8. Résiliation",
+        "titre": "8. Le Service est fourni en l'état",
         "paragraphes": [
-          "L'utilisateur peut supprimer son compte à tout moment. Glamia se réserve le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU."
+          "Nous mettons tout en œuvre pour que le Service soit disponible et exact, sans pouvoir garantir un fonctionnement ininterrompu ni exempt d'erreur. Nous sommes tenus d'une obligation de moyens.",
+          "Le Service dépend de tiers — Apple, Stripe, hébergeur, prestataire d'emails, réseaux mobiles. Nous ne répondons pas de leurs défaillances, tout en faisant ce qui est raisonnablement en notre pouvoir pour en limiter l'effet sur vous."
         ]
       },
       {
-        "titre": "9. Modification des CGU",
+        "titre": "9. Notre responsabilité envers vous",
         "paragraphes": [
-          "Glamia se réserve le droit de modifier les présentes CGU. Les utilisateurs seront informés de toute modification substantielle."
+          "Rien dans ces conditions ne limite ni n'exclut notre responsabilité en cas de dommage corporel, de dol ou de faute lourde, ni dans les cas où la loi l'interdit.",
+          "Sous cette réserve, et dans la limite permise par la loi :"
+        ],
+        "liste": [
+          "nous ne répondons pas des pertes indirectes : manque à gagner, perte de clientèle, perte d'image, rendez-vous manqués, économies espérées ;",
+          "nous ne répondons de la perte ou de l'altération de données que dans la limite du rétablissement de la dernière sauvegarde en notre possession ;",
+          "notre responsabilité totale, pour l'ensemble des réclamations nées sur une période de douze mois, est limitée au montant que vous nous avez versé sur cette période, ou à 100 euros si ce montant est supérieur."
         ]
       },
       {
-        "titre": "10. Contact",
+        "titre": "10. Ce que vous nous garantissez",
+        "paragraphes": [
+          "Vous nous garantissez contre toute réclamation, condamnation, amende ou frais raisonnable que nous supporterions du fait de votre utilisation du Service — en particulier une réclamation de l'une de vos clientes, un manquement au RGPD de votre côté, ou une obligation fiscale ou de droit de la consommation que vous n'auriez pas respectée."
+        ]
+      },
+      {
+        "titre": "11. Propriété intellectuelle",
+        "paragraphes": [
+          "Le Service — sa conception, son code, sa marque, ses contenus — appartient à Glamia. Ces conditions vous donnent le droit de l'utiliser tant que votre compte est ouvert ; elles ne transfèrent aucune propriété.",
+          "Ce que vous mettez dans Glamia reste à vous : vos noms de prestations, vos prix, vos photos, vos fiches clientes. Vous ne nous accordez que l'autorisation nécessaire pour les afficher et les traiter afin de faire fonctionner le Service pour vous."
+        ]
+      },
+      {
+        "titre": "12. Suspension et fermeture du compte",
+        "paragraphes": [
+          "Vous pouvez fermer votre compte à tout moment. Vous pouvez exporter votre fichier clientes avant de partir, y compris si votre abonnement a expiré.",
+          "Nous pouvons suspendre ou fermer un compte qui viole ces conditions, qui met en danger d'autres utilisatrices ou leurs clientes, ou lorsque la loi nous l'impose. Lorsque cela est raisonnablement possible, nous vous prévenons d'abord."
+        ]
+      },
+      {
+        "titre": "13. Modifications",
+        "paragraphes": [
+          "Nous pouvons faire évoluer le Service et ces conditions. Lorsqu'une modification touche substantiellement vos droits, nous vous en informons dans l'application ou par email avant son entrée en vigueur. Continuer à utiliser le Service après cette date vaut acceptation."
+        ]
+      },
+      {
+        "titre": "14. Loi applicable et tribunal compétent",
+        "paragraphes": [
+          "Ces conditions sont régies par le droit français.",
+          "Tout litige relatif à leur formation, leur exécution ou leur interprétation relève de la compétence exclusive des tribunaux de Paris, y compris en cas de pluralité de défendeurs ou d'appel en garantie. Cette clause est conclue entre professionnels, conformément à l'article 48 du code de procédure civile.",
+          "Avant toute action, nous nous engageons mutuellement à rechercher une solution amiable : écrivez-nous, nous répondons."
+        ]
+      },
+      {
+        "titre": "15. Contact",
         "paragraphes": [
           "{contact}"
         ]
@@ -328,90 +385,110 @@
   },
   "confidentialite": {
     "titre": "Politique de confidentialité",
-    "maj": "Dernière mise à jour : 19 juillet 2026",
-    "contact": "Pour exercer vos droits, contactez-nous à :",
+    "maj": "Dernière mise à jour : 19 août 2026",
+    "contact": "Pour exercer vos droits, écrivez-nous à :",
     "sections": [
       {
-        "titre": "1. Responsable du traitement",
+        "titre": "1. Qui est responsable de vos données",
         "paragraphes": [
-          "Glamia, application de gestion de rendez-vous et d'encaissement pour professionnels de la beauté."
+          "Glamia est une application de gestion de rendez-vous et d'encaissement pour professionnels de la beauté.",
+          "Deux situations différentes coexistent, et la distinction compte :",
+          "Quand vous prenez rendez-vous chez une professionnelle, c'est ELLE qui décide de ce qu'elle enregistre sur vous et pourquoi. Elle en est le responsable de traitement. Glamia agit comme son sous-traitant, au sens de l'article 28 du RGPD : nous conservons et traitons ces données sur ses instructions, pour faire fonctionner sa page de réservation et son agenda. Une demande sur votre fiche s'adresse d'abord à elle ; nous l'aidons à y répondre.",
+          "Quand une professionnelle crée un compte Glamia, Glamia est responsable de traitement pour ses propres données de compte."
         ]
       },
       {
-        "titre": "2. Données collectées",
+        "titre": "2. Ce que nous collectons",
         "paragraphes": [
-          "Lors de la prise de rendez-vous en ligne, nous collectons :",
-          "Si vous réglez en ligne (acompte, empreinte bancaire ou paiement via Glamia Pay), nous collectons également le montant, le type et la date de la transaction ainsi que les identifiants techniques de paiement. Les données de votre carte bancaire sont saisies et traitées directement par notre prestataire de paiement (Stripe) et ne sont jamais stockées par Glamia."
+          "Lors de la prise de rendez-vous en ligne, nous collectons :"
         ],
         "liste": [
-          "Prénom et nom",
-          "Adresse email",
-          "Numéro de téléphone",
-          "Prestations choisies, date et heure du rendez-vous",
-          "Commentaires optionnels laissés par la cliente"
+          "prénom et nom ;",
+          "adresse email ;",
+          "numéro de téléphone ;",
+          "prestations choisies, date et heure du rendez-vous ;",
+          "commentaires et photos d'inspiration que vous envoyez, s'il y en a ;",
+          "réponses aux questions que votre professionnelle pose avant la réservation."
         ]
       },
       {
-        "titre": "3. Finalité du traitement",
+        "titre": "3. Les paiements",
         "paragraphes": [
-          "Vos données sont utilisées exclusivement pour :"
+          "Si vous réglez en ligne — acompte, empreinte bancaire ou paiement Glamia Pay — nous enregistrons le montant, le type et la date de la transaction, ainsi que les identifiants techniques du paiement.",
+          "Les données de votre carte sont saisies et traitées directement par Stripe, prestataire certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs.",
+          "Lorsque vous laissez une empreinte bancaire, aucune somme n'est débitée à la réservation : il s'agit d'une autorisation permettant à votre professionnelle de débiter le montant convenu en cas d'absence non annulée, selon les conditions affichées avant que vous n'autorisiez la carte."
+        ]
+      },
+      {
+        "titre": "4. Pourquoi, et sur quelle base légale",
+        "paragraphes": [
+          "Vos données ne servent qu'à faire fonctionner la réservation : gérer votre rendez-vous, envoyer confirmations et rappels, traiter paiements et remboursements, et permettre à votre professionnelle et à vous d'échanger à propos du rendez-vous.",
+          "Nos bases légales sont l'exécution du service que vous avez demandé (article 6.1.b du RGPD), nos obligations légales et comptables pour les traces de paiement (article 6.1.c), et notre intérêt légitime à maintenir le service sûr et fonctionnel (article 6.1.f)."
+        ]
+      },
+      {
+        "titre": "5. Nous ne vendons pas vos données",
+        "paragraphes": [
+          "Nous ne vendons pas vos données personnelles et ne les partageons à aucune fin publicitaire. Nous ne l'avons jamais fait.",
+          "Elles ne sont accessibles qu'à la professionnelle chez qui vous prenez rendez-vous, et aux prestataires techniques listés ci-dessous."
+        ]
+      },
+      {
+        "titre": "6. Qui d'autre les manipule",
+        "paragraphes": [
+          "Nous faisons appel à des prestataires strictement nécessaires au fonctionnement du service :"
         ],
         "liste": [
-          "La gestion et le suivi de vos rendez-vous",
-          "L'envoi de confirmations, rappels et notifications par email liés à vos rendez-vous",
-          "Le traitement des paiements, acomptes, empreintes bancaires et remboursements liés à vos rendez-vous",
-          "La communication entre vous et votre praticienne"
-        ]
-      },
-      {
-        "titre": "4. Base légale",
-        "paragraphes": [
-          "Le traitement est fondé sur l'exécution du service demandé (prise de rendez-vous et, le cas échéant, paiement associé) conformément à l'article 6.1.b du RGPD. La conservation des données de paiement et de facturation répond en outre à nos obligations légales et comptables (article 6.1.c du RGPD)."
-        ]
-      },
-      {
-        "titre": "5. Durée de conservation",
-        "paragraphes": [
-          "Vos données sont conservées pendant la durée de la relation commerciale avec votre praticienne, puis supprimées dans un délai de 12 mois après votre dernier rendez-vous.",
-          "Les données de paiement et de facturation sont conservées le temps requis par nos obligations légales et comptables."
-        ]
-      },
-      {
-        "titre": "6. Paiements et Glamia Pay",
-        "paragraphes": [
-          "Glamia met à disposition de votre praticienne des fonctionnalités de paiement — acompte à la réservation, empreinte bancaire, encaissement par carte (y compris sans terminal, la carte étant posée sur l'iPhone de la praticienne) et liens de paiement — regroupées sous le nom Glamia Pay.",
-          "Ces paiements sont traités par Stripe (Stripe Payments Europe, Ltd.), prestataire certifié conforme à la norme de sécurité PCI-DSS. Les informations de votre carte bancaire sont saisies et traitées directement par Stripe : elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs.",
-          "Lorsque vous laissez une empreinte bancaire, aucune somme n'est débitée à la réservation : il s'agit d'une autorisation permettant à votre praticienne de débiter le montant convenu en cas d'absence non annulée, selon les conditions affichées avant paiement."
-        ]
-      },
-      {
-        "titre": "7. Partage des données",
-        "paragraphes": [
-          "Vos données sont accessibles uniquement à la praticienne auprès de laquelle vous prenez rendez-vous. Elles ne sont ni vendues, ni partagées avec des tiers à des fins commerciales.",
-          "Nous faisons appel à des prestataires techniques (sous-traitants) strictement nécessaires au fonctionnement du service :"
-        ],
-        "liste": [
-          "Hébergement des données : Supabase (serveurs situés dans l'Union européenne).",
+          "Hébergement : Supabase, sur des serveurs situés dans l'Union européenne.",
           "Paiements : Stripe, pour le traitement sécurisé des transactions Glamia Pay.",
-          "Envoi des emails (confirmations, rappels) : notre prestataire d'emailing."
+          "Envoi des emails (confirmations, rappels) : notre prestataire d'emailing.",
+          "Notifications : Expo, pour prévenir votre professionnelle sur son téléphone."
         ]
       },
       {
-        "titre": "8. Vos droits",
+        "titre": "7. Où vos données sont hébergées",
         "paragraphes": [
-          "Conformément au RGPD, vous disposez des droits suivants :",
-          "{contact}"
-        ],
-        "liste": [
-          "Droit d'accès, de rectification et de suppression de vos données",
-          "Droit à la portabilité",
-          "Droit d'opposition et de limitation du traitement"
+          "Vos données sont hébergées dans l'Union européenne.",
+          "Lorsqu'un transfert hors de l'Union est nécessaire chez l'un de nos prestataires, il repose sur une décision d'adéquation ou sur les clauses contractuelles types de la Commission européenne, et nous exigeons le même niveau de protection."
         ]
       },
       {
-        "titre": "9. Cookies",
+        "titre": "8. Combien de temps nous les gardons",
         "paragraphes": [
-          "Le site de réservation Glamia n'utilise pas de cookies publicitaires. Seuls des cookies techniques nécessaires au bon fonctionnement du service sont utilisés."
+          "Vos données de rendez-vous sont conservées pendant la durée de la relation avec votre professionnelle, puis supprimées dans les 12 mois qui suivent votre dernier rendez-vous.",
+          "Les traces de paiement et de facturation sont conservées le temps requis par nos obligations légales et comptables, qui peut être plus long."
+        ]
+      },
+      {
+        "titre": "9. Vos droits",
+        "paragraphes": [
+          "Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation et de portabilité, ainsi que du droit de vous opposer à un traitement fondé sur notre intérêt légitime. Vous pouvez aussi donner des directives sur le sort de vos données après votre décès.",
+          "{contact}",
+          "Nous répondons dans un délai d'un mois. Si la demande porte sur votre fiche chez une professionnelle, nous la transmettons à celle-ci, qui en est responsable."
+        ]
+      },
+      {
+        "titre": "10. Les mineurs",
+        "paragraphes": [
+          "Le service de réservation ne s'adresse pas aux personnes de moins de 16 ans, et nous ne collectons pas sciemment leurs données. Si vous pensez que les données d'un mineur ont été enregistrées, écrivez-nous et nous les supprimerons."
+        ]
+      },
+      {
+        "titre": "11. Cookies",
+        "paragraphes": [
+          "Le site de réservation Glamia n'utilise pas de cookies publicitaires. Seuls des cookies techniques nécessaires au fonctionnement du service sont utilisés."
+        ]
+      },
+      {
+        "titre": "12. Sécurité",
+        "paragraphes": [
+          "Les données sont chiffrées en transit et au repos. Les accès sont limités à ce dont chaque partie du service a besoin. Les données de carte ne sont jamais détenues par nous. Aucun système n'est parfaitement sûr : en cas de violation touchant vos droits, nous en informons sans retard injustifié l'autorité compétente et, lorsque la loi l'exige, vous-même."
+        ]
+      },
+      {
+        "titre": "13. Réclamations",
+        "paragraphes": [
+          "Si notre réponse ne vous satisfait pas, vous pouvez saisir la Commission nationale de l'informatique et des libertés (CNIL), 3 place de Fontenoy, 75007 Paris, ou l'autorité de protection des données de votre pays de résidence."
         ]
       }
     ]
