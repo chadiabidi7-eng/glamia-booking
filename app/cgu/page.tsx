@@ -1,48 +1,65 @@
-export default function CGUPage() {
+import { traduireDans } from '@/lib/i18n';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LES CONDITIONS D'UTILISATION.
+//
+// ── LA LANGUE VIENT DE L'ADRESSE ────────────────────────────────────────────
+//
+// Cette page n'appartient à aucune pro : elle est ouverte depuis la page de
+// réservation d'une cliente, depuis l'app d'une pro, ou tapée directement.
+// Elle n'a donc aucun profil à interroger.
+//
+// Les liens qui y mènent ajoutent la langue : /cgu?lang=en. Sans rien, c'est le
+// français — c'est ce que voient les 767 pros d'aujourd'hui, et ça ne bouge pas.
+//
+// ── ⚠️ CE TEXTE ANGLAIS EST UNE TRADUCTION, PAS UN TEXTE DE DROIT ANGLAIS ───
+//
+// Il dit fidèlement ce que disent les conditions françaises, pour qu'une pro
+// anglophone comprenne ce qu'elle accepte. Il n'a PAS été écrit pour le droit
+// britannique ou américain, et il n'a été relu par aucun juriste.
+//
+// À FAIRE RELIRE AVANT DE VENDRE AU ROYAUME-UNI OU AUX ÉTATS-UNIS.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default async function CGUPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const { lang } = await searchParams;
+  const t = (cle: string) => traduireDans(lang, `cgu.${cle}`);
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 20px', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Conditions Générales d&apos;Utilisation</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 32 }}>Dernière mise à jour : 29 mars 2026</p>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>{t('titre')}</h1>
+      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 32 }}>{t('maj')}</p>
 
-      <Section title="1. Objet">
-        <p>Les présentes CGU régissent l&apos;utilisation de l&apos;application Glamia, destinée aux professionnels de la beauté pour la gestion de leurs rendez-vous et de leur clientèle.</p>
+      {(['1', '2', '3', '4'] as const).map(n => (
+        <Section key={n} title={t(`s${n}t`)}>
+          <p>{t(`s${n}`)}</p>
+        </Section>
+      ))}
+
+      <Section title={t('s5t')}>
+        <p>{t('s5')}</p>
+        <p>
+          {t('s5b')}{' '}
+          <a
+            href={lang ? `/confidentialite?lang=${lang}` : '/confidentialite'}
+            style={{ color: '#e91e8c', textDecoration: 'underline' }}>
+            {traduireDans(lang, 'resa.confidentialite')}
+          </a>.
+        </p>
       </Section>
 
-      <Section title="2. Accès au service">
-        <p>L&apos;inscription à Glamia est réservée aux professionnels de la beauté. L&apos;utilisateur s&apos;engage à fournir des informations exactes lors de son inscription.</p>
-      </Section>
+      {(['6', '7', '8', '9'] as const).map(n => (
+        <Section key={n} title={t(`s${n}t`)}>
+          <p>{t(`s${n}`)}</p>
+        </Section>
+      ))}
 
-      <Section title="3. Compte utilisateur">
-        <p>Chaque utilisateur est responsable de la confidentialité de ses identifiants de connexion. Toute activité réalisée depuis son compte est présumée être de son fait.</p>
-      </Section>
-
-      <Section title="4. Utilisation du service">
-        <p>L&apos;utilisateur s&apos;engage à utiliser Glamia conformément à sa destination : gestion de rendez-vous, suivi de clientèle et communication professionnelle. Tout usage abusif ou frauduleux pourra entraîner la suspension du compte.</p>
-      </Section>
-
-      <Section title="5. Données et vie privée">
-        <p>L&apos;utilisateur est responsable des données personnelles de ses clientes qu&apos;il saisit dans Glamia. Il s&apos;engage à respecter le RGPD et à informer ses clientes de l&apos;utilisation de leurs données.</p>
-        <p>Pour plus de détails, consultez notre <a href="/confidentialite" style={{ color: '#e91e8c', textDecoration: 'underline' }}>Politique de confidentialité</a>.</p>
-      </Section>
-
-      <Section title="6. Propriété intellectuelle">
-        <p>L&apos;ensemble des éléments de l&apos;application Glamia (design, code, marque, contenus) sont la propriété exclusive de Glamia. Toute reproduction est interdite sans autorisation.</p>
-      </Section>
-
-      <Section title="7. Limitation de responsabilité">
-        <p>Glamia met tout en œuvre pour assurer la disponibilité du service, mais ne peut garantir une disponibilité ininterrompue. Glamia ne saurait être tenue responsable des dommages indirects liés à l&apos;utilisation du service.</p>
-      </Section>
-
-      <Section title="8. Résiliation">
-        <p>L&apos;utilisateur peut supprimer son compte à tout moment. Glamia se réserve le droit de suspendre ou supprimer un compte en cas de violation des présentes CGU.</p>
-      </Section>
-
-      <Section title="9. Modification des CGU">
-        <p>Glamia se réserve le droit de modifier les présentes CGU. Les utilisateurs seront informés de toute modification substantielle.</p>
-      </Section>
-
-      <Section title="10. Contact">
-        <p>Pour toute question : <strong>contact@glamia.pro</strong></p>
+      <Section title={t('s10t')}>
+        <p>{t('s10')} <strong>contact@glamia.pro</strong></p>
       </Section>
     </div>
   );
