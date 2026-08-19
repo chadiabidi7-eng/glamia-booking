@@ -180,7 +180,7 @@ export default function PageAvis() {
             <img src={p.vignette} alt="" style={S.vignetteImage} />
             <button
               type="button"
-              aria-label="Retirer cette photo"
+              aria-label={traduire('resa.retirerPhoto')}
               onClick={() => setPhotos(l => l.filter((_, j) => j !== i))}
               style={S.retirer}>
               <X size={13} color="#fff" />
@@ -195,7 +195,7 @@ export default function PageAvis() {
             disabled={prepare}
             style={S.ajouter}>
             {prepare ? <Camera size={19} color={GRIS} /> : <ImagePlus size={19} color={ROSE} />}
-            <span style={S.ajouterTexte}>{prepare ? 'Un instant…' : 'Photo'}</span>
+            <span style={S.ajouterTexte}>{prepare ? traduire('resa.unInstant') : traduire('avis.photo')}</span>
           </button>
         )}
       </div>

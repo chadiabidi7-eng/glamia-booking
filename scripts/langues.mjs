@@ -27,7 +27,18 @@ const RACINE = new URL('..', import.meta.url).pathname;
 
 // L'ÉCRAN FONDATEUR RESTE EN FRANÇAIS. Personne d'autre que Chadi ne l'ouvre :
 // le traduire coûterait du temps et n'aiderait aucune pro.
-const HORS_COMPTE = ['/app/admin/'];
+const HORS_COMPTE = [
+  '/app/admin/',        // l'écran fondateur, que seul Chadi ouvre
+  '/app/layout.tsx',    // la racine du site : elle ne connaît aucune pro
+];
+
+// Ce qui n'est pas du texte affiché : une étiquette technique posée sur un
+// paiement Stripe, un message de journal. Ni l'un ni l'autre n'est lu par une
+// pro ou par une cliente.
+const PAS_DU_TEXTE = [
+  'consentement à la résa',
+  'plus de 100 paiements sur 24h pour au moins un compte — scan possiblement partiel',
+];
 
 const LANGUES = ['fr', 'en', 'es'];
 
@@ -81,7 +92,8 @@ const ecrans = [...parcourir(join(RACINE, 'app'), ['.tsx', '.ts']), ...parcourir
 
 // Ce qui ne se traduit pas : le nom de la marque, et le coin réservé aux
 // essais qu'aucune pro ne voit.
-const JAMAIS_TRADUIT = ['GLAMIA', 'Glamia', 'Dev', 'Admin'];
+const JAMAIS_TRADUIT = ['GLAMIA', 'Glamia', 'GLAMIA PAY', 'Dev', 'Admin',
+  'contact@glamia.pro', 'Stripe', 'Apple', 'Instagram'];
 
 // Le motif n'acceptait que les phrases commençant par une lettre : « ← Retour »
 // et « ＋ Ajouter une prestation » passaient donc à travers. On accepte
@@ -103,7 +115,10 @@ for (const chemin of ecrans) {
     // texte. Aucune phrase affichée ne contient && || => ni ne finit par une
     // parenthèse ouvrante.
     .filter(p => !/(&&|\|\||=>|!==|===|\)\.|\bconst\b|\breturn\b)/.test(p))
-    .filter(p => !/[({[]$/.test(p) && !/^[)}\]]/.test(p));
+    .filter(p => !/[({[]$/.test(p) && !/^[)}\]]/.test(p))
+    // Deux derniers morceaux de code qui ressemblent à du texte : un type
+    // TypeScript coupé en deux, et une comparaison numérique.
+    .filter(p => !/^Promise$/.test(p) && !/^\d+\)/.test(p));
   if (trouvees.length) {
     enDur += trouvees.length;
     parEcran.push([chemin.replace(RACINE, ''), trouvees.length]);
@@ -126,8 +141,16 @@ for (const chemin of ecrans) {
   // Les messages de console ne sont lus que par nous : ils restent en
   // français, et ils n'ont rien à faire dans ce compte.
   const code = readFileSync(chemin, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '')
+    // ON REMPLACE PAR DES ESPACES, PAS PAR RIEN. Effacer un commentaire colle
+    // la ligne d'avant à celle d'après, et deux morceaux de code sans rapport
+    // finissent par ressembler à une phrase.
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/^\s*\/\/.*$/gm, m => m.replace(/[^\n]/g, ' '))
+    // Une ligne de journal tient sur une ligne : on la retire entière. Les rares
+    // appels sur plusieurs lignes sont pris par le second motif.
+    .replace(/^.*console\.[a-z]+\(.*$/gm, '')
+    // Un journal peut tenir sur deux lignes quand il porte plusieurs valeurs.
+    .replace(/console\.[a-z]+\([\s\S]{0,300}?\)\s*$/gm, '')
     .replace(/console\.[a-z]+\([\s\S]*?\);/g, '');
   // TROIS MOTIFS, UN PAR SORTE DE GUILLEMET, et c'est nécessaire : le motif
   // unique d'avant interdisait les trois guillemets À L'INTÉRIEUR de la
@@ -140,7 +163,8 @@ for (const chemin of ecrans) {
   ]
     .map(m => m[1])
     .filter(t => MOTS_FR.test(t) && /[a-zà-ÿ]{3}/i.test(t))
-    .filter(t => !/^[a-z0-9_\-/.@]+$/i.test(t) && !t.includes('://'));
+    .filter(t => !/^[a-z0-9_\-/.@]+$/i.test(t) && !t.includes('://'))
+    .filter(t => !PAS_DU_TEXTE.includes(t));
   if (trouvees.length) {
     cachees += trouvees.length;
     parEcranCache.push([chemin.replace(RACINE, ''), trouvees.length, trouvees]);
@@ -161,14 +185,20 @@ for (const chemin of [...ecrans, ...parcourir(join(RACINE, 'lib'), ['.ts', '.tsx
   // Les commentaires portent des exemples d'écriture : ce ne sont pas des
   // appels, et ils feraient sonner l'alarme pour rien.
   const code = readFileSync(chemin, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
+    // ON REMPLACE PAR DES ESPACES, PAS PAR RIEN. Effacer un commentaire colle
+    // la ligne d'avant à celle d'après, et deux morceaux de code sans rapport
+    // finissent par ressembler à une phrase.
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/^\s*\/\/.*$/gm, m => m.replace(/[^\n]/g, ' '));
   for (const m of code.matchAll(/traduire\(\s*'([a-zA-Z0-9_.]+)'/g)) appelees.add(m[1]);
   // Certaines clés sont fabriquées au vol : traduire(`catalogue.${cle}`). On
   // ne peut pas savoir ce que vaut la variable, mais on sait que TOUTE la
   // famille est appelée — la marquer entière vaut mieux que de faire sonner
   // l'alarme sur 72 lignes qui vont très bien.
   for (const m of code.matchAll(/traduire\(\s*`([a-zA-Z0-9_.]+)\.\$\{/g)) familles.add(m[1]);
+  // Les pages de droit lisent leurs clés au vol : i18n.t(`${bloc}.${cle}`),
+  // où `bloc` vaut « cgu » ou « confidentialite ».
+  for (const m of code.matchAll(/i18n\.t\(\s*`\$\{bloc\}/g)) { familles.add('cgu'); familles.add('confidentialite'); }
 }
 const racineCle = c => c.replace(/\.(zero|one|two|few|many|other)$/, '');
 const cles = new Set([...toutesLesCles].map(racineCle));

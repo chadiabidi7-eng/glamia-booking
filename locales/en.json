@@ -132,11 +132,41 @@
     "offresEnCours": "Offers running",
     "voirMoins": "See less",
     "reprogrammer": "Move it",
-    "commentaireOptionnel": "Comment (optional)"
+    "commentaireOptionnel": "Comment (optional)",
+    "importer": "Upload",
+    "annulTardEmpreinte": "You are cancelling less than %{delai} h before the appointment: %{somme} may be charged to your card.",
+    "annulTotEmpreinte": "You are cancelling more than %{delai} h before: nothing will be charged, your card is released.",
+    "annulTardAcompte": "You are cancelling less than %{delai} h before the appointment: your %{somme} will not be refunded.",
+    "annulTotAcompte": "You are cancelling more than %{delai} h before: your %{somme} will be refunded.",
+    "confirmerAnnulation": "Cancel your appointment on %{date} at %{heure} (%{prestation})?%{avertissement}",
+    "paiementAnnule": "Your payment has just been cancelled.",
+    "annulationImpossible": "This appointment couldn't be cancelled.",
+    "modificationImpossible": "This appointment couldn't be changed.",
+    "troisDecalages": "This appointment has already been moved 3 times. To change it again, contact your practitioner directly.",
+    "decalageTropTard": "Less than 24 h before the appointment, moving it online is no longer possible. Contact your practitioner directly.",
+    "reprogrammationImpossible": "This appointment couldn't be rescheduled.",
+    "erreurConsole": "Something went wrong. Open the console (F12) to see the detail.",
+    "photoRefusee": "That photo couldn't be added. Try another image.",
+    "photosNonEnvoyees": "Your photos couldn't be sent. Try again.",
+    "unePhotoRefusee": "One photo couldn't be added. Try another image.",
+    "photosRefusees": {
+      "one": "One photo couldn't be added. Try another image.",
+      "other": "%{count} photos couldn't be added. Try other images."
+    },
+    "cocheAcompteResa": "Tick the deposit acceptance box to book.",
+    "cocheEmpreinteResa": "Tick the card authorisation box to book.",
+    "tropDeResaPaye": "Too many bookings from this device in a short time. Your payment has just been cancelled — try again in an hour, or call your practitioner directly.",
+    "tropDeResa": "Too many bookings from this device in a short time. Try again in an hour, or call your practitioner directly.",
+    "creneauPrisPaye": "That slot is no longer available. Your payment has just been cancelled — choose another time.",
+    "paiementPasPret": "The payment module is not ready. Wait a second and try again.",
+    "carteRefusee": "The card couldn't be validated.",
+    "mesInspirationsPleines": "My inspiration (3/3)",
+    "ajouterInspirations": "Add my inspiration"
   },
   "commun": {
     "chargement": "Loading...",
-    "retour": "← Back"
+    "retour": "← Back",
+    "erreur": "Error"
   },
   "confirmation": {
     "lienExpire": "Link expired",
@@ -165,7 +195,8 @@
     "troisPhotosMax": {
       "one": "3 photos maximum: only the first was kept",
       "other": "3 photos maximum: only the first %{count} were kept"
-    }
+    },
+    "instructions": "Notes for your appointment"
   },
   "merci": {
     "introuvable": "Payment not found",
@@ -184,7 +215,8 @@
     "voirFacture": "See my receipt",
     "indisponible": "Payment unavailable",
     "paiementSecurise": "Secure payment · Glamia Pay",
-    "echec": "The payment didn't go through. Try again."
+    "echec": "The payment didn't go through. Try again.",
+    "echecCourt": "The payment didn't go through."
   },
   "avis": {
     "merci": "Thank you!",
@@ -204,7 +236,8 @@
     "photoIllisible": "One of the photos couldn't be read. Try another one.",
     "envoiRate": "It didn't go through. Try again in a moment.",
     "envoiRateConnexion": "It didn't go through. Check your connection.",
-    "placeholder": "What you thought of the result, the welcome… (optional)"
+    "placeholder": "What you thought of the result, the welcome… (optional)",
+    "photo": "Photo"
   },
   "stripe": {
     "reprise": "Connection to finish",
@@ -235,7 +268,20 @@
     "virementRate": "Your bank refused the payout from your balance. Check your bank details in your Payments — your money is still there.",
     "compteBloque": "Your Stripe account is no longer taking payments. Sort it out in your Payments to keep getting paid.",
     "compteBloqueTitre": "Stripe account to sort out",
-    "litigeTitre": "Deposit disputed ⚠️"
+    "litigeTitre": "Deposit disputed ⚠️",
+    "taCliente": "Your client",
+    "inspirationsTitre": "New inspiration 💅",
+    "inspirations": {
+      "one": "%{nom} added an inspiration photo for her appointment on %{date}.",
+      "other": "%{nom} added %{count} inspiration photos for her appointment on %{date}."
+    },
+    "paiementRecuTitre": "Payment received 💸",
+    "paiementRecu": "%{montant} € from %{prenom} — your balance is credited",
+    "paiementRecuSansNom": "%{montant} € — your balance is credited",
+    "prestationsModifiees": "%{prenom} changed her services on %{date} at %{heure}: %{prestations}",
+    "nouveauRdvNom": "%{prenom} %{nom} booked %{prestations} on %{date} at %{heure}%{appel}",
+    "nouveauRdv": "%{prenom} booked %{prestations} on %{date} at %{heure}%{appel}",
+    "rdvReprogramme": "%{prenom} rescheduled her appointment to %{date} at %{heure}"
   },
   "creneaux": {
     "jourIndisponible": "That day is no longer available. Please choose another date.",
@@ -256,7 +302,11 @@
     "bug": "I have a bug or a login problem",
     "supprimerCompte": "Delete my account and my data",
     "vousEtesCliente": "Are you a client who has booked an appointment?",
-    "description": "Need help with Glamia? Contact us by email or on Instagram, and find answers to the most common questions."
+    "description": "Need help with Glamia? Contact us by email or on Instagram, and find answers to the most common questions.",
+    "reglages": "Settings",
+    "abonnements": "Subscriptions",
+    "cheminApple": " on your iPhone → tap your name at the top → ",
+    "resiliationEffet": "Cancelling takes effect at the end of the period you have already paid for; you keep access until then."
   },
   "cgu": {
     "titre": "Terms of Use",
@@ -498,5 +548,9 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "reserveDescription": "Book your beauty appointment online",
+    "siteDescription": "Book online with your beauty professional"
   }
 }

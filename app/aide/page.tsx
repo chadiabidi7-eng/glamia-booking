@@ -43,9 +43,8 @@ export default function AidePage() {
 
       <Section title={traduire('aide.gererAbonnement')}>
         <p>
-          {traduire('aide.abonnementApple')} <strong>Réglages</strong> sur votre iPhone
-          → touchez votre nom en haut → <strong>Abonnements</strong> → <strong>Glamia</strong>. La résiliation prend effet à la fin de
-          la période déjà payée&nbsp;; vous gardez l&apos;accès jusque-là.
+          {traduire('aide.abonnementApple')} <strong>{traduire('aide.reglages')}</strong>{traduire('aide.cheminApple')}
+          <strong>{traduire('aide.abonnements')}</strong> → <strong>Glamia</strong>. {traduire('aide.resiliationEffet')}
         </p>
       </Section>
 

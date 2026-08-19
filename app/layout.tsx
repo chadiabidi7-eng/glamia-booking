@@ -15,13 +15,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://booking.glamia.pro'),
   title: "Glamia",
+  // LA RACINE DU SITE NE CONNAÎT AUCUNE PRO : elle reste en français, comme
+  // l'accueil de booking.glamia.pro. Chaque page de réservation, elle, porte
+  // sa propre description dans la langue de sa pro.
   description: "Réservation en ligne chez votre professionnelle de beauté",
   applicationName: "Glamia",
   openGraph: {
     type: "website",
     siteName: "Glamia",
     title: "Glamia",
-    description: "Réservation en ligne chez votre professionnelle de beauté",
+    // LA RACINE DU SITE NE CONNAÎT AUCUNE PRO : elle reste en français, comme
+  // l'accueil de booking.glamia.pro. Chaque page de réservation, elle, porte
+  // sa propre description dans la langue de sa pro.
+  description: "Réservation en ligne chez votre professionnelle de beauté",
     url: "https://booking.glamia.pro",
     locale: "fr_FR",
     images: [
@@ -36,7 +42,10 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "Glamia",
-    description: "Réservation en ligne chez votre professionnelle de beauté",
+    // LA RACINE DU SITE NE CONNAÎT AUCUNE PRO : elle reste en français, comme
+  // l'accueil de booking.glamia.pro. Chaque page de réservation, elle, porte
+  // sa propre description dans la langue de sa pro.
+  description: "Réservation en ligne chez votre professionnelle de beauté",
     images: ["/og-image.png"],
   },
 };

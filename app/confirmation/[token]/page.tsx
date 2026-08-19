@@ -91,7 +91,7 @@ function SectionInspirations({
     if (fichiers.length === 0 || restant <= 0 || envoi) return
     const aTraiter = fichiers.slice(0, restant)
     if (fichiers.length > restant) {
-      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+      alert(traduire('confirmation.troisPhotosMax', { count: restant }))
     }
     setEnvoi(true)
     try {
@@ -107,7 +107,7 @@ function SectionInspirations({
       onAjout(json.inspirations)
     } catch (err) {
       console.error('[confirmation] inspirations:', err)
-      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+      alert(traduire('resa.photosNonEnvoyees'))
     } finally {
       setEnvoi(false)
     }
@@ -139,7 +139,7 @@ function SectionInspirations({
         }}>
           <Sparkles size={15} color="#fff" />
         </span>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>Tes inspirations 💅</span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{traduire('resa.tesInspirations')}</span>
       </div>
       <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
         {photos.length >= 3
@@ -172,7 +172,7 @@ function InstructionsBox({ instructions }: { instructions: string | null }) {
     <div style={{ background: '#FFF8E1', borderRadius: 16, padding: 16, border: '1.5px solid #F5C27A', marginBottom: 24, textAlign: 'left', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <FileText size={18} color="#E67E22" />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Instructions pour votre RDV</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{traduire('confirmation.instructions')}</span>
       </div>
       <p style={{ fontSize: 14, color: '#1f2937', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>{instructions}</p>
     </div>
@@ -375,7 +375,7 @@ function ConfirmationPage() {
         // grille à jour. L'écran d'erreur générique la mettait dehors, sans
         // rien lui expliquer, avec son rendez-vous d'origine intact et aucun
         // moyen de comprendre pourquoi.
-        let message = "Ce créneau n'est plus disponible. Choisis-en un autre."
+        let message = traduire('confirmation.creneauPris')
         try {
           const refus = await res.json()
           if (refus?.message) message = refus.message

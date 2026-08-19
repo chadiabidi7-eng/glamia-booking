@@ -209,8 +209,9 @@ export async function POST(req: NextRequest) {
           const nom = cli ? [cli.prenom, cli.nom].filter(Boolean).join(' ') : null
           await pousserNotifPro(
             paiement.pro_id,
-            'Paiement reçu 💸',
-            `${(paiement.montant / 100).toFixed(2).replace('.', ',')} €${nom ? ` de ${nom}` : ''} — ta caisse est créditée`,
+            'notif.paiementRecuTitre',
+            nom ? 'notif.paiementRecu' : 'notif.paiementRecuSansNom',
+            { montant: (paiement.montant / 100).toFixed(2), prenom: nom ?? '' },
           )
           // Facture rose à la cliente (edge fn qui a la clé Resend)
           fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {

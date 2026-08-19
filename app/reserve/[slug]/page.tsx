@@ -402,7 +402,7 @@ function OffresSection({
     <div style={{ marginBottom: 20 }}>
       <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, border: `1.5px solid ${PINK}` }}>
         <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={16} color={PINK} /> Offres en cours
+          <Sparkles size={16} color={PINK} /> {traduire('resa.offresEnCours')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visible.map(o => {
@@ -487,9 +487,7 @@ function OffresSection({
               background: 'transparent', border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, color: PINK,
             }}
-          >
-            Voir moins
-          </button>
+          >{traduire('resa.voirMoins')}</button>
         )}
       </div>
     </div>
@@ -1775,7 +1773,7 @@ export default function ReservationPage() {
     if (fichiers.length === 0 || restant <= 0 || inspiCompression) return
     const aTraiter = fichiers.slice(0, restant)
     if (fichiers.length > restant) {
-      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+      alert(traduire('confirmation.troisPhotosMax', { count: restant }))
     }
     setInspiCompression(true)
     try {
@@ -1785,7 +1783,7 @@ export default function ReservationPage() {
       }
     } catch (err) {
       console.error('[inspirations] Erreur compression:', err)
-      alert("Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.")
+      alert(traduire('resa.photoRefusee'))
     } finally {
       setInspiCompression(false)
     }
@@ -1807,7 +1805,7 @@ export default function ReservationPage() {
       setInspiDone(rdv.id)
     } catch (err) {
       console.error('[inspirations] Erreur envoi:', err)
-      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+      alert(traduire('resa.photosNonEnvoyees'))
     } finally {
       setInspiEnvoi(false)
     }
@@ -1842,12 +1840,12 @@ export default function ReservationPage() {
         envoyerPushNotif(
           pro.id,
           '❌ RDV annulé',
-          `${clientePrenom} a annulé son RDV du ${formatRdvDate(rdv.date)} à ${formatRdvHeure(rdv.date)}`
+          traduire('notif.rdvAnnule', { prenom: clientePrenom, date: formatRdvDate(rdv.date), heure: formatRdvHeure(rdv.date) })
         )
       }
     } catch (e) {
       console.error('[handleAnnulerRdv] Erreur:', e)
-      alert('Impossible d\'annuler ce rendez-vous.')
+      alert(traduire('resa.annulationImpossible'))
     } finally {
       setAnnulationEnCours(null)
     }
@@ -1884,16 +1882,16 @@ export default function ReservationPage() {
       const somme = fmtCentimes(rdv.paiement.montant, symPropay)
       if (rdv.paiement.nature === 'empreinte') {
         avertissement = tardive
-          ? `\n\nVous annulez à moins de ${delaiAnnulation} h du rendez-vous : ${somme} pourront être prélevés sur votre carte.`
-          : `\n\nVous annulez à plus de ${delaiAnnulation} h : rien ne sera prélevé, votre empreinte est libérée.`
+          ? `\n\n${traduire('resa.annulTardEmpreinte', { delai: delaiAnnulation, somme })}`
+          : `\n\n${traduire('resa.annulTotEmpreinte', { delai: delaiAnnulation })}`
       } else {
         avertissement = tardive
-          ? `\n\nVous annulez à moins de ${delaiAnnulation} h du rendez-vous : vos ${somme} ne seront pas remboursés.`
-          : `\n\nVous annulez à plus de ${delaiAnnulation} h : vos ${somme} vous seront remboursés.`
+          ? `\n\n${traduire('resa.annulTardAcompte', { delai: delaiAnnulation, somme })}`
+          : `\n\n${traduire('resa.annulTotAcompte', { delai: delaiAnnulation, somme })}`
       }
     }
 
-    if (window.confirm(`Annuler votre RDV du ${dateLabel} à ${heureLabel} (${rdv.technique}) ?${avertissement}`)) {
+    if (window.confirm(traduire('resa.confirmerAnnulation', { date: dateLabel, heure: heureLabel, prestation: rdv.technique, avertissement }))) {
       handleAnnulerRdv(rdv.id)
     }
   }
@@ -2025,7 +2023,7 @@ export default function ReservationPage() {
     envoyerPushNotif(
       pro.id,
       '🌸 RDV modifié',
-      `${clientePrenom} a modifié ses prestations du ${dateAffichee} à ${heureAffichee} : ${labels}`
+      traduire('notif.prestationsModifiees', { prenom: clientePrenom, date: dateAffichee, heure: heureAffichee, prestations: labels })
     )
 
     // Email de confirmation à jour pour la cliente
@@ -2105,7 +2103,7 @@ export default function ReservationPage() {
       await appliquerModifPresta(rdv, modifSelection, null, null)
     } catch (e) {
       console.error('[confirmerModifPresta] Erreur:', e)
-      alert('Impossible de modifier ce rendez-vous.')
+      alert(traduire('resa.modificationImpossible'))
     } finally {
       setModifSaving(false)
     }
@@ -2183,10 +2181,10 @@ export default function ReservationPage() {
         const d = await res.json().catch(() => ({}))
         alert(
           d?.error === 'decalage_max_atteint'
-            ? 'Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.'
+            ? traduire('resa.troisDecalages')
             : d?.error === 'decalage_tardif'
-              ? 'À moins de 24 h du rendez-vous, le décalage en ligne n\'est plus possible. Contacte directement ta praticienne.'
-              : 'Impossible de reprogrammer ce rendez-vous.',
+              ? traduire('resa.decalageTropTard')
+              : traduire('resa.reprogrammationImpossible'),
         )
         setReprogSaving(false)
         return
@@ -2196,7 +2194,7 @@ export default function ReservationPage() {
       envoyerPushNotif(
         pro.id,
         '📅 RDV reprogrammé',
-        `${clientePrenom} a reprogrammé son RDV au ${formatDateLong(reprogDate)} à ${reprogHeure}`
+        traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
       )
 
       // Mettre à jour la liste locale
@@ -2251,7 +2249,7 @@ export default function ReservationPage() {
       scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
-      alert('Impossible de reprogrammer ce rendez-vous.')
+      alert(traduire('resa.reprogrammationImpossible'))
     } finally {
       setReprogSaving(false)
     }
@@ -2519,7 +2517,7 @@ export default function ReservationPage() {
     const restant = 3 - inspirations.length
     const aTraiter = fichiers.slice(0, restant)
     if (fichiers.length > restant) {
-      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+      alert(traduire('confirmation.troisPhotosMax', { count: restant }))
     }
     setCompressionEnCours(true)
     let echecs = 0
@@ -2533,7 +2531,7 @@ export default function ReservationPage() {
       }
     }
     setCompressionEnCours(false)
-    if (echecs > 0) alert(echecs === 1 ? "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image." : `${echecs} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images.`)
+    if (echecs > 0) alert(echecs === 1 ? traduire('resa.unePhotoRefusee') : traduire('resa.photosRefusees', { count: echecs }))
   }
 
   async function handleConfirm() {
@@ -2558,13 +2556,13 @@ export default function ReservationPage() {
       if (propay?.actif) {
         if (!propayConsent) {
           alert(propay.mode === 'acompte'
-            ? "Coche la case d'acceptation de l'acompte pour réserver."
-            : "Coche la case d'autorisation d'empreinte bancaire pour réserver.")
+            ? traduire('resa.cocheAcompteResa')
+            : traduire('resa.cocheEmpreinteResa'))
           return
         }
         const resultat = await propayRef.current?.confirmer()
         if (!resultat?.ok) {
-          setRefusCarte(resultat?.erreur ?? 'Le paiement n\'a pas abouti.')
+          setRefusCarte(resultat?.erreur ?? traduire('payer.echecCourt'))
           return
         }
         propayIntentId = resultat.intentId ?? null
@@ -2669,13 +2667,13 @@ export default function ReservationPage() {
         // choisir une autre heure recommencerait indéfiniment sans comprendre.
         if (creation?.raison === 'trop_de_reservations') {
           alert(propayIntentId
-            ? "Trop de réservations depuis cet appareil en peu de temps. Ton paiement vient d'être annulé — réessaie dans une heure, ou appelle directement ta praticienne."
-            : "Trop de réservations depuis cet appareil en peu de temps. Réessaie dans une heure, ou appelle directement ta praticienne.")
+            ? traduire('resa.tropDeResaPaye')
+            : traduire('resa.tropDeResa'))
           return
         }
         alert(propayIntentId
-          ? (creation?.message ? `${creation.message} Ton paiement vient d'être annulé.` : "Ce créneau n'est plus disponible. Ton paiement vient d'être annulé — choisis un autre horaire.")
-          : (creation?.message || "Ce créneau n'est plus disponible. Choisis-en un autre."))
+          ? (creation?.message ? `${creation.message} ${traduire('resa.paiementAnnule')}` : traduire('resa.creneauPrisPaye'))
+          : (creation?.message || traduire('confirmation.creneauPris')))
         setHeure('')
         setStep(4)
         setRdvVersion(v => v + 1)
@@ -2861,18 +2859,18 @@ export default function ReservationPage() {
         envoyerPushNotif(
           pro.id,
           rappel ? '🌸 Nouvelle cliente · 📞 À contacter' : '🌸 Nouvelle cliente !',
-          `${clientePrenom} ${clienteNom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
+          traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
         )
       } else {
         envoyerPushNotif(
           pro.id,
           rappel ? '🌸 Nouveau RDV · 📞 À contacter' : '🌸 Nouveau RDV',
-          `${clientePrenom} a pris RDV pour ${techniquesStr} le ${formatDateLong(date)} à ${heure}${mentionAppel}`
+          traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
         )
       }
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
-      alert('Une erreur est survenue. Ouvre la console (F12) pour voir le détail.')
+      alert(traduire('resa.erreurConsole'))
     } finally {
       setSubmitting(false)
     }
@@ -3519,8 +3517,8 @@ export default function ReservationPage() {
                           >
                             <Camera size={14} color={PINK} />
                             {(rdv.inspirations?.length ?? 0) >= 3
-                              ? 'Mes inspirations (3/3)'
-                              : 'Ajouter mes inspirations'}
+                              ? traduire('resa.mesInspirationsPleines')
+                              : traduire('resa.ajouterInspirations')}
                           </button>
                           )}
 
@@ -3592,7 +3590,7 @@ export default function ReservationPage() {
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
                                       <ImagePlus size={16} color={PINK} />
-                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? traduire('resa.unInstant') : 'Importer'}</span>
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? traduire('resa.unInstant') : traduire('resa.importer')}</span>
                                       <input type="file" accept="image/*" multiple onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
                                   </>
@@ -3623,9 +3621,7 @@ export default function ReservationPage() {
                                 color: PINK, fontSize: 13, fontWeight: 600,
                                 cursor: 'pointer', transition: 'all 0.15s',
                               }}
-                            >
-                              Reprogrammer
-                            </button>
+                            >{traduire('resa.reprogrammer')}</button>
                             <button
                               onClick={() => confirmerAnnulation(rdv)}
                               disabled={annulationEnCours === rdv.id}
@@ -4637,7 +4633,7 @@ export default function ReservationPage() {
                 { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
                 ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
-                  label: 'Total',
+                  label: traduire('resa.total'),
                   value: prixFinal !== prixTotal
                     ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : 'Offert'}</span></>
                     : offreAppliquee && prixTotalBrut !== prixTotal
@@ -4764,7 +4760,7 @@ export default function ReservationPage() {
                   }}>
                     <Camera size={20} color={PINK} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : traduire('resa.prendre')}
+                      {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.prendre')}
                     </span>
                     <input
                       type="file"
@@ -4784,7 +4780,7 @@ export default function ReservationPage() {
                   }}>
                     <ImagePlus size={20} color={PINK} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? 'Un instant…' : 'Importer'}
+                      {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.importer')}
                     </span>
                     <input
                       type="file"
@@ -5275,7 +5271,7 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
       async confirmer() {
         if (dejaRegleRef.current) return { ok: true, intentId: dejaRegleRef.current }
         if (!stripeJs || !elements) {
-          return { ok: false, erreur: "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie." }
+          return { ok: false, erreur: traduire('resa.paiementPasPret') }
         }
         // Nom + email fournis ici (on ne les collecte pas dans le Payment Element,
         // ce qui retire l'invite Link « enregistre tes infos »).
@@ -5288,7 +5284,7 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
           if (error || !setupIntent) {
             const deja = await dejaAbouti(error)
             if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
-            return { ok: false, erreur: error?.message ?? "La carte n'a pas pu être validée." }
+            return { ok: false, erreur: error?.message ?? traduire('resa.carteRefusee') }
           }
           return { ok: true, intentId: setupIntent.id }
         }
@@ -5299,7 +5295,7 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
         if (error || !paymentIntent) {
           const deja = await dejaAbouti(error)
           if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
-          return { ok: false, erreur: error?.message ?? "Le paiement n'a pas abouti." }
+          return { ok: false, erreur: error?.message ?? traduire('payer.echecCourt') }
         }
         return { ok: true, intentId: paymentIntent.id }
       },
@@ -5396,9 +5392,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
         background: 'none', border: 'none', cursor: 'pointer',
         color: PINK, fontWeight: 600, fontSize: 14, padding: '0 0 16px', display: 'block',
       }}
-    >
-      ← Retour
-    </button>
+    >{traduire('commun.retour')}</button>
   )
 }
 

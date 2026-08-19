@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
 import { libererEmpreintesRdv } from '../../stripe/webhook/route'
+import { traduireDans } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (lien d'encaissement de la fiche RDV).
@@ -66,14 +67,28 @@ async function envoyerFacture(paiementId: string) {
   }
 }
 
-async function notifierPro(proId: string, title: string, body: string) {
-  const { data: pro } = await supabaseAdmin.from('profiles').select('push_token').eq('id', proId).maybeSingle()
+/** Prévenir la pro, dans SA langue : on lui passe des clés, pas des phrases. */
+async function notifierPro(
+  proId: string,
+  cleTitre: string,
+  cleCorps: string,
+  valeurs?: Record<string, unknown>,
+) {
+  const { data: pro } = await supabaseAdmin
+    .from('profiles').select('push_token, langue').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
+  const langue = (pro as { langue?: string }).langue
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pro.push_token, title, body, sound: 'default', priority: 'high' }),
+      body: JSON.stringify({
+        to: pro.push_token,
+        title: traduireDans(langue, cleTitre),
+        body: traduireDans(langue, cleCorps, valeurs),
+        sound: 'default',
+        priority: 'high',
+      }),
     })
   } catch (e) {
     console.error('[api/propay/lien] notif:', e)
@@ -154,8 +169,9 @@ export async function POST(req: NextRequest) {
       const prenom = p.rdv?.cliente?.prenom ?? null
       await notifierPro(
         p.pro_id,
-        'Paiement reçu 💸',
-        `${(p.montant / 100).toFixed(2).replace('.', ',')} €${prenom ? ` de ${prenom}` : ''} — ta caisse est créditée`,
+        'notif.paiementRecuTitre',
+        prenom ? 'notif.paiementRecu' : 'notif.paiementRecuSansNom',
+        { montant: (p.montant / 100).toFixed(2), prenom: prenom ?? '' },
       )
       await envoyerFacture(p.id)
     }

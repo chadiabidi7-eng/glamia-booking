@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { traduireDans } from '@/lib/i18n'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -162,18 +163,18 @@ export async function POST(req: NextRequest) {
   if (parToken || parTelephone) {
     try {
       const [{ data: pro }, { data: cli }] = await Promise.all([
-        supabaseAdmin.from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle(),
+        supabaseAdmin.from('profiles').select('push_token, langue').eq('id', rdv.pro_id).maybeSingle(),
         supabaseAdmin.from('clientes').select('prenom, nom').eq('id', rdv.cliente_id).maybeSingle(),
       ])
       if (pro?.push_token) {
-        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || 'Ta cliente'
+        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || traduireDans((pro as { langue?: string })?.langue, 'notif.taCliente')
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: pro.push_token,
-            title: 'Nouvelles inspirations 💅',
-            body: `${nomCliente} a ajouté ${urls.length > 1 ? `${urls.length} photos` : 'une photo'} d'inspiration pour son RDV du ${formatRdvFr(rdv.date)}.`,
+            title: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirationsTitre'),
+            body: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirations', { nom: nomCliente, count: urls.length, date: formatRdvFr(rdv.date) }),
           }),
         })
       }

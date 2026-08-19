@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { traduireDans } from '@/lib/i18n'
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -18,14 +19,14 @@ export async function generateMetadata(
 
   const fallback: Metadata = {
     title: 'Glamia',
-    description: 'Réservation en ligne chez votre professionnelle de beauté',
+    description: traduireDans('fr', 'meta.siteDescription'),
   }
 
   try {
     // Même logique que la page : slug exact, created_at ASC pour gérer les doublons
     const { data } = await supabaseServer
       .from('profiles')
-      .select('prenom, nom')
+      .select('prenom, nom, langue')
       .eq('slug', slug)
       .order('created_at', { ascending: true })
       .limit(1)
@@ -33,8 +34,12 @@ export async function generateMetadata(
     const pro = data?.[0]
     if (!pro) return fallback
 
+    // LE TITRE ET L'APERÇU SUIVENT LA PRO. C'est ce qui s'affiche quand elle
+    // colle son lien dans sa bio Instagram ou l'envoie par message : une pro
+    // de Londres ne veut pas d'un aperçu en français sous son nom.
+    const langue = (pro as { langue?: string }).langue
     const title = `${pro.prenom} ${pro.nom} — Glamia`
-    const description = `Réservez votre rendez-vous beauté en ligne`
+    const description = traduireDans(langue, 'meta.reserveDescription')
 
     return {
       title,
@@ -44,7 +49,7 @@ export async function generateMetadata(
         siteName: 'Glamia',
         title,
         description,
-        locale: 'fr_FR',
+        locale: langue === 'en' ? 'en_GB' : langue === 'es' ? 'es_ES' : 'fr_FR',
         images: [
           {
             url: '/og-image.png',

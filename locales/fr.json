@@ -132,11 +132,41 @@
     "offresEnCours": "Offres en cours",
     "voirMoins": "Voir moins",
     "reprogrammer": "Reprogrammer",
-    "commentaireOptionnel": "Commentaire (optionnel)"
+    "commentaireOptionnel": "Commentaire (optionnel)",
+    "importer": "Importer",
+    "annulTardEmpreinte": "Vous annulez à moins de %{delai} h du rendez-vous : %{somme} pourront être prélevés sur votre carte.",
+    "annulTotEmpreinte": "Vous annulez à plus de %{delai} h : rien ne sera prélevé, votre empreinte est libérée.",
+    "annulTardAcompte": "Vous annulez à moins de %{delai} h du rendez-vous : vos %{somme} ne seront pas remboursés.",
+    "annulTotAcompte": "Vous annulez à plus de %{delai} h : vos %{somme} vous seront remboursés.",
+    "confirmerAnnulation": "Annuler votre RDV du %{date} à %{heure} (%{prestation}) ?%{avertissement}",
+    "paiementAnnule": "Ton paiement vient d'être annulé.",
+    "annulationImpossible": "Impossible d'annuler ce rendez-vous.",
+    "modificationImpossible": "Impossible de modifier ce rendez-vous.",
+    "troisDecalages": "Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.",
+    "decalageTropTard": "À moins de 24 h du rendez-vous, le décalage en ligne n'est plus possible. Contacte directement ta praticienne.",
+    "reprogrammationImpossible": "Impossible de reprogrammer ce rendez-vous.",
+    "erreurConsole": "Une erreur est survenue. Ouvre la console (F12) pour voir le détail.",
+    "photoRefusee": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "photosNonEnvoyees": "Tes photos n'ont pas pu être envoyées. Réessaie.",
+    "unePhotoRefusee": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "photosRefusees": {
+      "one": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+      "other": "%{count} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images."
+    },
+    "cocheAcompteResa": "Coche la case d'acceptation de l'acompte pour réserver.",
+    "cocheEmpreinteResa": "Coche la case d'autorisation d'empreinte bancaire pour réserver.",
+    "tropDeResaPaye": "Trop de réservations depuis cet appareil en peu de temps. Ton paiement vient d'être annulé — réessaie dans une heure, ou appelle directement ta praticienne.",
+    "tropDeResa": "Trop de réservations depuis cet appareil en peu de temps. Réessaie dans une heure, ou appelle directement ta praticienne.",
+    "creneauPrisPaye": "Ce créneau n'est plus disponible. Ton paiement vient d'être annulé — choisis un autre horaire.",
+    "paiementPasPret": "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie.",
+    "carteRefusee": "La carte n'a pas pu être validée.",
+    "mesInspirationsPleines": "Mes inspirations (3/3)",
+    "ajouterInspirations": "Ajouter mes inspirations"
   },
   "commun": {
     "chargement": "Chargement...",
-    "retour": "← Retour"
+    "retour": "← Retour",
+    "erreur": "Erreur"
   },
   "confirmation": {
     "lienExpire": "Lien expiré",
@@ -165,7 +195,8 @@
     "troisPhotosMax": {
       "one": "3 photos maximum : seule la première a été gardée",
       "other": "3 photos maximum : seules les %{count} premières ont été gardées"
-    }
+    },
+    "instructions": "Instructions pour votre RDV"
   },
   "merci": {
     "introuvable": "Paiement introuvable",
@@ -184,7 +215,8 @@
     "voirFacture": "Voir ma facture",
     "indisponible": "Paiement indisponible",
     "paiementSecurise": "Paiement sécurisé · Glamia Pay",
-    "echec": "Le paiement n'a pas abouti. Réessaie."
+    "echec": "Le paiement n'a pas abouti. Réessaie.",
+    "echecCourt": "Le paiement n'a pas abouti."
   },
   "avis": {
     "merci": "Merci !",
@@ -204,7 +236,8 @@
     "photoIllisible": "Une des photos n'a pas pu être lue. Réessaie avec une autre.",
     "envoiRate": "L'envoi n'a pas abouti. Réessaie dans un instant.",
     "envoiRateConnexion": "L'envoi n'a pas abouti. Vérifie ta connexion.",
-    "placeholder": "Ce que tu as pensé du résultat, de l'accueil… (facultatif)"
+    "placeholder": "Ce que tu as pensé du résultat, de l'accueil… (facultatif)",
+    "photo": "Photo"
   },
   "stripe": {
     "reprise": "Connexion à reprendre",
@@ -235,7 +268,20 @@
     "virementRate": "Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.",
     "compteBloque": "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
     "compteBloqueTitre": "Compte Stripe à régulariser",
-    "litigeTitre": "Acompte contesté ⚠️"
+    "litigeTitre": "Acompte contesté ⚠️",
+    "taCliente": "Ta cliente",
+    "inspirationsTitre": "Nouvelles inspirations 💅",
+    "inspirations": {
+      "one": "%{nom} a ajouté une photo d'inspiration pour son RDV du %{date}.",
+      "other": "%{nom} a ajouté %{count} photos d'inspiration pour son RDV du %{date}."
+    },
+    "paiementRecuTitre": "Paiement reçu 💸",
+    "paiementRecu": "%{montant} € de %{prenom} — ta caisse est créditée",
+    "paiementRecuSansNom": "%{montant} € — ta caisse est créditée",
+    "prestationsModifiees": "%{prenom} a modifié ses prestations du %{date} à %{heure} : %{prestations}",
+    "nouveauRdvNom": "%{prenom} %{nom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
+    "nouveauRdv": "%{prenom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
+    "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}"
   },
   "creneaux": {
     "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",
@@ -256,7 +302,11 @@
     "bug": "J'ai un bug ou un souci de connexion",
     "supprimerCompte": "Supprimer mon compte et mes données",
     "vousEtesCliente": "Vous êtes cliente et vous avez pris rendez-vous ?",
-    "description": "Besoin d'aide avec Glamia ? Contactez-nous par email ou sur Instagram, et retrouvez les réponses aux questions les plus fréquentes."
+    "description": "Besoin d'aide avec Glamia ? Contactez-nous par email ou sur Instagram, et retrouvez les réponses aux questions les plus fréquentes.",
+    "reglages": "Réglages",
+    "abonnements": "Abonnements",
+    "cheminApple": " sur votre iPhone → touchez votre nom en haut → ",
+    "resiliationEffet": "La résiliation prend effet à la fin de la période déjà payée ; vous gardez l'accès jusque-là."
   },
   "cgu": {
     "titre": "Conditions Générales d'Utilisation",
@@ -492,5 +542,9 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "reserveDescription": "Réservez votre rendez-vous beauté en ligne",
+    "siteDescription": "Réservation en ligne chez votre professionnelle de beauté"
   }
 }
