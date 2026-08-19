@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
+import { traduireDans } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — webhook Stripe (endpoint « Connect » : événements des
@@ -38,13 +39,31 @@ export async function libererEmpreintesRdv(rdvId: string) {
   }
 }
 
-async function pousserNotifPro(proId: string, title: string, body: string) {
-  const { data: pro } = await supabaseAdmin.from('profiles').select('push_token').eq('id', proId).maybeSingle()
+/**
+ * Prévenir une pro, DANS SA LANGUE.
+ *
+ * On lui passe des clés, pas des phrases : le serveur sert toutes les pros, et
+ * c'est ici — au moment où l'on va chercher son jeton — qu'on sait enfin
+ * laquelle. Sa langue est lue au même endroit, ça ne coûte rien de plus.
+ */
+async function pousserNotifPro(
+  proId: string,
+  cleTitre: string,
+  cleCorps: string,
+  valeurs?: Record<string, unknown>,
+) {
+  const { data: pro } = await supabaseAdmin
+    .from('profiles').select('push_token, langue').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
+  const langue = (pro as { langue?: string }).langue
   await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: pro.push_token, title, body }),
+    body: JSON.stringify({
+      to: pro.push_token,
+      title: traduireDans(langue, cleTitre),
+      body: traduireDans(langue, cleCorps, valeurs),
+    }),
   })
 }
 
@@ -134,8 +153,8 @@ export async function POST(req: NextRequest) {
         if (avant?.charges_enabled === true && !nowEnabled && avant.pro_id) {
           await pousserNotifPro(
             avant.pro_id,
-            'Compte Stripe à régulariser',
-            "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
+            'notif.compteBloqueTitre',
+            'notif.compteBloque',
           )
         }
         break
@@ -235,8 +254,9 @@ export async function POST(req: NextRequest) {
           if (paiement) {
             await pousserNotifPro(
               paiement.pro_id,
-              'Acompte contesté ⚠️',
-              `Une cliente conteste un prélèvement de ${(paiement.montant / 100).toFixed(2).replace('.', ',')} €. Consulte ton espace Stripe pour répondre au litige.`,
+              'notif.litigeTitre',
+              'notif.litige',
+              { montant: (paiement.montant / 100).toFixed(2) },
             )
           }
         }
@@ -278,8 +298,8 @@ export async function POST(req: NextRequest) {
         if (event.type === 'payout.failed' && lien?.pro_id) {
           await pousserNotifPro(
             lien.pro_id,
-            'Ton virement n’est pas parti',
-            'Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.',
+            'notif.virementRateTitre',
+            'notif.virementRate',
           )
         }
         console.log(`[stripe/webhook] virement ${virement.status} — ${(virement.amount / 100).toFixed(2)} ${virement.currency} — ${compte}`)

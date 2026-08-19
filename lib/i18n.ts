@@ -64,4 +64,23 @@ export function traduire(cle: string, options?: Record<string, unknown>): string
   return i18n.t(cle, options);
 }
 
+/**
+ * LA MÊME PHRASE, MAIS CÔTÉ SERVEUR.
+ *
+ * Les routes qui envoient une notification ou un mail tournent sur le serveur :
+ * elles servent plusieurs pros à la fois, et n'ont pas de « langue en cours ».
+ * On la leur passe donc à chaque appel — celle de la pro concernée, lue dans
+ * son profil.
+ *
+ * Sans ça, la langue de la dernière pro servie déciderait pour la suivante.
+ */
+export function traduireDans(
+  langue: string | null | undefined,
+  cle: string,
+  options?: Record<string, unknown>,
+): string {
+  const locale = (LANGUES as readonly string[]).includes(langue ?? '') ? langue : 'fr';
+  return i18n.t(cle, { ...options, locale });
+}
+
 export default i18n;

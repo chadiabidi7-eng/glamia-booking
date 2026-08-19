@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
+import { traduireDans } from '@/lib/i18n'
 
 const MOIS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
@@ -249,7 +250,7 @@ export async function POST(
     try {
       const { data: proData } = await supabaseAdmin
         .from('profiles')
-        .select('push_token')
+        .select('push_token, langue')
         .eq('id', rdv.pro_id)
         .maybeSingle()
 
@@ -259,7 +260,7 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'Une cliente'
+      const clientePrenom = cliente?.prenom ?? traduireDans(proData?.langue, 'notif.uneCliente')
       const newDateStr = newDate.slice(0, 10)
       const newHeureStr = newDate.slice(11, 16)
 
@@ -270,8 +271,8 @@ export async function POST(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: proData.push_token,
-            title: '📅 RDV décalé',
-            body: `${clientePrenom} a décalé son RDV du ${formatDateFr(oldDateStr)} au ${formatDateFr(newDateStr)} à ${newHeureStr}`,
+            title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
+            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr), apres: formatDateFr(newDateStr), heure: newHeureStr }),
           }),
         })
       }
@@ -355,7 +356,7 @@ export async function POST(
   try {
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('push_token')
+      .select('push_token, langue')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -369,15 +370,15 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'une cliente'
+      const clientePrenom = cliente?.prenom ?? traduireDans(pro?.langue, 'notif.uneClienteMinuscule')
       const dateStr = (rdv.date as string).slice(0, 10)
       const heureStr = (rdv.date as string).slice(11, 16)
       const dateFr = formatDateFr(dateStr)
 
       const title = action === 'confirmer' ? '✅ RDV confirmé' : '❌ RDV annulé'
       const body = action === 'confirmer'
-        ? `${clientePrenom} a confirmé son RDV du ${dateFr} à ${heureStr}`
-        : `${clientePrenom} a annulé son RDV du ${dateFr} à ${heureStr}`
+        ? traduireDans(pro?.langue, 'notif.rdvConfirme', { prenom: clientePrenom, date: dateFr, heure: heureStr })
+        : traduireDans(pro?.langue, 'notif.rdvAnnule', { prenom: clientePrenom, date: dateFr, heure: heureStr })
 
       const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',

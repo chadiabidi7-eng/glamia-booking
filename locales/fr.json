@@ -217,5 +217,30 @@
     "ouvrirMaCaisse": "Ouvrir ma caisse",
     "ouvertureGlamia": "Ouverture de Glamia...",
     "telechargerApp": "télécharge l'app sur l'App Store"
+  },
+  "notif": {
+    "uneCliente": "Une cliente",
+    "uneClienteMinuscule": "une cliente",
+    "taPraticienne": "ta praticienne",
+    "rdvDecaleTitre": "📅 RDV décalé",
+    "rdvDecale": "%{prenom} a décalé son RDV du %{avant} au %{apres} à %{heure}",
+    "rdvConfirme": "%{prenom} a confirmé son RDV du %{date} à %{heure}",
+    "rdvAnnule": "%{prenom} a annulé son RDV du %{date} à %{heure}",
+    "avisAvecPrestation": "%{auteur} t'a laissé un avis sur %{prestation}.",
+    "avis": "%{auteur} t'a laissé un avis.",
+    "attenteTitre": "🌸 Une cliente attend une place",
+    "attente": "%{nom} aimerait venir le %{jour} (%{duree}). Elle sera prévenue si une place se libère.",
+    "litige": "Une cliente conteste un prélèvement de %{montant} €. Consulte ton espace Stripe pour répondre au litige.",
+    "virementRateTitre": "Ton virement n’est pas parti",
+    "virementRate": "Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.",
+    "compteBloque": "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
+    "compteBloqueTitre": "Compte Stripe à régulariser",
+    "litigeTitre": "Acompte contesté ⚠️"
+  },
+  "creneaux": {
+    "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",
+    "jourFerme": "Cette journée n'est plus ouverte à la réservation. Choisis une autre date.",
+    "creneauRetire": "Ce créneau n'est plus proposé. Choisis-en un autre.",
+    "creneauPris": "Ce créneau vient d'être pris 😔 Choisis-en un autre."
   }
 }

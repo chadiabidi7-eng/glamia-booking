@@ -217,5 +217,30 @@
     "ouvrirMaCaisse": "Open my payments",
     "ouvertureGlamia": "Opening Glamia...",
     "telechargerApp": "download the app on the App Store"
+  },
+  "notif": {
+    "uneCliente": "A client",
+    "uneClienteMinuscule": "a client",
+    "taPraticienne": "your practitioner",
+    "rdvDecaleTitre": "📅 Appointment moved",
+    "rdvDecale": "%{prenom} moved her appointment from %{avant} to %{apres} at %{heure}",
+    "rdvConfirme": "%{prenom} confirmed her appointment on %{date} at %{heure}",
+    "rdvAnnule": "%{prenom} cancelled her appointment on %{date} at %{heure}",
+    "avisAvecPrestation": "%{auteur} left you a review about %{prestation}.",
+    "avis": "%{auteur} left you a review.",
+    "attenteTitre": "🌸 A client is waiting for a slot",
+    "attente": "%{nom} would like to come on %{jour} (%{duree}). She will be told if a slot opens up.",
+    "litige": "A client is disputing a %{montant} € charge. Check your Stripe account to respond to the dispute.",
+    "virementRateTitre": "Your payout did not go out",
+    "virementRate": "Your bank refused the payout from your balance. Check your bank details in your Payments — your money is still there.",
+    "compteBloque": "Your Stripe account is no longer taking payments. Sort it out in your Payments to keep getting paid.",
+    "compteBloqueTitre": "Stripe account to sort out",
+    "litigeTitre": "Deposit disputed ⚠️"
+  },
+  "creneaux": {
+    "jourIndisponible": "That day is no longer available. Please choose another date.",
+    "jourFerme": "That day is no longer open for booking. Please choose another date.",
+    "creneauRetire": "That slot is no longer offered. Please choose another.",
+    "creneauPris": "That slot has just been taken 😔 Please choose another."
   }
 }

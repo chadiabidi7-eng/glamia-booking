@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { traduireDans } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
   // enregistrée : on log et on renvoie ok.
   try {
     const { data: pro } = await supabaseAdmin
-      .from('profiles').select('push_token').eq('id', pro_id).maybeSingle()
+      .from('profiles').select('push_token, langue').eq('id', pro_id).maybeSingle()
 
     if (pro?.push_token) {
       const [a, m, j] = (jour as string).split('-').map(Number)
@@ -121,8 +122,8 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: pro.push_token,
-          title: '🌸 Une cliente attend une place',
-          body: `${[prenomNet, nomNet].filter(Boolean).join(' ')} aimerait venir le ${jourLisible} (${dureeLisible}). Elle sera prévenue si une place se libère.`,
+          title: traduireDans(pro?.langue, 'notif.attenteTitre'),
+          body: traduireDans(pro?.langue, 'notif.attente', { nom: [prenomNet, nomNet].filter(Boolean).join(' '), jour: jourLisible, duree: dureeLisible }),
         }),
       })
     }

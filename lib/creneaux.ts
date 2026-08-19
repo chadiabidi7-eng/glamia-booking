@@ -1,3 +1,4 @@
+import { traduire } from '@/lib/i18n'
 // ─────────────────────────────────────────────────────────────────────────────
 // Le calcul des créneaux, en un seul endroit.
 //
@@ -286,10 +287,10 @@ export function creneauReservable(args: {
   const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation } = args
 
   if (isDayBlocked(date, bloques)) {
-    return { ok: false, raison: 'jour_bloque', message: "Cette journée n'est plus disponible. Choisis une autre date." }
+    return { ok: false, raison: 'jour_bloque', message: traduire('creneaux.jourIndisponible') }
   }
   if (!isDayWorking(date, horaires, horairesSpec, planningVar)) {
-    return { ok: false, raison: 'jour_ferme', message: "Cette journée n'est plus ouverte à la réservation. Choisis une autre date." }
+    return { ok: false, raison: 'jour_ferme', message: traduire('creneaux.jourFerme') }
   }
 
   const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation)
@@ -297,10 +298,10 @@ export function creneauReservable(args: {
 
   // Absent de la grille : hors horaires, trop proche, ou durée qui déborde.
   if (!slot) {
-    return { ok: false, raison: 'hors_grille', message: "Ce créneau n'est plus proposé. Choisis-en un autre." }
+    return { ok: false, raison: 'hors_grille', message: traduire('creneaux.creneauRetire') }
   }
   if (!slot.disponible) {
-    return { ok: false, raison: 'occupe', message: "Ce créneau vient d'être pris 😔 Choisis-en un autre." }
+    return { ok: false, raison: 'occupe', message: traduire('creneaux.creneauPris') }
   }
   return { ok: true }
 }
