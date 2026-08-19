@@ -42,10 +42,18 @@ const fichiers = Object.fromEntries(LANGUES.map(l => [
 ]));
 
 // ── 1. Les mêmes clés partout ────────────────────────────────────────────────
-const reference = new Set(fichiers.fr);
+//
+// SAUF LES PAGES DE DROIT. Les conditions et la confidentialité ne sont pas des
+// traductions l'une de l'autre : l'anglaise nomme quatre lois applicables là où
+// la française en nomme une, et la section n'a donc pas le même nombre de
+// paragraphes. Exiger la parité obligerait à mentir dans l'une des deux.
+const PAS_UNE_TRADUCTION = ['cgu.sections', 'confidentialite.sections'];
+const compte = c => !PAS_UNE_TRADUCTION.some(p => c.startsWith(p));
+
+const reference = new Set(fichiers.fr.filter(compte));
 let manquantes = 0;
 for (const langue of ['en', 'es']) {
-  const presentes = new Set(fichiers[langue]);
+  const presentes = new Set(fichiers[langue].filter(compte));
   const absentes = [...reference].filter(c => !presentes.has(c));
   const enTrop = [...presentes].filter(c => !reference.has(c));
   console.log(`  ${langue} : ${presentes.size} clés — ${absentes.length} manquante(s), ${enTrop.length} en trop`);
