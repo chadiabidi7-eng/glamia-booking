@@ -82,7 +82,13 @@ for (const chemin of ecrans) {
   const source = readFileSync(chemin, 'utf8');
   const trouvees = [...source.matchAll(PHRASE)].map(m => m[1].trim())
     .filter(p => /[A-Za-zÀ-ÿ]{2}/.test(p) && !/^[0-9\s€$%.,:-]+$/.test(p))
-    .filter(p => !JAMAIS_TRADUIT.includes(p));
+    .filter(p => !JAMAIS_TRADUIT.includes(p))
+    // Prendre « ce qui est entre > et < » attrape aussi des MORCEAUX DE CODE :
+    // une expression coupée en deux par un retour à la ligne ressemble à du
+    // texte. Aucune phrase affichée ne contient && || => ni ne finit par une
+    // parenthèse ouvrante.
+    .filter(p => !/(&&|\|\||=>|!==|===|\)\.|\bconst\b|\breturn\b)/.test(p))
+    .filter(p => !/[({[]$/.test(p) && !/^[)}\]]/.test(p));
   if (trouvees.length) {
     enDur += trouvees.length;
     parEcran.push([chemin.replace(RACINE, ''), trouvees.length]);
