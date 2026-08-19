@@ -17,7 +17,7 @@ import {
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
-import { poserLangue, traduire } from '@/lib/i18n'
+import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
@@ -2041,6 +2041,7 @@ export default function ReservationPage() {
               cliente_email: clienteEmail.trim(),
               cliente_prenom: clientePrenom.trim(),
               pro_nom: pro.pseudo || `${pro.prenom} ${pro.nom}`,
+              langue: langueActuelle(),
               date: dateAffichee,
               heure: heureAffichee,
               duree: formatDuree(duree),
