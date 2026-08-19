@@ -260,70 +260,243 @@
   },
   "cgu": {
     "titre": "Terms of Use",
-    "maj": "Last updated: 29 March 2026",
-    "s1t": "1. Purpose",
-    "s1": "These Terms govern the use of the Glamia application, intended for beauty professionals to manage their appointments and their clients.",
-    "s2t": "2. Access to the service",
-    "s2": "Registration with Glamia is reserved for beauty professionals. Users undertake to provide accurate information when registering.",
-    "s3t": "3. User account",
-    "s3": "Each user is responsible for keeping their login details confidential. Any activity carried out from their account is presumed to be their own.",
-    "s4t": "4. Use of the service",
-    "s4": "Users undertake to use Glamia for its intended purpose: managing appointments, following up with clients and professional communication. Any abusive or fraudulent use may lead to the account being suspended.",
-    "s5t": "5. Data and privacy",
-    "s5": "Users are responsible for the personal data of their clients that they enter into Glamia. They undertake to comply with data protection law and to inform their clients of how their data is used.",
-    "s5b": "For more detail, see our",
-    "s6t": "6. Intellectual property",
-    "s6": "All elements of the Glamia application (design, code, brand, content) are the exclusive property of Glamia. Any reproduction is prohibited without authorisation.",
-    "s7t": "7. Limitation of liability",
-    "s7": "Glamia does everything it can to keep the service available, but cannot guarantee uninterrupted availability. Glamia cannot be held liable for indirect damages arising from use of the service.",
-    "s8t": "8. Termination",
-    "s8": "Users may delete their account at any time. Glamia reserves the right to suspend or delete an account in the event of a breach of these Terms.",
-    "s9t": "9. Changes to these Terms",
-    "s9": "Glamia reserves the right to change these Terms. Users will be informed of any substantial change.",
-    "s10t": "10. Contact",
-    "s10": "For any question:"
+    "maj": "Last updated: 19 August 2026",
+    "contact": "For any question:",
+    "sections": [
+      {
+        "titre": "1. Who we are, and what these Terms cover",
+        "paragraphes": [
+          "Glamia is an appointment, client-management and payment application for beauty professionals. These Terms form a binding agreement between you and Glamia, and apply every time you access or use the application, the booking pages it generates, or any related service (together, the “Service”).",
+          "If you do not agree to these Terms, do not use the Service."
+        ]
+      },
+      {
+        "titre": "2. Who may use the Service",
+        "paragraphes": [
+          "The Service is for business use by beauty professionals. By registering you confirm that you are at least 18 years old, that you have the authority to enter into these Terms, and that you are using the Service in the course of a trade, business or profession.",
+          "The Service is not intended for consumers acting outside a business. Your clients do not hold an account: they only use the booking page you publish."
+        ]
+      },
+      {
+        "titre": "3. Your account",
+        "paragraphes": [
+          "You are responsible for keeping your login details confidential and for everything done through your account. Tell us immediately if you believe your account has been used without your permission.",
+          "You must give accurate registration information and keep it up to date. We may suspend an account whose details are false or misleading."
+        ]
+      },
+      {
+        "titre": "4. Acceptable use",
+        "paragraphes": [
+          "You agree to use the Service for its intended purpose: managing appointments, following up with clients, and taking payment for services you actually provide.",
+          "You must not:"
+        ],
+        "liste": [
+          "use the Service unlawfully, or to arrange anything unlawful;",
+          "upload content that is unlawful, abusive, or infringes anyone’s rights;",
+          "attempt to access data belonging to other professionals or their clients;",
+          "copy, resell, reverse-engineer or attempt to extract the source of the Service;",
+          "use the Service to send unsolicited marketing in breach of applicable law."
+        ]
+      },
+      {
+        "titre": "5. Your clients’ data — your role and ours",
+        "paragraphes": [
+          "You decide which client information you record and why. In data protection terms, you are the controller of your clients’ personal data, and Glamia acts as your processor: we handle that data on your instructions, to provide the Service.",
+          "You are responsible for having a lawful basis to record and use your clients’ data, and for telling them how it is used. We are responsible for keeping it secure and for only using it to run the Service.",
+          "Glamia is the controller of your own account data (your registration details, your subscription, your use of the app).",
+          "How all of this works in practice is set out in our {confidentialite}."
+        ]
+      },
+      {
+        "titre": "6. Payments",
+        "paragraphes": [
+          "Glamia Pay lets you ask for a deposit, hold a card on file, take card payments and send payment links. Payments are processed by Stripe. Glamia is not a bank and never holds your money: funds move from your client to your own connected account.",
+          "You are responsible for the prices you set, for the cancellation and no-show terms you display to your clients, for issuing any refund you owe, and for your own tax and accounting obligations.",
+          "Where you charge a card on file for a no-show, you must have shown your client the conditions before she paid or authorised the card. Chargebacks and disputes raised by your clients are between you and your client; we will give you the records we hold to help you respond."
+        ]
+      },
+      {
+        "titre": "7. Subscriptions and billing",
+        "paragraphes": [
+          "Paid plans are sold through the Apple App Store and billed by Apple. Renewals, cancellations and refunds follow Apple’s rules and your App Store account settings, not ours.",
+          "If your subscription lapses, your account moves to a limited state: your data is kept, but some features stop. We will tell you before that happens."
+        ]
+      },
+      {
+        "titre": "8. The Service is provided “as is”",
+        "paragraphes": [
+          "We work hard to keep the Service available and accurate, but we do not promise that it will be uninterrupted, error-free, or fit for any particular purpose beyond what these Terms describe. To the fullest extent permitted by law, we exclude all implied warranties.",
+          "The Service depends on third parties — Apple, Stripe, hosting and email providers, mobile networks. We are not responsible for their failures, though we will do what we reasonably can to limit the effect on you."
+        ]
+      },
+      {
+        "titre": "9. Our liability to you",
+        "paragraphes": [
+          "Nothing in these Terms limits or excludes our liability for death or personal injury caused by our negligence, for fraud or fraudulent misrepresentation, or for anything else that cannot lawfully be limited or excluded.",
+          "Subject to that, and to the fullest extent permitted by law:"
+        ],
+        "liste": [
+          "we are not liable for loss of profit, loss of business, loss of goodwill, loss of anticipated savings, missed appointments, or any indirect or consequential loss;",
+          "we are not liable for loss or corruption of data beyond restoring the most recent backup we hold;",
+          "our total liability to you, for all claims arising in any twelve-month period, is limited to the greater of the amount you paid us for the Service in that period, or one hundred pounds sterling (or its equivalent in your currency)."
+        ]
+      },
+      {
+        "titre": "10. Your responsibility to us",
+        "paragraphes": [
+          "You agree to cover us for any claim, loss, fine or reasonable cost we suffer because of the way you used the Service — in particular any claim from one of your clients, any breach of data protection law on your side, and any tax or consumer-law obligation of yours that you did not meet."
+        ]
+      },
+      {
+        "titre": "11. Intellectual property",
+        "paragraphes": [
+          "The Service — its design, code, brand and content — belongs to Glamia. These Terms give you permission to use it while your account is open; they do not transfer any ownership.",
+          "What you put into Glamia stays yours: your service names, your prices, your photos, your client records. You give us only the permission we need to display and process them in order to run the Service for you."
+        ]
+      },
+      {
+        "titre": "12. Suspension and closing your account",
+        "paragraphes": [
+          "You may close your account at any time. You can export your client list before you go, including if your subscription has expired.",
+          "We may suspend or close an account that breaches these Terms, that puts other users or their clients at risk, or that we are required to act on by law. Where it is reasonable to do so, we will warn you first."
+        ]
+      },
+      {
+        "titre": "13. Changes",
+        "paragraphes": [
+          "We may change the Service and these Terms. If a change materially affects your rights, we will tell you in the app or by email before it takes effect. Continuing to use the Service after that means you accept the new Terms."
+        ]
+      },
+      {
+        "titre": "14. Which law applies, and where disputes are heard",
+        "paragraphes": [
+          "If your business is established in the United Kingdom, these Terms are governed by the laws of England and Wales, and the courts of England and Wales have exclusive jurisdiction.",
+          "If your business is established in Canada, these Terms are governed by the laws of the Province of Ontario and the federal laws of Canada that apply there, and the courts of Ontario have exclusive jurisdiction.",
+          "If your business is established in the United States, these Terms are governed by the laws of the State of Delaware without regard to its conflict-of-law rules, and the state and federal courts located in Delaware have exclusive jurisdiction.",
+          "Anywhere else, these Terms are governed by French law and the courts of Paris have exclusive jurisdiction.",
+          "Nothing here removes a mandatory protection given to you by the law of the country where you are established."
+        ]
+      },
+      {
+        "titre": "15. Contact",
+        "paragraphes": [
+          "{contact}"
+        ]
+      }
+    ]
   },
   "confidentialite": {
     "titre": "Privacy Policy",
-    "maj": "Last updated: 19 July 2026",
-    "s1t": "1. Data controller",
-    "s1": "Glamia, an appointment and payment management application for beauty professionals.",
-    "s2t": "2. Data we collect",
-    "s2": "When you book online, we collect:",
-    "s2l1": "First name and surname",
-    "s2l2": "Email address",
-    "s2l3": "Phone number",
-    "s2l4": "Services chosen, date and time of the appointment",
-    "s2l5": "Optional comments left by the client",
-    "s2b": "If you pay online (deposit, card on file or payment through Glamia Pay), we also collect the amount, the type and the date of the transaction, along with technical payment identifiers. Your card details are entered and processed directly by our payment provider (Stripe) and are never stored by Glamia.",
-    "s3t": "3. Why we process it",
-    "s3": "Your data is used solely for:",
-    "s3l1": "Managing and following up your appointments",
-    "s3l2": "Sending confirmations, reminders and email notifications about your appointments",
-    "s3l3": "Processing payments, deposits, cards on file and refunds relating to your appointments",
-    "s3l4": "Communication between you and your practitioner",
-    "s4t": "4. Legal basis",
-    "s4": "Processing is based on performance of the service you requested (booking and, where applicable, the associated payment), under Article 6(1)(b) GDPR. Retention of payment and invoicing data also meets our legal and accounting obligations (Article 6(1)(c) GDPR).",
-    "s5t": "5. How long we keep it",
-    "s5": "Your data is kept for the duration of the commercial relationship with your practitioner, then deleted within 12 months of your last appointment.",
-    "s5b": "Payment and invoicing data is kept for as long as our legal and accounting obligations require.",
-    "s6t": "6. Payments and Glamia Pay",
-    "s6": "Glamia offers your practitioner payment features — a deposit at booking, a card held on file, card payments (including without a terminal, the card being tapped on the practitioner's iPhone) and payment links — grouped under the name Glamia Pay.",
-    "s6b": "These payments are processed by Stripe (Stripe Payments Europe, Ltd.), a provider certified as compliant with the PCI-DSS security standard. Your card details are entered and processed directly by Stripe: they never pass through Glamia and are never kept on our servers.",
-    "s6c": "When you leave a card on file, no money is taken at booking: it is an authorisation allowing your practitioner to charge the agreed amount if you do not turn up without cancelling, under the conditions shown before payment.",
-    "s7t": "7. Sharing your data",
-    "s7": "Your data is accessible only to the practitioner you book with. It is neither sold nor shared with third parties for commercial purposes.",
-    "s7b": "We use technical providers (processors) strictly necessary for the service to work:",
-    "s7l1": "Data hosting: Supabase (servers located in the European Union).",
-    "s7l2": "Payments: Stripe, for secure processing of Glamia Pay transactions.",
-    "s7l3": "Sending emails (confirmations, reminders): our emailing provider.",
-    "s8t": "8. Your rights",
-    "s8": "Under data protection law, you have the following rights:",
-    "s8l1": "The right to access, correct and delete your data",
-    "s8l2": "The right to data portability",
-    "s8l3": "The right to object to and restrict processing",
-    "s8b": "To exercise your rights, contact us at:",
-    "s9t": "9. Cookies",
-    "s9": "The Glamia booking site does not use advertising cookies. Only technical cookies necessary for the service to work are used."
+    "maj": "Last updated: 19 August 2026",
+    "contact": "To exercise any of these rights, contact us at:",
+    "sections": [
+      {
+        "titre": "1. Who is responsible for your data",
+        "paragraphes": [
+          "Glamia is an appointment, client-management and payment application for beauty professionals.",
+          "There are two different situations, and they matter:",
+          "When you book an appointment with a professional, that professional decides what to record about you and why. She is the controller of your data. Glamia acts as her processor: we hold and handle it on her instructions, to run her booking page and her diary. Requests about your appointment record go to her first; we will help her answer.",
+          "When a professional creates a Glamia account, Glamia is the controller of her own account data."
+        ]
+      },
+      {
+        "titre": "2. What we collect",
+        "paragraphes": [
+          "When you book online, we collect:"
+        ],
+        "liste": [
+          "first name and surname;",
+          "email address;",
+          "phone number;",
+          "the services chosen, and the date and time of the appointment;",
+          "any optional comment or inspiration photo you send;",
+          "answers to any question your professional asks before booking."
+        ]
+      },
+      {
+        "titre": "3. Payments",
+        "paragraphes": [
+          "If you pay online — a deposit, a card held on file, or a payment through Glamia Pay — we record the amount, the type and the date of the transaction, and technical payment references.",
+          "Your card details are entered and processed directly by Stripe, a payment provider certified to the PCI-DSS standard. They never pass through Glamia and are never stored on our servers.",
+          "When you leave a card on file, no money is taken at booking. It is an authorisation allowing your professional to charge the agreed amount if you do not turn up without cancelling, under the conditions shown to you before you authorised it."
+        ]
+      },
+      {
+        "titre": "4. Why we use it, and on what basis",
+        "paragraphes": [
+          "We use your data only to run the booking service: managing your appointment, sending confirmations and reminders, processing payments and refunds, and letting you and your professional communicate about the appointment.",
+          "If you are in the United Kingdom or the European Economic Area, our lawful bases are the performance of the service you asked for (Article 6(1)(b) UK GDPR / GDPR), our legal and accounting obligations for payment records (Article 6(1)(c)), and our legitimate interest in keeping the service secure and working (Article 6(1)(f)).",
+          "If you are in Canada, we collect and use your information with your knowledge and consent, for the purposes described here, as required by PIPEDA.",
+          "If you are in the United States, we process your information for the business purposes described here."
+        ]
+      },
+      {
+        "titre": "5. We do not sell your data",
+        "paragraphes": [
+          "We do not sell your personal information, and we do not share it for cross-context behavioural advertising. We have not done so in the past twelve months. This statement is made for the purposes of the California Consumer Privacy Act as amended (CCPA/CPRA), and applies equally everywhere else.",
+          "Your data is accessible only to the professional you book with, and to the technical providers listed below."
+        ]
+      },
+      {
+        "titre": "6. Who else handles it",
+        "paragraphes": [
+          "We use technical providers strictly necessary to run the service:"
+        ],
+        "liste": [
+          "Hosting: Supabase, on servers located in the European Union.",
+          "Payments: Stripe, for secure processing of Glamia Pay transactions.",
+          "Email delivery: our emailing provider, for confirmations and reminders.",
+          "Push notifications: Expo, to alert your professional on her phone."
+        ]
+      },
+      {
+        "titre": "7. Where your data is held, and transfers",
+        "paragraphes": [
+          "Your data is hosted in the European Union.",
+          "For users in the United Kingdom, transfers rely on the UK’s adequacy regulations for the EEA. For users elsewhere, where a transfer is needed we rely on Standard Contractual Clauses or another lawful transfer mechanism, and we require our providers to protect your data to the same standard."
+        ]
+      },
+      {
+        "titre": "8. How long we keep it",
+        "paragraphes": [
+          "Your appointment data is kept for as long as you have a commercial relationship with your professional, then deleted within 12 months of your last appointment.",
+          "Payment and invoicing records are kept for as long as our legal and accounting obligations require, which may be longer."
+        ]
+      },
+      {
+        "titre": "9. Your rights",
+        "paragraphes": [
+          "Wherever you are, you can ask us to give you a copy of your data, correct it, or delete it. Depending on where you live you may also have the rights below.",
+          "United Kingdom and EEA: access, rectification, erasure, restriction, portability, and the right to object to processing based on legitimate interests.",
+          "Canada: access to your personal information, correction of inaccuracies, and withdrawal of consent, subject to legal and contractual limits.",
+          "California: the right to know what we collect and why, to delete it, to correct it, to opt out of sale or sharing (we do neither), and not to be treated differently for exercising any of these rights.",
+          "{contact}"
+        ]
+      },
+      {
+        "titre": "10. Children",
+        "paragraphes": [
+          "The booking service is not intended for children under 16. We do not knowingly collect data from them. If you believe a child’s data has been recorded, write to us and we will remove it."
+        ]
+      },
+      {
+        "titre": "11. Cookies",
+        "paragraphes": [
+          "The Glamia booking site does not use advertising cookies. Only technical cookies necessary for the service to work are used."
+        ]
+      },
+      {
+        "titre": "12. Security",
+        "paragraphes": [
+          "Data is encrypted in transit and at rest. Access is limited to what each part of the service needs. Card details are never held by us. No system is perfectly secure, but we will tell you and the relevant authority without undue delay if a breach affects your rights."
+        ]
+      },
+      {
+        "titre": "13. Complaints",
+        "paragraphes": [
+          "If you are not satisfied with how we handled your data, you can complain to your supervisory authority: the Information Commissioner’s Office in the United Kingdom, the Office of the Privacy Commissioner in Canada, your State Attorney General in the United States, or the CNIL in France."
+        ]
+      }
+    ]
   }
 }
