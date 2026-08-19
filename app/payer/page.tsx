@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (remplace Stripe Checkout).
@@ -38,7 +39,7 @@ type Details = {
 
 export default function PayerWrapper() {
   return (
-    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>Chargement…</p></Cadre>}>
+    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>{traduire('commun.chargement')}</p></Cadre>}>
       <Payer />
     </Suspense>
   )
@@ -88,20 +89,20 @@ function Payer() {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>Lien indisponible</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>Ce lien a peut-être expiré. Rapproche-toi de ta praticienne.</p>
+        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>{traduire('payer.lienIndisponible')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>{traduire('merci.lienExpire')}</p>
       </Cadre>
     )
   }
-  if (!d) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>Chargement…</p></Cadre>
+  if (!d) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>{traduire('commun.chargement')}</p></Cadre>
 
   if (d.statut === 'paye') {
     return (
       <Cadre>
         <div style={pastille}><span style={{ color: '#fff', fontSize: 30, fontWeight: 700 }}>✓</span></div>
-        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0, fontFamily: "'Playfair Display', serif" }}>Déjà réglé</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 18px' }}>Ce paiement a bien été effectué. Merci 💅</p>
-        <a href={`/paiement/merci?token=${encodeURIComponent(token)}`} style={boutonLien}>Voir ma facture</a>
+        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0, fontFamily: "'Playfair Display', serif" }}>{traduire('payer.dejaRegle')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 18px' }}>{traduire('payer.dejaRegleDetail')}</p>
+        <a href={`/paiement/merci?token=${encodeURIComponent(token)}`} style={boutonLien}>{traduire('payer.voirFacture')}</a>
       </Cadre>
     )
   }
@@ -110,7 +111,7 @@ function Payer() {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>Paiement indisponible</h1>
+        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>{traduire('payer.indisponible')}</h1>
       </Cadre>
     )
   }
@@ -134,7 +135,7 @@ function Payer() {
           />
           <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>Total</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>{traduire('resa.total')}</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0)}</span>
           </div>
         </div>
@@ -154,9 +155,7 @@ function Payer() {
               que celui de la praticienne — quel que soit ce pays. */}
           Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés.
         </p>
-        <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>
-          Paiement sécurisé · Glamia Pay
-        </p>
+        <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>{traduire('payer.paiementSecurise')}</p>
       </div>
     </Cadre>
   )
@@ -191,7 +190,7 @@ function Formulaire({ token, total, nom, email }: { token: string; total: number
       ...(retirerLink ? { confirmParams: { payment_method_data: { billing_details: { name: nom || undefined, email } } } } : {}),
     })
     if (error) {
-      setMsg(error.message ?? "Le paiement n'a pas abouti. Réessaie.")
+      setMsg(error.message ?? traduire('payer.echec'))
       setEnCours(false)
       return
     }

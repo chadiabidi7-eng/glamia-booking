@@ -137,5 +137,85 @@
   "commun": {
     "chargement": "Loading...",
     "retour": "← Back"
+  },
+  "confirmation": {
+    "lienExpire": "Link expired",
+    "lienExpireDetail": "This confirmation link is no longer valid.",
+    "demanderNouveauLien": "Contact your professional for a new link.",
+    "dejaConfirme": "Already confirmed",
+    "votreRdvChez": "Your appointment with",
+    "estDejaConfirme": "is already confirmed.",
+    "rdvAnnule": "Appointment cancelled",
+    "rdvAnnuleDetail": "This appointment has been cancelled.",
+    "votreRdv": "Your appointment",
+    "decaler": "Move my appointment",
+    "choisirNouvelleDate": "Choose a new date",
+    "aucunCreneau": "No slots available that day.",
+    "confirme": "Appointment confirmed!",
+    "estConfirme": "is confirmed.",
+    "fermerPage": "You can close this page.",
+    "bienAnnule": "Your appointment has been cancelled.",
+    "decale": "Appointment moved!",
+    "bienDecale": "Your appointment has been moved.",
+    "nouvelEmail": "You'll get a new confirmation email.",
+    "erreurDetail": "Something went wrong. Please try again or contact your professional.",
+    "confirmerMonRdv": "Confirm my appointment",
+    "annulerMonRdv": "Cancel my appointment",
+    "creneauPris": "That slot is no longer available. Please choose another.",
+    "troisPhotosMax": {
+      "one": "3 photos maximum: only the first was kept",
+      "other": "3 photos maximum: only the first %{count} were kept"
+    }
+  },
+  "merci": {
+    "introuvable": "Payment not found",
+    "lienExpire": "The link may have expired. Get in touch with your practitioner.",
+    "verification": "Checking the payment…",
+    "enCours": "Payment in progress",
+    "recharge": "Reload this page in a few seconds.",
+    "valide": "Payment confirmed",
+    "prevenue": "Thank you! Your practitioner has been notified 💅",
+    "facture": "Save my receipt (PDF)"
+  },
+  "payer": {
+    "lienIndisponible": "Link unavailable",
+    "dejaRegle": "Already paid",
+    "dejaRegleDetail": "This payment has gone through. Thank you 💅",
+    "voirFacture": "See my receipt",
+    "indisponible": "Payment unavailable",
+    "paiementSecurise": "Secure payment · Glamia Pay",
+    "echec": "The payment didn't go through. Try again."
+  },
+  "avis": {
+    "merci": "Thank you!",
+    "merciDetail": "Your review has arrived. It will help other clients decide.",
+    "titre": "Your review of this appointment",
+    "prenomInitiale": "Your review will show with your first name and the initial of your surname.",
+    "rdvAnnule": "Appointment cancelled",
+    "tropTot": "A little early",
+    "delaiPasse": "The window has closed",
+    "envoyer": "Send my review",
+    "lienInconnu": "This link doesn't match any appointment.",
+    "rdvAnnuleDetail": "This appointment was cancelled, there is no review to leave.",
+    "tropTotDetail": "You'll be able to leave your review once the appointment has happened.",
+    "delaiPasseDetail": "Reviews can be left within three days of the appointment.",
+    "dejaLaisse": "Your review has been recorded. Thank you!",
+    "desactives": "Your practitioner isn't collecting reviews at the moment.",
+    "photoIllisible": "One of the photos couldn't be read. Try another one.",
+    "envoiRate": "It didn't go through. Try again in a moment.",
+    "envoiRateConnexion": "It didn't go through. Check your connection.",
+    "placeholder": "What you thought of the result, the welcome… (optional)"
+  },
+  "stripe": {
+    "reprise": "Connection to finish",
+    "repriseDetail": "The link has expired. Open the “Payments & Deposits” screen",
+    "repriseDetail2": "in Glamia again to pick up where you left off.",
+    "ouvrirGlamia": "Open Glamia",
+    "compteValide": "Account verified!",
+    "paiementsActifs": "Your payments are on. We're taking you back",
+    "versLaCaisse": "to your Glamia balance…",
+    "ouvrirMaCaisse": "Open my payments",
+    "ouvertureGlamia": "Opening Glamia...",
+    "telechargerApp": "download the app on the App Store"
   }
 }

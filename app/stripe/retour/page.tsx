@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { traduire } from '@/lib/i18n'
 
 // Page relais post-onboarding Stripe : la pro revient ici après avoir terminé
 // le parcours Stripe Express. « Compte validé » + redirection vers l'écran
@@ -28,9 +29,9 @@ export default function StripeRetour() {
       }}>
         <span style={{ color: '#fff', fontSize: 34, fontWeight: 700 }}>✓</span>
       </div>
-      <h1 style={{ fontSize: 23, color: '#1f2937', margin: 0 }}>Compte validé !</h1>
+      <h1 style={{ fontSize: 23, color: '#1f2937', margin: 0 }}>{traduire('stripe.compteValide')}</h1>
       <p style={{ fontSize: 15, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-        Tes paiements sont activés. On te ramène<br />à ta caisse Glamia…
+        {traduire('stripe.paiementsActifs')}<br />{traduire('stripe.versLaCaisse')}
       </p>
       <a
         href={CAISSE}
@@ -38,9 +39,7 @@ export default function StripeRetour() {
           marginTop: 10, background: PINK, color: '#fff', textDecoration: 'none',
           padding: '14px 32px', borderRadius: 50, fontWeight: 700, fontSize: 15,
         }}
-      >
-        Ouvrir ma caisse
-      </a>
+      >{traduire('stripe.ouvrirMaCaisse')}</a>
     </div>
   )
 }

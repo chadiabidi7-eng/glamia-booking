@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { traduire } from '@/lib/i18n'
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia/id6760552102'
 
@@ -35,10 +36,10 @@ export default function OuvrirApp() {
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon.png" alt="Glamia" width={72} height={72} style={{ borderRadius: 20 }} />
-      <p style={{ fontSize: 16, fontWeight: 700, color: '#1f2937', margin: 0 }}>Ouverture de Glamia...</p>
+      <p style={{ fontSize: 16, fontWeight: 700, color: '#1f2937', margin: 0 }}>{traduire('stripe.ouvertureGlamia')}</p>
       <p style={{ fontSize: 13, color: '#9ca3af', margin: 0, textAlign: 'center' }}>
         Si rien ne se passe,{' '}
-        <a href={APP_STORE_URL} style={{ color: '#C2779E', fontWeight: 600 }}>télécharge l&apos;app sur l&apos;App Store</a>.
+        <a href={APP_STORE_URL} style={{ color: '#C2779E', fontWeight: 600 }}>{traduire('stripe.telechargerApp')}</a>.
       </p>
     </main>
   )

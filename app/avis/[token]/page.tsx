@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Camera, CheckCircle, ImagePlus, X } from 'lucide-react'
 import { preparerPhotoAvis, type PhotoPreparee } from '@/lib/photo-avis'
+import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // « Laisse ton avis » — la page que la cliente ouvre après son rendez-vous.
@@ -34,12 +35,12 @@ type Etat =
   | { chargement: false; ouvert: false; raison: string }
 
 const MESSAGES: Record<string, { titre: string; texte: string }> = {
-  inconnu: { titre: 'Lien introuvable', texte: "Ce lien ne correspond à aucun rendez-vous." },
-  annule: { titre: 'Rendez-vous annulé', texte: "Ce rendez-vous a été annulé, il n'y a pas d'avis à laisser." },
-  trop_tot: { titre: 'Un peu tôt', texte: "Tu pourras laisser ton avis une fois le rendez-vous passé." },
-  trop_tard: { titre: 'Le délai est passé', texte: "Les avis se laissent dans les trois jours qui suivent le rendez-vous." },
-  deja: { titre: 'Déjà envoyé', texte: "Ton avis a bien été enregistré. Merci !" },
-  ferme: { titre: 'Avis désactivés', texte: "Ta praticienne ne recueille pas d'avis pour le moment." },
+  inconnu: { titre: 'Lien introuvable', texte: traduire('avis.lienInconnu') },
+  annule: { titre: traduire('avis.rdvAnnule'), texte: traduire('avis.rdvAnnuleDetail') },
+  trop_tot: { titre: traduire('avis.tropTot'), texte: traduire('avis.tropTotDetail') },
+  trop_tard: { titre: traduire('avis.delaiPasse'), texte: traduire('avis.delaiPasseDetail') },
+  deja: { titre: 'Déjà envoyé', texte: traduire('avis.dejaLaisse') },
+  ferme: { titre: 'Avis désactivés', texte: traduire('avis.desactives') },
 }
 
 export default function PageAvis() {
@@ -74,7 +75,7 @@ export default function PageAvis() {
       const prets = await Promise.all(retenus.map(preparerPhotoAvis))
       setPhotos(p => [...p, ...prets])
     } catch {
-      setErreur("Une des photos n'a pas pu être lue. Réessaie avec une autre.")
+      setErreur(traduire('avis.photoIllisible'))
     } finally {
       setPrepare(false)
       if (champFichier.current) champFichier.current.value = ''
@@ -93,19 +94,19 @@ export default function PageAvis() {
       })
       const d = await r.json()
       if (!r.ok) {
-        setErreur(MESSAGES[d.error]?.texte ?? "L'envoi n'a pas abouti. Réessaie dans un instant.")
+        setErreur(MESSAGES[d.error]?.texte ?? traduire('avis.envoiRate'))
         return
       }
       setEnvoye(true)
     } catch {
-      setErreur("L'envoi n'a pas abouti. Vérifie ta connexion.")
+      setErreur(traduire('avis.envoiRateConnexion'))
     } finally {
       setEnvoi(false)
     }
   }
 
   if (etat.chargement) {
-    return <Cadre><p style={S.attente}>Un instant…</p></Cadre>
+    return <Cadre><p style={S.attente}>{traduire('resa.unInstant')}</p></Cadre>
   }
 
   if (envoye) {
@@ -113,10 +114,8 @@ export default function PageAvis() {
       <Cadre>
         <div style={S.centre}>
           <CheckCircle size={42} color={ROSE} />
-          <h1 style={S.titre}>Merci&nbsp;!</h1>
-          <p style={S.texteDoux}>
-            Ton avis est arrivé. Il aidera d&apos;autres clientes à se décider.
-          </p>
+          <h1 style={S.titre}>{traduire('avis.merci')}</h1>
+          <p style={S.texteDoux}>{traduire('avis.merciDetail')}</p>
         </div>
       </Cadre>
     )
@@ -140,7 +139,7 @@ export default function PageAvis() {
 
   return (
     <Cadre>
-      <h1 style={S.titre}>Ton avis sur ce rendez-vous</h1>
+      <h1 style={S.titre}>{traduire('avis.titre')}</h1>
       <p style={S.sousTitre}>
         {etat.prestations ? `${etat.prestations} · ` : ''}{jour}, avec {etat.pro}
       </p>
@@ -168,7 +167,7 @@ export default function PageAvis() {
       <textarea
         value={texte}
         onChange={e => setTexte(e.target.value.slice(0, 1000))}
-        placeholder="Ce que tu as pensé du résultat, de l'accueil… (facultatif)"
+        placeholder={traduire('avis.placeholder')}
         style={S.champ}
         rows={5}
       />
@@ -216,12 +215,10 @@ export default function PageAvis() {
         onClick={envoyer}
         disabled={note === 0 || envoi || prepare}
         style={{ ...S.envoyer, opacity: note === 0 || envoi || prepare ? 0.4 : 1 }}>
-        {envoi ? 'Envoi…' : 'Envoyer mon avis'}
+        {envoi ? 'Envoi…' : traduire('avis.envoyer')}
       </button>
 
-      <p style={S.mention}>
-        Ton avis s&apos;affichera avec ton prénom et l&apos;initiale de ton nom.
-      </p>
+      <p style={S.mention}>{traduire('avis.prenomInitiale')}</p>
     </Cadre>
   )
 }

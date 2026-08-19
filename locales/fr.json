@@ -137,5 +137,85 @@
   "commun": {
     "chargement": "Chargement...",
     "retour": "← Retour"
+  },
+  "confirmation": {
+    "lienExpire": "Lien expiré",
+    "lienExpireDetail": "Ce lien de confirmation n'est plus valide.",
+    "demanderNouveauLien": "Contactez votre professionnelle pour un nouveau lien.",
+    "dejaConfirme": "RDV déjà confirmé",
+    "votreRdvChez": "Votre rendez-vous chez",
+    "estDejaConfirme": "est déjà confirmé.",
+    "rdvAnnule": "RDV annulé",
+    "rdvAnnuleDetail": "Ce rendez-vous a été annulé.",
+    "votreRdv": "Votre rendez-vous",
+    "decaler": "Décaler mon RDV",
+    "choisirNouvelleDate": "Choisissez une nouvelle date",
+    "aucunCreneau": "Aucun créneau disponible ce jour.",
+    "confirme": "RDV confirmé !",
+    "estConfirme": "est confirmé.",
+    "fermerPage": "Vous pouvez fermer cette page.",
+    "bienAnnule": "Votre rendez-vous a bien été annulé.",
+    "decale": "RDV décalé !",
+    "bienDecale": "Votre rendez-vous a bien été décalé.",
+    "nouvelEmail": "Vous recevrez un nouvel email de confirmation.",
+    "erreurDetail": "Une erreur est survenue. Veuillez réessayer ou contacter votre professionnelle.",
+    "confirmerMonRdv": "Confirmer mon RDV",
+    "annulerMonRdv": "Annuler mon RDV",
+    "creneauPris": "Ce créneau n'est plus disponible. Choisis-en un autre.",
+    "troisPhotosMax": {
+      "one": "3 photos maximum : seule la première a été gardée",
+      "other": "3 photos maximum : seules les %{count} premières ont été gardées"
+    }
+  },
+  "merci": {
+    "introuvable": "Paiement introuvable",
+    "lienExpire": "Le lien a peut-être expiré. Rapproche-toi de ta praticienne.",
+    "verification": "Vérification du paiement…",
+    "enCours": "Paiement en cours",
+    "recharge": "Recharge cette page dans quelques secondes.",
+    "valide": "Paiement validé",
+    "prevenue": "Merci ! Ta praticienne a été prévenue 💅",
+    "facture": "Enregistrer ma facture (PDF)"
+  },
+  "payer": {
+    "lienIndisponible": "Lien indisponible",
+    "dejaRegle": "Déjà réglé",
+    "dejaRegleDetail": "Ce paiement a bien été effectué. Merci 💅",
+    "voirFacture": "Voir ma facture",
+    "indisponible": "Paiement indisponible",
+    "paiementSecurise": "Paiement sécurisé · Glamia Pay",
+    "echec": "Le paiement n'a pas abouti. Réessaie."
+  },
+  "avis": {
+    "merci": "Merci !",
+    "merciDetail": "Ton avis est arrivé. Il aidera d'autres clientes à se décider.",
+    "titre": "Ton avis sur ce rendez-vous",
+    "prenomInitiale": "Ton avis s'affichera avec ton prénom et l'initiale de ton nom.",
+    "rdvAnnule": "Rendez-vous annulé",
+    "tropTot": "Un peu tôt",
+    "delaiPasse": "Le délai est passé",
+    "envoyer": "Envoyer mon avis",
+    "lienInconnu": "Ce lien ne correspond à aucun rendez-vous.",
+    "rdvAnnuleDetail": "Ce rendez-vous a été annulé, il n'y a pas d'avis à laisser.",
+    "tropTotDetail": "Tu pourras laisser ton avis une fois le rendez-vous passé.",
+    "delaiPasseDetail": "Les avis se laissent dans les trois jours qui suivent le rendez-vous.",
+    "dejaLaisse": "Ton avis a bien été enregistré. Merci !",
+    "desactives": "Ta praticienne ne recueille pas d'avis pour le moment.",
+    "photoIllisible": "Une des photos n'a pas pu être lue. Réessaie avec une autre.",
+    "envoiRate": "L'envoi n'a pas abouti. Réessaie dans un instant.",
+    "envoiRateConnexion": "L'envoi n'a pas abouti. Vérifie ta connexion.",
+    "placeholder": "Ce que tu as pensé du résultat, de l'accueil… (facultatif)"
+  },
+  "stripe": {
+    "reprise": "Connexion à reprendre",
+    "repriseDetail": "Le lien a expiré. Rouvre l’écran « Acomptes & paiements »",
+    "repriseDetail2": "dans Glamia pour reprendre là où tu en étais.",
+    "ouvrirGlamia": "Ouvrir Glamia",
+    "compteValide": "Compte validé !",
+    "paiementsActifs": "Tes paiements sont activés. On te ramène",
+    "versLaCaisse": "à ta caisse Glamia…",
+    "ouvrirMaCaisse": "Ouvrir ma caisse",
+    "ouvertureGlamia": "Ouverture de Glamia...",
+    "telechargerApp": "télécharge l'app sur l'App Store"
   }
 }
