@@ -210,7 +210,9 @@ const MOIS = [
 const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 // 5 étapes : Techniques fusionnées en une seule étape accordéon
-const STEP_LABELS = ['Identification', 'Techniques', 'Date', 'Heure', traduire('resa.confirmation')]
+// UNE FONCTION, PAS UNE CONSTANTE : lue au chargement du fichier, elle
+// resterait dans la langue de départ. Voir scripts/textes-figes.mjs.
+const STEP_LABELS = () => [traduire('resa.etapeIdentification'), traduire('resa.etapeTechniques'), traduire('resa.etapeDate'), traduire('resa.etapeHeure'), traduire('resa.confirmation')]
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -3201,7 +3203,7 @@ export default function ReservationPage() {
 
           {/* Progress bar */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-            {STEP_LABELS.map((_, i) => (
+            {STEP_LABELS().map((_, i) => (
               <div
                 key={i}
                 style={{
@@ -3213,7 +3215,7 @@ export default function ReservationPage() {
             ))}
           </div>
           <p style={{ fontSize: 11, color: PINK, fontWeight: 600, margin: 0 }}>
-            Étape {step}/{STEP_LABELS.length} — {STEP_LABELS[step - 1]}
+            Étape {step}/{STEP_LABELS().length} — {STEP_LABELS()[step - 1]}
           </p>
         </div>
       </div>
@@ -3988,7 +3990,7 @@ export default function ReservationPage() {
                   </div>
                   <div style={{ marginTop: 4 }}>
                     <label style={S.label}>{traduire('resa.email')}</label>
-                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder="votre@email.com" style={S.input} autoCapitalize="none" />
+                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder={traduire('resa.emailPlaceholder')} style={S.input} autoCapitalize="none" />
                     <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>{traduire('resa.emailDetail')}</p>
                   </div>
                 </div>
@@ -4629,9 +4631,9 @@ export default function ReservationPage() {
 
               {/* Infos principales */}
               {[
-                { icon: <User size={20} color={GLAMIA_PINK} />, label: 'Cliente',  value: `${clientePrenom} ${clienteNom}` },
-                { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: 'Date',     value: formatDateLong(date) },
-                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: 'Heure',    value: `${heure} · ${formatDuree(dureeTotal)}` },
+                { icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleCliente'), value: `${clientePrenom} ${clienteNom}` },
+                { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleDate'), value: formatDateLong(date) },
+                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeTotal)}` },
                 ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: traduire('resa.total'),

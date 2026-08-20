@@ -34,14 +34,16 @@ type Etat =
   | { chargement: false; ouvert: true; pro: string; prestations: string; quand: string }
   | { chargement: false; ouvert: false; raison: string }
 
-const MESSAGES: Record<string, { titre: string; texte: string }> = {
-  inconnu: { titre: 'Lien introuvable', texte: traduire('avis.lienInconnu') },
+// UNE FONCTION, PAS UNE CONSTANTE : lue au chargement du fichier, elle
+// resterait dans la langue de départ. Voir scripts/textes-figes.mjs.
+const MESSAGES: () => Record<string, { titre: string; texte: string }> = () => ({
+  inconnu: { titre: traduire('avis.lienIntrouvable'), texte: traduire('avis.lienInconnu') },
   annule: { titre: traduire('avis.rdvAnnule'), texte: traduire('avis.rdvAnnuleDetail') },
   trop_tot: { titre: traduire('avis.tropTot'), texte: traduire('avis.tropTotDetail') },
   trop_tard: { titre: traduire('avis.delaiPasse'), texte: traduire('avis.delaiPasseDetail') },
-  deja: { titre: 'Déjà envoyé', texte: traduire('avis.dejaLaisse') },
-  ferme: { titre: 'Avis désactivés', texte: traduire('avis.desactives') },
-}
+  deja: { titre: traduire('avis.dejaEnvoye'), texte: traduire('avis.dejaLaisse') },
+  ferme: { titre: traduire('avis.desactivesTitre'), texte: traduire('avis.desactives') },
+})
 
 export default function PageAvis() {
   const { token } = useParams<{ token: string }>()
@@ -94,7 +96,7 @@ export default function PageAvis() {
       })
       const d = await r.json()
       if (!r.ok) {
-        setErreur(MESSAGES[d.error]?.texte ?? traduire('avis.envoiRate'))
+        setErreur(MESSAGES()[d.error]?.texte ?? traduire('avis.envoiRate'))
         return
       }
       setEnvoye(true)
@@ -122,7 +124,7 @@ export default function PageAvis() {
   }
 
   if (!etat.ouvert) {
-    const m = MESSAGES[etat.raison] ?? MESSAGES.inconnu
+    const m = MESSAGES()[etat.raison] ?? MESSAGES().inconnu
     return (
       <Cadre>
         <div style={S.centre}>

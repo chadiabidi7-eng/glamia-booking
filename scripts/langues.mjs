@@ -118,7 +118,7 @@ for (const chemin of ecrans) {
     .filter(p => !/[({[]$/.test(p) && !/^[)}\]]/.test(p))
     // Deux derniers morceaux de code qui ressemblent à du texte : un type
     // TypeScript coupé en deux, et une comparaison numérique.
-    .filter(p => !/^Promise$/.test(p) && !/^\d+\)/.test(p));
+    .filter(p => !/^(Promise|Record|Partial|Array|Omit)$/.test(p) && !/^\d+\)/.test(p));
   if (trouvees.length) {
     enDur += trouvees.length;
     parEcran.push([chemin.replace(RACINE, ''), trouvees.length]);

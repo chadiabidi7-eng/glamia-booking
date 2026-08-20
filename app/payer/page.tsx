@@ -133,7 +133,7 @@ function Payer() {
             label={`${d.type === 'acompte' ? 'Acompte' : d.type === 'solde' ? 'Solde' : 'Prestation'}${d.prestation ? ` — ${d.prestation}` : ''}`}
             val={fmt(d.restant ?? 0)}
           />
-          <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0)} />
+          <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>{traduire('resa.total')}</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0)}</span>

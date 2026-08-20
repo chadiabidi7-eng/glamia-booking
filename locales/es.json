@@ -1,1 +1,573 @@
-{}
+{
+  "resa": {
+    "reglement": "Normas",
+    "refusDefaut": "No puedo atenderte para esta petición.",
+    "ecrivezLui": "Escríbele y lo habláis directamente:",
+    "modifierReponses": "Modificar mis respuestas",
+    "repondreFormulaire": "Responder al formulario",
+    "facultatif": " · opcional",
+    "pageIntrouvable": "Página no encontrada",
+    "pageIntrouvableDetail": "Este enlace de reserva no existe o se ha desactivado.",
+    "indisponible": "La reserva de citas en línea no está disponible por ahora.",
+    "contactez": "Contacta con",
+    "surSesReseaux": "en sus redes sociales.",
+    "rdvEnregistre": "Tu cita ha quedado registrada",
+    "prestations": "Servicios",
+    "fidelite": "FIDELIDAD",
+    "reduction": "DESCUENTO",
+    "total": "Total",
+    "empreinteRassure": "No se ha cobrado nada. Tu tarjeta solo queda registrada, y únicamente se cobrará si no vienes o si cancelas tarde.",
+    "inspirationsNonEnvoyees": "Tus fotos de inspiración no se han podido enviar.",
+    "mailAvant": "Recibirás un correo de confirmación 24 h antes de tu cita para confirmar que vienes.",
+    "verifiezSpams": "Si no recibes el correo, mira en la carpeta de spam.",
+    "aBientot": "¡Hasta pronto!",
+    "signatureGlamia": "La app de las profesionales de la belleza",
+    "reservationEnLigne": "Reserva en línea",
+    "bonjour": "¡Hola!",
+    "entrezNumero": "Escribe tu número para empezar.",
+    "telephone": "Teléfono",
+    "continuer": "Continuar →",
+    "verification": "Comprobando...",
+    "reconnue": "Te hemos reconocido.",
+    "laisserAvis": "Dejar una reseña",
+    "chargementRdv": "Cargando tus citas...",
+    "vosRdv": "Tus próximas citas",
+    "rdvReprogramme": "¡Cita cambiada de fecha!",
+    "prestationsModifiees": "¡Servicios modificados!",
+    "modifierPrestations": "Modificar los servicios",
+    "prendre": "Reservar",
+    "vosPrestations": "Tus servicios",
+    "fermer": "✕ Cerrar",
+    "nouvelleDate": "Nueva fecha",
+    "carteFidelite": "Tarjeta de fidelidad",
+    "premiereVisite": "¿Primera vez? ¡Encantada!",
+    "prenom": "Nombre",
+    "nom": "Apellido",
+    "email": "Correo",
+    "emailDetail": "Para recibir la confirmación de tu cita",
+    "fideliteDetail": "¡Acumula sellos en cada cita y disfruta de descuentos!",
+    "quellesPrestations": "¿Qué servicios?",
+    "choisirTechniques": "Elige uno o varios servicios.",
+    "aucunePrestation": "Ningún servicio disponible por ahora.",
+    "choisissezDate": "Elige una fecha",
+    "rechercheCreneau": "Buscando el próximo hueco...",
+    "prochainCreneau": "Próximo hueco disponible",
+    "prendreCeRdv": "Reservar esta cita →",
+    "selectionne": "Seleccionado",
+    "jourOff": "Día libre",
+    "complet": "Completo —",
+    "cliquezPourEtrePrevenue": "pulsa para que te avisemos",
+    "passe": "Pasado",
+    "choisissezHeure": "Elige una hora",
+    "chargementCreneaux": "Cargando los huecos...",
+    "cestNote": "Tomamos nota",
+    "attenteConfirmee": "Recibirás un correo si se queda un hueco libre ese día. El hueco es para la primera que reserve.",
+    "etrePrevenue": "Avisarme si se queda un hueco libre",
+    "verifiezCoordonnees": "Comprueba el nombre, el teléfono y el correo, y vuelve a intentarlo.",
+    "coordonneesEffacees": "Tus datos sirven únicamente para avisarte de ese día, y luego se borran.",
+    "mePrevenir": "Avisarme si se queda un hueco libre",
+    "choisirAutreDate": "← Elegir otra fecha",
+    "confirmation": "Confirmación",
+    "verifiezDetails": "Comprueba los datos de tu cita.",
+    "recapitulatif": "Resumen",
+    "tesInspirations": "Tus inspiraciones 💅",
+    "unInstant": "Un momento…",
+    "regleeMaintenant": "Pagado ahora, no tienes que pagar nada en el momento.",
+    "payeMaintenant": "Pagado ahora, se descuenta del precio de tu servicio.",
+    "fraisCouvrent": "Cubren el servicio de reserva en línea:",
+    "fraisRappels": "los recordatorios automáticos antes de tu cita",
+    "fraisDecaler": "cambiar la fecha, modificar o cancelar tú misma, sin llamar",
+    "fraisInspirations": "enviar tus fotos de inspiración a tu profesional",
+    "fraisFidelite": "tu tarjeta de fidelidad, que se llena sola",
+    "paiementSecurise": "Pago seguro con Stripe — el dinero va directamente a tu profesional, Glamia nunca lo retiene.",
+    "conditionsUtilisation": "condiciones de uso",
+    "confidentialite": "Política de privacidad",
+    "questionAuDessus": "Te espera una pregunta justo arriba",
+    "lectureImpossible": "No se ha podido leer el archivo",
+    "uneQuestion": "una pregunta",
+    "confirmerPlace": "Confirmar este hueco",
+    "prendreRdv": "Pedir cita",
+    "taPraticienne": "Tu profesional",
+    "taPraticienneMinuscule": "tu profesional",
+    "troisPhotosTransmises": "Tus 3 fotos se han enviado 💅",
+    "choisirAuMoinsUne": "Elige al menos un servicio",
+    "confirmerModification": "Confirmar el cambio",
+    "confirmerPourLe": "Confirmar para el",
+    "reprogrammerAu": "Cambiar al",
+    "masquerDetails": "Ocultar los detalles",
+    "voirDetails": "Ver los detalles",
+    "verificationJours": "Comprobando los días completos…",
+    "verifiezEtValidez": "Comprueba tus datos y confirma.",
+    "laissezCoordonnees": "Déjanos tus datos y te escribimos en cuanto se quede un hueco libre.",
+    "contacteeAvant": "¿Quieres que te contacten antes de tu cita?",
+    "contacteeAvantPar": "¿Quieres que %{pro} te contacte antes de tu cita?",
+    "tonPaiement": "tu pago",
+    "tonAcompte": "tu anticipo",
+    "confirmerReservation": "Confirmar mi reserva",
+    "repondsQuestion": "Responde a la pregunta de arriba",
+    "glisserDefiler": "Desliza para ver · toca para cerrar",
+    "toucherFermer": "Toca para cerrar",
+    "completPrevenir": "Completo — avisarme si se queda un hueco libre",
+    "retirerPhoto": "Quitar esta foto",
+    "supprimerPhoto": "Eliminar esta foto",
+    "photoPrestation": "Foto del servicio",
+    "cocheAcompte": "Marca la casilla de aceptación del anticipo antes de pagar.",
+    "cochePaiement": "Marca la casilla de aceptación del pago antes de pagar.",
+    "cocheEmpreinte": "Marca la casilla de autorización de retención en tarjeta antes de pagar.",
+    "photosTransmises": {
+      "one": "Tu foto de inspiración se ha enviado",
+      "other": "Tus %{count} fotos de inspiración se han enviado"
+    },
+    "photoTransmise": "Tu foto de inspiración se ha enviado",
+    "montreInspiration": "Enséñale a %{pro} lo que tienes en mente — le llegará un aviso.",
+    "paliersDansNRdv": "%{label} en tu cita n.º %{count}",
+    "prochainRdv": "Próxima cita: %{label}",
+    "montreInspirationAjoute": "Enséñale a %{pro} lo que tienes en mente — añade hasta 3 fotos (opcional).",
+    "reductionPersonnelle": "%{pro} te hace un descuento personal de %{valeur}",
+    "reductionTousRdv": ", que se aplica automáticamente a todas tus citas.",
+    "reductionProchainsRdv": {
+      "one": ", que se aplica automáticamente a tu próxima cita.",
+      "other": ", que se aplica automáticamente a tus %{count} próximas citas."
+    },
+    "offresEnCours": "Ofertas activas",
+    "voirMoins": "Ver menos",
+    "reprogrammer": "Cambiar la fecha",
+    "commentaireOptionnel": "Comentario (opcional)",
+    "importer": "Subir",
+    "annulTardEmpreinte": "Cancelas con menos de %{delai} h de antelación: se podrán cobrar %{somme} de tu tarjeta.",
+    "annulTotEmpreinte": "Cancelas con más de %{delai} h: no se cobrará nada, tu retención queda liberada.",
+    "annulTardAcompte": "Cancelas con menos de %{delai} h de antelación: no se te devolverán tus %{somme}.",
+    "annulTotAcompte": "Cancelas con más de %{delai} h: se te devolverán tus %{somme}.",
+    "confirmerAnnulation": "¿Cancelar tu cita del %{date} a las %{heure} (%{prestation})?%{avertissement}",
+    "paiementAnnule": "Tu pago acaba de anularse.",
+    "annulationImpossible": "No se ha podido cancelar esta cita.",
+    "modificationImpossible": "No se ha podido modificar esta cita.",
+    "troisDecalages": "Esta cita ya se ha cambiado de fecha 3 veces. Para otro cambio, habla directamente con tu profesional.",
+    "decalageTropTard": "Con menos de 24 h de antelación ya no se puede cambiar la fecha en línea. Habla directamente con tu profesional.",
+    "reprogrammationImpossible": "No se ha podido cambiar la fecha de esta cita.",
+    "erreurConsole": "Se ha producido un error. Abre la consola (F12) para ver el detalle.",
+    "photoRefusee": "Esta foto no se ha podido añadir. Prueba con otra imagen.",
+    "photosNonEnvoyees": "Tus fotos no se han podido enviar. Inténtalo otra vez.",
+    "unePhotoRefusee": "Una foto no se ha podido añadir. Prueba con otra imagen.",
+    "photosRefusees": {
+      "one": "Una foto no se ha podido añadir. Prueba con otra imagen.",
+      "other": "%{count} fotos no se han podido añadir. Prueba con otras imágenes."
+    },
+    "cocheAcompteResa": "Marca la casilla de aceptación del anticipo para reservar.",
+    "cocheEmpreinteResa": "Marca la casilla de autorización de retención en tarjeta para reservar.",
+    "tropDeResaPaye": "Demasiadas reservas desde este dispositivo en poco tiempo. Tu pago acaba de anularse — inténtalo dentro de una hora, o llama directamente a tu profesional.",
+    "tropDeResa": "Demasiadas reservas desde este dispositivo en poco tiempo. Inténtalo dentro de una hora, o llama directamente a tu profesional.",
+    "creneauPrisPaye": "Este hueco ya no está disponible. Tu pago acaba de anularse — elige otra hora.",
+    "paiementPasPret": "El módulo de pago no está listo. Espera un segundo e inténtalo otra vez.",
+    "carteRefusee": "No se ha podido validar la tarjeta.",
+    "mesInspirationsPleines": "Mis inspiraciones (3/3)",
+    "ajouterInspirations": "Añadir mis inspiraciones",
+    "emailPlaceholder": "tu@correo.com",
+    "fraisReservation": "Gastos de reserva",
+    "libelleCliente": "Clienta",
+    "libelleDate": "Fecha",
+    "libelleHeure": "Hora",
+    "etapeIdentification": "Identificación",
+    "etapeTechniques": "Servicios",
+    "etapeDate": "Fecha",
+    "etapeHeure": "Hora"
+  },
+  "commun": {
+    "chargement": "Cargando...",
+    "retour": "← Volver",
+    "erreur": "Error"
+  },
+  "creneaux": {
+    "jourIndisponible": "Este día ya no está disponible. Elige otra fecha.",
+    "jourFerme": "Este día ya no está abierto a reservas. Elige otra fecha.",
+    "creneauRetire": "Este hueco ya no se ofrece. Elige otro.",
+    "creneauPris": "Este hueco lo acaban de coger 😔 Elige otro."
+  },
+  "meta": {
+    "reserveDescription": "Reserva tu cita de belleza en línea",
+    "siteDescription": "Reserva en línea con tu profesional de la belleza"
+  },
+  "confirmation": {
+    "lienExpire": "Enlace caducado",
+    "lienExpireDetail": "Este enlace de confirmación ya no es válido.",
+    "demanderNouveauLien": "Pide un nuevo enlace a tu profesional.",
+    "dejaConfirme": "Cita ya confirmada",
+    "votreRdvChez": "Tu cita con",
+    "estDejaConfirme": "ya está confirmada.",
+    "rdvAnnule": "Cita cancelada",
+    "rdvAnnuleDetail": "Esta cita se ha cancelado.",
+    "votreRdv": "Tu cita",
+    "decaler": "Cambiar la fecha de mi cita",
+    "choisirNouvelleDate": "Elige una nueva fecha",
+    "aucunCreneau": "Ningún hueco disponible ese día.",
+    "confirme": "¡Cita confirmada!",
+    "estConfirme": "está confirmada.",
+    "fermerPage": "Ya puedes cerrar esta página.",
+    "bienAnnule": "Tu cita se ha cancelado.",
+    "decale": "¡Cita cambiada de fecha!",
+    "bienDecale": "Tu cita ha cambiado de fecha.",
+    "nouvelEmail": "Recibirás un nuevo correo de confirmación.",
+    "erreurDetail": "Se ha producido un error. Inténtalo otra vez o habla con tu profesional.",
+    "confirmerMonRdv": "Confirmar mi cita",
+    "annulerMonRdv": "Cancelar mi cita",
+    "creneauPris": "Este hueco ya no está disponible. Elige otro.",
+    "troisPhotosMax": {
+      "one": "3 fotos como máximo: solo se ha guardado la primera",
+      "other": "3 fotos como máximo: solo se han guardado las %{count} primeras"
+    },
+    "instructions": "Instrucciones para tu cita"
+  },
+  "merci": {
+    "introuvable": "Pago no encontrado",
+    "lienExpire": "Puede que el enlace haya caducado. Habla con tu profesional.",
+    "verification": "Comprobando el pago…",
+    "enCours": "Pago en curso",
+    "recharge": "Recarga esta página dentro de unos segundos.",
+    "valide": "Pago confirmado",
+    "prevenue": "¡Gracias! Tu profesional ya lo sabe 💅",
+    "facture": "Guardar mi factura (PDF)"
+  },
+  "payer": {
+    "lienIndisponible": "Enlace no disponible",
+    "dejaRegle": "Ya pagado",
+    "dejaRegleDetail": "Este pago se ha realizado correctamente. Gracias 💅",
+    "voirFacture": "Ver mi factura",
+    "indisponible": "Pago no disponible",
+    "paiementSecurise": "Pago seguro · Glamia Pay",
+    "echec": "El pago no ha salido bien. Inténtalo otra vez.",
+    "echecCourt": "El pago no ha salido bien."
+  },
+  "avis": {
+    "merci": "¡Gracias!",
+    "merciDetail": "Tu reseña ha llegado. Ayudará a otras clientas a decidirse.",
+    "titre": "Tu reseña sobre esta cita",
+    "prenomInitiale": "Tu reseña se mostrará con tu nombre y la inicial de tu apellido.",
+    "rdvAnnule": "Cita cancelada",
+    "tropTot": "Un poco pronto",
+    "delaiPasse": "El plazo ha pasado",
+    "envoyer": "Enviar mi reseña",
+    "lienInconnu": "Este enlace no corresponde a ninguna cita.",
+    "rdvAnnuleDetail": "Esta cita se ha cancelado, no hay ninguna reseña que dejar.",
+    "tropTotDetail": "Podrás dejar tu reseña una vez pasada la cita.",
+    "delaiPasseDetail": "Las reseñas se dejan durante los tres días siguientes a la cita.",
+    "dejaLaisse": "Tu reseña ha quedado registrada. ¡Gracias!",
+    "desactives": "Tu profesional no recoge reseñas por ahora.",
+    "photoIllisible": "Una de las fotos no se ha podido leer. Prueba con otra.",
+    "envoiRate": "El envío no ha salido bien. Inténtalo dentro de un momento.",
+    "envoiRateConnexion": "El envío no ha salido bien. Comprueba tu conexión.",
+    "placeholder": "Lo que te ha parecido el resultado, el trato… (opcional)",
+    "photo": "Foto",
+    "lienIntrouvable": "Enlace no encontrado",
+    "dejaEnvoye": "Ya enviada",
+    "desactivesTitre": "Reseñas desactivadas"
+  },
+  "stripe": {
+    "reprise": "Conexión por retomar",
+    "repriseDetail": "El enlace ha caducado. Vuelve a abrir la pantalla «Anticipos y pagos»",
+    "repriseDetail2": "en Glamia para seguir donde lo dejaste.",
+    "ouvrirGlamia": "Abrir Glamia",
+    "compteValide": "¡Cuenta validada!",
+    "paiementsActifs": "Tus pagos están activados. Te llevamos",
+    "versLaCaisse": "a tus cobros de Glamia…",
+    "ouvrirMaCaisse": "Abrir mis cobros",
+    "ouvertureGlamia": "Abriendo Glamia...",
+    "telechargerApp": "descarga la app en la App Store"
+  },
+  "notif": {
+    "uneCliente": "Una clienta",
+    "uneClienteMinuscule": "una clienta",
+    "taPraticienne": "tu profesional",
+    "rdvDecaleTitre": "📅 Cita cambiada de fecha",
+    "rdvDecale": "%{prenom} ha cambiado su cita del %{avant} al %{apres} a las %{heure}",
+    "rdvConfirme": "%{prenom} ha confirmado su cita del %{date} a las %{heure}",
+    "rdvAnnule": "%{prenom} ha cancelado su cita del %{date} a las %{heure}",
+    "avisAvecPrestation": "%{auteur} te ha dejado una reseña sobre %{prestation}.",
+    "avis": "%{auteur} te ha dejado una reseña.",
+    "attenteTitre": "🌸 Una clienta espera un hueco",
+    "attente": "A %{nom} le gustaría ir el %{jour} (%{duree}). La avisaremos si se queda un hueco libre.",
+    "litige": "Una clienta reclama un cobro de %{montant} €. Entra en tu espacio de Stripe para responder a la reclamación.",
+    "virementRateTitre": "Tu transferencia no ha salido",
+    "virementRate": "Tu banco ha rechazado la transferencia. Comprueba tu IBAN en tus Cobros — tu dinero sigue ahí.",
+    "compteBloque": "Tu cuenta de Stripe ya no acepta pagos. Regularízala en tus Cobros para seguir cobrando.",
+    "compteBloqueTitre": "Cuenta de Stripe por regularizar",
+    "litigeTitre": "Anticipo reclamado ⚠️",
+    "taCliente": "Tu clienta",
+    "inspirationsTitre": "Nuevas inspiraciones 💅",
+    "inspirations": {
+      "one": "%{nom} ha añadido una foto de inspiración para su cita del %{date}.",
+      "other": "%{nom} ha añadido %{count} fotos de inspiración para su cita del %{date}."
+    },
+    "paiementRecuTitre": "Pago recibido 💸",
+    "paiementRecu": "%{montant} € de %{prenom} — tus cobros están al día",
+    "paiementRecuSansNom": "%{montant} € — tus cobros están al día",
+    "prestationsModifiees": "%{prenom} ha modificado sus servicios del %{date} a las %{heure}: %{prestations}",
+    "nouveauRdvNom": "%{prenom} %{nom} ha pedido cita para %{prestations} el %{date} a las %{heure}%{appel}",
+    "nouveauRdv": "%{prenom} ha pedido cita para %{prestations} el %{date} a las %{heure}%{appel}",
+    "rdvReprogramme": "%{prenom} ha cambiado su cita al %{date} a las %{heure}"
+  },
+  "aide": {
+    "titre": "Ayuda y asistencia",
+    "intro": "¿Una pregunta, un problema, una idea? Estamos aquí para ayudarte. Lo leemos y respondemos todo, normalmente en 24 o 48 horas (días laborables).",
+    "nousContacter": "Contactar con nosotros",
+    "ecrireEmail": "Escribir a contact@glamia.pro",
+    "ecrireInstagram": "Escríbenos por Instagram (@glamia.officiel)",
+    "essaiDebut": "Al instalarla, descubres",
+    "essaiQuatorzeJours": "todo Glamia gratis durante 14 días",
+    "abonnementApple": "Las suscripciones de Glamia las gestiona Apple. Para cambiarla o darla de baja: abre",
+    "gererAbonnement": "Gestionar o dar de baja mi suscripción",
+    "bug": "Tengo un fallo o un problema para entrar",
+    "supprimerCompte": "Eliminar mi cuenta y mis datos",
+    "vousEtesCliente": "¿Eres clienta y has pedido cita?",
+    "description": "¿Necesitas ayuda con Glamia? Escríbenos por correo o por Instagram, y consulta las respuestas a las preguntas más frecuentes.",
+    "reglages": "Ajustes",
+    "abonnements": "Suscripciones",
+    "cheminApple": " en tu iPhone → toca tu nombre arriba → ",
+    "resiliationEffet": "La baja tiene efecto al final del periodo ya pagado; hasta entonces mantienes el acceso.",
+    "metaTitre": "Ayuda y asistencia — Glamia",
+    "essaiTitre": "¿Cómo funciona la prueba gratuita?",
+    "essaiSuite": "Al terminar la prueba puedes quedarte en la versión gratuita o pasar a Glamia Pro para tener clientas ilimitadas y estadísticas avanzadas. No se cobra nada hasta que elijas una suscripción.",
+    "payTitre": "Glamia Pay: ¿cómo cobro?",
+    "payTexte": "Desde la app puedes cobrar con tarjeta sin datáfono (la tarjeta se apoya en tu iPhone), pedir un anticipo o una retención al reservar, y enviar un enlace de pago por SMS. Todo queda registrado en tus cobros de Glamia. Si un pago o una devolución te plantea dudas, escríbenos y lo miramos contigo.",
+    "bugTexte": "Cierra la aplicación del todo y vuelve a abrirla; si el problema sigue, cierra la sesión y vuelve a entrar. Si aun así no se arregla, escríbenos a contact@glamia.pro contándonos qué pasa (y una captura de pantalla si puedes): te respondemos enseguida.",
+    "supprimerCompteTexte": "Puedes pedir que eliminemos tu cuenta y todos tus datos para siempre cuando quieras, escribiendo a contact@glamia.pro desde el correo de tu cuenta. La eliminación se hace en unos días, conforme a la normativa de protección de datos.",
+    "clienteTexte": "Para cambiar o cancelar una cita, usa el enlace de reservas que te ha pasado tu profesional, o habla con ella directamente. Si tienes un problema técnico con la reserva en línea, escríbenos a contact@glamia.pro."
+  },
+  "cgu": {
+    "titre": "Condiciones Generales de Uso",
+    "maj": "Última actualización: 19 de agosto de 2026",
+    "contact": "Para cualquier duda:",
+    "sections": [
+      {
+        "titre": "1. Quiénes somos y qué cubren estas condiciones",
+        "paragraphes": [
+          "Glamia es una aplicación de gestión de citas, seguimiento de clientas y cobros, destinada a profesionales de la belleza. Estas condiciones forman un contrato entre tú y Glamia, y se aplican cada vez que usas la aplicación, la página de reservas que publica para ti o cualquier servicio relacionado (en adelante, «el Servicio»).",
+          "Si no aceptas estas condiciones, no uses el Servicio."
+        ]
+      },
+      {
+        "titre": "2. Quién puede usar el Servicio",
+        "paragraphes": [
+          "El Servicio está reservado a un uso profesional por parte de profesionales de la belleza. Al registrarte, declaras tener al menos 18 años, tener capacidad para obligar a tu negocio y usar el Servicio en el marco de tu actividad profesional.",
+          "Tus clientas no tienen cuenta: solo usan la página de reservas que tú publicas."
+        ]
+      },
+      {
+        "titre": "3. Tu cuenta",
+        "paragraphes": [
+          "Eres responsable de la confidencialidad de tus credenciales y de todo lo que se haga desde tu cuenta. Avísanos de inmediato si crees que se ha usado sin tu permiso.",
+          "Te comprometes a facilitar información exacta al registrarte y a mantenerla actualizada. Podemos suspender una cuenta cuya información sea falsa o engañosa."
+        ]
+      },
+      {
+        "titre": "4. Uso permitido",
+        "paragraphes": [
+          "Te comprometes a usar el Servicio para lo que sirve: gestionar tus citas, hacer seguimiento de tus clientas y cobrar servicios que realizas de verdad.",
+          "No debes:"
+        ],
+        "liste": [
+          "usar el Servicio de forma ilícita, ni para organizar nada ilícito;",
+          "subir contenido ilícito, injurioso o que vulnere los derechos de un tercero;",
+          "intentar acceder a los datos de otras profesionales o de sus clientas;",
+          "copiar, revender, descompilar o intentar extraer el código del Servicio;",
+          "utilizarlo para enviar mensajes comerciales no solicitados incumpliendo la ley."
+        ]
+      },
+      {
+        "titre": "5. Los datos de tus clientas — tu papel y el nuestro",
+        "paragraphes": [
+          "Eres tú quien decide qué información guardas sobre tus clientas y para qué. En materia de protección de datos, tú eres la RESPONSABLE DEL TRATAMIENTO de los datos personales de tus clientas, y Glamia actúa como tu ENCARGADO DEL TRATAMIENTO: tratamos esos datos siguiendo tus instrucciones, para que el Servicio funcione.",
+          "Tú respondes de tener una base legal para recoger y usar esos datos, y de informar a tus clientas. Nosotros respondemos de su seguridad y de usarlos únicamente para hacer funcionar el Servicio.",
+          "Glamia sí es responsable del tratamiento de TUS PROPIOS datos de cuenta: tu registro, tu suscripción y tu uso de la aplicación.",
+          "El detalle de este reparto —exigido por el artículo 28 del RGPD en España, por la Ley Federal de Protección de Datos Personales en Posesión de los Particulares en México y por la Ley 1581 de 2012 en Colombia— figura en nuestra {confidentialite}."
+        ]
+      },
+      {
+        "titre": "6. Los pagos",
+        "paragraphes": [
+          "Glamia Pay te permite pedir un anticipo, guardar una retención en tarjeta, cobrar con tarjeta y enviar enlaces de pago. Los pagos los procesa Stripe. Glamia no es un banco y nunca retiene tu dinero: los fondos van de tu clienta a tu propia cuenta conectada.",
+          "Sigues siendo responsable de los precios que fijas, de las condiciones de cancelación y de ausencia que muestras a tus clientas, de las devoluciones que debas hacer y de tus obligaciones fiscales y contables.",
+          "Cuando cobras una retención por una ausencia, debes haber mostrado las condiciones a tu clienta ANTES de que pagara o autorizara su tarjeta. Las reclamaciones bancarias son un asunto entre tu clienta y tú; te entregaremos los registros de que dispongamos para ayudarte a responder."
+        ]
+      },
+      {
+        "titre": "7. Suscripción y facturación",
+        "paragraphes": [
+          "Las suscripciones de pago las vende la App Store y las factura Apple. Las renovaciones, bajas y devoluciones siguen las reglas de Apple y los ajustes de tu cuenta de la App Store, no los nuestros.",
+          "Si tu suscripción se interrumpe, tu cuenta pasa a modo restringido: tus datos se conservan, pero algunas funciones se paran. Te avisamos antes."
+        ]
+      },
+      {
+        "titre": "8. El Servicio se presta tal cual",
+        "paragraphes": [
+          "Hacemos todo lo posible para que el Servicio esté disponible y sea exacto, sin poder garantizar un funcionamiento ininterrumpido ni libre de errores. Asumimos una obligación de medios.",
+          "El Servicio depende de terceros — Apple, Stripe, el proveedor de alojamiento, el proveedor de correo, las redes móviles. No respondemos de sus fallos, aunque hacemos lo que razonablemente está en nuestra mano para limitar su efecto sobre ti."
+        ]
+      },
+      {
+        "titre": "9. Nuestra responsabilidad frente a ti",
+        "paragraphes": [
+          "Nada en estas condiciones limita ni excluye nuestra responsabilidad por daños personales, por dolo o culpa grave, ni en los casos en que la ley lo prohíbe.",
+          "Con esa salvedad, y en la medida permitida por la ley:"
+        ],
+        "liste": [
+          "no respondemos de las pérdidas indirectas: lucro cesante, pérdida de clientela, daño de imagen, citas perdidas, ahorros esperados;",
+          "no respondemos de la pérdida o alteración de datos más allá de restaurar la última copia de seguridad que tengamos;",
+          "nuestra responsabilidad total, por el conjunto de reclamaciones surgidas en un periodo de doce meses, se limita al importe que nos hayas pagado en ese periodo, o a cien euros (o su equivalente en tu moneda) si esa cantidad es mayor."
+        ]
+      },
+      {
+        "titre": "10. Lo que tú nos garantizas",
+        "paragraphes": [
+          "Nos garantizas frente a cualquier reclamación, condena, multa o gasto razonable que soportemos por tu uso del Servicio — en particular una reclamación de una de tus clientas, un incumplimiento de la normativa de protección de datos por tu parte, o una obligación fiscal o de derecho del consumo que no hubieras cumplido."
+        ]
+      },
+      {
+        "titre": "11. Propiedad intelectual",
+        "paragraphes": [
+          "El Servicio — su diseño, su código, su marca, sus contenidos — pertenece a Glamia. Estas condiciones te dan derecho a usarlo mientras tu cuenta esté abierta; no transfieren ninguna propiedad.",
+          "Lo que tú pones en Glamia sigue siendo tuyo: los nombres de tus servicios, tus precios, tus fotos, tus fichas de clientas. Solo nos concedes la autorización necesaria para mostrarlos y tratarlos con el fin de que el Servicio funcione para ti."
+        ]
+      },
+      {
+        "titre": "12. Suspensión y cierre de la cuenta",
+        "paragraphes": [
+          "Puedes cerrar tu cuenta cuando quieras. Puedes exportar tu fichero de clientas antes de irte, incluso si tu suscripción ha caducado.",
+          "Podemos suspender o cerrar una cuenta que incumpla estas condiciones, que ponga en peligro a otras usuarias o a sus clientas, o cuando la ley nos lo imponga. Cuando sea razonablemente posible, te avisamos antes."
+        ]
+      },
+      {
+        "titre": "13. Modificaciones",
+        "paragraphes": [
+          "Podemos hacer evolucionar el Servicio y estas condiciones. Cuando un cambio afecte de forma sustancial a tus derechos, te informaremos en la aplicación o por correo antes de que entre en vigor. Seguir usando el Servicio después de esa fecha equivale a aceptarlo."
+        ]
+      },
+      {
+        "titre": "14. Qué ley se aplica y qué tribunales resuelven",
+        "paragraphes": [
+          "Si tu negocio está establecido en España, estas condiciones se rigen por el Derecho español y los juzgados y tribunales de Madrid capital son los únicos competentes.",
+          "Si tu negocio está establecido en México, estas condiciones se rigen por las leyes de la Ciudad de México y los tribunales competentes de la Ciudad de México son los únicos competentes.",
+          "Si tu negocio está establecido en Colombia, estas condiciones se rigen por la ley colombiana y los jueces de Bogotá D. C. son los únicos competentes.",
+          "En cualquier otro lugar, estas condiciones se rigen por el Derecho francés y los tribunales de París son los únicos competentes.",
+          "Nada de lo anterior te priva de una protección imperativa que te otorgue la ley del país donde estés establecida.",
+          "Antes de cualquier acción, nos comprometemos mutuamente a buscar una solución amistosa: escríbenos y te respondemos."
+        ]
+      },
+      {
+        "titre": "15. Contacto",
+        "paragraphes": [
+          "{contact}"
+        ]
+      }
+    ]
+  },
+  "confidentialite": {
+    "titre": "Política de privacidad",
+    "maj": "Última actualización: 19 de agosto de 2026",
+    "contact": "Para ejercer tus derechos, escríbenos a:",
+    "sections": [
+      {
+        "titre": "1. Quién es responsable de tus datos",
+        "paragraphes": [
+          "Glamia es una aplicación de gestión de citas y cobros para profesionales de la belleza.",
+          "Conviven dos situaciones distintas, y la diferencia importa:",
+          "Cuando pides cita con una profesional, es ELLA quien decide qué guarda sobre ti y para qué. Ella es la responsable del tratamiento. Glamia actúa como su encargado del tratamiento: conservamos y tratamos esos datos siguiendo sus instrucciones, para que funcionen su página de reservas y su agenda. Una petición sobre tu ficha se dirige primero a ella; nosotros la ayudamos a responder.",
+          "Cuando una profesional crea una cuenta en Glamia, Glamia es responsable del tratamiento de sus propios datos de cuenta."
+        ]
+      },
+      {
+        "titre": "2. Qué recogemos",
+        "paragraphes": [
+          "Al pedir cita en línea, recogemos:"
+        ],
+        "liste": [
+          "nombre y apellidos;",
+          "correo electrónico;",
+          "número de teléfono;",
+          "servicios elegidos, fecha y hora de la cita;",
+          "comentarios y fotos de inspiración que envíes, si las hay;",
+          "respuestas a las preguntas que tu profesional hace antes de la reserva."
+        ]
+      },
+      {
+        "titre": "3. Los pagos",
+        "paragraphes": [
+          "Si pagas en línea — anticipo, retención en tarjeta o pago con Glamia Pay — registramos el importe, el tipo y la fecha de la operación, así como los identificadores técnicos del pago.",
+          "Los datos de tu tarjeta los introduces y los trata directamente Stripe, proveedor certificado conforme a la norma PCI-DSS. No pasan por Glamia y nunca se guardan en nuestros servidores.",
+          "Cuando dejas una retención en tarjeta, no se cobra ningún importe al reservar: es una autorización que permite a tu profesional cobrar el importe acordado si no vas sin haber cancelado, según las condiciones mostradas antes de que autorizaras la tarjeta."
+        ]
+      },
+      {
+        "titre": "4. Para qué, y con qué base legal",
+        "paragraphes": [
+          "Tus datos solo sirven para que la reserva funcione: gestionar tu cita, enviar confirmaciones y recordatorios, tratar pagos y devoluciones, y permitir que tu profesional y tú habléis sobre la cita.",
+          "Nuestras bases legales son la ejecución del servicio que has solicitado (artículo 6.1.b del RGPD), nuestras obligaciones legales y contables para los registros de pago (artículo 6.1.c) y nuestro interés legítimo en mantener el servicio seguro y operativo (artículo 6.1.f). En México, el tratamiento se basa en tu consentimiento y en la relación jurídica que da origen a la cita, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares; en Colombia, en tu autorización previa conforme a la Ley 1581 de 2012."
+        ]
+      },
+      {
+        "titre": "5. No vendemos tus datos",
+        "paragraphes": [
+          "No vendemos tus datos personales ni los compartimos con ningún fin publicitario. Nunca lo hemos hecho.",
+          "Solo tienen acceso a ellos la profesional con la que pides cita y los proveedores técnicos que se enumeran a continuación."
+        ]
+      },
+      {
+        "titre": "6. Quién más los manipula",
+        "paragraphes": [
+          "Recurrimos a proveedores estrictamente necesarios para que el servicio funcione:"
+        ],
+        "liste": [
+          "Alojamiento: Supabase, en servidores situados en la Unión Europea.",
+          "Pagos: Stripe, para el tratamiento seguro de las operaciones de Glamia Pay.",
+          "Envío de correos (confirmaciones, recordatorios): nuestro proveedor de correo.",
+          "Avisos: Expo, para avisar a tu profesional en su teléfono."
+        ]
+      },
+      {
+        "titre": "7. Dónde se alojan tus datos",
+        "paragraphes": [
+          "Tus datos se alojan en la Unión Europea.",
+          "Cuando hace falta una transferencia fuera de la Unión con alguno de nuestros proveedores, se apoya en una decisión de adecuación o en las cláusulas contractuales tipo de la Comisión Europea, y exigimos el mismo nivel de protección."
+        ]
+      },
+      {
+        "titre": "8. Cuánto tiempo los guardamos",
+        "paragraphes": [
+          "Los datos de tus citas se conservan mientras dure la relación con tu profesional, y luego se eliminan en los 12 meses siguientes a tu última cita.",
+          "Los registros de pago y de facturación se conservan el tiempo que exigen nuestras obligaciones legales y contables, que puede ser más largo."
+        ]
+      },
+      {
+        "titre": "9. Tus derechos",
+        "paragraphes": [
+          "Tienes derecho de acceso, rectificación, supresión, limitación y portabilidad, además del derecho a oponerte a un tratamiento basado en nuestro interés legítimo. En México y en Colombia, estos derechos se conocen como derechos ARCO (acceso, rectificación, cancelación y oposición) y como derecho a conocer, actualizar, rectificar y suprimir tus datos y a revocar la autorización.",
+          "{contact}",
+          "Respondemos en el plazo de un mes. Si la petición se refiere a tu ficha con una profesional, se la trasladamos a ella, que es su responsable."
+        ]
+      },
+      {
+        "titre": "10. Los menores",
+        "paragraphes": [
+          "El servicio de reservas no está dirigido a menores de 16 años, y no recogemos sus datos a sabiendas. Si crees que se han registrado los datos de un menor, escríbenos y los eliminaremos."
+        ]
+      },
+      {
+        "titre": "11. Cookies",
+        "paragraphes": [
+          "La página de reservas de Glamia no utiliza cookies publicitarias. Solo se usan cookies técnicas necesarias para que el servicio funcione."
+        ]
+      },
+      {
+        "titre": "12. Seguridad",
+        "paragraphes": [
+          "Los datos se cifran en tránsito y en reposo. Los accesos se limitan a lo que cada parte del servicio necesita. Los datos de tarjeta nunca están en nuestro poder. Ningún sistema es perfectamente seguro: si se produce una brecha que afecte a tus derechos, informaremos sin dilación indebida a la autoridad competente y, cuando la ley lo exija, a ti misma."
+        ]
+      },
+      {
+        "titre": "13. Reclamaciones",
+        "paragraphes": [
+          "Si nuestra respuesta no te satisface, puedes acudir a la Agencia Española de Protección de Datos (C/ Jorge Juan 6, 28001 Madrid), al INAI en México, a la Superintendencia de Industria y Comercio en Colombia, o a la autoridad de protección de datos de tu país de residencia."
+        ]
+      }
+    ]
+  }
+}

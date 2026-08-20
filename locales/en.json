@@ -161,7 +161,16 @@
     "paiementPasPret": "The payment module is not ready. Wait a second and try again.",
     "carteRefusee": "The card couldn't be validated.",
     "mesInspirationsPleines": "My inspiration (3/3)",
-    "ajouterInspirations": "Add my inspiration"
+    "ajouterInspirations": "Add my inspiration",
+    "emailPlaceholder": "you@email.com",
+    "fraisReservation": "Booking fee",
+    "libelleCliente": "Client",
+    "libelleDate": "Date",
+    "libelleHeure": "Time",
+    "etapeIdentification": "Who you are",
+    "etapeTechniques": "Services",
+    "etapeDate": "Date",
+    "etapeHeure": "Time"
   },
   "commun": {
     "chargement": "Loading...",
@@ -237,7 +246,10 @@
     "envoiRate": "It didn't go through. Try again in a moment.",
     "envoiRateConnexion": "It didn't go through. Check your connection.",
     "placeholder": "What you thought of the result, the welcome… (optional)",
-    "photo": "Photo"
+    "photo": "Photo",
+    "lienIntrouvable": "Link not found",
+    "dejaEnvoye": "Already sent",
+    "desactivesTitre": "Reviews turned off"
   },
   "stripe": {
     "reprise": "Connection to finish",
@@ -306,7 +318,15 @@
     "reglages": "Settings",
     "abonnements": "Subscriptions",
     "cheminApple": " on your iPhone → tap your name at the top → ",
-    "resiliationEffet": "Cancelling takes effect at the end of the period you have already paid for; you keep access until then."
+    "resiliationEffet": "Cancelling takes effect at the end of the period you have already paid for; you keep access until then.",
+    "metaTitre": "Help & support — Glamia",
+    "essaiTitre": "How does the free trial work?",
+    "essaiSuite": "When the trial ends you can stay on the free version or move to Glamia Pro for unlimited clients and advanced stats. Nothing is charged until you choose a plan.",
+    "payTitre": "Glamia Pay: how do I get paid?",
+    "payTexte": "From the app you can take card payments without a terminal (the card taps on your iPhone), ask for a deposit or hold a card at booking, and send a payment link by text. Everything is tracked in your Glamia balance. If a payment or a refund puzzles you, write to us and we will look at it with you.",
+    "bugTexte": "Close the app completely and open it again; if the problem is still there, sign out and sign back in. If that is not enough, write to contact@glamia.pro describing what happens (a screenshot helps): we answer quickly.",
+    "supprimerCompteTexte": "You can ask us to delete your account and all your data for good at any time, by writing to contact@glamia.pro from your account address. Deletion is carried out within a few days, in line with data protection law.",
+    "clienteTexte": "To change or cancel an appointment, use the booking link your professional shared with you, or contact her directly. For a technical problem with the online booking, write to contact@glamia.pro."
   },
   "cgu": {
     "titre": "Terms of Use",
