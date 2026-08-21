@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
+import { symboleDevise } from '@/lib/devise'
 import { libererEmpreintesRdv } from '../../stripe/webhook/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +51,21 @@ async function chargerContexte(token: string) {
     .maybeSingle()
   if (!compte?.account_id) return null
 
-  return { p, account: compte.account_id }
+  // LA PAGE COMPTE DANS LA MONNAIE DE LA PRO. Elle s'ouvre sur un lien nu, sans
+  // nom de pro dedans : faute de la lire ici, elle écrivait « € » quoi qu'il
+  // arrive. Une cliente suisse lisait « 37,60 € » pour 37,60 francs — le même
+  // défaut que la page de réservation, corrigé là-bas le 5 août.
+  const { data: pro } = await supabaseAdmin
+    .from('profiles')
+    .select('devise')
+    .eq('id', p.pro_id)
+    .maybeSingle()
+
+  return {
+    p,
+    account: compte.account_id,
+    devise: (pro as { devise?: string | null } | null)?.devise ?? 'EUR',
+  }
 }
 
 // Envoi de la facture rose à la cliente via l'edge function (qui a la clé Resend)
@@ -87,20 +102,21 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
-    const { p, account } = ctx
+    const { p, account, devise } = ctx
 
-    if (p.statut === 'paye') return NextResponse.json({ statut: 'paye' })
+    if (p.statut === 'paye') return NextResponse.json({ statut: 'paye', devise })
     if (p.statut !== 'en_attente' || !p.stripe_payment_intent_id) {
-      return NextResponse.json({ statut: p.statut })
+      return NextResponse.json({ statut: p.statut, devise })
     }
 
     const intent = await stripe().paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
-    if (intent.status === 'succeeded') return NextResponse.json({ statut: 'paye' })
+    if (intent.status === 'succeeded') return NextResponse.json({ statut: 'paye', devise })
 
     const restant = p.montant
     const frais = p.frais_reservation ?? 0
     return NextResponse.json({
       statut: 'a_payer',
+      devise,
       stripe_account: account,
       client_secret: intent.client_secret,
       type: p.type,
@@ -128,7 +144,7 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
-    const { p, account } = ctx
+    const { p, account, devise } = ctx
     if (p.statut === 'paye') return NextResponse.json({ statut: 'paye' })
     if (!p.stripe_payment_intent_id) return NextResponse.json({ statut: p.statut })
 
@@ -155,7 +171,7 @@ export async function POST(req: NextRequest) {
       await notifierPro(
         p.pro_id,
         'Paiement reçu 💸',
-        `${(p.montant / 100).toFixed(2).replace('.', ',')} €${prenom ? ` de ${prenom}` : ''} — ta caisse est créditée`,
+        `${(p.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(devise)}${prenom ? ` de ${prenom}` : ''} — ta caisse est créditée`,
       )
       await envoyerFacture(p.id)
     }
