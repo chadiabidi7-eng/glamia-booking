@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
+import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — webhook Stripe (endpoint « Connect » : événements des
@@ -191,7 +192,9 @@ export async function POST(req: NextRequest) {
           await pousserNotifPro(
             paiement.pro_id,
             'Paiement reçu 💸',
-            `${(paiement.montant / 100).toFixed(2).replace('.', ',')} €${nom ? ` de ${nom}` : ''} — ta caisse est créditée`,
+            // Le symbole vient du paiement lui-même : c'est la monnaie dans
+            // laquelle l'argent a réellement bougé, pas une supposition.
+            `${(paiement.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(intent.currency?.toUpperCase())}${nom ? ` de ${nom}` : ''} — ta caisse est créditée`,
           )
           // Facture rose à la cliente (edge fn qui a la clé Resend)
           fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {
@@ -236,7 +239,7 @@ export async function POST(req: NextRequest) {
             await pousserNotifPro(
               paiement.pro_id,
               'Acompte contesté ⚠️',
-              `Une cliente conteste un prélèvement de ${(paiement.montant / 100).toFixed(2).replace('.', ',')} €. Consulte ton espace Stripe pour répondre au litige.`,
+              `Une cliente conteste un prélèvement de ${(paiement.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(litige.currency?.toUpperCase())}. Consulte ton espace Stripe pour répondre au litige.`,
             )
           }
         }

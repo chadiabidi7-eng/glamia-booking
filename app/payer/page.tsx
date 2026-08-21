@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (remplace Stripe Checkout).
@@ -14,7 +15,10 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 const PINK = '#C2779E'
 const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
 
-const fmt = (c: number) => `${(c / 100).toFixed(2).replace('.', ',')} €`
+// LE MONTANT EST DANS LA MONNAIE DE LA PRO. L'euro était écrit en dur : une
+// cliente suisse lisait « 37,60 € » pour un solde de 37,60 francs.
+const fmt = (c: number, devise?: string | null) =>
+  `${(c / 100).toFixed(2).replace('.', ',')} ${symboleDevise(devise)}`
 
 const stripePromises: Record<string, ReturnType<typeof loadStripe>> = {}
 function getStripePromise(compte: string) {
@@ -24,6 +28,7 @@ function getStripePromise(compte: string) {
 
 type Details = {
   statut: string
+  devise?: string | null
   stripe_account?: string
   client_secret?: string
   type?: string
@@ -130,12 +135,12 @@ function Payer() {
         <div style={carteDetail}>
           <Ligne
             label={`${d.type === 'acompte' ? 'Acompte' : d.type === 'solde' ? 'Solde' : 'Prestation'}${d.prestation ? ` — ${d.prestation}` : ''}`}
-            val={fmt(d.restant ?? 0)}
+            val={fmt(d.restant ?? 0, d.devise)}
           />
-          <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0)} />
+          <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0, d.devise)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>Total</span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0)}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0, d.devise)}</span>
           </div>
         </div>
 
@@ -144,7 +149,7 @@ function Payer() {
           stripe={getStripePromise(d.stripe_account)}
           options={{ clientSecret: d.client_secret, locale: 'fr', appearance, fonts }}
         >
-          <Formulaire token={token} total={d.total ?? 0} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
+          <Formulaire token={token} total={d.total ?? 0} devise={d.devise} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
         </Elements>
 
         <p style={{ fontSize: 11, color: '#9a8f95', textAlign: 'center', marginTop: 12, lineHeight: 1.4 }}>
@@ -171,7 +176,7 @@ function Ligne({ label, val }: { label: string; val: string }) {
   )
 }
 
-function Formulaire({ token, total, nom, email }: { token: string; total: number; nom: string; email: string }) {
+function Formulaire({ token, total, devise, nom, email }: { token: string; total: number; devise?: string | null; nom: string; email: string }) {
   const stripe = useStripe()
   const elements = useElements()
   const [enCours, setEnCours] = useState(false)
@@ -221,7 +226,7 @@ function Formulaire({ token, total, nom, email }: { token: string; total: number
         padding: '15px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: enCours ? 'default' : 'pointer',
         opacity: enCours ? 0.6 : 1, fontFamily: "'Poppins', sans-serif",
       }}>
-        {enCours ? 'Paiement…' : `Payer ${fmt(total)}`}
+        {enCours ? 'Paiement…' : `Payer ${fmt(total, devise)}`}
       </button>
       {msg && <p style={{ color: '#c0392b', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{msg}</p>}
     </>
