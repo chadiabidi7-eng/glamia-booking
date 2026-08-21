@@ -75,11 +75,21 @@ export function etiquette(): string {
 }
 
 /** Vrai quand l'heure s'écrit en AM/PM. Le français jamais. */
+/**
+ * LE PAYS DÉCIDE, PAS LA LANGUE. Même règle que l'app — décision de Chadi le
+ * 21 août 2026. On ne décide plus rien ici : on DEMANDE à l'étiquette ce que
+ * son pays fait. Royaume-Uni 24 h, États-Unis 12 h, Espagne 24 h, Mexique
+ * 12 h, sans aucune liste à tenir à jour.
+ *
+ * Le repli est 24 heures : c'est ce que lisent les pros francophones.
+ */
 export function heure12(): boolean {
-  const langue = langueActuelle();
-  if (langue === 'fr') return false;
-  if (langue === 'es') return ['es-MX', 'es-CO'].includes(etiquette());
-  return true;
+  try {
+    return new Intl.DateTimeFormat(etiquette(), { hour: 'numeric' })
+      .resolvedOptions().hour12 === true;
+  } catch {
+    return false;
+  }
 }
 
 /** « 14:30 » reste « 14:30 » en français, devient « 2:30 PM » en anglais. */

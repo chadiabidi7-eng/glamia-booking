@@ -18,8 +18,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
-import { poserPays, moisLongs } from '@/lib/heures-dates'
-import { etiquette } from '@/lib/heures-dates'
+import { poserPays, moisLongs, etiquette, formatHeure } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
 // Types
@@ -1002,9 +1001,10 @@ export default function ReservationPage() {
         fontSize: 13.5, color: '#6B6470', lineHeight: 1.5,
         margin: '14px 0 0', textAlign: 'center',
       }}>
-        {pro?.pseudo || pro?.prenom} a {questionsValides.length === 1
-          ? traduire('resa.uneQuestion') : `${questionsValides.length} questions`} à vous poser
-        avant de fixer votre rendez-vous.
+        {traduire('resa.questionsAvant', {
+          pro: pro?.pseudo || pro?.prenom || '',
+          count: questionsValides.length,
+        })}
       </p>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 26 }}>
         <button
@@ -3327,11 +3327,14 @@ export default function ReservationPage() {
                 <span style={{
                   width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none',
                 }} />
+                {/* L'heure passait par un remplacement à la main — « 17:30 »
+                    devenait « 17h30 », une écriture française, sur une page
+                    par ailleurs en anglais. On repasse par formatHeure. */}
                 <span>
-                  Prochaine dispo le{' '}
-                  <b style={{ color: '#2D2D2D' }}>{formatDateCourte(prochaineDispo.date)}</b>
-                  {' à '}
-                  <b style={{ color: '#2D2D2D' }}>{prochaineDispo.heure.replace(':', 'h')}</b>
+                  {traduire('resa.prochaineDispo', {
+                    date: formatDateCourte(prochaineDispo.date),
+                    heure: formatHeure(prochaineDispo.heure),
+                  })}
                 </span>
               </div>
             )}
@@ -3375,7 +3378,7 @@ export default function ReservationPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <User size={28} color={GLAMIA_PINK} />
                     <div>
-                      <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>Bonjour {clientePrenom} !</p>
+                      <p style={{ fontWeight: 600, color: '#1f2937', margin: 0 }}>{traduire('resa.bonjourPrenom', { prenom: clientePrenom })}</p>
                       <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{traduire('resa.reconnue')}</p>
                     </div>
                   </div>

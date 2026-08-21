@@ -192,7 +192,12 @@
     "blocPrestation": "Prestation",
     "blocAcompte": "Acompte",
     "blocEmpreinte": "Empreinte bancaire",
-    "rienDebiteAujourdhui": "Rien n'est débité aujourd'hui — uniquement en cas d'absence ou d'annulation à moins de %{delai} h."
+    "rienDebiteAujourdhui": "Rien n'est débité aujourd'hui — uniquement en cas d'absence ou d'annulation à moins de %{delai} h.",
+    "prochaineDispo": "Prochaine dispo le %{date} à %{heure}",
+    "questionsAvant": {
+      "one": "%{pro} a une question à vous poser avant de fixer votre rendez-vous.",
+      "other": "%{pro} a %{count} questions à vous poser avant de fixer votre rendez-vous."
+    }
   },
   "commun": {
     "chargement": "Chargement...",

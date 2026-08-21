@@ -192,7 +192,12 @@
     "blocPrestation": "Service",
     "blocAcompte": "Deposit",
     "blocEmpreinte": "Card hold",
-    "rienDebiteAujourdhui": "Nothing is charged today — only if you do not show up or cancel less than %{delai} h before."
+    "rienDebiteAujourdhui": "Nothing is charged today — only if you do not show up or cancel less than %{delai} h before.",
+    "prochaineDispo": "Next slot on %{date} at %{heure}",
+    "questionsAvant": {
+      "one": "%{pro} has one question for you before booking your appointment.",
+      "other": "%{pro} has %{count} questions for you before booking your appointment."
+    }
   },
   "commun": {
     "chargement": "Loading...",

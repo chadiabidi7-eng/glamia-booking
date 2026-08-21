@@ -192,7 +192,12 @@
     "blocPrestation": "Servicio",
     "blocAcompte": "Anticipo",
     "blocEmpreinte": "Retención en tarjeta",
-    "rienDebiteAujourdhui": "Hoy no se cobra nada — solo si no acudes o si cancelas con menos de %{delai} h."
+    "rienDebiteAujourdhui": "Hoy no se cobra nada — solo si no acudes o si cancelas con menos de %{delai} h.",
+    "prochaineDispo": "Próximo hueco el %{date} a las %{heure}",
+    "questionsAvant": {
+      "one": "%{pro} tiene una pregunta antes de fijar tu cita.",
+      "other": "%{pro} tiene %{count} preguntas antes de fijar tu cita."
+    }
   },
   "commun": {
     "chargement": "Cargando...",
