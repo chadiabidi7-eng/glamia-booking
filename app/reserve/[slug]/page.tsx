@@ -140,6 +140,12 @@ type RdvAVenir = {
 // ─── Glamia Pay (acomptes / empreintes à la résa) ────────────────────────────
 type PropayInfo = {
   actif: boolean
+  /**
+   * ON N'A PAS PU DEMANDER À STRIPE — ce n'est pas la même chose que « la pro
+   * ne demande rien ». Les deux se répondaient « actif: false », et une panne
+   * laissait donc réserver sans acompte, en silence.
+   */
+  panne?: boolean
   mode?: 'empreinte' | 'acompte' | 'total'
   acompte?: number        // centimes
   frais?: number          // centimes (frais de réservation, mode acompte)
@@ -2410,8 +2416,9 @@ export default function ReservationPage() {
       }),
     })
       .then(r => r.json())
-      .then((d: PropayInfo) => setPropay(d))
-      .catch(() => setPropay({ actif: false }))
+      .then((d: PropayInfo & { error?: string }) =>
+        setPropay(d?.error ? { actif: false, panne: true } : d))
+      .catch(() => setPropay({ actif: false, panne: true }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
@@ -2571,6 +2578,17 @@ export default function ReservationPage() {
       // Dans cet ordre, et pas l'inverse : un rendez-vous créé puis une carte
       // refusée laisserait un créneau pris sans paiement, et la pro devrait
       // faire le ménage à la main.
+      // ── UNE PANNE NE DOIT PAS OFFRIR LE RENDEZ-VOUS ──────────────────────
+      // Quand Stripe ne répond pas, on ne sait pas ce que la pro demande. La
+      // page l'a longtemps pris pour « elle ne demande rien » : la cliente
+      // réservait sans rien payer, et ni elle ni la pro ne le voyaient. On
+      // s'arrête ici plutôt que d'inventer une réponse. Le créneau n'est pas
+      // pris, elle peut réessayer dans la seconde.
+      if (acompteActif && propay?.panne) {
+        alert(traduire('resa.paiementInjoignable'))
+        setSubmitting(false)
+        return
+      }
       let propayIntentId: string | null = null
       if (propay?.actif) {
         if (!propayConsent) {

@@ -114,6 +114,7 @@
     "photoPrestation": "Photo de la prestation",
     "cocheAcompte": "Coche la case d'acceptation de l'acompte avant de payer.",
     "cochePaiement": "Coche la case d'acceptation du paiement avant de payer.",
+    "paiementInjoignable": "Le paiement est momentanément indisponible. Réessaie dans un instant — ton créneau n'est pas perdu.",
     "cocheEmpreinte": "Coche la case d'autorisation d'empreinte bancaire avant de payer.",
     "photosTransmises": {
       "one": "Ta photo d'inspiration a été transmise",

@@ -114,6 +114,7 @@
     "photoPrestation": "Foto del servicio",
     "cocheAcompte": "Marca la casilla de aceptación del anticipo antes de pagar.",
     "cochePaiement": "Marca la casilla de aceptación del pago antes de pagar.",
+    "paiementInjoignable": "El pago no está disponible por un momento. Vuelve a intentarlo en un instante — tu hueco no se pierde.",
     "cocheEmpreinte": "Marca la casilla de autorización de retención en tarjeta antes de pagar.",
     "photosTransmises": {
       "one": "Tu foto de inspiración se ha enviado",

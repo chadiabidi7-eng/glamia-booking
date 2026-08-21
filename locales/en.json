@@ -114,6 +114,7 @@
     "photoPrestation": "Service photo",
     "cocheAcompte": "Tick the deposit acceptance box before paying.",
     "cochePaiement": "Tick the payment acceptance box before paying.",
+    "paiementInjoignable": "Payment is unavailable for a moment. Try again shortly — your slot is not lost.",
     "cocheEmpreinte": "Tick the card authorisation box before paying.",
     "photosTransmises": {
       "one": "Your inspiration photo has been sent",
