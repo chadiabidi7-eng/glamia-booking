@@ -1623,6 +1623,10 @@ export default function ReservationPage() {
         adresse:          found.adresse ?? undefined,
         is_pro:           found.is_pro ?? false,
         devise:           found.devise ?? 'EUR',
+        // Le pays décide de la forme du numéro proposé en exemple. Oublié ici
+        // la première fois — exactement le piège que décrit le commentaire
+        // juste en dessous.
+        pays:             found.pays ?? null,
         // LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE « AUTRE ». Cette page ne
         // recopie pas le profil reçu : elle le REBÂTIT champ par champ. Tout
         // champ oublié ici est jeté en silence — le serveur l'envoie, la page
