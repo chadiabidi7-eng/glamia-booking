@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { traduire } from '@/lib/i18n'
+import { traduire, poserLangue, poserLangueSansPro } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page « Paiement validé » + facture rose, simple et imprimable.
@@ -13,7 +13,7 @@ const PINK = '#C2779E'
 
 // La facture n'est plus fabriquée ici : elle arrive toute faite, dans la monnaie
 // de la caisse de la pro. L'euro écrit en dur à cet endroit était le défaut.
-type Recu = { statut: string; html?: string }
+type Recu = { statut: string; langue?: string | null; html?: string }
 
 export default function MerciWrapper() {
   return (
@@ -42,10 +42,21 @@ function PageMerci() {
   const [erreur, setErreur] = useState(false)
 
   useEffect(() => {
+    // Un lien expiré ou tronqué n'a aucune pro à suivre : le message d'erreur
+    // suit alors le navigateur, comme la page d'avis. Le reçu, quand il
+    // arrive, repose la langue de la pro par-dessus.
+    poserLangueSansPro()
     if (!token) { setErreur(true); return }
     fetch(`/api/propay/recu?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
-      .then(d => (d.error ? setErreur(true) : setRecu(d)))
+      .then(d => {
+        if (d.error) { setErreur(true); return }
+        // La langue arrive avec le reçu, et doit être posée AVANT le premier
+        // rendu : le cadre de la page reste sinon en français autour d'une
+        // facture anglaise.
+        poserLangue(d.langue)
+        setRecu(d)
+      })
       .catch(() => setErreur(true))
   }, [token])
 

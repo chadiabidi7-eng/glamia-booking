@@ -48,7 +48,15 @@ export async function GET(req: NextRequest) {
     if (!data) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
     const p = data as unknown as Paiement
 
-    if (p.statut !== 'paye') return NextResponse.json({ statut: 'en_attente' })
+    // LA PAGE PARLE LA LANGUE DE LA PRO. Elle s'ouvre sur un jeton nu, sans
+    // nom de pro dedans : sans cette valeur, son cadre restait en français
+    // autour d'une facture anglaise. La facture, elle, va déjà la chercher
+    // toute seule.
+    const { data: pro } = await supabaseAdmin
+      .from('profiles').select('langue').eq('id', p.pro_id).maybeSingle()
+    const langue = (pro as { langue?: string | null } | null)?.langue ?? null
+
+    if (p.statut !== 'paye') return NextResponse.json({ statut: 'en_attente', langue })
 
     // La facture est fabriquée à un seul endroit : la fonction qui l'envoie
     // par mail. On lui demande la même, en HTML, au lieu de la refaire ici.
@@ -68,7 +76,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'facture_indisponible' }, { status: 502 })
     }
 
-    return NextResponse.json({ statut: 'paye', html: await rendu.text() })
+    return NextResponse.json({ statut: 'paye', langue, html: await rendu.text() })
   } catch (e) {
     console.error('[api/propay/recu]', e)
     return NextResponse.json({ error: 'erreur' }, { status: 500 })
