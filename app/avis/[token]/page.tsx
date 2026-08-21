@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Camera, CheckCircle, ImagePlus, X } from 'lucide-react'
 import { preparerPhotoAvis, type PhotoPreparee } from '@/lib/photo-avis'
-import { traduire, poserLangueSansPro } from '@/lib/i18n'
+import { traduire, poserLangueSansPro, poserLangue } from '@/lib/i18n'
 import { etiquette } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,7 +64,12 @@ export default function PageAvis() {
     poserLangueSansPro();
     fetch(`/api/avis/${token}`)
       .then(r => r.json())
-      .then(d => setEtat({ chargement: false, ...d }))
+      .then(d => {
+        // Le serveur connaît la pro : sa langue l'emporte sur celle du
+        // navigateur, posée plus haut en attendant la réponse.
+        if (d?.langue) poserLangue(d.langue);
+        setEtat({ chargement: false, ...d });
+      })
       .catch(() => setEtat({ chargement: false, ouvert: false, raison: 'inconnu' }))
   }, [token])
 

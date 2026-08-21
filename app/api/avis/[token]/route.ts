@@ -92,7 +92,7 @@ function finDuRdv(heureAffichee: string, dureeMin: number | null, fuseau?: strin
 }
 
 type Etat =
-  | { ouvert: true; pro: string; prestations: string; quand: string }
+  | { ouvert: true; pro: string; prestations: string; quand: string; langue: string }
   | { ouvert: false; raison: 'inconnu' | 'annule' | 'trop_tot' | 'trop_tard' | 'deja' }
 
 async function lireEtat(token: string): Promise<Etat> {
@@ -129,6 +129,12 @@ async function lireEtat(token: string): Promise<Etat> {
     pro: (pro?.pseudo || pro?.prenom || traduireDans((pro as { langue?: string })?.langue, 'notif.taPraticienne')) as string,
     prestations,
     quand: rdv.date as string,
+    // LA PAGE D'AVIS APPARTIENT À LA PRO, comme sa page de réservation. Elle
+    // suivait la langue du NAVIGATEUR, faute de connaître la pro depuis le
+    // navigateur — mais le serveur, lui, vient de la lire. Une cliente
+    // française d'une pro anglaise voyait un formulaire français au bout d'un
+    // parcours anglais.
+    langue: ((pro as { langue?: string })?.langue ?? 'fr'),
   }
 }
 
