@@ -215,8 +215,20 @@ export async function remisesVerifiees(
   fideliteDemandee: unknown,
   reductionDemandee: unknown,
 ): Promise<RemisesVerifiees> {
-  if (!clienteId) return { prix: prixPanier, fidelite: null, reduction: null }
-
+  // ── UNE CLIENTE INCONNUE A DROIT AU PREMIER PALIER ───────────────────────
+  //
+  // Le serveur s'arrêtait ici dès qu'il ne trouvait pas de fiche : pas de
+  // fiche, pas de remise, prix plein. C'est faux quand la pro offre quelque
+  // chose DÈS LE PREMIER TAMPON — 28 pros le font aujourd'hui. La page
+  // affichait « -15 € », le rendez-vous s'enregistrait à 60 €, et le paiement
+  // en prélevait 75 : la cliente payait quinze euros de plus que ce que disait
+  // sa propre fiche, sans que personne ne le voie.
+  //
+  // Elle n'a pas de fiche parce qu'elle vient pour la première fois — c'est
+  // précisément le cas que ce palier vise. On ne lui accorde QUE celui-là :
+  // sans tampon, le prochain est forcément le premier. La réduction
+  // personnelle, elle, reste refusée — elle est accrochée à une fiche qui
+  // n'existe pas encore.
   const veutFidelite = !!fideliteDemandee
   const veutReduction = !!reductionDemandee
   if (!veutFidelite && !veutReduction) {
@@ -224,17 +236,21 @@ export async function remisesVerifiees(
   }
 
   const [{ data: fiche }, { data: cliente }, { data: pro }] = await Promise.all([
-    supabaseAdmin
-      .from('fidelite_clientes')
-      .select('recompense_disponible, tampons')
-      .eq('pro_id', proId)
-      .eq('cliente_id', clienteId)
-      .maybeSingle(),
-    supabaseAdmin
-      .from('clientes')
-      .select('reduction_type, reduction_valeur, reduction_rdv_restants')
-      .eq('id', clienteId)
-      .maybeSingle(),
+    clienteId
+      ? supabaseAdmin
+          .from('fidelite_clientes')
+          .select('recompense_disponible, tampons')
+          .eq('pro_id', proId)
+          .eq('cliente_id', clienteId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    clienteId
+      ? supabaseAdmin
+          .from('clientes')
+          .select('reduction_type, reduction_valeur, reduction_rdv_restants')
+          .eq('id', clienteId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabaseAdmin
       .from('profiles')
       .select('fidelite_config')
