@@ -354,7 +354,8 @@
     "nouveauRdv": "%{prenom} ha pedido cita para %{prestations} el %{date} a las %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} ha cambiado su cita al %{date} a las %{heure}",
     "rdvConfirmeTitre": "✅ Cita confirmada",
-    "rdvAnnuleTitre": "❌ Cita cancelada"
+    "rdvAnnuleTitre": "❌ Cita cancelada",
+    "nouvelAvisTitre": "Nueva reseña %{etoiles}"
   },
   "aide": {
     "titre": "Ayuda y asistencia",

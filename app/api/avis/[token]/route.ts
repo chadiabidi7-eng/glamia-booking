@@ -272,7 +272,7 @@ export async function POST(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: profil.push_token,
-          title: `Nouvel avis ${etoiles}`,
+          title: traduireDans(profil?.langue, 'notif.nouvelAvisTitre', { etoiles }),
           body: etat.prestations
             ? traduireDans(profil?.langue, 'notif.avisAvecPrestation', { auteur, prestation: etat.prestations })
             : traduireDans(profil?.langue, 'notif.avis', { auteur }),

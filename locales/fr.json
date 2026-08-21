@@ -344,7 +344,8 @@
     "nouveauRdv": "%{prenom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}",
     "rdvConfirmeTitre": "✅ RDV confirmé",
-    "rdvAnnuleTitre": "❌ RDV annulé"
+    "rdvAnnuleTitre": "❌ RDV annulé",
+    "nouvelAvisTitre": "Nouvel avis %{etoiles}"
   },
   "creneaux": {
     "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",

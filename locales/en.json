@@ -344,7 +344,8 @@
     "nouveauRdv": "%{prenom} booked %{prestations} on %{date} at %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} rescheduled her appointment to %{date} at %{heure}",
     "rdvConfirmeTitre": "✅ Appointment confirmed",
-    "rdvAnnuleTitre": "❌ Appointment cancelled"
+    "rdvAnnuleTitre": "❌ Appointment cancelled",
+    "nouvelAvisTitre": "New review %{etoiles}"
   },
   "creneaux": {
     "jourIndisponible": "That day is no longer available. Please choose another date.",
