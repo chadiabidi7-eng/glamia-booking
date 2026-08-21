@@ -4869,7 +4869,9 @@ export default function ReservationPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CreditCard size={16} color={PINK} />
                   <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36', flex: 1 }}>
-                    {propay.mode === 'total' ? 'Prestation' : propay.mode === 'acompte' ? 'Acompte' : 'Empreinte bancaire'}
+                    {propay.mode === 'total' ? traduire('resa.blocPrestation')
+                      : propay.mode === 'acompte' ? traduire('resa.blocAcompte')
+                      : traduire('resa.blocEmpreinte')}
                   </label>
                   <span style={{
                     background: PINK, color: '#fff', borderRadius: 8,
@@ -4890,7 +4892,7 @@ export default function ReservationPage() {
                     ? <>{traduire('resa.regleeMaintenant')}</>
                     : propay.mode === 'acompte'
                       ? <>{traduire('resa.payeMaintenant')}</>
-                      : <>Rien n&apos;est débité aujourd&apos;hui — uniquement en cas d&apos;absence ou d&apos;annulation à moins de {propay.delai_annulation ?? 24} h.</>}
+                      : <>{traduire('resa.rienDebiteAujourdhui', { delai: propay.delai_annulation ?? 24 })}</>}
                 </p>
 
                 {/* ── LES FRAIS DE RÉSERVATION, ET CE QU'ILS PAIENT ──────────
@@ -4944,8 +4946,19 @@ export default function ReservationPage() {
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
-                      ? <><strong style={{ color: '#1f2937' }}>Annulation gratuite jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — passé ce délai ou en cas d&apos;absence, {fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0), symPropay)} pourront être prélevés ({fmtCentimes(propay.acompte ?? 0, symPropay)} d&apos;empreinte + {fmtCentimes(propay.frais ?? 0, symPropay)} de frais).</>
-                      : <><strong style={{ color: '#1f2937' }}>{propay.mode === 'total' ? 'Paiement remboursé' : 'Acompte remboursé'} à 100 % jusqu&apos;à {propay.delai_annulation ?? 24} h avant le RDV</strong> — tu changes de plans ? Annule à plus de {propay.delai_annulation ?? 24} h et {propay.mode === 'total' ? traduire('resa.tonPaiement') : traduire('resa.tonAcompte')} de {fmtCentimes(propay.acompte ?? 0, symPropay)} te revient intégralement (les frais de réservation restent acquis). À moins de {propay.delai_annulation ?? 24} h, la somme est conservée par la praticienne.</>}
+                      ? <><strong style={{ color: '#1f2937' }}>{traduire('resa.condEmpreinteTitre', { delai: propay.delai_annulation ?? 24 })}</strong>{traduire('resa.condEmpreinteSuite', {
+                          total: fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0), symPropay),
+                          empreinte: fmtCentimes(propay.acompte ?? 0, symPropay),
+                          frais: fmtCentimes(propay.frais ?? 0, symPropay),
+                        })}</>
+                      : <><strong style={{ color: '#1f2937' }}>{traduire('resa.condRembourseTitre', {
+                          quoi: propay.mode === 'total' ? traduire('resa.condPaiementRembourse') : traduire('resa.condAcompteRembourse'),
+                          delai: propay.delai_annulation ?? 24,
+                        })}</strong>{traduire('resa.condRembourseSuite', {
+                          delai: propay.delai_annulation ?? 24,
+                          leTien: propay.mode === 'total' ? traduire('resa.tonPaiement') : traduire('resa.tonAcompte'),
+                          somme: fmtCentimes(propay.acompte ?? 0, symPropay),
+                        })}</>}
                   </span>
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
@@ -5002,8 +5015,14 @@ export default function ReservationPage() {
                         cliente — en promettait 24. Deux règles contradictoires
                         sur le même écran, dont la plus engageante était fausse. */}
                     {propay.mode === 'empreinte'
-                      ? <>J&apos;autorise le prélèvement de {fmtCentimes(propay.acompte ?? 0, symPropay)} en cas d&apos;absence ou d&apos;annulation à moins de {propay.delai_annulation ?? 24} h.</>
-                      : <>J&apos;accepte de régler {fmtCentimes(propay.total_cliente ?? 0, symPropay)} maintenant, conservés si absence ou annulation à moins de {propay.delai_annulation ?? 24} h.</>}
+                      ? traduire('resa.consentEmpreinte', {
+                          somme: fmtCentimes(propay.acompte ?? 0, symPropay),
+                          delai: propay.delai_annulation ?? 24,
+                        })
+                      : traduire('resa.consentPaiement', {
+                          somme: fmtCentimes(propay.total_cliente ?? 0, symPropay),
+                          delai: propay.delai_annulation ?? 24,
+                        })}
                   </span>
                 </label>
               </div>

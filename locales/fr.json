@@ -177,7 +177,22 @@
     "jourDeRepos": "Jour de repos",
     "nouvelleInspiration": "Nouvelle inspiration",
     "bonjourPrenom": "Bonjour %{prenom} !",
-    "aucunCreneauDuree": "Aucun créneau de %{duree} disponible ce jour."
+    "aucunCreneauDuree": "Aucun créneau de %{duree} disponible ce jour.",
+    "condEmpreinteTitre": "Annulation gratuite jusqu'à %{delai} h avant le RDV",
+    "condEmpreinteSuite": " — passé ce délai ou en cas d'absence, %{total} pourront être prélevés (%{empreinte} d'empreinte + %{frais} de frais).",
+    "condPaiementRembourse": "Paiement remboursé",
+    "condAcompteRembourse": "Acompte remboursé",
+    "condRembourseTitre": "%{quoi} à 100 % jusqu'à %{delai} h avant le RDV",
+    "condRembourseSuite": " — tu changes de plans ? Annule à plus de %{delai} h et %{leTien} de %{somme} te revient intégralement (les frais de réservation restent acquis). À moins de %{delai} h, la somme est conservée par la praticienne.",
+    "consentEmpreinte": "J'autorise le prélèvement de %{somme} en cas d'absence ou d'annulation à moins de %{delai} h.",
+    "consentPaiement": "J'accepte de régler %{somme} maintenant, conservés si absence ou annulation à moins de %{delai} h.",
+    "adresseALaReservation": "L’adresse exacte vous sera communiquée dès votre réservation.",
+    "adresseALaConfirmation": "L’adresse exacte vous sera communiquée à la confirmation de votre présence, la veille.",
+    "adressePorLaPro": "L’adresse exacte vous sera envoyée directement par votre praticienne.",
+    "blocPrestation": "Prestation",
+    "blocAcompte": "Acompte",
+    "blocEmpreinte": "Empreinte bancaire",
+    "rienDebiteAujourdhui": "Rien n'est débité aujourd'hui — uniquement en cas d'absence ou d'annulation à moins de %{delai} h."
   },
   "commun": {
     "chargement": "Chargement...",

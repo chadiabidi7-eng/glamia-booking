@@ -177,7 +177,22 @@
     "jourDeRepos": "Day off",
     "nouvelleInspiration": "New inspiration",
     "bonjourPrenom": "Hi %{prenom}!",
-    "aucunCreneauDuree": "No %{duree} slot available that day."
+    "aucunCreneauDuree": "No %{duree} slot available that day.",
+    "condEmpreinteTitre": "Free cancellation up to %{delai} h before the appointment",
+    "condEmpreinteSuite": " — after that, or if you do not show up, %{total} may be charged (%{empreinte} hold + %{frais} fee).",
+    "condPaiementRembourse": "Payment refunded",
+    "condAcompteRembourse": "Deposit refunded",
+    "condRembourseTitre": "%{quoi} in full up to %{delai} h before the appointment",
+    "condRembourseSuite": " — plans changed? Cancel more than %{delai} h ahead and %{leTien} of %{somme} comes back to you in full (the booking fee is not refunded). Under %{delai} h, your professional keeps the amount.",
+    "consentEmpreinte": "I authorise a charge of %{somme} if I do not show up or cancel less than %{delai} h before.",
+    "consentPaiement": "I agree to pay %{somme} now, kept if I do not show up or cancel less than %{delai} h before.",
+    "adresseALaReservation": "The exact address will be sent to you as soon as you book.",
+    "adresseALaConfirmation": "The exact address will be sent to you when you confirm you are coming, the day before.",
+    "adressePorLaPro": "The exact address will be sent to you directly by your professional.",
+    "blocPrestation": "Service",
+    "blocAcompte": "Deposit",
+    "blocEmpreinte": "Card hold",
+    "rienDebiteAujourdhui": "Nothing is charged today — only if you do not show up or cancel less than %{delai} h before."
   },
   "commun": {
     "chargement": "Loading...",

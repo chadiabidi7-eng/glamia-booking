@@ -52,11 +52,11 @@ export function conditionsAffichees(
 export function quandLAdresse(moment: string): string | null {
   switch (moment) {
     case 'reservation':
-      return 'L’adresse exacte vous sera communiquée dès votre réservation.'
+      return traduire('resa.adresseALaReservation')
     case 'presence':
-      return 'L’adresse exacte vous sera communiquée à la confirmation de votre présence, la veille.'
+      return traduire('resa.adresseALaConfirmation')
     case 'jamais':
-      return 'L’adresse exacte vous sera envoyée directement par votre praticienne.'
+      return traduire('resa.adressePorLaPro')
     default:
       return null
   }

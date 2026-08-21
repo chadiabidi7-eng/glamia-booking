@@ -177,7 +177,22 @@
     "jourDeRepos": "Día de descanso",
     "nouvelleInspiration": "Nueva inspiración",
     "bonjourPrenom": "¡Hola %{prenom}!",
-    "aucunCreneauDuree": "Ningún hueco de %{duree} disponible ese día."
+    "aucunCreneauDuree": "Ningún hueco de %{duree} disponible ese día.",
+    "condEmpreinteTitre": "Cancelación gratuita hasta %{delai} h antes de la cita",
+    "condEmpreinteSuite": " — pasado ese plazo, o si no acudes, se podrán cobrar %{total} (%{empreinte} de retención + %{frais} de gastos).",
+    "condPaiementRembourse": "Pago reembolsado",
+    "condAcompteRembourse": "Anticipo reembolsado",
+    "condRembourseTitre": "%{quoi} al 100 % hasta %{delai} h antes de la cita",
+    "condRembourseSuite": " — ¿te cambian los planes? Cancela con más de %{delai} h y %{leTien} de %{somme} te vuelve íntegro (los gastos de reserva no se devuelven). Con menos de %{delai} h, tu profesional se queda con el importe.",
+    "consentEmpreinte": "Autorizo el cobro de %{somme} si no acudo o si cancelo con menos de %{delai} h.",
+    "consentPaiement": "Acepto pagar %{somme} ahora, importe que se conserva si no acudo o si cancelo con menos de %{delai} h.",
+    "adresseALaReservation": "La dirección exacta se te comunicará en cuanto reserves.",
+    "adresseALaConfirmation": "La dirección exacta se te comunicará al confirmar tu asistencia, la víspera.",
+    "adressePorLaPro": "La dirección exacta te la enviará directamente tu profesional.",
+    "blocPrestation": "Servicio",
+    "blocAcompte": "Anticipo",
+    "blocEmpreinte": "Retención en tarjeta",
+    "rienDebiteAujourdhui": "Hoy no se cobra nada — solo si no acudes o si cancelas con menos de %{delai} h."
   },
   "commun": {
     "chargement": "Cargando...",
