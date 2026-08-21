@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import { traduire } from '@/lib/i18n'
+import { traduire, poserLangue, langueActuelle } from '@/lib/i18n'
+import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (remplace Stripe Checkout).
@@ -15,7 +16,10 @@ import { traduire } from '@/lib/i18n'
 const PINK = '#C2779E'
 const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
 
-const fmt = (c: number) => `${(c / 100).toFixed(2).replace('.', ',')} €`
+// LE MONTANT EST DANS LA MONNAIE DE LA PRO. Il était écrit en euros en dur :
+// une cliente britannique lisait « 30,00 € » sur un acompte en livres.
+const fmt = (c: number, devise?: string | null) =>
+  `${(c / 100).toFixed(2).replace('.', ',')} ${symboleDevise(devise)}`
 
 const stripePromises: Record<string, ReturnType<typeof loadStripe>> = {}
 function getStripePromise(compte: string) {
@@ -25,6 +29,8 @@ function getStripePromise(compte: string) {
 
 type Details = {
   statut: string
+  langue?: string | null
+  devise?: string | null
   stripe_account?: string
   client_secret?: string
   type?: string
@@ -68,7 +74,13 @@ function Payer() {
     if (!token) { setErreur(true); return }
     fetch(`/api/propay/lien?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
-      .then(j => (j.error ? setErreur(true) : setD(j)))
+      .then(j => {
+        if (j.error) { setErreur(true); return }
+        // La page s'ouvre sur un lien nu : la langue arrive avec les détails,
+        // et doit être posée AVANT le premier rendu des textes.
+        poserLangue(j.langue)
+        setD(j)
+      })
       .catch(() => setErreur(true))
   }, [token])
 
@@ -123,7 +135,9 @@ function Payer() {
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div style={{ fontSize: 24, fontWeight: 700, color: PINK, letterSpacing: 0.5, fontFamily: "'Playfair Display', serif" }}>Glamia</div>
           <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>
-            {d.cliente_prenom ? `Bonjour ${d.cliente_prenom}, ` : ''}règle ta prestation en toute sécurité.
+            {d.cliente_prenom
+              ? traduire('payer.regleEnSecuriteAvecPrenom', { prenom: d.cliente_prenom })
+              : traduire('payer.regleEnSecurite')}
           </p>
         </div>
 
@@ -133,21 +147,21 @@ function Payer() {
             label={`${d.type === 'acompte' ? traduire('resa.ligneAcompte')
               : d.type === 'solde' ? traduire('resa.ligneSolde')
               : traduire('resa.lignePrestation')}${d.prestation ? ` — ${d.prestation}` : ''}`}
-            val={fmt(d.restant ?? 0)}
+            val={fmt(d.restant ?? 0, d.devise)}
           />
-          <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0)} />
+          <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0, d.devise)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>{traduire('resa.total')}</span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0)}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0, d.devise)}</span>
           </div>
         </div>
 
         {/* Carte */}
         <Elements
           stripe={getStripePromise(d.stripe_account)}
-          options={{ clientSecret: d.client_secret, locale: 'fr', appearance, fonts }}
+          options={{ clientSecret: d.client_secret, locale: langueActuelle(), appearance, fonts }}
         >
-          <Formulaire token={token} total={d.total ?? 0} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
+          <Formulaire token={token} total={d.total ?? 0} devise={d.devise} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
         </Elements>
 
         <p style={{ fontSize: 11, color: '#9a8f95', textAlign: 'center', marginTop: 12, lineHeight: 1.4 }}>
@@ -155,7 +169,7 @@ function Payer() {
               suisse ou canadienne : sa carte locale est parfaitement normale
               chez elle. Ce qui coûte plus cher, c'est une carte d'un AUTRE pays
               que celui de la praticienne — quel que soit ce pays. */}
-          Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés.
+          {traduire('payer.fraisCarteEtrangere')}
         </p>
         <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>{traduire('payer.paiementSecurise')}</p>
       </div>
@@ -172,7 +186,7 @@ function Ligne({ label, val }: { label: string; val: string }) {
   )
 }
 
-function Formulaire({ token, total, nom, email }: { token: string; total: number; nom: string; email: string }) {
+function Formulaire({ token, total, devise, nom, email }: { token: string; total: number; devise?: string | null; nom: string; email: string }) {
   const stripe = useStripe()
   const elements = useElements()
   const [enCours, setEnCours] = useState(false)
@@ -222,7 +236,7 @@ function Formulaire({ token, total, nom, email }: { token: string; total: number
         padding: '15px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: enCours ? 'default' : 'pointer',
         opacity: enCours ? 0.6 : 1, fontFamily: "'Poppins', sans-serif",
       }}>
-        {enCours ? 'Paiement…' : `Payer ${fmt(total)}`}
+        {enCours ? traduire('payer.enCours') : traduire('payer.payerMontant', { montant: fmt(total, devise) })}
       </button>
       {msg && <p style={{ color: '#c0392b', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{msg}</p>}
     </>

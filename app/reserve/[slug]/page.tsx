@@ -1851,7 +1851,7 @@ export default function ReservationPage() {
       if (rdv && pro) {
         envoyerPushNotif(
           pro.id,
-          '❌ RDV annulé',
+          traduire('notif.rdvAnnuleTitre'),
           traduire('notif.rdvAnnule', { prenom: clientePrenom, date: formatRdvDate(rdv.date), heure: formatRdvHeure(rdv.date) })
         )
       }
@@ -2034,7 +2034,7 @@ export default function ReservationPage() {
     // Push à la pro
     envoyerPushNotif(
       pro.id,
-      '🌸 RDV modifié',
+      traduire('notif.rdvModifieTitre'),
       traduire('notif.prestationsModifiees', { prenom: clientePrenom, date: dateAffichee, heure: heureAffichee, prestations: labels })
     )
 
@@ -2054,6 +2054,7 @@ export default function ReservationPage() {
               cliente_prenom: clientePrenom.trim(),
               pro_nom: pro.pseudo || `${pro.prenom} ${pro.nom}`,
               langue: langueActuelle(),
+              pays: pro.pays ?? null,
               date: dateAffichee,
               heure: heureAffichee,
               duree: formatDuree(duree),
@@ -2206,7 +2207,7 @@ export default function ReservationPage() {
       // Push notification
       envoyerPushNotif(
         pro.id,
-        '📅 RDV reprogrammé',
+        traduire('notif.rdvReprogrammeTitre'),
         traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
       )
 
@@ -2236,6 +2237,8 @@ export default function ReservationPage() {
                 cliente_email: clienteEmail.trim(),
                 cliente_prenom: clientePrenom.trim(),
                 pro_nom: proNomComplet,
+                langue: langueActuelle(),
+                pays: pro.pays ?? null,
                 date: formatDateLong(reprogDate),
                 heure: reprogHeure,
                 duree: formatDuree(rdvReprog.duree),
@@ -2804,6 +2807,11 @@ export default function ReservationPage() {
             cliente_email: clienteEmail.trim(),
             cliente_prenom: clientePrenom.trim(),
             pro_nom: proNomComplet,
+            // La langue et le pays voyagent avec le mail : sans eux, la
+            // confirmation repartait en français chez une pro anglaise, avec
+            // des dates anglaises au milieu.
+            langue: langueActuelle(),
+            pays: pro.pays ?? null,
             date: formatDateLong(date),
             heure,
             duree: formatDuree(dureeTotal),
@@ -2867,17 +2875,17 @@ export default function ReservationPage() {
       // Demande de contact : mention bien visible dans la notification. Le mot
       // suit celui de la case cochée par la cliente — elle a demandé à être
       // « contactée », la pro doit lire la même chose, pas « rappelée ».
-      const mentionAppel = rappel ? `\n📞 ${clientePrenom} souhaite être contactée !` : ''
+      const mentionAppel = rappel ? '\n' + traduire('notif.souhaiteEtreContactee', { prenom: clientePrenom }) : ''
       if (nouvelleCliente) {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouvelle cliente · 📞 À contacter' : '🌸 Nouvelle cliente !',
+          traduire(rappel ? 'notif.nouvelleClienteContactTitre' : 'notif.nouvelleClienteTitre'),
           traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
         )
       } else {
         envoyerPushNotif(
           pro.id,
-          rappel ? '🌸 Nouveau RDV · 📞 À contacter' : '🌸 Nouveau RDV',
+          traduire(rappel ? 'notif.nouveauRdvContactTitre' : 'notif.nouveauRdvTitre'),
           traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
         )
       }
@@ -4980,7 +4988,7 @@ export default function ReservationPage() {
                   <span>{traduire('resa.paiementSecurise')}</span>
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
-                  Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés. En réglant, tu acceptes les{' '}
+                  {traduire('resa.fraisCarteEtrangere')}
                   <a href="https://booking.glamia.pro/cgu" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsUtilisation')}</a>.
                 </p>
                 <Elements
@@ -4991,7 +4999,9 @@ export default function ReservationPage() {
                   // (faille C10).
                   key={propay.client_secret}
                   stripe={getStripePromise(propay.stripe_account)}
-                  options={{ clientSecret: propay.client_secret, locale: 'fr' }}
+                  // Les champs de carte de Stripe suivent la page : « Card
+                  // number » chez une pro anglaise, pas « Numéro de carte ».
+                  options={{ clientSecret: propay.client_secret, locale: langueActuelle() }}
                 >
                   <BlocGlamiaPay
                     ref={propayRef}

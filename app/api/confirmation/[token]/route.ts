@@ -282,7 +282,7 @@ export async function POST(
       if (cliente?.email) {
         const { data: proInfo } = await supabaseAdmin
           .from('profiles')
-          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom')
+          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom, pays')
           .eq('id', rdv.pro_id)
           .maybeSingle()
 
@@ -306,6 +306,8 @@ export async function POST(
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
+              langue: proData?.langue ?? null,
+              pays: (proInfo as { pays?: string | null } | null)?.pays ?? null,
               date: formatDateFr(newDateStr, proData?.langue),
               heure: newHeureStr,
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',

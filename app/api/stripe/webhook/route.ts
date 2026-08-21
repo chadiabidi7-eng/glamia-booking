@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
 import { traduireDans } from '@/lib/i18n'
+import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — webhook Stripe (endpoint « Connect » : événements des
@@ -53,16 +54,22 @@ async function pousserNotifPro(
   valeurs?: Record<string, unknown>,
 ) {
   const { data: pro } = await supabaseAdmin
-    .from('profiles').select('push_token, langue').eq('id', proId).maybeSingle()
+    .from('profiles').select('push_token, langue, devise').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
   const langue = (pro as { langue?: string }).langue
+  // LES SOMMES SONT DANS LA MONNAIE DE LA PRO. Les phrases portaient un « € »
+  // écrit en dur : une pro britannique lisait « 30.00 € » pour un encaissement
+  // en livres. Le montant arrive en centimes, il repart avec son symbole.
+  const valeursAvecDevise = valeurs?.montantCentimes !== undefined
+    ? { ...valeurs, montant: `${(Number(valeurs.montantCentimes) / 100).toFixed(2)} ${symboleDevise((pro as { devise?: string }).devise)}` }
+    : valeurs
   await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       to: pro.push_token,
       title: traduireDans(langue, cleTitre),
-      body: traduireDans(langue, cleCorps, valeurs),
+      body: traduireDans(langue, cleCorps, valeursAvecDevise),
     }),
   })
 }
@@ -211,7 +218,7 @@ export async function POST(req: NextRequest) {
             paiement.pro_id,
             'notif.paiementRecuTitre',
             nom ? 'notif.paiementRecu' : 'notif.paiementRecuSansNom',
-            { montant: (paiement.montant / 100).toFixed(2), prenom: nom ?? '' },
+            { montantCentimes: paiement.montant, prenom: nom ?? '' },
           )
           // Facture rose à la cliente (edge fn qui a la clé Resend)
           fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {
@@ -257,7 +264,7 @@ export async function POST(req: NextRequest) {
               paiement.pro_id,
               'notif.litigeTitre',
               'notif.litige',
-              { montant: (paiement.montant / 100).toFixed(2) },
+              { montantCentimes: paiement.montant },
             )
           }
         }

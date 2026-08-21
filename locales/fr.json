@@ -81,6 +81,7 @@
     "fraisFidelite": "ta carte de fidélité, qui se remplit toute seule",
     "paiementSecurise": "Paiement sécurisé par Stripe — l'argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.",
     "conditionsUtilisation": "conditions d'utilisation",
+    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés. En réglant, tu acceptes les ",
     "confidentialite": "Politique de confidentialité",
     "questionAuDessus": "Une question t'attend juste au-dessus",
     "lectureImpossible": "Lecture du fichier impossible",
@@ -276,7 +277,12 @@
     "indisponible": "Paiement indisponible",
     "paiementSecurise": "Paiement sécurisé · Glamia Pay",
     "echec": "Le paiement n'a pas abouti. Réessaie.",
-    "echecCourt": "Le paiement n'a pas abouti."
+    "echecCourt": "Le paiement n'a pas abouti.",
+    "regleEnSecuriteAvecPrenom": "Bonjour %{prenom}, règle ta prestation en toute sécurité.",
+    "regleEnSecurite": "Règle ta prestation en toute sécurité.",
+    "enCours": "Paiement…",
+    "payerMontant": "Payer %{montant}",
+    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés."
   },
   "avis": {
     "merci": "Merci !",
@@ -324,7 +330,7 @@
     "avis": "%{auteur} t'a laissé un avis.",
     "attenteTitre": "🌸 Une cliente attend une place",
     "attente": "%{nom} aimerait venir le %{jour} (%{duree}). Elle sera prévenue si une place se libère.",
-    "litige": "Une cliente conteste un prélèvement de %{montant} €. Consulte ton espace Stripe pour répondre au litige.",
+    "litige": "Une cliente conteste un prélèvement de %{montant}. Consulte ton espace Stripe pour répondre au litige.",
     "virementRateTitre": "Ton virement n’est pas parti",
     "virementRate": "Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.",
     "compteBloque": "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
@@ -337,15 +343,22 @@
       "other": "%{nom} a ajouté %{count} photos d'inspiration pour son RDV du %{date}."
     },
     "paiementRecuTitre": "Paiement reçu 💸",
-    "paiementRecu": "%{montant} € de %{prenom} — ta caisse est créditée",
-    "paiementRecuSansNom": "%{montant} € — ta caisse est créditée",
+    "paiementRecu": "%{montant} de %{prenom} — ta caisse est créditée",
+    "paiementRecuSansNom": "%{montant} — ta caisse est créditée",
     "prestationsModifiees": "%{prenom} a modifié ses prestations du %{date} à %{heure} : %{prestations}",
     "nouveauRdvNom": "%{prenom} %{nom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
     "nouveauRdv": "%{prenom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}",
     "rdvConfirmeTitre": "✅ RDV confirmé",
     "rdvAnnuleTitre": "❌ RDV annulé",
-    "nouvelAvisTitre": "Nouvel avis %{etoiles}"
+    "nouvelAvisTitre": "Nouvel avis %{etoiles}",
+    "rdvModifieTitre": "🌸 RDV modifié",
+    "rdvReprogrammeTitre": "📅 RDV reprogrammé",
+    "nouvelleClienteTitre": "🌸 Nouvelle cliente !",
+    "nouvelleClienteContactTitre": "🌸 Nouvelle cliente · 📞 À contacter",
+    "nouveauRdvTitre": "🌸 Nouveau RDV",
+    "nouveauRdvContactTitre": "🌸 Nouveau RDV · 📞 À contacter",
+    "souhaiteEtreContactee": "📞 %{prenom} souhaite être contactée !"
   },
   "creneaux": {
     "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",

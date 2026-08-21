@@ -81,6 +81,7 @@
     "fraisFidelite": "your loyalty card, which fills itself in",
     "paiementSecurise": "Secure payment by Stripe — the money goes straight to your professional, Glamia never holds the funds.",
     "conditionsUtilisation": "terms of use",
+    "fraisCarteEtrangere": "A card issued in a country other than your professional's may incur higher fees. By paying, you accept the ",
     "confidentialite": "Privacy policy",
     "questionAuDessus": "There's a question waiting just above",
     "lectureImpossible": "Couldn't read the file",
@@ -276,7 +277,12 @@
     "indisponible": "Payment unavailable",
     "paiementSecurise": "Secure payment · Glamia Pay",
     "echec": "The payment didn't go through. Try again.",
-    "echecCourt": "The payment didn't go through."
+    "echecCourt": "The payment didn't go through.",
+    "regleEnSecuriteAvecPrenom": "Hello %{prenom}, pay for your appointment securely.",
+    "regleEnSecurite": "Pay for your appointment securely.",
+    "enCours": "Paying…",
+    "payerMontant": "Pay %{montant}",
+    "fraisCarteEtrangere": "A card issued in a country other than your professional's may incur higher fees."
   },
   "avis": {
     "merci": "Thank you!",
@@ -324,7 +330,7 @@
     "avis": "%{auteur} left you a review.",
     "attenteTitre": "🌸 A client is waiting for a slot",
     "attente": "%{nom} would like to come on %{jour} (%{duree}). She will be told if a slot opens up.",
-    "litige": "A client is disputing a %{montant} € charge. Check your Stripe account to respond to the dispute.",
+    "litige": "A client is disputing a %{montant} charge. Check your Stripe account to respond to the dispute.",
     "virementRateTitre": "Your payout did not go out",
     "virementRate": "Your bank refused the payout from your balance. Check your bank details in your Payments — your money is still there.",
     "compteBloque": "Your Stripe account is no longer taking payments. Sort it out in your Payments to keep getting paid.",
@@ -337,15 +343,22 @@
       "other": "%{nom} added %{count} inspiration photos for her appointment on %{date}."
     },
     "paiementRecuTitre": "Payment received 💸",
-    "paiementRecu": "%{montant} € from %{prenom} — your balance is credited",
-    "paiementRecuSansNom": "%{montant} € — your balance is credited",
+    "paiementRecu": "%{montant} from %{prenom} — your balance is credited",
+    "paiementRecuSansNom": "%{montant} — your balance is credited",
     "prestationsModifiees": "%{prenom} changed her services on %{date} at %{heure}: %{prestations}",
     "nouveauRdvNom": "%{prenom} %{nom} booked %{prestations} on %{date} at %{heure}%{appel}",
     "nouveauRdv": "%{prenom} booked %{prestations} on %{date} at %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} rescheduled her appointment to %{date} at %{heure}",
     "rdvConfirmeTitre": "✅ Appointment confirmed",
     "rdvAnnuleTitre": "❌ Appointment cancelled",
-    "nouvelAvisTitre": "New review %{etoiles}"
+    "nouvelAvisTitre": "New review %{etoiles}",
+    "rdvModifieTitre": "🌸 Appointment updated",
+    "rdvReprogrammeTitre": "📅 Appointment rescheduled",
+    "nouvelleClienteTitre": "🌸 New client!",
+    "nouvelleClienteContactTitre": "🌸 New client · 📞 Wants a call",
+    "nouveauRdvTitre": "🌸 New booking",
+    "nouveauRdvContactTitre": "🌸 New booking · 📞 Wants a call",
+    "souhaiteEtreContactee": "📞 %{prenom} would like you to get in touch!"
   },
   "creneaux": {
     "jourIndisponible": "That day is no longer available. Please choose another date.",

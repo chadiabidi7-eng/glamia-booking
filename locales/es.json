@@ -81,6 +81,7 @@
     "fraisFidelite": "tu tarjeta de fidelidad, que se llena sola",
     "paiementSecurise": "Pago seguro con Stripe — el dinero va directamente a tu profesional, Glamia nunca lo retiene.",
     "conditionsUtilisation": "condiciones de uso",
+    "fraisCarteEtrangere": "Una tarjeta emitida en un país distinto al de tu profesional puede conllevar comisiones más altas. Al pagar, aceptas las ",
     "confidentialite": "Política de privacidad",
     "questionAuDessus": "Te espera una pregunta justo arriba",
     "lectureImpossible": "No se ha podido leer el archivo",
@@ -286,7 +287,12 @@
     "indisponible": "Pago no disponible",
     "paiementSecurise": "Pago seguro · Glamia Pay",
     "echec": "El pago no ha salido bien. Inténtalo otra vez.",
-    "echecCourt": "El pago no ha salido bien."
+    "echecCourt": "El pago no ha salido bien.",
+    "regleEnSecuriteAvecPrenom": "Hola %{prenom}, paga tu servicio de forma segura.",
+    "regleEnSecurite": "Paga tu servicio de forma segura.",
+    "enCours": "Pagando…",
+    "payerMontant": "Pagar %{montant}",
+    "fraisCarteEtrangere": "Una tarjeta emitida en un país distinto al de tu profesional puede conllevar comisiones más altas."
   },
   "avis": {
     "merci": "¡Gracias!",
@@ -334,7 +340,7 @@
     "avis": "%{auteur} te ha dejado una reseña.",
     "attenteTitre": "🌸 Una clienta espera un hueco",
     "attente": "A %{nom} le gustaría ir el %{jour} (%{duree}). La avisaremos si se queda un hueco libre.",
-    "litige": "Una clienta reclama un cobro de %{montant} €. Entra en tu espacio de Stripe para responder a la reclamación.",
+    "litige": "Una clienta reclama un cobro de %{montant}. Entra en tu espacio de Stripe para responder a la reclamación.",
     "virementRateTitre": "Tu transferencia no ha salido",
     "virementRate": "Tu banco ha rechazado la transferencia. Comprueba tu IBAN en tus Cobros — tu dinero sigue ahí.",
     "compteBloque": "Tu cuenta de Stripe ya no acepta pagos. Regularízala en tus Cobros para seguir cobrando.",
@@ -347,15 +353,22 @@
       "other": "%{nom} ha añadido %{count} fotos de inspiración para su cita del %{date}."
     },
     "paiementRecuTitre": "Pago recibido 💸",
-    "paiementRecu": "%{montant} € de %{prenom} — tus cobros están al día",
-    "paiementRecuSansNom": "%{montant} € — tus cobros están al día",
+    "paiementRecu": "%{montant} de %{prenom} — tus cobros están al día",
+    "paiementRecuSansNom": "%{montant} — tus cobros están al día",
     "prestationsModifiees": "%{prenom} ha modificado sus servicios del %{date} a las %{heure}: %{prestations}",
     "nouveauRdvNom": "%{prenom} %{nom} ha pedido cita para %{prestations} el %{date} a las %{heure}%{appel}",
     "nouveauRdv": "%{prenom} ha pedido cita para %{prestations} el %{date} a las %{heure}%{appel}",
     "rdvReprogramme": "%{prenom} ha cambiado su cita al %{date} a las %{heure}",
     "rdvConfirmeTitre": "✅ Cita confirmada",
     "rdvAnnuleTitre": "❌ Cita cancelada",
-    "nouvelAvisTitre": "Nueva reseña %{etoiles}"
+    "nouvelAvisTitre": "Nueva reseña %{etoiles}",
+    "rdvModifieTitre": "🌸 Cita modificada",
+    "rdvReprogrammeTitre": "📅 Cita reprogramada",
+    "nouvelleClienteTitre": "🌸 ¡Nueva clienta!",
+    "nouvelleClienteContactTitre": "🌸 Nueva clienta · 📞 Quiere que la llames",
+    "nouveauRdvTitre": "🌸 Nueva cita",
+    "nouveauRdvContactTitre": "🌸 Nueva cita · 📞 Quiere que la llames",
+    "souhaiteEtreContactee": "📞 ¡%{prenom} quiere que te pongas en contacto!"
   },
   "aide": {
     "titre": "Ayuda y asistencia",
