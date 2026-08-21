@@ -201,6 +201,8 @@
     },
     "etapeSur": "Étape %{n}/%{total} — %{nom}",
     "ongletAccueil": "Accueil",
+    "ongletAvis": "Avis",
+    "ongletAdresse": "Adresse",
     "reponseOui": "Oui",
     "reponseNon": "Non",
     "dureeAuTotal": "%{duree} au total",

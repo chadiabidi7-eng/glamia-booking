@@ -201,6 +201,8 @@
     },
     "etapeSur": "Paso %{n}/%{total} — %{nom}",
     "ongletAccueil": "Bienvenida",
+    "ongletAvis": "Reseñas",
+    "ongletAdresse": "Dirección",
     "reponseOui": "Sí",
     "reponseNon": "No",
     "dureeAuTotal": "%{duree} en total",

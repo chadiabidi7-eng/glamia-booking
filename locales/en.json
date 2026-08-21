@@ -201,6 +201,8 @@
     },
     "etapeSur": "Step %{n}/%{total} — %{nom}",
     "ongletAccueil": "Welcome",
+    "ongletAvis": "Reviews",
+    "ongletAdresse": "Address",
     "reponseOui": "Yes",
     "reponseNon": "No",
     "dureeAuTotal": "%{duree} in total",

@@ -637,9 +637,9 @@ export default function ReservationPage() {
   const aAccueil = conditions.length > 0
 
   const onglets = [
-    aAvis && { cle: 'avis' as const, nom: 'Avis' },
+    aAvis && { cle: 'avis' as const, nom: traduire('resa.ongletAvis') },
     aAccueil && { cle: 'accueil' as const, nom: traduire('resa.ongletAccueil') },
-    aAdresse && { cle: 'adresse' as const, nom: 'Adresse' },
+    aAdresse && { cle: 'adresse' as const, nom: traduire('resa.ongletAdresse') },
   ].filter(Boolean) as { cle: 'avis' | 'adresse' | 'accueil'; nom: string }[]
 
   // Le premier onglet disponible, si celui en cours n'existe pas pour cette pro.
