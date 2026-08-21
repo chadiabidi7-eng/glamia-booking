@@ -39,7 +39,6 @@ const MESSAGES: Record<string, { titre: string; texte: string }> = {
   trop_tot: { titre: 'Un peu tôt', texte: "Tu pourras laisser ton avis une fois le rendez-vous passé." },
   trop_tard: { titre: 'Le délai est passé', texte: "Les avis se laissent dans les trois jours qui suivent le rendez-vous." },
   deja: { titre: 'Déjà envoyé', texte: "Ton avis a bien été enregistré. Merci !" },
-  ferme: { titre: 'Avis désactivés', texte: "Ta praticienne ne recueille pas d'avis pour le moment." },
 }
 
 export default function PageAvis() {

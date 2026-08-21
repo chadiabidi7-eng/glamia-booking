@@ -21,6 +21,17 @@ import { prestationsLisibles } from '@/lib/nomsPrestations'
 // LE NOM EST RÉDUIT À « Prénom N. » — ici, pas dans le navigateur. Une cliente
 // laisse un avis à sa praticienne, pas au monde entier, et son nom de famille
 // n'a rien à faire sur une page publique.
+//
+// DEUX CLÉS OUVRENT CETTE PAGE, ET C'EST VOULU. `token_avis` est celle de
+// chaque rendez-vous, posée à sa création. `token_confirmation` est celle du
+// rappel : les mails déjà partis la portent, et ils doivent continuer de
+// marcher. On essaie donc les deux.
+//
+// L'AVIS SE RECUEILLE MÊME QUAND LA PRO NE LES AFFICHE PAS. Le bouton de son
+// app dit « Afficher sur ma page » : il commande la VITRINE, pas la collecte.
+// Une pro qui l'éteint continue de recevoir les avis dans son app, et le jour
+// où elle le rallume, tout apparaît d'un coup. Refuser l'avis à la cliente,
+// c'était lui faire perdre son geste pour de bon.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const supabaseAdmin = createClient(
@@ -33,6 +44,23 @@ const FENETRE_MS = 72 * 60 * 60 * 1000
 const PHOTOS_MAX = 3
 const TEXTE_MAX = 1000
 const POIDS_MAX = 1_500_000
+
+/** Une clé d'avis est un UUID ; celle du rappel en est un aussi, mais stockée
+ *  en texte. On ne teste `token_avis` que sur une forme valide : comparer du
+ *  n'importe-quoi à une colonne uuid fait échouer la requête entière. */
+const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Le rendez-vous désigné par une clé — la sienne, ou celle de son rappel. */
+async function rdvDuJeton(token: string, colonnes: string) {
+  if (FORME_UUID.test(token)) {
+    const { data } = await supabaseAdmin
+      .from('rendez_vous').select(colonnes).eq('token_avis', token).maybeSingle()
+    if (data) return data
+  }
+  const { data } = await supabaseAdmin
+    .from('rendez_vous').select(colonnes).eq('token_confirmation', token).maybeSingle()
+  return data
+}
 
 /** « Camille Dupont » devient « Camille D. ». */
 function nomCourt(prenom?: string | null, nom?: string | null): string {
@@ -62,14 +90,17 @@ function finDuRdv(heureAffichee: string, dureeMin: number | null, fuseau?: strin
 
 type Etat =
   | { ouvert: true; pro: string; prestations: string; quand: string }
-  | { ouvert: false; raison: 'inconnu' | 'annule' | 'trop_tot' | 'trop_tard' | 'deja' | 'ferme' }
+  | { ouvert: false; raison: 'inconnu' | 'annule' | 'trop_tot' | 'trop_tard' | 'deja' }
 
 async function lireEtat(token: string): Promise<Etat> {
-  const { data: rdv } = await supabaseAdmin
-    .from('rendez_vous')
-    .select('id, date, duree, statut, technique, techniques, specialite, pro_id, cliente_id')
-    .eq('token_confirmation', token)
-    .maybeSingle()
+  const rdv = await rdvDuJeton(
+    token,
+    'id, date, duree, statut, technique, techniques, specialite, pro_id, cliente_id',
+  ) as {
+    id: string; date: string; duree: number | null; statut: string
+    technique: unknown; techniques: unknown; specialite: unknown
+    pro_id: string; cliente_id: string
+  } | null
 
   if (!rdv) return { ouvert: false, raison: 'inconnu' }
   if (rdv.statut === 'annule') return { ouvert: false, raison: 'annule' }
@@ -77,8 +108,7 @@ async function lireEtat(token: string): Promise<Etat> {
   // Le fuseau de la pro se lit d'abord : sans lui, l'heure du rendez-vous ne
   // veut rien dire, et c'est elle qu'on s'apprête à comparer à maintenant.
   const { data: pro } = await supabaseAdmin
-    .from('profiles').select('pseudo, prenom, avis_actifs, timezone').eq('id', rdv.pro_id).maybeSingle()
-  if (pro && pro.avis_actifs === false) return { ouvert: false, raison: 'ferme' }
+    .from('profiles').select('pseudo, prenom, timezone').eq('id', rdv.pro_id).maybeSingle()
 
   const fin = finDuRdv(rdv.date as string, rdv.duree as number | null, pro?.timezone as string | null)
   const maintenant = Date.now()
@@ -154,11 +184,8 @@ export async function POST(
     return NextResponse.json({ error: etat.raison }, { status: 409 })
   }
 
-  const { data: rdv } = await supabaseAdmin
-    .from('rendez_vous')
-    .select('id, pro_id, cliente_id')
-    .eq('token_confirmation', token)
-    .maybeSingle()
+  const rdv = await rdvDuJeton(token, 'id, pro_id, cliente_id') as
+    { id: string; pro_id: string; cliente_id: string } | null
   if (!rdv) return NextResponse.json({ error: 'inconnu' }, { status: 404 })
 
   const { data: cliente } = await supabaseAdmin
