@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -73,7 +74,9 @@ export async function POST(req: NextRequest) {
 
   const prenomNet = typeof prenom === 'string' ? prenom.trim().slice(0, 80) : ''
   const nomNet = typeof nom === 'string' ? nom.trim().slice(0, 80) : ''
-  const telNet = typeof telephone === 'string' ? telephone.replace(/[\s\-.()]/g, '').slice(0, 25) : ''
+  // Le numéro d'une inscription en liste d'attente est comparé aux fiches
+  // clientes plus tard : il doit être écrit de la même façon qu'elles.
+  const telNet = typeof telephone === 'string' ? normaliserTelephone(telephone).slice(0, 25) : ''
 
   if (prenomNet.length < 2) return NextResponse.json({ error: 'prenom_requis' }, { status: 400 })
   if (telNet.length < 6) return NextResponse.json({ error: 'telephone_requis' }, { status: 400 })

@@ -20,6 +20,7 @@ import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
 import { exempleTelephone } from '@/lib/telephone-exemple'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────
 // Types
@@ -255,12 +256,6 @@ function normalizeStr(str: string) {
     .replace(/^-|-$/g, '')
 }
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-\.\(\)]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 function formatDuree(min: number) {
   if (min < 60) return `${min} min`
@@ -1669,7 +1664,7 @@ export default function ReservationPage() {
   // ── Step 1 : Check phone ─────────────────────
   async function handleCheckPhone() {
     if (!pro) return
-    const normalized = normalizePhone(telephone)
+    const normalized = normaliserTelephone(telephone)
     if (normalized.length < 8) return
 
     setPhoneStatus('checking')
@@ -2593,7 +2588,7 @@ export default function ReservationPage() {
 
       let cId = clienteId
       let nouvelleCliente = false
-      const telNormalized = normalizePhone(telephone)
+      const telNormalized = normaliserTelephone(telephone)
 
       if (!cId) {
         // Un seul appel : le serveur retrouve la cliente à son numéro, ou la

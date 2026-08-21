@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { traiterAnnulationPropay } from '@/lib/propay'
 import { NextRequest, NextResponse } from 'next/server'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — annulation d'un RDV par la CLIENTE depuis la page de résa.
@@ -16,12 +17,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 export async function POST(req: NextRequest) {
   let body: { rdv_id?: unknown; telephone?: unknown }
@@ -43,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   // ── VÉRIFICATION DE PROPRIÉTÉ : le téléphone doit être celui de la cliente ──
   const telRdv = (rdv as { cliente?: { telephone?: string } }).cliente?.telephone
-  if (!telRdv || normalizePhone(telRdv) !== normalizePhone(telephone)) {
+  if (!telRdv || normaliserTelephone(telRdv) !== normaliserTelephone(telephone)) {
     return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
   }
 

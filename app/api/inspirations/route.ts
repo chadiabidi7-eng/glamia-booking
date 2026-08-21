@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
+import { normaliserTelephone } from '@/lib/telephone'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -12,12 +13,6 @@ const MAX_PHOTOS = 3
 const MAX_OCTETS = 4 * 1024 * 1024      // 4 Mo max par photo (décodée)
 const DELAI_MAX_MS = 15 * 60 * 1000     // le RDV doit avoir été créé il y a moins de 15 min (anti-abus)
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-\.\(\)]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 // « mercredi 15 juillet à 14:30 » (les dates RDV sont stockées en heure murale, lues en UTC)
 function formatRdvFr(iso: string, langue?: string | null): string {
@@ -118,7 +113,7 @@ export async function POST(req: NextRequest) {
       .select('telephone')
       .eq('id', rdv.cliente_id)
       .maybeSingle()
-    if (!cliente?.telephone || normalizePhone(cliente.telephone) !== normalizePhone(telephone as string)) {
+    if (!cliente?.telephone || normaliserTelephone(cliente.telephone) !== normaliserTelephone(telephone as string)) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 })
     }
   }
