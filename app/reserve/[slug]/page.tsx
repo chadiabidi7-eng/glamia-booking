@@ -19,6 +19,7 @@ import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCirc
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure } from '@/lib/heures-dates'
+import { exempleTelephone } from '@/lib/telephone-exemple'
 
 // ─────────────────────────────────────────────
 // Types
@@ -108,6 +109,8 @@ type ProInfo = {
   categorie_autre_nom?: string | null
   categorie_autre_icone?: string | null
   devise?: string
+  /** Le pays de travail — il décide de la forme du numéro proposé en exemple. */
+  pays?: string | null
 }
 
 type RdvAVenir = {
@@ -3353,7 +3356,7 @@ export default function ReservationPage() {
               type="tel"
               value={telephone}
               onChange={e => { setTelephone(e.target.value); setPhoneStatus('idle') }}
-              placeholder="06 12 34 56 78"
+              placeholder={exempleTelephone(pro?.pays)}
               style={S.input}
               onKeyDown={e => e.key === 'Enter' && handleCheckPhone()}
             />
