@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
-    const { p, account } = ctx
+    const { p, account, devise } = ctx
     if (p.statut === 'paye') return NextResponse.json({ statut: 'paye' })
     if (!p.stripe_payment_intent_id) return NextResponse.json({ statut: p.statut })
 
