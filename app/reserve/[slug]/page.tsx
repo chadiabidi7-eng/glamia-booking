@@ -3137,7 +3137,7 @@ export default function ReservationPage() {
               </p>
               {propayRegle.mode !== 'empreinte' && propayRegle.frais > 0 && (
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '4px 0 0' }}>
-                  Dont {fmtCentimes(propayRegle.frais, symPropay)} de frais de réservation.
+                  {traduire('resa.dontFrais', { somme: fmtCentimes(propayRegle.frais, symPropay) })}
                 </p>
               )}
             </div>
@@ -4948,7 +4948,7 @@ export default function ReservationPage() {
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 10, fontWeight: 800, flexShrink: 0,
                       }}>i</span>
-                      + {fmtCentimes(propay.frais ?? 0, symPropay)} de frais de réservation
+                      {traduire('resa.fraisEnPlus', { somme: fmtCentimes(propay.frais ?? 0, symPropay) })}
                     </button>
                     {fraisExpliques && (
                       <div style={{

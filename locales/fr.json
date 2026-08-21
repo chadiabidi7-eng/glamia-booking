@@ -167,6 +167,8 @@
     "ajouterInspirations": "Ajouter mes inspirations",
     "emailPlaceholder": "votre@email.com",
     "fraisReservation": "Frais de réservation",
+    "fraisEnPlus": "+ %{somme} de frais de réservation",
+    "dontFrais": "Dont %{somme} de frais de réservation.",
     "libelleCliente": "Cliente",
     "libelleDate": "Date",
     "libelleHeure": "Heure",

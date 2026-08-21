@@ -167,6 +167,8 @@
     "ajouterInspirations": "Añadir mis inspiraciones",
     "emailPlaceholder": "tu@correo.com",
     "fraisReservation": "Gastos de reserva",
+    "fraisEnPlus": "+ %{somme} de gastos de reserva",
+    "dontFrais": "Incluye %{somme} de gastos de reserva.",
     "libelleCliente": "Clienta",
     "libelleDate": "Fecha",
     "libelleHeure": "Hora",
