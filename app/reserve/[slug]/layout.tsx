@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { traduireDans } from '@/lib/i18n'
+import LangueDeLaPro from './LangueDeLaPro'
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -11,6 +13,23 @@ const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+/**
+ * Le profil public, lu une seule fois par affichage.
+ *
+ * Le titre de la page et la langue de l'écran d'attente le réclament tous les
+ * deux. `cache` fait que la question n'est posée à la base qu'une fois : sans
+ * lui, chaque page de réservation coûterait deux lectures au lieu d'une.
+ */
+const profilDuSlug = cache(async (slug: string) => {
+  const { data } = await supabaseServer
+    .from('profiles')
+    .select('prenom, nom, langue')
+    .eq('slug', slug)
+    .order('created_at', { ascending: true })
+    .limit(1)
+  return data?.[0] ?? null
+})
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -24,14 +43,7 @@ export async function generateMetadata(
 
   try {
     // Même logique que la page : slug exact, created_at ASC pour gérer les doublons
-    const { data } = await supabaseServer
-      .from('profiles')
-      .select('prenom, nom, langue')
-      .eq('slug', slug)
-      .order('created_at', { ascending: true })
-      .limit(1)
-
-    const pro = data?.[0]
+    const pro = await profilDuSlug(slug)
     if (!pro) return fallback
 
     // LE TITRE ET L'APERÇU SUIVENT LA PRO. C'est ce qui s'affiche quand elle
@@ -71,6 +83,24 @@ export async function generateMetadata(
   }
 }
 
-export default function ReserveLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default async function ReserveLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ slug: string }>
+}) {
+  // LA LANGUE PART AVEC LE HTML, pas après. La page va chercher la pro
+  // elle-même depuis le navigateur ; le temps de cet aller-retour, son écran
+  // d'attente n'avait aucune langue et affichait le français. Le serveur, lui,
+  // connaît déjà la pro — il vient de lire son profil pour le titre.
+  const { slug } = await params
+  let langue: string | null = null
+  try {
+    langue = ((await profilDuSlug(slug))?.langue as string | null) ?? null
+  } catch {
+    // Une base qui ne répond pas ne doit pas empêcher la page de s'ouvrir :
+    // on repart sur le français, comme avant.
+  }
+  return <LangueDeLaPro langue={langue}>{children}</LangueDeLaPro>
 }

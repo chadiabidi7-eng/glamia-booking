@@ -17,7 +17,7 @@ import {
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
-import { langueActuelle, poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
+import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
 import { exempleTelephone } from '@/lib/telephone-exemple'
 import { normaliserTelephone } from '@/lib/telephone'
@@ -1570,13 +1570,9 @@ export default function ReservationPage() {
   }
 
   async function loadPro() {
-    // TANT QU'ON NE SAIT PAS DE QUELLE PRO IL S'AGIT, ON SUIT LE NAVIGATEUR.
-    // L'écran d'attente disait « Chargement… » à tout le monde : la cliente
-    // d'une pro anglaise voyait un mot français avant même que la page
-    // s'affiche. La langue de la pro se pose dès qu'elle est connue, quelques
-    // dixièmes de seconde plus tard, et reprend la main — c'est la même règle
-    // que la page d'avis et la page de remerciement.
-    poserLangueSansPro()
+    // La langue est déjà posée par le layout, qui a lu le profil côté serveur
+    // avant même que le HTML parte (voir LangueDeLaPro). On ne la remplace pas
+    // par celle du navigateur ici : ce serait revenir en arrière.
     setPageState('loading')
     try {
       // Un seul appel. Le serveur cherche par slug, applique le repli si
