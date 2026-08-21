@@ -256,17 +256,15 @@
     "lienInconnu": "Este enlace no corresponde a ninguna cita.",
     "rdvAnnuleDetail": "Esta cita se ha cancelado, no hay ninguna reseña que dejar.",
     "tropTotDetail": "Podrás dejar tu reseña una vez pasada la cita.",
-    "delaiPasseDetail": "Las reseñas se dejan durante los tres días siguientes a la cita.",
+    "delaiPasseDetail": "Esta cita es demasiado antigua para recibir una reseña.",
     "dejaLaisse": "Tu reseña ha quedado registrada. ¡Gracias!",
-    "desactives": "Tu profesional no recoge reseñas por ahora.",
     "photoIllisible": "Una de las fotos no se ha podido leer. Prueba con otra.",
     "envoiRate": "El envío no ha salido bien. Inténtalo dentro de un momento.",
     "envoiRateConnexion": "El envío no ha salido bien. Comprueba tu conexión.",
     "placeholder": "Lo que te ha parecido el resultado, el trato… (opcional)",
     "photo": "Foto",
     "lienIntrouvable": "Enlace no encontrado",
-    "dejaEnvoye": "Ya enviada",
-    "desactivesTitre": "Reseñas desactivadas"
+    "dejaEnvoye": "Ya enviada"
   },
   "stripe": {
     "reprise": "Conexión por retomar",

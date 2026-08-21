@@ -42,7 +42,6 @@ const MESSAGES: () => Record<string, { titre: string; texte: string }> = () => (
   trop_tot: { titre: traduire('avis.tropTot'), texte: traduire('avis.tropTotDetail') },
   trop_tard: { titre: traduire('avis.delaiPasse'), texte: traduire('avis.delaiPasseDetail') },
   deja: { titre: traduire('avis.dejaEnvoye'), texte: traduire('avis.dejaLaisse') },
-  ferme: { titre: traduire('avis.desactivesTitre'), texte: traduire('avis.desactives') },
 })
 
 export default function PageAvis() {

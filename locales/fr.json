@@ -246,17 +246,15 @@
     "lienInconnu": "Ce lien ne correspond à aucun rendez-vous.",
     "rdvAnnuleDetail": "Ce rendez-vous a été annulé, il n'y a pas d'avis à laisser.",
     "tropTotDetail": "Tu pourras laisser ton avis une fois le rendez-vous passé.",
-    "delaiPasseDetail": "Les avis se laissent dans les trois jours qui suivent le rendez-vous.",
+    "delaiPasseDetail": "Ce rendez-vous est trop ancien pour recevoir un avis.",
     "dejaLaisse": "Ton avis a bien été enregistré. Merci !",
-    "desactives": "Ta praticienne ne recueille pas d'avis pour le moment.",
     "photoIllisible": "Une des photos n'a pas pu être lue. Réessaie avec une autre.",
     "envoiRate": "L'envoi n'a pas abouti. Réessaie dans un instant.",
     "envoiRateConnexion": "L'envoi n'a pas abouti. Vérifie ta connexion.",
     "placeholder": "Ce que tu as pensé du résultat, de l'accueil… (facultatif)",
     "photo": "Photo",
     "lienIntrouvable": "Lien introuvable",
-    "dejaEnvoye": "Déjà envoyé",
-    "desactivesTitre": "Avis désactivés"
+    "dejaEnvoye": "Déjà envoyé"
   },
   "stripe": {
     "reprise": "Connexion à reprendre",

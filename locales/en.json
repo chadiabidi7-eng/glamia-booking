@@ -246,17 +246,15 @@
     "lienInconnu": "This link doesn't match any appointment.",
     "rdvAnnuleDetail": "This appointment was cancelled, there is no review to leave.",
     "tropTotDetail": "You'll be able to leave your review once the appointment has happened.",
-    "delaiPasseDetail": "Reviews can be left within three days of the appointment.",
+    "delaiPasseDetail": "This appointment is too old to be reviewed.",
     "dejaLaisse": "Your review has been recorded. Thank you!",
-    "desactives": "Your practitioner isn't collecting reviews at the moment.",
     "photoIllisible": "One of the photos couldn't be read. Try another one.",
     "envoiRate": "It didn't go through. Try again in a moment.",
     "envoiRateConnexion": "It didn't go through. Check your connection.",
     "placeholder": "What you thought of the result, the welcome… (optional)",
     "photo": "Photo",
     "lienIntrouvable": "Link not found",
-    "dejaEnvoye": "Already sent",
-    "desactivesTitre": "Reviews turned off"
+    "dejaEnvoye": "Already sent"
   },
   "stripe": {
     "reprise": "Connection to finish",

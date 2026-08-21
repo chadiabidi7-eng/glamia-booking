@@ -63,14 +63,20 @@ export async function POST(req: NextRequest) {
     //
     // On ne renvoie que ce qu'il faut pour afficher un bouton — la date, la
     // prestation, le jeton. Jamais le prix, jamais un identifiant de paiement.
+    // ON PROPOSE L'AVIS MÊME QUAND LA PRO NE L'AFFICHE PAS. Son bouton dit
+    // « Afficher sur ma page » : il commande la vitrine, pas la collecte. Elle
+    // reçoit les avis dans son app dans tous les cas, et le jour où elle
+    // rallume, tout apparaît. On testait `avis_actifs` ici : les quatre pros
+    // qui l'avaient éteint perdaient les avis pour de bon, au lieu de les
+    // mettre de côté.
       const { data: pro } = await supabaseAdmin
-      .from('profiles').select('avis_actifs, timezone').eq('id', pro_id).maybeSingle()
+      .from('profiles').select('timezone').eq('id', pro_id).maybeSingle()
 
       let avisAProposer: { token: string; date: string; prestations: string }[] = []
-      if (pro?.avis_actifs !== false) {
+      {
       const { data: passes } = await supabaseAdmin
         .from('rendez_vous')
-        .select('id, date, duree, technique, techniques, token_confirmation')
+        .select('id, date, duree, technique, techniques, token_avis')
         .eq('cliente_id', cliente_id)
         .eq('pro_id', pro_id)
         .neq('statut', 'annule')
@@ -89,7 +95,10 @@ export async function POST(req: NextRequest) {
       avisAProposer = (passes ?? [])
         .filter(r => {
           if (deja.has(r.id as string)) return false
-          if (!r.token_confirmation) return false
+          // Plus de condition sur le rappel. La clé d'avis existe pour tout
+          // rendez-vous : une cliente enregistrée avec son seul numéro n'avait
+          // jamais de rappel, donc jamais de bouton.
+          if (!r.token_avis) return false
           // La fenêtre est comptée depuis la FIN du rendez-vous, comme côté
           // serveur d'écriture : les deux doivent dire la même chose — y
           // compris sur le fuseau, sans quoi le bouton apparaît ici alors que
@@ -99,7 +108,7 @@ export async function POST(req: NextRequest) {
           return Date.now() <= fin + 72 * 3600 * 1000
         })
         .map(r => ({
-          token: r.token_confirmation as string,
+          token: r.token_avis as string,
           date: r.date as string,
           prestations: prestationsLisibles(r.techniques, r.technique),
         }))
