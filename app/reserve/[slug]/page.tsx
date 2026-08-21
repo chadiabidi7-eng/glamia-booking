@@ -3604,7 +3604,7 @@ export default function ReservationPage() {
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
                                       <Camera size={16} color={PINK} />
-                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{traduire('resa.prendre')}</span>
+                                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{traduire('resa.prendrePhoto')}</span>
                                       <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
                                     <label style={{
@@ -3931,7 +3931,7 @@ export default function ReservationPage() {
                             background: PINK, color: '#fff', borderRadius: 10,
                             padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
                           }}>
-                            {label} au prochain RDV
+                            {traduire('resa.auProchainRdv', { label })}
                           </span>
                         )
                       })()}
@@ -4784,7 +4784,7 @@ export default function ReservationPage() {
                   }}>
                     <Camera size={20} color={PINK} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
-                      {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.prendre')}
+                      {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.prendrePhoto')}
                     </span>
                     <input
                       type="file"
