@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
+import { avisFenetreMs } from '@/lib/reglages'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // L'AVIS D'UNE CLIENTE, DÉPOSÉ DEPUIS SON LIEN DE RENDEZ-VOUS.
@@ -39,8 +40,9 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-/** Trois jours après la fin du rendez-vous. Au-delà, on ne demande plus. */
-const FENETRE_MS = 72 * 60 * 60 * 1000
+// La fenêtre se lit en base, elle n'est plus écrite ici : on veut pouvoir la
+// rouvrir sur deux mois le temps d'une campagne de rattrapage, et la refermer
+// ensuite, sans déployer la page de résa. Voir lib/reglages.ts.
 const PHOTOS_MAX = 3
 const TEXTE_MAX = 1000
 const POIDS_MAX = 1_500_000
@@ -113,7 +115,7 @@ async function lireEtat(token: string): Promise<Etat> {
   const fin = finDuRdv(rdv.date as string, rdv.duree as number | null, pro?.timezone as string | null)
   const maintenant = Date.now()
   if (maintenant < fin) return { ouvert: false, raison: 'trop_tot' }
-  if (maintenant > fin + FENETRE_MS) return { ouvert: false, raison: 'trop_tard' }
+  if (maintenant > fin + await avisFenetreMs()) return { ouvert: false, raison: 'trop_tard' }
 
   const { data: existant } = await supabaseAdmin
     .from('avis_clientes').select('id').eq('rdv_id', rdv.id).maybeSingle()

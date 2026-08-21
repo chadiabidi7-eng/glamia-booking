@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
+import { avisFenetreMs } from '@/lib/reglages'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — ce qui appartient à UNE cliente : ses rendez-vous à venir
@@ -74,6 +75,11 @@ export async function POST(req: NextRequest) {
 
       let avisAProposer: { token: string; date: string; prestations: string }[] = []
       {
+      // On remonte un peu plus loin que la fenêtre elle-même : un rendez-vous
+      // qui COMMENCE en limite de fenêtre se TERMINE après, et il a encore
+      // droit à son avis. Deux jours de marge, comme avant.
+      const fenetreMs = await avisFenetreMs()
+      const remonteeMs = fenetreMs + 2 * 24 * 3600 * 1000
       const { data: passes } = await supabaseAdmin
         .from('rendez_vous')
         .select('id, date, duree, technique, techniques, token_avis')
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
         .eq('pro_id', pro_id)
         .neq('statut', 'annule')
         .lt('date', new Date().toISOString())
-        .gte('date', new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString())
+        .gte('date', new Date(Date.now() - remonteeMs).toISOString())
         .order('date', { ascending: false })
 
       const deja = new Set<string>()
@@ -105,7 +111,7 @@ export async function POST(req: NextRequest) {
           // la page d'avis répond « pas encore passé ».
           const fin = instantReel(r.date as string, pro?.timezone as string | null).getTime()
             + ((r.duree as number) ?? 60) * 60 * 1000
-          return Date.now() <= fin + 72 * 3600 * 1000
+          return Date.now() <= fin + fenetreMs
         })
         .map(r => ({
           token: r.token_avis as string,

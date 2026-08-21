@@ -37,7 +37,7 @@ const MESSAGES: Record<string, { titre: string; texte: string }> = {
   inconnu: { titre: 'Lien introuvable', texte: "Ce lien ne correspond à aucun rendez-vous." },
   annule: { titre: 'Rendez-vous annulé', texte: "Ce rendez-vous a été annulé, il n'y a pas d'avis à laisser." },
   trop_tot: { titre: 'Un peu tôt', texte: "Tu pourras laisser ton avis une fois le rendez-vous passé." },
-  trop_tard: { titre: 'Le délai est passé', texte: "Les avis se laissent dans les trois jours qui suivent le rendez-vous." },
+  trop_tard: { titre: 'Le délai est passé', texte: "Ce rendez-vous est trop ancien pour recevoir un avis." },
   deja: { titre: 'Déjà envoyé', texte: "Ton avis a bien été enregistré. Merci !" },
 }
 
