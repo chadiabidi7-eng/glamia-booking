@@ -18,7 +18,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
-import { poserPays } from '@/lib/heures-dates'
+import { poserPays, moisLongs } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
 // Types
@@ -202,10 +202,9 @@ const BadgeOffre = ({ pack, petit = false }: { pack: boolean; petit?: boolean })
   </span>
 )
 
-const MOIS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-]
+// Les mois suivent la langue de la pro, comme les jours et les heures. Ils
+// étaient écrits en français dans le calendrier de sa page de réservation.
+const MOIS = () => moisLongs()
 
 const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -3782,7 +3781,7 @@ export default function ReservationPage() {
                                   style={{ ...S.navBtn, opacity: (reprogCalYear === todayJs.getFullYear() && reprogCalMonth === todayJs.getMonth()) ? 0.3 : 1 }}
                                 >‹</button>
                                 <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15, textTransform: 'capitalize' }}>
-                                  {MOIS[reprogCalMonth]} {reprogCalYear}
+                                  {MOIS()[reprogCalMonth]} {reprogCalYear}
                                 </span>
                                 <button onClick={reprogNextMonth} style={S.navBtn}>›</button>
                               </div>
@@ -4434,7 +4433,7 @@ export default function ReservationPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <button onClick={prevMonth} disabled={isAtCurrentMonth()} style={{ ...S.navBtn, opacity: isAtCurrentMonth() ? 0.3 : 1 }}>‹</button>
               <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16, textTransform: 'capitalize' }}>
-                {MOIS[calMonth]} {calYear}
+                {MOIS()[calMonth]} {calYear}
               </span>
               <button onClick={nextMonth} style={S.navBtn}>›</button>
             </div>
@@ -4567,7 +4566,7 @@ export default function ReservationPage() {
                         background: PINK, color: '#fff', fontWeight: 700, fontSize: 15,
                         cursor: attenteEtat === 'envoi' ? 'default' : 'pointer', opacity: attenteEtat === 'envoi' ? 0.6 : 1,
                       }}>
-                      {attenteEtat === 'envoi' ? 'Enregistrement…' : 'Me prévenir'}
+                      {attenteEtat === 'envoi' ? traduire('resa.enregistrementEnCours') : traduire('resa.mePrevenir')}
                     </button>
                     <p style={{ margin: '10px 0 0', color: '#9ca3af', fontSize: 12, lineHeight: 1.5 }}>{traduire('resa.coordonneesEffacees')}</p>
                   </div>
@@ -5443,7 +5442,7 @@ function CalendarDay({
       disabled={isDisabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={isOff ? 'Jour de repos' : isComplet ? traduire('resa.completPrevenir') : undefined}
+      title={isOff ? traduire('resa.jourDeRepos') : isComplet ? traduire('resa.completPrevenir') : undefined}
       style={{
         aspectRatio: '1', borderRadius: '50%', boxSizing: 'border-box',
         // Le cadre est toujours là, transparent la plupart du temps : sinon la

@@ -170,7 +170,14 @@
     "etapeIdentification": "Identificación",
     "etapeTechniques": "Servicios",
     "etapeDate": "Fecha",
-    "etapeHeure": "Hora"
+    "etapeHeure": "Hora",
+    "envoiEnCours": "Enviando…",
+    "decalageEnCours": "Cambiando la fecha...",
+    "enregistrementEnCours": "Guardando…",
+    "jourDeRepos": "Día de descanso",
+    "nouvelleInspiration": "Nueva inspiración",
+    "bonjourPrenom": "¡Hola %{prenom}!",
+    "aucunCreneauDuree": "Ningún hueco de %{duree} disponible ese día."
   },
   "commun": {
     "chargement": "Cargando...",
@@ -569,5 +576,13 @@
         ]
       }
     ]
+  },
+  "vitrine": {
+    "condAccompagnant": "Se admite acompañante",
+    "condEnfants": "Se admiten niños",
+    "condHommes": "Se admiten hombres",
+    "condHandicap": "Acceso adaptado",
+    "condParking": "Aparcamiento cerca",
+    "condAnimaux": "Se admiten mascotas"
   }
 }

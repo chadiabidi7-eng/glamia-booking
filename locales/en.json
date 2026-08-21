@@ -170,7 +170,14 @@
     "etapeIdentification": "Who you are",
     "etapeTechniques": "Services",
     "etapeDate": "Date",
-    "etapeHeure": "Time"
+    "etapeHeure": "Time",
+    "envoiEnCours": "Sending…",
+    "decalageEnCours": "Moving the appointment...",
+    "enregistrementEnCours": "Saving…",
+    "jourDeRepos": "Day off",
+    "nouvelleInspiration": "New inspiration",
+    "bonjourPrenom": "Hi %{prenom}!",
+    "aucunCreneauDuree": "No %{duree} slot available that day."
   },
   "commun": {
     "chargement": "Loading...",
@@ -572,5 +579,13 @@
   "meta": {
     "reserveDescription": "Book your beauty appointment online",
     "siteDescription": "Book online with your beauty professional"
+  },
+  "vitrine": {
+    "condAccompagnant": "Companions welcome",
+    "condEnfants": "Children welcome",
+    "condHommes": "Men welcome",
+    "condHandicap": "Step-free access",
+    "condParking": "Parking nearby",
+    "condAnimaux": "Pets welcome"
   }
 }

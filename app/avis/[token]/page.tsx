@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Camera, CheckCircle, ImagePlus, X } from 'lucide-react'
 import { preparerPhotoAvis, type PhotoPreparee } from '@/lib/photo-avis'
-import { traduire } from '@/lib/i18n'
+import { traduire, poserLangueSansPro } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // « Laisse ton avis » — la page que la cliente ouvre après son rendez-vous.
@@ -61,6 +61,7 @@ export default function PageAvis() {
   const champFichier = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    poserLangueSansPro();
     fetch(`/api/avis/${token}`)
       .then(r => r.json())
       .then(d => setEtat({ chargement: false, ...d }))
@@ -217,7 +218,7 @@ export default function PageAvis() {
         onClick={envoyer}
         disabled={note === 0 || envoi || prepare}
         style={{ ...S.envoyer, opacity: note === 0 || envoi || prepare ? 0.4 : 1 }}>
-        {envoi ? 'Envoi…' : traduire('avis.envoyer')}
+        {envoi ? traduire('resa.envoiEnCours') : traduire('avis.envoyer')}
       </button>
 
       <p style={S.mention}>{traduire('avis.prenomInitiale')}</p>

@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
 import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
-import { poserLangue, traduire } from '@/lib/i18n'
+import { poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
@@ -249,6 +249,7 @@ function ConfirmationPage() {
 
   // ── Chargement initial ──────────────────────
   useEffect(() => {
+    poserLangueSansPro();
     if (!token) { setState('error'); return }
 
     const load = async () => {
@@ -684,7 +685,7 @@ import { traduire } from '@/lib/i18n';
                     disabled={acting}
                     style={{ marginTop: 16 }}
                   >
-                    {acting ? 'Décalage en cours...' : `Décaler au ${formatDateFr(decDate)} à ${decHeure}`}
+                    {acting ? traduire('resa.decalageEnCours') : `Décaler au ${formatDateFr(decDate)} à ${decHeure}`}
                   </button>
                 )}
               </div>

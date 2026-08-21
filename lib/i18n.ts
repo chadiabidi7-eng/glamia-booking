@@ -55,6 +55,25 @@ export function poserLangue(langue: string | null | undefined) {
     : 'fr';
 }
 
+/**
+ * QUAND IL N'Y A AUCUNE PRO À SUIVRE, ON SUIT LE NAVIGATEUR.
+ *
+ * La règle de cette page est de parler la langue de la PRO, jamais celle de la
+ * visiteuse — c'est sa vitrine. Mais certains écrans s'affichent sans qu'on
+ * sache de quelle pro il s'agit : un lien d'avis inconnu, un lien de
+ * confirmation expiré, une page de réservation qui n'existe pas. Il n'y a alors
+ * personne à suivre, et le français par défaut est un choix arbitraire — une
+ * Anglaise lisait « Ce lien ne correspond à aucun rendez-vous ».
+ *
+ * Dans ce cas précis, et uniquement là, le navigateur est la meilleure
+ * information disponible.
+ */
+export function poserLangueSansPro() {
+  const nav = typeof navigator !== 'undefined' ? navigator.language : '';
+  const code = (nav || '').slice(0, 2).toLowerCase();
+  poserLangue((LANGUES as readonly string[]).includes(code) ? code : 'fr');
+}
+
 export function langueActuelle(): Langue {
   return i18n.locale as Langue;
 }

@@ -170,7 +170,14 @@
     "etapeIdentification": "Identification",
     "etapeTechniques": "Prestations",
     "etapeDate": "Date",
-    "etapeHeure": "Heure"
+    "etapeHeure": "Heure",
+    "envoiEnCours": "Envoi…",
+    "decalageEnCours": "Décalage en cours...",
+    "enregistrementEnCours": "Enregistrement…",
+    "jourDeRepos": "Jour de repos",
+    "nouvelleInspiration": "Nouvelle inspiration",
+    "bonjourPrenom": "Bonjour %{prenom} !",
+    "aucunCreneauDuree": "Aucun créneau de %{duree} disponible ce jour."
   },
   "commun": {
     "chargement": "Chargement...",
@@ -566,5 +573,13 @@
   "meta": {
     "reserveDescription": "Réservez votre rendez-vous beauté en ligne",
     "siteDescription": "Réservation en ligne chez votre professionnelle de beauté"
+  },
+  "vitrine": {
+    "condAccompagnant": "Accompagnant accepté",
+    "condEnfants": "Enfants acceptés",
+    "condHommes": "Hommes acceptés",
+    "condHandicap": "Accès handicapé",
+    "condParking": "Parking à proximité",
+    "condAnimaux": "Animaux sur place"
   }
 }

@@ -20,7 +20,13 @@ import { readFileSync } from 'fs';
 
 // Le dernier état AVANT le début du chantier des langues : le 19 août 2026,
 // juste avant que la première phrase ne bouge. C'est la référence.
-const AVANT = process.argv[2] ?? 'HEAD';
+// LE DERNIER COMMIT AVANT LE CHANTIER DES LANGUES. Par défaut c'était HEAD,
+// c'est-à-dire le code d'AUJOURD'HUI — où les phrases ont justement quitté le
+// code pour les fichiers de langue. La preuve ne retrouvait donc presque rien
+// et affichait 371 écarts qui n'en étaient pas. Le bon point de comparaison,
+// c'est la veille : 9391c92, « Les virements vers les banques sont enfin
+// suivis », dernier état de la page avant qu'on y touche.
+const AVANT = process.argv[2] ?? '9391c92';
 
 const fr = JSON.parse(readFileSync(new URL('../locales/fr.json', import.meta.url), 'utf8'));
 
