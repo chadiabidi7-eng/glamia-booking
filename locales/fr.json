@@ -197,7 +197,24 @@
     "questionsAvant": {
       "one": "%{pro} a une question à vous poser avant de fixer votre rendez-vous.",
       "other": "%{pro} a %{count} questions à vous poser avant de fixer votre rendez-vous."
-    }
+    },
+    "etapeSur": "Étape %{n}/%{total} — %{nom}",
+    "ongletAccueil": "Accueil",
+    "reponseOui": "Oui",
+    "reponseNon": "Non",
+    "dureeAuTotal": "%{duree} au total",
+    "dispoPourDuree": "Disponibilités pour une durée de %{duree}.",
+    "inspiPlusTard": " Pas d'inspiration sous la main ? Vous pourrez aussi les ajouter plus tard, depuis le lien de gestion de votre réservation.",
+    "commentairePlaceholder": "Informations supplémentaires pour votre praticienne…",
+    "consentementDonnees": "En confirmant, vous acceptez que vos données soient utilisées uniquement dans le cadre de votre rendez-vous.",
+    "offert": "Offert",
+    "gratuit": "Gratuit",
+    "aPartirDe": "À partir de %{prix}",
+    "empreinteBancaire": "Empreinte bancaire",
+    "prestationReglee": "Prestation réglée",
+    "acompteVerse": "Acompte versé",
+    "deduitDuPrix": "Déduit du prix de votre prestation. Il vous reste %{reste} à régler sur place.",
+    "aucunCreneauCeJour": "Aucun créneau de %{duree} disponible ce jour."
   },
   "commun": {
     "chargement": "Chargement...",

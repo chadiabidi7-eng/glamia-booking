@@ -197,7 +197,24 @@
     "questionsAvant": {
       "one": "%{pro} tiene una pregunta antes de fijar tu cita.",
       "other": "%{pro} tiene %{count} preguntas antes de fijar tu cita."
-    }
+    },
+    "etapeSur": "Paso %{n}/%{total} — %{nom}",
+    "ongletAccueil": "Bienvenida",
+    "reponseOui": "Sí",
+    "reponseNon": "No",
+    "dureeAuTotal": "%{duree} en total",
+    "dispoPourDuree": "Disponibilidad para una cita de %{duree}.",
+    "inspiPlusTard": " ¿No tienes inspiración a mano? También puedes añadirlas más tarde, desde el enlace de gestión de tu reserva.",
+    "commentairePlaceholder": "Información adicional para tu profesional…",
+    "consentementDonnees": "Al confirmar, aceptas que tus datos se usen únicamente para tu cita.",
+    "offert": "Gratis",
+    "gratuit": "Gratis",
+    "aPartirDe": "Desde %{prix}",
+    "empreinteBancaire": "Retención en tarjeta",
+    "prestationReglee": "Servicio pagado",
+    "acompteVerse": "Anticipo pagado",
+    "deduitDuPrix": "Se descuenta del precio de tu servicio. Quedan %{reste} por pagar en el salón.",
+    "aucunCreneauCeJour": "Ningún hueco de %{duree} disponible ese día."
   },
   "commun": {
     "chargement": "Cargando...",

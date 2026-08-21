@@ -197,7 +197,24 @@
     "questionsAvant": {
       "one": "%{pro} has one question for you before booking your appointment.",
       "other": "%{pro} has %{count} questions for you before booking your appointment."
-    }
+    },
+    "etapeSur": "Step %{n}/%{total} — %{nom}",
+    "ongletAccueil": "Welcome",
+    "reponseOui": "Yes",
+    "reponseNon": "No",
+    "dureeAuTotal": "%{duree} in total",
+    "dispoPourDuree": "Availability for a %{duree} appointment.",
+    "inspiPlusTard": " No inspiration to hand? You can also add them later, from your booking management link.",
+    "commentairePlaceholder": "Anything else for your professional…",
+    "consentementDonnees": "By confirming, you agree that your details are used only for your appointment.",
+    "offert": "Free",
+    "gratuit": "Free",
+    "aPartirDe": "From %{prix}",
+    "empreinteBancaire": "Card hold",
+    "prestationReglee": "Service paid",
+    "acompteVerse": "Deposit paid",
+    "deduitDuPrix": "Taken off the price of your service. %{reste} left to pay on the day.",
+    "aucunCreneauCeJour": "No %{duree} slot available on this day."
   },
   "commun": {
     "chargement": "Loading...",
