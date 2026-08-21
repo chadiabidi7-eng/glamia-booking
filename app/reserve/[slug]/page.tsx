@@ -957,7 +957,7 @@ export default function ReservationPage() {
       <p style={{
         fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
         color: '#B4564C', margin: 0,
-      }}>Message de {pro?.pseudo || pro?.prenom}</p>
+      }}>{traduire('resa.messageDe', { pro: pro?.pseudo || pro?.prenom || '' })}</p>
 
       <p style={{
         fontSize: 16, fontWeight: 600, color: '#2D2D2D',
@@ -967,7 +967,13 @@ export default function ReservationPage() {
       </p>
 
       <p style={{ fontSize: 12.5, color: '#8A8A9A', margin: '12px 0 0' }}>
-        {refus.question} — vous avez répondu «&nbsp;{refus.reponse}&nbsp;»
+        {/* La réponse est stockée en français — on l'affiche traduite,
+            comme les boutons qui l'ont produite. */}
+        {traduire('resa.vousAvezRepondu', {
+          question: refus.question,
+          reponse: refus.reponse === 'Oui' ? traduire('resa.reponseOui')
+            : refus.reponse === 'Non' ? traduire('resa.reponseNon') : refus.reponse,
+        })}
       </p>
 
       {reseaux.length > 0 && (

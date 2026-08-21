@@ -214,7 +214,9 @@
     "prestationReglee": "Service paid",
     "acompteVerse": "Deposit paid",
     "deduitDuPrix": "Taken off the price of your service. %{reste} left to pay on the day.",
-    "aucunCreneauCeJour": "No %{duree} slot available on this day."
+    "aucunCreneauCeJour": "No %{duree} slot available on this day.",
+    "messageDe": "Message from %{pro}",
+    "vousAvezRepondu": "%{question} — you answered “%{reponse}”"
   },
   "commun": {
     "chargement": "Loading...",

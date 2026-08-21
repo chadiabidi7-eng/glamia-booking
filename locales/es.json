@@ -214,7 +214,9 @@
     "prestationReglee": "Servicio pagado",
     "acompteVerse": "Anticipo pagado",
     "deduitDuPrix": "Se descuenta del precio de tu servicio. Quedan %{reste} por pagar en el salón.",
-    "aucunCreneauCeJour": "Ningún hueco de %{duree} disponible ese día."
+    "aucunCreneauCeJour": "Ningún hueco de %{duree} disponible ese día.",
+    "messageDe": "Mensaje de %{pro}",
+    "vousAvezRepondu": "%{question} — has respondido «%{reponse}»"
   },
   "commun": {
     "chargement": "Cargando...",
