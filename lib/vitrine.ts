@@ -1,3 +1,4 @@
+import { traduire } from '@/lib/i18n'
 // ─────────────────────────────────────────────────────────────────────────────
 // CE QUE LA PAGE DE RÉSERVATION MONTRE DE LA PRO.
 //
@@ -7,13 +8,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Les six conditions, dans un ordre qui ne change jamais d'une pro à l'autre. */
-export const CONDITIONS: { cle: string; libelle: string }[] = [
-  { cle: 'accompagnant', libelle: 'Accompagnant accepté' },
-  { cle: 'enfants',      libelle: 'Enfants acceptés' },
-  { cle: 'hommes',       libelle: 'Hommes acceptés' },
-  { cle: 'handicap',     libelle: 'Accès handicapé' },
-  { cle: 'parking',      libelle: 'Parking à proximité' },
-  { cle: 'animaux',      libelle: 'Animaux sur place' },
+// UNE FONCTION, PAS UNE CONSTANTE : lue au chargement du fichier, elle
+// resterait dans la langue de départ. Voir scripts/textes-figes.mjs.
+export const CONDITIONS = (): { cle: string; libelle: string }[] => [
+  { cle: 'accompagnant', libelle: traduire('vitrine.condAccompagnant') },
+  { cle: 'enfants',      libelle: traduire('vitrine.condEnfants') },
+  { cle: 'hommes',       libelle: traduire('vitrine.condHommes') },
+  { cle: 'handicap',     libelle: traduire('vitrine.condHandicap') },
+  { cle: 'parking',      libelle: traduire('vitrine.condParking') },
+  { cle: 'animaux',      libelle: traduire('vitrine.condAnimaux') },
 ]
 
 /**
@@ -30,7 +33,7 @@ export function conditionsAffichees(
   accueil: Record<string, boolean | null> | null | undefined,
 ): { libelle: string; oui: boolean }[] {
   if (!accueil) return []
-  const catalogue = CONDITIONS
+  const catalogue = CONDITIONS()
     .filter(c => typeof accueil[c.cle] === 'boolean')
     .map(c => ({ libelle: c.libelle, oui: accueil[c.cle] === true }))
   const siennes = Object.keys(accueil)
@@ -49,11 +52,11 @@ export function conditionsAffichees(
 export function quandLAdresse(moment: string): string | null {
   switch (moment) {
     case 'reservation':
-      return 'L’adresse exacte vous sera communiquée dès votre réservation.'
+      return traduire('resa.adresseALaReservation')
     case 'presence':
-      return 'L’adresse exacte vous sera communiquée à la confirmation de votre présence, la veille.'
+      return traduire('resa.adresseALaConfirmation')
     case 'jamais':
-      return 'L’adresse exacte vous sera envoyée directement par votre praticienne.'
+      return traduire('resa.adressePorLaPro')
     default:
       return null
   }

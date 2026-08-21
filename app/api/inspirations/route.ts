@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { traduireDans } from '@/lib/i18n'
+import { etiquetteDe } from '@/lib/heures-dates'
+import { normaliserTelephone } from '@/lib/telephone'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -10,17 +13,11 @@ const MAX_PHOTOS = 3
 const MAX_OCTETS = 4 * 1024 * 1024      // 4 Mo max par photo (décodée)
 const DELAI_MAX_MS = 15 * 60 * 1000     // le RDV doit avoir été créé il y a moins de 15 min (anti-abus)
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-\.\(\)]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 // « mercredi 15 juillet à 14:30 » (les dates RDV sont stockées en heure murale, lues en UTC)
-function formatRdvFr(iso: string): string {
+function formatRdvFr(iso: string, langue?: string | null): string {
   const d = new Date(iso)
-  const jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+  const jour = d.toLocaleDateString(etiquetteDe(langue), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
   const heure = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
   return `${jour} à ${heure}`
 }
@@ -116,7 +113,7 @@ export async function POST(req: NextRequest) {
       .select('telephone')
       .eq('id', rdv.cliente_id)
       .maybeSingle()
-    if (!cliente?.telephone || normalizePhone(cliente.telephone) !== normalizePhone(telephone as string)) {
+    if (!cliente?.telephone || normaliserTelephone(cliente.telephone) !== normaliserTelephone(telephone as string)) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 })
     }
   }
@@ -162,18 +159,18 @@ export async function POST(req: NextRequest) {
   if (parToken || parTelephone) {
     try {
       const [{ data: pro }, { data: cli }] = await Promise.all([
-        supabaseAdmin.from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle(),
+        supabaseAdmin.from('profiles').select('push_token, langue').eq('id', rdv.pro_id).maybeSingle(),
         supabaseAdmin.from('clientes').select('prenom, nom').eq('id', rdv.cliente_id).maybeSingle(),
       ])
       if (pro?.push_token) {
-        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || 'Ta cliente'
+        const nomCliente = [cli?.prenom, cli?.nom].filter(Boolean).join(' ') || traduireDans((pro as { langue?: string })?.langue, 'notif.taCliente')
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: pro.push_token,
-            title: 'Nouvelles inspirations 💅',
-            body: `${nomCliente} a ajouté ${urls.length > 1 ? `${urls.length} photos` : 'une photo'} d'inspiration pour son RDV du ${formatRdvFr(rdv.date)}.`,
+            title: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirationsTitre'),
+            body: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirations', { nom: nomCliente, count: urls.length, date: formatRdvFr(rdv.date, (pro as { langue?: string })?.langue) }),
           }),
         })
       }

@@ -2,16 +2,18 @@ import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
+import { traduireDans } from '@/lib/i18n'
+import { etiquetteDe } from '@/lib/heures-dates'
 
-const MOIS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
-const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+// Les noms de jours et de mois étaient écrits en français, en dur. Une pro
+// anglaise recevait « mercredi 15 juillet » dans sa notification. On les
+// demande au formateur du navigateur, dans la langue de la pro.
 
-function formatDateFr(iso: string): string {
+function formatDateFr(iso: string, langue?: string | null): string {
   const d = new Date(iso + 'T00:00:00')
-  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+  return d.toLocaleDateString(etiquetteDe(langue), {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
 }
 
 const supabaseAdmin = createClient(
@@ -50,7 +52,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -116,6 +118,10 @@ export async function GET(
     pro_photo: pro?.avatar_url ?? null,
     pro_adresse: pro?.adresse ?? null,
     pro_devise: (pro as any)?.devise ?? 'EUR',
+    // La page de confirmation parle la langue de la pro, comme sa page de
+    // réservation : c'est la même vitrine, vue plus tard.
+    pro_langue: (pro as any)?.langue ?? 'fr',
+    pro_pays: (pro as any)?.pays ?? null,
     pro_id: data.pro_id,
     horaires: (pro as any)?.horaires ?? null,
     duree: data.duree ?? 60,
@@ -183,7 +189,7 @@ export async function POST(
 
     const { data: proRegles } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -245,7 +251,7 @@ export async function POST(
     try {
       const { data: proData } = await supabaseAdmin
         .from('profiles')
-        .select('push_token')
+        .select('push_token, langue')
         .eq('id', rdv.pro_id)
         .maybeSingle()
 
@@ -255,7 +261,7 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'Une cliente'
+      const clientePrenom = cliente?.prenom ?? traduireDans(proData?.langue, 'notif.uneCliente')
       const newDateStr = newDate.slice(0, 10)
       const newHeureStr = newDate.slice(11, 16)
 
@@ -266,8 +272,8 @@ export async function POST(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: proData.push_token,
-            title: '📅 RDV décalé',
-            body: `${clientePrenom} a décalé son RDV du ${formatDateFr(oldDateStr)} au ${formatDateFr(newDateStr)} à ${newHeureStr}`,
+            title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
+            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
           }),
         })
       }
@@ -276,7 +282,7 @@ export async function POST(
       if (cliente?.email) {
         const { data: proInfo } = await supabaseAdmin
           .from('profiles')
-          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom')
+          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom, pays')
           .eq('id', rdv.pro_id)
           .maybeSingle()
 
@@ -300,7 +306,9 @@ export async function POST(
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
-              date: formatDateFr(newDateStr),
+              langue: proData?.langue ?? null,
+              pays: (proInfo as { pays?: string | null } | null)?.pays ?? null,
+              date: formatDateFr(newDateStr, proData?.langue),
               heure: newHeureStr,
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
               prix_total: rdvFull?.prix ?? 0,
@@ -351,7 +359,7 @@ export async function POST(
   try {
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('push_token')
+      .select('push_token, langue')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -365,15 +373,15 @@ export async function POST(
         .eq('id', rdv.cliente_id)
         .maybeSingle()
 
-      const clientePrenom = cliente?.prenom ?? 'une cliente'
+      const clientePrenom = cliente?.prenom ?? traduireDans(pro?.langue, 'notif.uneClienteMinuscule')
       const dateStr = (rdv.date as string).slice(0, 10)
       const heureStr = (rdv.date as string).slice(11, 16)
-      const dateFr = formatDateFr(dateStr)
+      const dateFr = formatDateFr(dateStr, pro?.langue)
 
-      const title = action === 'confirmer' ? '✅ RDV confirmé' : '❌ RDV annulé'
+      const title = traduireDans(pro?.langue, action === 'confirmer' ? 'notif.rdvConfirmeTitre' : 'notif.rdvAnnuleTitre')
       const body = action === 'confirmer'
-        ? `${clientePrenom} a confirmé son RDV du ${dateFr} à ${heureStr}`
-        : `${clientePrenom} a annulé son RDV du ${dateFr} à ${heureStr}`
+        ? traduireDans(pro?.langue, 'notif.rdvConfirme', { prenom: clientePrenom, date: dateFr, heure: heureStr })
+        : traduireDans(pro?.langue, 'notif.rdvAnnule', { prenom: clientePrenom, date: dateFr, heure: heureStr })
 
       const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',

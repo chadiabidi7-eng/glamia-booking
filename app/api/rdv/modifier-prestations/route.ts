@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable } from '@/lib/creneaux'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -17,12 +18,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 const SEUIL_TARDIVE_MS = 24 * 3600_000
 const MAX_DECALAGES = 3
@@ -61,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   // ── VÉRIFICATION DE PROPRIÉTÉ ──
   const telRdv = (rdv as { cliente?: { telephone?: string } }).cliente?.telephone
-  if (!telRdv || normalizePhone(telRdv) !== normalizePhone(telephone)) {
+  if (!telRdv || normaliserTelephone(telRdv) !== normaliserTelephone(telephone)) {
     return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
   }
   if (rdv.statut === 'annule') {

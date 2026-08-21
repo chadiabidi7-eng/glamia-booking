@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { traduire, poserLangue, poserLangueSansPro } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page « Paiement validé » + facture rose, simple et imprimable.
@@ -12,11 +13,11 @@ const PINK = '#C2779E'
 
 // La facture n'est plus fabriquée ici : elle arrive toute faite, dans la monnaie
 // de la caisse de la pro. L'euro écrit en dur à cet endroit était le défaut.
-type Recu = { statut: string; html?: string }
+type Recu = { statut: string; langue?: string | null; html?: string }
 
 export default function MerciWrapper() {
   return (
-    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>Chargement…</p></Cadre>}>
+    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>{traduire('commun.chargement')}</p></Cadre>}>
       <PageMerci />
     </Suspense>
   )
@@ -41,10 +42,21 @@ function PageMerci() {
   const [erreur, setErreur] = useState(false)
 
   useEffect(() => {
+    // Un lien expiré ou tronqué n'a aucune pro à suivre : le message d'erreur
+    // suit alors le navigateur, comme la page d'avis. Le reçu, quand il
+    // arrive, repose la langue de la pro par-dessus.
+    poserLangueSansPro()
     if (!token) { setErreur(true); return }
     fetch(`/api/propay/recu?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
-      .then(d => (d.error ? setErreur(true) : setRecu(d)))
+      .then(d => {
+        if (d.error) { setErreur(true); return }
+        // La langue arrive avec le reçu, et doit être posée AVANT le premier
+        // rendu : le cadre de la page reste sinon en français autour d'une
+        // facture anglaise.
+        poserLangue(d.langue)
+        setRecu(d)
+      })
       .catch(() => setErreur(true))
   }, [token])
 
@@ -52,20 +64,20 @@ function PageMerci() {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937' }}>Paiement introuvable</h1>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>Le lien a peut-être expiré. Rapproche-toi de ta praticienne.</p>
+        <h1 style={{ fontSize: 20, color: '#1f2937' }}>{traduire('merci.introuvable')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280' }}>{traduire('merci.lienExpire')}</p>
       </Cadre>
     )
   }
 
-  if (!recu) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>Vérification du paiement…</p></Cadre>
+  if (!recu) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>{traduire('merci.verification')}</p></Cadre>
 
   if (recu.statut !== 'paye') {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>⏳</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937' }}>Paiement en cours</h1>
-        <p style={{ fontSize: 14, color: '#6b7280' }}>Recharge cette page dans quelques secondes.</p>
+        <h1 style={{ fontSize: 20, color: '#1f2937' }}>{traduire('merci.enCours')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280' }}>{traduire('merci.recharge')}</p>
       </Cadre>
     )
   }
@@ -83,10 +95,8 @@ function PageMerci() {
         }}>
           <span style={{ color: '#fff', fontSize: 30, fontWeight: 700 }}>✓</span>
         </div>
-        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0 }}>Paiement validé</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 0' }}>
-          Merci ! Ta praticienne a été prévenue 💅
-        </p>
+        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0 }}>{traduire('merci.valide')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 0' }}>{traduire('merci.prevenue')}</p>
       </div>
 
       {/* ── LA FACTURE, CELLE DU MAIL ET AUCUNE AUTRE ────────────────────────
@@ -109,9 +119,7 @@ function PageMerci() {
         style={{
           marginTop: 18, background: PINK, color: '#fff', border: 'none', cursor: 'pointer',
           padding: '13px 30px', borderRadius: 50, fontWeight: 700, fontSize: 14,
-        }}>
-        Enregistrer ma facture (PDF)
-      </button>
+        }}>{traduire('merci.facture')}</button>
     </Cadre>
   )
 }

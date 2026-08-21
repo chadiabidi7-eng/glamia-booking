@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 import { avisFenetreMs } from '@/lib/reglages'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — ce qui appartient à UNE cliente : ses rendez-vous à venir
@@ -24,12 +25,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function normalizePhone(tel: string): string {
-  let n = (tel ?? '').replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +43,7 @@ export async function POST(req: NextRequest) {
       .eq('pro_id', pro_id)
       .maybeSingle()
 
-    if (!fiche || normalizePhone(fiche.telephone as string) !== normalizePhone(telephone)) {
+    if (!fiche || normaliserTelephone(fiche.telephone as string) !== normaliserTelephone(telephone)) {
       // Même réponse qu'une cliente sans rien : ne pas indiquer si la fiche
       // existe, sinon l'erreur elle-même devient un moyen de deviner.
       return NextResponse.json({ rdvs: [], fidelite: null })

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
 import { reglagesPay } from '@/lib/pays-stripe'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — création de l'intent à l'étape de confirmation de la résa.
@@ -60,12 +61,6 @@ const STRIPE_FIXE_CENTIMES = 25
 type Reglage = { mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
 type Config = Reglage & { actif?: boolean; nouvelles?: Reglage | null }
 
-function normalizePhone(tel: string): string {
-  let n = (tel ?? '').replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 /**
  * Cette cliente est-elle déjà venue chez cette pro ?
@@ -86,12 +81,12 @@ function normalizePhone(tel: string): string {
 /** L'identifiant de la cliente derrière ce numéro, pour relire ses remises. */
 async function ficheClienteParTelephone(proId: string, telephone: unknown): Promise<string | null> {
   if (typeof telephone !== 'string') return null
-  const cible = normalizePhone(telephone)
+  const cible = normaliserTelephone(telephone)
   if (cible.length < 9) return null
   const { data: clientes } = await supabaseAdmin
     .from('clientes').select('id, telephone').eq('pro_id', proId)
   // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
-  return (clientes ?? []).find(c => normalizePhone(c.telephone as string) === cible)?.id ?? null
+  return (clientes ?? []).find(c => normaliserTelephone(c.telephone as string) === cible)?.id ?? null
 }
 
 async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise<boolean> {
@@ -113,14 +108,14 @@ async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise
   // tarif des nouvelles est toujours le plus exigeant des deux, et se tromper
   // dans ce sens demanderait trop d'argent à une fidèle.
   if (typeof telephone !== 'string') return false
-  const cible = normalizePhone(telephone)
+  const cible = normaliserTelephone(telephone)
   if (cible.length < 9) return false
   try {
     const { data: clientes, error } = await supabaseAdmin
       .from('clientes').select('id, telephone').eq('pro_id', proId)
     if (error) return false
     // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
-    return !(clientes ?? []).some(c => normalizePhone(c.telephone as string) === cible)
+    return !(clientes ?? []).some(c => normaliserTelephone(c.telephone as string) === cible)
   } catch {
     return false
   }

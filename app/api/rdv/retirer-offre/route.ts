@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — repli quand une offre (pack) n'a pas pu s'appliquer à une
@@ -14,12 +15,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function normalizePhone(tel: string): string {
-  let n = tel.replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 export async function POST(req: NextRequest) {
   let body: { rdv_id?: unknown; telephone?: unknown; prix?: unknown }
@@ -40,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
 
   const telRdv = (rdv as { cliente?: { telephone?: string } }).cliente?.telephone
-  if (!telRdv || normalizePhone(telRdv) !== normalizePhone(telephone)) {
+  if (!telRdv || normaliserTelephone(telRdv) !== normaliserTelephone(telephone)) {
     return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
   }
 

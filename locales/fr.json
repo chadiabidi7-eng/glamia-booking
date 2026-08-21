@@ -1,0 +1,647 @@
+{
+  "resa": {
+    "reglement": "Règlement",
+    "refusDefaut": "Je ne peux pas vous recevoir pour cette demande.",
+    "ecrivezLui": "Écrivez-lui, vous en parlerez directement :",
+    "modifierReponses": "Modifier mes réponses",
+    "repondreFormulaire": "Répondre au formulaire",
+    "facultatif": " · facultatif",
+    "pageIntrouvable": "Page introuvable",
+    "pageIntrouvableDetail": "Ce lien de réservation n'existe pas ou a été désactivé.",
+    "indisponible": "La prise de rendez-vous en ligne est indisponible pour le moment.",
+    "contactez": "Contactez",
+    "surSesReseaux": "sur ses réseaux sociaux.",
+    "rdvEnregistre": "Votre RDV est bien enregistré",
+    "prestations": "Prestations",
+    "fidelite": "FIDÉLITÉ",
+    "reduction": "RÉDUCTION",
+    "total": "Total",
+    "empreinteRassure": "Rien n'a été débité. Votre carte est simplement enregistrée, et ne sera prélevée qu'en cas d'absence ou d'annulation tardive.",
+    "inspirationsNonEnvoyees": "Tes photos d'inspiration n'ont pas pu être envoyées.",
+    "mailAvant": "Vous recevrez un email de confirmation 24h avant votre rendez-vous pour confirmer votre présence.",
+    "verifiezSpams": "Si vous ne recevez pas l'email, pensez à vérifier vos spams.",
+    "aBientot": "À bientôt !",
+    "signatureGlamia": "L'app des professionnelles de la beauté",
+    "reservationEnLigne": "Réservation en ligne",
+    "bonjour": "Bonjour !",
+    "entrezNumero": "Entrez votre numéro pour commencer.",
+    "telephone": "Téléphone",
+    "continuer": "Continuer →",
+    "verification": "Vérification...",
+    "reconnue": "Vous êtes bien reconnue.",
+    "laisserAvis": "Laisser un avis",
+    "chargementRdv": "Chargement de vos rendez-vous...",
+    "vosRdv": "Vos rendez-vous à venir",
+    "rdvReprogramme": "RDV reprogrammé !",
+    "prestationsModifiees": "Prestations modifiées !",
+    "modifierPrestations": "Modifier les prestations",
+    "prendre": "Prendre",
+    "vosPrestations": "Vos prestations",
+    "fermer": "✕ Fermer",
+    "nouvelleDate": "Nouvelle date",
+    "carteFidelite": "Carte de fidélité",
+    "premiereVisite": "Première visite ? Enchanté(e) !",
+    "prenom": "Prénom",
+    "nom": "Nom",
+    "email": "Email",
+    "emailDetail": "Pour recevoir votre confirmation de RDV",
+    "fideliteDetail": "Cumulez des tampons à chaque RDV et profitez de réductions !",
+    "quellesPrestations": "Quelles prestations ?",
+    "choisirTechniques": "Sélectionnez une ou plusieurs techniques.",
+    "aucunePrestation": "Aucune prestation disponible pour le moment.",
+    "choisissezDate": "Choisissez une date",
+    "rechercheCreneau": "Recherche du prochain créneau...",
+    "prochainCreneau": "Prochain créneau disponible",
+    "prendreCeRdv": "Prendre ce RDV →",
+    "selectionne": "Sélectionné",
+    "jourOff": "Jour off",
+    "complet": "Complet —",
+    "cliquezPourEtrePrevenue": "cliquez pour être prévenue",
+    "passe": "Passé",
+    "choisissezHeure": "Choisissez une heure",
+    "chargementCreneaux": "Chargement des créneaux...",
+    "cestNote": "C'est noté",
+    "attenteConfirmee": "Vous recevrez un e-mail si une place se libère ce jour-là. La place part à la première qui réserve.",
+    "etrePrevenue": "Être prévenue si une place se libère",
+    "verifiezCoordonnees": "Vérifiez le prénom, le téléphone et l'e-mail, puis réessayez.",
+    "coordonneesEffacees": "Vos coordonnées servent uniquement à vous prévenir pour ce jour-là, et sont effacées ensuite.",
+    "mePrevenir": "Me prévenir si une place se libère",
+    "choisirAutreDate": "← Choisir une autre date",
+    "confirmation": "Confirmation",
+    "verifiezDetails": "Vérifiez les détails de votre rendez-vous.",
+    "recapitulatif": "Récapitulatif",
+    "tesInspirations": "Tes inspirations 💅",
+    "unInstant": "Un instant…",
+    "regleeMaintenant": "Réglée maintenant, rien à payer sur place.",
+    "payeMaintenant": "Payé maintenant, déduit du prix de ta prestation.",
+    "fraisCouvrent": "Ils couvrent le service de réservation en ligne :",
+    "fraisRappels": "les rappels automatiques avant ton rendez-vous",
+    "fraisDecaler": "décaler, modifier ou annuler toi-même, sans appeler",
+    "fraisInspirations": "envoyer tes photos d'inspiration à ta praticienne",
+    "fraisFidelite": "ta carte de fidélité, qui se remplit toute seule",
+    "paiementSecurise": "Paiement sécurisé par Stripe — l'argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.",
+    "conditionsUtilisation": "conditions d'utilisation",
+    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés. En réglant, tu acceptes les ",
+    "confidentialite": "Politique de confidentialité",
+    "questionAuDessus": "Une question t'attend juste au-dessus",
+    "lectureImpossible": "Lecture du fichier impossible",
+    "uneQuestion": "une question",
+    "confirmerPlace": "Confirmer cette place",
+    "prendreRdv": "Prendre rendez-vous",
+    "taPraticienne": "Ta praticienne",
+    "taPraticienneMinuscule": "ta praticienne",
+    "troisPhotosTransmises": "Tes 3 photos ont bien été transmises 💅",
+    "choisirAuMoinsUne": "Sélectionnez au moins une prestation",
+    "confirmerModification": "Confirmer la modification",
+    "confirmerPourLe": "Confirmer pour le",
+    "reprogrammerAu": "Reprogrammer au",
+    "masquerDetails": "Masquer les détails",
+    "voirDetails": "Voir les détails",
+    "verificationJours": "Vérification des jours complets…",
+    "verifiezEtValidez": "Vérifiez vos coordonnées et validez.",
+    "laissezCoordonnees": "Laissez vos coordonnées, on vous écrit dès qu'une place se libère.",
+    "contacteeAvant": "Souhaitez-vous être contactée avant votre rendez-vous ?",
+    "contacteeAvantPar": "Souhaitez-vous être contactée par %{pro} avant votre rendez-vous ?",
+    "tonPaiement": "ton paiement",
+    "tonAcompte": "ton acompte",
+    "confirmerReservation": "Confirmer ma réservation",
+    "repondsQuestion": "Réponds à la question au-dessus",
+    "glisserDefiler": "Glisse pour défiler · touche pour fermer",
+    "toucherFermer": "Touche pour fermer",
+    "completPrevenir": "Complet — être prévenue si une place se libère",
+    "retirerPhoto": "Retirer cette photo",
+    "supprimerPhoto": "Supprimer cette photo",
+    "photoPrestation": "Photo de la prestation",
+    "cocheAcompte": "Coche la case d'acceptation de l'acompte avant de payer.",
+    "cochePaiement": "Coche la case d'acceptation du paiement avant de payer.",
+    "cocheEmpreinte": "Coche la case d'autorisation d'empreinte bancaire avant de payer.",
+    "photosTransmises": {
+      "one": "Ta photo d'inspiration a été transmise",
+      "other": "Tes %{count} photos d'inspiration ont été transmises"
+    },
+    "photoTransmise": "Ta photo d'inspiration a été transmise",
+    "montreInspiration": "Montre à %{pro} ce que tu as en tête — elle recevra une notification.",
+    "paliersDansNRdv": "%{label} sur ton %{count}e RDV",
+    "prochainRdv": "Prochain RDV : %{label}",
+    "auProchainRdv": "%{label} au prochain RDV",
+    "montreInspirationAjoute": "Montre à %{pro} ce que tu as en tête — ajoute jusqu'à 3 photos (optionnel).",
+    "reductionPersonnelle": "%{pro} vous fait bénéficier d’une réduction personnelle de %{valeur}",
+    "reductionTousRdv": ", appliquée automatiquement à tous vos rendez-vous.",
+    "reductionProchainsRdv": {
+      "one": ", appliquée automatiquement à votre prochain rendez-vous.",
+      "other": ", appliquée automatiquement à vos %{count} prochains rendez-vous."
+    },
+    "offresEnCours": "Offres en cours",
+    "voirMoins": "Voir moins",
+    "reprogrammer": "Reprogrammer",
+    "commentaireOptionnel": "Commentaire (optionnel)",
+    "importer": "Importer",
+    "prendrePhoto": "Prendre",
+    "annulTardEmpreinte": "Vous annulez à moins de %{delai} h du rendez-vous : %{somme} pourront être prélevés sur votre carte.",
+    "annulTotEmpreinte": "Vous annulez à plus de %{delai} h : rien ne sera prélevé, votre empreinte est libérée.",
+    "annulTardAcompte": "Vous annulez à moins de %{delai} h du rendez-vous : vos %{somme} ne seront pas remboursés.",
+    "annulTotAcompte": "Vous annulez à plus de %{delai} h : vos %{somme} vous seront remboursés.",
+    "confirmerAnnulation": "Annuler votre RDV du %{date} à %{heure} (%{prestation}) ?%{avertissement}",
+    "paiementAnnule": "Ton paiement vient d'être annulé.",
+    "annulationImpossible": "Impossible d'annuler ce rendez-vous.",
+    "modificationImpossible": "Impossible de modifier ce rendez-vous.",
+    "troisDecalages": "Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.",
+    "decalageTropTard": "À moins de 24 h du rendez-vous, le décalage en ligne n'est plus possible. Contacte directement ta praticienne.",
+    "reprogrammationImpossible": "Impossible de reprogrammer ce rendez-vous.",
+    "erreurConsole": "Une erreur est survenue. Ouvre la console (F12) pour voir le détail.",
+    "photoRefusee": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "photosNonEnvoyees": "Tes photos n'ont pas pu être envoyées. Réessaie.",
+    "unePhotoRefusee": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+    "photosRefusees": {
+      "one": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
+      "other": "%{count} photos n'ont pas pu être ajoutées. Réessaie avec d'autres images."
+    },
+    "cocheAcompteResa": "Coche la case d'acceptation de l'acompte pour réserver.",
+    "cocheEmpreinteResa": "Coche la case d'autorisation d'empreinte bancaire pour réserver.",
+    "tropDeResaPaye": "Trop de réservations depuis cet appareil en peu de temps. Ton paiement vient d'être annulé — réessaie dans une heure, ou appelle directement ta praticienne.",
+    "tropDeResa": "Trop de réservations depuis cet appareil en peu de temps. Réessaie dans une heure, ou appelle directement ta praticienne.",
+    "creneauPrisPaye": "Ce créneau n'est plus disponible. Ton paiement vient d'être annulé — choisis un autre horaire.",
+    "paiementPasPret": "Le module de paiement n'est pas prêt. Patiente une seconde et réessaie.",
+    "carteRefusee": "La carte n'a pas pu être validée.",
+    "mesInspirationsPleines": "Mes inspirations (3/3)",
+    "ajouterInspirations": "Ajouter mes inspirations",
+    "emailPlaceholder": "votre@email.com",
+    "fraisReservation": "Frais de réservation",
+    "libelleCliente": "Cliente",
+    "libelleDate": "Date",
+    "libelleHeure": "Heure",
+    "etapeIdentification": "Identification",
+    "etapeTechniques": "Prestations",
+    "etapeDate": "Date",
+    "etapeHeure": "Heure",
+    "envoiEnCours": "Envoi…",
+    "decalageEnCours": "Décalage en cours...",
+    "enregistrementEnCours": "Enregistrement…",
+    "jourDeRepos": "Jour de repos",
+    "nouvelleInspiration": "Nouvelle inspiration",
+    "bonjourPrenom": "Bonjour %{prenom} !",
+    "aucunCreneauDuree": "Aucun créneau de %{duree} disponible ce jour.",
+    "condEmpreinteTitre": "Annulation gratuite jusqu'à %{delai} h avant le RDV",
+    "condEmpreinteSuite": " — passé ce délai ou en cas d'absence, %{total} pourront être prélevés (%{empreinte} d'empreinte + %{frais} de frais).",
+    "condPaiementRembourse": "Paiement remboursé",
+    "condAcompteRembourse": "Acompte remboursé",
+    "condRembourseTitre": "%{quoi} à 100 % jusqu'à %{delai} h avant le RDV",
+    "condRembourseSuite": " — tu changes de plans ? Annule à plus de %{delai} h et %{leTien} de %{somme} te revient intégralement (les frais de réservation restent acquis). À moins de %{delai} h, la somme est conservée par la praticienne.",
+    "consentEmpreinte": "J'autorise le prélèvement de %{somme} en cas d'absence ou d'annulation à moins de %{delai} h.",
+    "consentPaiement": "J'accepte de régler %{somme} maintenant, conservés si absence ou annulation à moins de %{delai} h.",
+    "adresseALaReservation": "L’adresse exacte vous sera communiquée dès votre réservation.",
+    "adresseALaConfirmation": "L’adresse exacte vous sera communiquée à la confirmation de votre présence, la veille.",
+    "adressePorLaPro": "L’adresse exacte vous sera envoyée directement par votre praticienne.",
+    "blocPrestation": "Prestation",
+    "blocAcompte": "Acompte",
+    "blocEmpreinte": "Empreinte bancaire",
+    "rienDebiteAujourdhui": "Rien n'est débité aujourd'hui — uniquement en cas d'absence ou d'annulation à moins de %{delai} h.",
+    "prochaineDispo": "Prochaine dispo le %{date} à %{heure}",
+    "questionsAvant": {
+      "one": "%{pro} a une question à vous poser avant de fixer votre rendez-vous.",
+      "other": "%{pro} a %{count} questions à vous poser avant de fixer votre rendez-vous."
+    },
+    "etapeSur": "Étape %{n}/%{total} — %{nom}",
+    "ongletAccueil": "Accueil",
+    "ongletAvis": "Avis",
+    "ongletAdresse": "Adresse",
+    "reponseOui": "Oui",
+    "reponseNon": "Non",
+    "dureeAuTotal": "%{duree} au total",
+    "dispoPourDuree": "Disponibilités pour une durée de %{duree}.",
+    "inspiPlusTard": " Pas d'inspiration sous la main ? Vous pourrez aussi les ajouter plus tard, depuis le lien de gestion de votre réservation.",
+    "commentairePlaceholder": "Informations supplémentaires pour votre praticienne…",
+    "consentementDonnees": "En confirmant, vous acceptez que vos données soient utilisées uniquement dans le cadre de votre rendez-vous.",
+    "offert": "Offert",
+    "gratuit": "Gratuit",
+    "aPartirDe": "À partir de %{prix}",
+    "empreinteBancaire": "Empreinte bancaire",
+    "prestationReglee": "Prestation réglée",
+    "acompteVerse": "Acompte versé",
+    "deduitDuPrix": "Déduit du prix de votre prestation. Il vous reste %{reste} à régler sur place.",
+    "aucunCreneauCeJour": "Aucun créneau de %{duree} disponible ce jour.",
+    "messageDe": "Message de %{pro}",
+    "vousAvezRepondu": "%{question} — vous avez répondu « %{reponse} »",
+    "exemplePrenom": "Sophie",
+    "exempleNom": "Martin",
+    "ligneAcompte": "Acompte",
+    "ligneSolde": "Solde",
+    "lignePrestation": "Prestation"
+  },
+  "commun": {
+    "chargement": "Chargement...",
+    "retour": "← Retour",
+    "erreur": "Erreur"
+  },
+  "confirmation": {
+    "lienExpire": "Lien expiré",
+    "lienExpireDetail": "Ce lien de confirmation n'est plus valide.",
+    "demanderNouveauLien": "Contactez votre professionnelle pour un nouveau lien.",
+    "dejaConfirme": "RDV déjà confirmé",
+    "votreRdvChez": "Votre rendez-vous chez",
+    "estDejaConfirme": "est déjà confirmé.",
+    "rdvAnnule": "RDV annulé",
+    "rdvAnnuleDetail": "Ce rendez-vous a été annulé.",
+    "votreRdv": "Votre rendez-vous",
+    "decaler": "Décaler mon RDV",
+    "choisirNouvelleDate": "Choisissez une nouvelle date",
+    "aucunCreneau": "Aucun créneau disponible ce jour.",
+    "confirme": "RDV confirmé !",
+    "estConfirme": "est confirmé.",
+    "fermerPage": "Vous pouvez fermer cette page.",
+    "bienAnnule": "Votre rendez-vous a bien été annulé.",
+    "decale": "RDV décalé !",
+    "bienDecale": "Votre rendez-vous a bien été décalé.",
+    "nouvelEmail": "Vous recevrez un nouvel email de confirmation.",
+    "erreurDetail": "Une erreur est survenue. Veuillez réessayer ou contacter votre professionnelle.",
+    "confirmerMonRdv": "Confirmer mon RDV",
+    "annulerMonRdv": "Annuler mon RDV",
+    "creneauPris": "Ce créneau n'est plus disponible. Choisis-en un autre.",
+    "troisPhotosMax": {
+      "one": "3 photos maximum : seule la première a été gardée",
+      "other": "3 photos maximum : seules les %{count} premières ont été gardées"
+    },
+    "instructions": "Instructions pour votre RDV"
+  },
+  "merci": {
+    "introuvable": "Paiement introuvable",
+    "lienExpire": "Le lien a peut-être expiré. Rapproche-toi de ta praticienne.",
+    "verification": "Vérification du paiement…",
+    "enCours": "Paiement en cours",
+    "recharge": "Recharge cette page dans quelques secondes.",
+    "valide": "Paiement validé",
+    "prevenue": "Merci ! Ta praticienne a été prévenue 💅",
+    "facture": "Enregistrer ma facture (PDF)"
+  },
+  "payer": {
+    "lienIndisponible": "Lien indisponible",
+    "dejaRegle": "Déjà réglé",
+    "dejaRegleDetail": "Ce paiement a bien été effectué. Merci 💅",
+    "voirFacture": "Voir ma facture",
+    "indisponible": "Paiement indisponible",
+    "paiementSecurise": "Paiement sécurisé · Glamia Pay",
+    "echec": "Le paiement n'a pas abouti. Réessaie.",
+    "echecCourt": "Le paiement n'a pas abouti.",
+    "regleEnSecuriteAvecPrenom": "Bonjour %{prenom}, règle ta prestation en toute sécurité.",
+    "regleEnSecurite": "Règle ta prestation en toute sécurité.",
+    "enCours": "Paiement…",
+    "payerMontant": "Payer %{montant}",
+    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés."
+  },
+  "avis": {
+    "merci": "Merci !",
+    "merciDetail": "Ton avis est arrivé. Il aidera d'autres clientes à se décider.",
+    "titre": "Ton avis sur ce rendez-vous",
+    "prenomInitiale": "Ton avis s'affichera avec ton prénom et l'initiale de ton nom.",
+    "rdvAnnule": "Rendez-vous annulé",
+    "tropTot": "Un peu tôt",
+    "delaiPasse": "Le délai est passé",
+    "envoyer": "Envoyer mon avis",
+    "lienInconnu": "Ce lien ne correspond à aucun rendez-vous.",
+    "rdvAnnuleDetail": "Ce rendez-vous a été annulé, il n'y a pas d'avis à laisser.",
+    "tropTotDetail": "Tu pourras laisser ton avis une fois le rendez-vous passé.",
+    "delaiPasseDetail": "Ce rendez-vous est trop ancien pour recevoir un avis.",
+    "dejaLaisse": "Ton avis a bien été enregistré. Merci !",
+    "photoIllisible": "Une des photos n'a pas pu être lue. Réessaie avec une autre.",
+    "envoiRate": "L'envoi n'a pas abouti. Réessaie dans un instant.",
+    "envoiRateConnexion": "L'envoi n'a pas abouti. Vérifie ta connexion.",
+    "placeholder": "Ce que tu as pensé du résultat, de l'accueil… (facultatif)",
+    "photo": "Photo",
+    "lienIntrouvable": "Lien introuvable",
+    "dejaEnvoye": "Déjà envoyé"
+  },
+  "stripe": {
+    "reprise": "Connexion à reprendre",
+    "repriseDetail": "Le lien a expiré. Rouvre l’écran « Acomptes & paiements »",
+    "repriseDetail2": "dans Glamia pour reprendre là où tu en étais.",
+    "ouvrirGlamia": "Ouvrir Glamia",
+    "compteValide": "Compte validé !",
+    "paiementsActifs": "Tes paiements sont activés. On te ramène",
+    "versLaCaisse": "à ta caisse Glamia…",
+    "ouvrirMaCaisse": "Ouvrir ma caisse",
+    "ouvertureGlamia": "Ouverture de Glamia...",
+    "telechargerApp": "télécharge l'app sur l'App Store"
+  },
+  "notif": {
+    "uneCliente": "Une cliente",
+    "uneClienteMinuscule": "une cliente",
+    "taPraticienne": "ta praticienne",
+    "rdvDecaleTitre": "📅 RDV décalé",
+    "rdvDecale": "%{prenom} a décalé son RDV du %{avant} au %{apres} à %{heure}",
+    "rdvConfirme": "%{prenom} a confirmé son RDV du %{date} à %{heure}",
+    "rdvAnnule": "%{prenom} a annulé son RDV du %{date} à %{heure}",
+    "avisAvecPrestation": "%{auteur} t'a laissé un avis sur %{prestation}.",
+    "avis": "%{auteur} t'a laissé un avis.",
+    "attenteTitre": "🌸 Une cliente attend une place",
+    "attente": "%{nom} aimerait venir le %{jour} (%{duree}). Elle sera prévenue si une place se libère.",
+    "litige": "Une cliente conteste un prélèvement de %{montant}. Consulte ton espace Stripe pour répondre au litige.",
+    "virementRateTitre": "Ton virement n’est pas parti",
+    "virementRate": "Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.",
+    "compteBloque": "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
+    "compteBloqueTitre": "Compte Stripe à régulariser",
+    "litigeTitre": "Acompte contesté ⚠️",
+    "taCliente": "Ta cliente",
+    "inspirationsTitre": "Nouvelles inspirations 💅",
+    "inspirations": {
+      "one": "%{nom} a ajouté une photo d'inspiration pour son RDV du %{date}.",
+      "other": "%{nom} a ajouté %{count} photos d'inspiration pour son RDV du %{date}."
+    },
+    "paiementRecuTitre": "Paiement reçu 💸",
+    "paiementRecu": "%{montant} de %{prenom} — ta caisse est créditée",
+    "paiementRecuSansNom": "%{montant} — ta caisse est créditée",
+    "prestationsModifiees": "%{prenom} a modifié ses prestations du %{date} à %{heure} : %{prestations}",
+    "nouveauRdvNom": "%{prenom} %{nom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
+    "nouveauRdv": "%{prenom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
+    "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}",
+    "rdvConfirmeTitre": "✅ RDV confirmé",
+    "rdvAnnuleTitre": "❌ RDV annulé",
+    "nouvelAvisTitre": "Nouvel avis %{etoiles}",
+    "rdvModifieTitre": "🌸 RDV modifié",
+    "rdvReprogrammeTitre": "📅 RDV reprogrammé",
+    "nouvelleClienteTitre": "🌸 Nouvelle cliente !",
+    "nouvelleClienteContactTitre": "🌸 Nouvelle cliente · 📞 À contacter",
+    "nouveauRdvTitre": "🌸 Nouveau RDV",
+    "nouveauRdvContactTitre": "🌸 Nouveau RDV · 📞 À contacter",
+    "souhaiteEtreContactee": "📞 %{prenom} souhaite être contactée !"
+  },
+  "creneaux": {
+    "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",
+    "jourFerme": "Cette journée n'est plus ouverte à la réservation. Choisis une autre date.",
+    "creneauRetire": "Ce créneau n'est plus proposé. Choisis-en un autre.",
+    "creneauPris": "Ce créneau vient d'être pris 😔 Choisis-en un autre."
+  },
+  "aide": {
+    "titre": "Aide & assistance",
+    "intro": "Une question, un souci, une idée ? On est là pour vous aider. On lit et on répond à tout, généralement sous 24 à 48 heures (jours ouvrés).",
+    "nousContacter": "Nous contacter",
+    "ecrireEmail": "Écrire à contact@glamia.pro",
+    "ecrireInstagram": "Nous écrire sur Instagram (@glamia.officiel)",
+    "essaiDebut": "À l'installation, vous découvrez",
+    "essaiQuatorzeJours": "tout Glamia gratuitement pendant 14 jours",
+    "abonnementApple": "Les abonnements Glamia sont gérés par Apple. Pour modifier ou résilier : ouvrez",
+    "gererAbonnement": "Gérer ou résilier mon abonnement",
+    "bug": "J'ai un bug ou un souci de connexion",
+    "supprimerCompte": "Supprimer mon compte et mes données",
+    "vousEtesCliente": "Vous êtes cliente et vous avez pris rendez-vous ?",
+    "description": "Besoin d'aide avec Glamia ? Contactez-nous par email ou sur Instagram, et retrouvez les réponses aux questions les plus fréquentes.",
+    "reglages": "Réglages",
+    "abonnements": "Abonnements",
+    "cheminApple": " sur votre iPhone → touchez votre nom en haut → ",
+    "resiliationEffet": "La résiliation prend effet à la fin de la période déjà payée ; vous gardez l'accès jusque-là.",
+    "metaTitre": "Aide & assistance — Glamia",
+    "essaiTitre": "L'essai gratuit, comment ça marche ?",
+    "essaiSuite": "À la fin de l'essai, vous pouvez rester en version gratuite ou passer à Glamia Pro pour les clientes illimitées et les statistiques avancées. Aucun prélèvement n'a lieu tant que vous ne choisissez pas un abonnement.",
+    "payTitre": "Glamia Pay : comment être payée ?",
+    "payTexte": "Depuis l'app, vous pouvez encaisser vos clientes par carte, sans terminal (la carte se pose sur votre iPhone), demander un acompte ou une empreinte à la réservation, et envoyer un lien de paiement par SMS. Tout est suivi dans votre caisse Glamia. Si un paiement ou un remboursement vous pose question, écrivez-nous : on regarde avec vous.",
+    "bugTexte": "Fermez complètement l'application puis rouvrez-la ; si le problème persiste, déconnectez-vous et reconnectez-vous. Si ça ne suffit pas, écrivez-nous à contact@glamia.pro en décrivant ce qu'il se passe (et, si possible, une capture d'écran) : on vous répond rapidement.",
+    "supprimerCompteTexte": "Vous pouvez demander la suppression définitive de votre compte et de toutes vos données à tout moment en nous écrivant à contact@glamia.pro depuis l'adresse de votre compte. La suppression est effectuée sous quelques jours, conformément au RGPD.",
+    "clienteTexte": "Pour modifier ou annuler un rendez-vous, utilisez le lien de réservation que votre professionnelle vous a partagé, ou contactez-la directement. Pour un souci technique sur la réservation en ligne, écrivez-nous à contact@glamia.pro."
+  },
+  "cgu": {
+    "titre": "Conditions Générales d'Utilisation",
+    "maj": "Dernière mise à jour : 19 août 2026",
+    "contact": "Pour toute question :",
+    "sections": [
+      {
+        "titre": "1. Qui nous sommes, et ce que couvrent ces conditions",
+        "paragraphes": [
+          "Glamia est une application de gestion de rendez-vous, de suivi de clientèle et d'encaissement, destinée aux professionnels de la beauté. Les présentes conditions forment un contrat entre vous et Glamia, et s'appliquent chaque fois que vous utilisez l'application, la page de réservation qu'elle publie pour vous, ou tout service qui s'y rattache (ci-après « le Service »).",
+          "Si vous n'acceptez pas ces conditions, n'utilisez pas le Service."
+        ]
+      },
+      {
+        "titre": "2. Qui peut utiliser le Service",
+        "paragraphes": [
+          "Le Service est réservé à un usage professionnel par des professionnels de la beauté. En vous inscrivant, vous déclarez avoir au moins 18 ans, avoir le pouvoir d'engager votre activité, et utiliser le Service dans le cadre de votre activité professionnelle.",
+          "Vos clientes n'ont pas de compte : elles utilisent seulement la page de réservation que vous publiez."
+        ]
+      },
+      {
+        "titre": "3. Votre compte",
+        "paragraphes": [
+          "Vous êtes responsable de la confidentialité de vos identifiants et de tout ce qui est fait depuis votre compte. Prévenez-nous immédiatement si vous pensez qu'il a été utilisé sans votre accord.",
+          "Vous vous engagez à fournir des informations exactes à l'inscription et à les tenir à jour. Nous pouvons suspendre un compte dont les informations sont fausses ou trompeuses."
+        ]
+      },
+      {
+        "titre": "4. Usage autorisé",
+        "paragraphes": [
+          "Vous vous engagez à utiliser le Service pour ce à quoi il sert : gérer vos rendez-vous, suivre vos clientes, et encaisser des prestations que vous réalisez réellement.",
+          "Vous ne devez pas :"
+        ],
+        "liste": [
+          "utiliser le Service de manière illicite, ou pour organiser quoi que ce soit d'illicite ;",
+          "y déposer un contenu illicite, injurieux, ou qui porte atteinte aux droits d'un tiers ;",
+          "tenter d'accéder aux données d'autres professionnelles ou de leurs clientes ;",
+          "copier, revendre, décompiler ou tenter d'extraire le code du Service ;",
+          "vous en servir pour envoyer des messages commerciaux non sollicités en violation de la loi."
+        ]
+      },
+      {
+        "titre": "5. Les données de vos clientes — votre rôle et le nôtre",
+        "paragraphes": [
+          "C'est vous qui décidez quelles informations vous enregistrez sur vos clientes, et pourquoi. Au sens du RGPD, vous en êtes le RESPONSABLE DE TRAITEMENT, et Glamia agit comme votre SOUS-TRAITANT : nous les traitons sur vos instructions, pour faire fonctionner le Service.",
+          "Vous répondez d'avoir une base légale pour collecter et utiliser ces données, et d'en informer vos clientes. Nous répondons de leur sécurité et de ne les utiliser que pour faire tourner le Service.",
+          "Glamia est en revanche responsable de traitement pour VOS PROPRES données de compte : votre inscription, votre abonnement, votre utilisation de l'application.",
+          "Le détail de ce partage, exigé par l'article 28 du RGPD, figure dans notre {confidentialite}."
+        ]
+      },
+      {
+        "titre": "6. Les paiements",
+        "paragraphes": [
+          "Glamia Pay vous permet de demander un acompte, de garder une empreinte bancaire, d'encaisser par carte et d'envoyer des liens de paiement. Les paiements sont traités par Stripe. Glamia n'est pas une banque et ne détient jamais votre argent : les fonds vont de votre cliente à votre propre compte connecté.",
+          "Vous restez responsable des prix que vous fixez, des conditions d'annulation et d'absence que vous affichez à vos clientes, des remboursements que vous devez, et de vos obligations fiscales et comptables.",
+          "Lorsque vous prélevez une empreinte pour une absence, vous devez avoir affiché les conditions à votre cliente AVANT qu'elle ne paie ou n'autorise sa carte. Les contestations bancaires opposent votre cliente et vous ; nous vous remettrons les traces dont nous disposons pour vous aider à y répondre."
+        ]
+      },
+      {
+        "titre": "7. Abonnement et facturation",
+        "paragraphes": [
+          "Les abonnements payants sont vendus par l'App Store et facturés par Apple. Les renouvellements, résiliations et remboursements suivent les règles d'Apple et les réglages de votre compte App Store, pas les nôtres.",
+          "Si votre abonnement s'interrompt, votre compte passe en mode restreint : vos données sont conservées, mais certaines fonctions s'arrêtent. Nous vous prévenons avant."
+        ]
+      },
+      {
+        "titre": "8. Le Service est fourni en l'état",
+        "paragraphes": [
+          "Nous mettons tout en œuvre pour que le Service soit disponible et exact, sans pouvoir garantir un fonctionnement ininterrompu ni exempt d'erreur. Nous sommes tenus d'une obligation de moyens.",
+          "Le Service dépend de tiers — Apple, Stripe, hébergeur, prestataire d'emails, réseaux mobiles. Nous ne répondons pas de leurs défaillances, tout en faisant ce qui est raisonnablement en notre pouvoir pour en limiter l'effet sur vous."
+        ]
+      },
+      {
+        "titre": "9. Notre responsabilité envers vous",
+        "paragraphes": [
+          "Rien dans ces conditions ne limite ni n'exclut notre responsabilité en cas de dommage corporel, de dol ou de faute lourde, ni dans les cas où la loi l'interdit.",
+          "Sous cette réserve, et dans la limite permise par la loi :"
+        ],
+        "liste": [
+          "nous ne répondons pas des pertes indirectes : manque à gagner, perte de clientèle, perte d'image, rendez-vous manqués, économies espérées ;",
+          "nous ne répondons de la perte ou de l'altération de données que dans la limite du rétablissement de la dernière sauvegarde en notre possession ;",
+          "notre responsabilité totale, pour l'ensemble des réclamations nées sur une période de douze mois, est limitée au montant que vous nous avez versé sur cette période, ou à 100 euros si ce montant est supérieur."
+        ]
+      },
+      {
+        "titre": "10. Ce que vous nous garantissez",
+        "paragraphes": [
+          "Vous nous garantissez contre toute réclamation, condamnation, amende ou frais raisonnable que nous supporterions du fait de votre utilisation du Service — en particulier une réclamation de l'une de vos clientes, un manquement au RGPD de votre côté, ou une obligation fiscale ou de droit de la consommation que vous n'auriez pas respectée."
+        ]
+      },
+      {
+        "titre": "11. Propriété intellectuelle",
+        "paragraphes": [
+          "Le Service — sa conception, son code, sa marque, ses contenus — appartient à Glamia. Ces conditions vous donnent le droit de l'utiliser tant que votre compte est ouvert ; elles ne transfèrent aucune propriété.",
+          "Ce que vous mettez dans Glamia reste à vous : vos noms de prestations, vos prix, vos photos, vos fiches clientes. Vous ne nous accordez que l'autorisation nécessaire pour les afficher et les traiter afin de faire fonctionner le Service pour vous."
+        ]
+      },
+      {
+        "titre": "12. Suspension et fermeture du compte",
+        "paragraphes": [
+          "Vous pouvez fermer votre compte à tout moment. Vous pouvez exporter votre fichier clientes avant de partir, y compris si votre abonnement a expiré.",
+          "Nous pouvons suspendre ou fermer un compte qui viole ces conditions, qui met en danger d'autres utilisatrices ou leurs clientes, ou lorsque la loi nous l'impose. Lorsque cela est raisonnablement possible, nous vous prévenons d'abord."
+        ]
+      },
+      {
+        "titre": "13. Modifications",
+        "paragraphes": [
+          "Nous pouvons faire évoluer le Service et ces conditions. Lorsqu'une modification touche substantiellement vos droits, nous vous en informons dans l'application ou par email avant son entrée en vigueur. Continuer à utiliser le Service après cette date vaut acceptation."
+        ]
+      },
+      {
+        "titre": "14. Loi applicable et tribunal compétent",
+        "paragraphes": [
+          "Ces conditions sont régies par le droit français.",
+          "Tout litige relatif à leur formation, leur exécution ou leur interprétation relève de la compétence exclusive des tribunaux de Paris, y compris en cas de pluralité de défendeurs ou d'appel en garantie. Cette clause est conclue entre professionnels, conformément à l'article 48 du code de procédure civile.",
+          "Avant toute action, nous nous engageons mutuellement à rechercher une solution amiable : écrivez-nous, nous répondons."
+        ]
+      },
+      {
+        "titre": "15. Contact",
+        "paragraphes": [
+          "{contact}"
+        ]
+      }
+    ]
+  },
+  "confidentialite": {
+    "titre": "Politique de confidentialité",
+    "maj": "Dernière mise à jour : 19 août 2026",
+    "contact": "Pour exercer vos droits, écrivez-nous à :",
+    "sections": [
+      {
+        "titre": "1. Qui est responsable de vos données",
+        "paragraphes": [
+          "Glamia est une application de gestion de rendez-vous et d'encaissement pour professionnels de la beauté.",
+          "Deux situations différentes coexistent, et la distinction compte :",
+          "Quand vous prenez rendez-vous chez une professionnelle, c'est ELLE qui décide de ce qu'elle enregistre sur vous et pourquoi. Elle en est le responsable de traitement. Glamia agit comme son sous-traitant, au sens de l'article 28 du RGPD : nous conservons et traitons ces données sur ses instructions, pour faire fonctionner sa page de réservation et son agenda. Une demande sur votre fiche s'adresse d'abord à elle ; nous l'aidons à y répondre.",
+          "Quand une professionnelle crée un compte Glamia, Glamia est responsable de traitement pour ses propres données de compte."
+        ]
+      },
+      {
+        "titre": "2. Ce que nous collectons",
+        "paragraphes": [
+          "Lors de la prise de rendez-vous en ligne, nous collectons :"
+        ],
+        "liste": [
+          "prénom et nom ;",
+          "adresse email ;",
+          "numéro de téléphone ;",
+          "prestations choisies, date et heure du rendez-vous ;",
+          "commentaires et photos d'inspiration que vous envoyez, s'il y en a ;",
+          "réponses aux questions que votre professionnelle pose avant la réservation."
+        ]
+      },
+      {
+        "titre": "3. Les paiements",
+        "paragraphes": [
+          "Si vous réglez en ligne — acompte, empreinte bancaire ou paiement Glamia Pay — nous enregistrons le montant, le type et la date de la transaction, ainsi que les identifiants techniques du paiement.",
+          "Les données de votre carte sont saisies et traitées directement par Stripe, prestataire certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs.",
+          "Lorsque vous laissez une empreinte bancaire, aucune somme n'est débitée à la réservation : il s'agit d'une autorisation permettant à votre professionnelle de débiter le montant convenu en cas d'absence non annulée, selon les conditions affichées avant que vous n'autorisiez la carte."
+        ]
+      },
+      {
+        "titre": "4. Pourquoi, et sur quelle base légale",
+        "paragraphes": [
+          "Vos données ne servent qu'à faire fonctionner la réservation : gérer votre rendez-vous, envoyer confirmations et rappels, traiter paiements et remboursements, et permettre à votre professionnelle et à vous d'échanger à propos du rendez-vous.",
+          "Nos bases légales sont l'exécution du service que vous avez demandé (article 6.1.b du RGPD), nos obligations légales et comptables pour les traces de paiement (article 6.1.c), et notre intérêt légitime à maintenir le service sûr et fonctionnel (article 6.1.f)."
+        ]
+      },
+      {
+        "titre": "5. Nous ne vendons pas vos données",
+        "paragraphes": [
+          "Nous ne vendons pas vos données personnelles et ne les partageons à aucune fin publicitaire. Nous ne l'avons jamais fait.",
+          "Elles ne sont accessibles qu'à la professionnelle chez qui vous prenez rendez-vous, et aux prestataires techniques listés ci-dessous."
+        ]
+      },
+      {
+        "titre": "6. Qui d'autre les manipule",
+        "paragraphes": [
+          "Nous faisons appel à des prestataires strictement nécessaires au fonctionnement du service :"
+        ],
+        "liste": [
+          "Hébergement : Supabase, sur des serveurs situés dans l'Union européenne.",
+          "Paiements : Stripe, pour le traitement sécurisé des transactions Glamia Pay.",
+          "Envoi des emails (confirmations, rappels) : notre prestataire d'emailing.",
+          "Notifications : Expo, pour prévenir votre professionnelle sur son téléphone."
+        ]
+      },
+      {
+        "titre": "7. Où vos données sont hébergées",
+        "paragraphes": [
+          "Vos données sont hébergées dans l'Union européenne.",
+          "Lorsqu'un transfert hors de l'Union est nécessaire chez l'un de nos prestataires, il repose sur une décision d'adéquation ou sur les clauses contractuelles types de la Commission européenne, et nous exigeons le même niveau de protection."
+        ]
+      },
+      {
+        "titre": "8. Combien de temps nous les gardons",
+        "paragraphes": [
+          "Vos données de rendez-vous sont conservées pendant la durée de la relation avec votre professionnelle, puis supprimées dans les 12 mois qui suivent votre dernier rendez-vous.",
+          "Les traces de paiement et de facturation sont conservées le temps requis par nos obligations légales et comptables, qui peut être plus long."
+        ]
+      },
+      {
+        "titre": "9. Vos droits",
+        "paragraphes": [
+          "Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation et de portabilité, ainsi que du droit de vous opposer à un traitement fondé sur notre intérêt légitime. Vous pouvez aussi donner des directives sur le sort de vos données après votre décès.",
+          "{contact}",
+          "Nous répondons dans un délai d'un mois. Si la demande porte sur votre fiche chez une professionnelle, nous la transmettons à celle-ci, qui en est responsable."
+        ]
+      },
+      {
+        "titre": "10. Les mineurs",
+        "paragraphes": [
+          "Le service de réservation ne s'adresse pas aux personnes de moins de 16 ans, et nous ne collectons pas sciemment leurs données. Si vous pensez que les données d'un mineur ont été enregistrées, écrivez-nous et nous les supprimerons."
+        ]
+      },
+      {
+        "titre": "11. Cookies",
+        "paragraphes": [
+          "Le site de réservation Glamia n'utilise pas de cookies publicitaires. Seuls des cookies techniques nécessaires au fonctionnement du service sont utilisés."
+        ]
+      },
+      {
+        "titre": "12. Sécurité",
+        "paragraphes": [
+          "Les données sont chiffrées en transit et au repos. Les accès sont limités à ce dont chaque partie du service a besoin. Les données de carte ne sont jamais détenues par nous. Aucun système n'est parfaitement sûr : en cas de violation touchant vos droits, nous en informons sans retard injustifié l'autorité compétente et, lorsque la loi l'exige, vous-même."
+        ]
+      },
+      {
+        "titre": "13. Réclamations",
+        "paragraphes": [
+          "Si notre réponse ne vous satisfait pas, vous pouvez saisir la Commission nationale de l'informatique et des libertés (CNIL), 3 place de Fontenoy, 75007 Paris, ou l'autorité de protection des données de votre pays de résidence."
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "reserveDescription": "Réservez votre rendez-vous beauté en ligne",
+    "siteDescription": "Réservation en ligne chez votre professionnelle de beauté"
+  },
+  "vitrine": {
+    "condAccompagnant": "Accompagnant accepté",
+    "condEnfants": "Enfants acceptés",
+    "condHommes": "Hommes acceptés",
+    "condHandicap": "Accès handicapé",
+    "condParking": "Parking à proximité",
+    "condAnimaux": "Animaux sur place"
+  }
+}

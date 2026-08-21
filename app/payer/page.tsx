@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { traduire, poserLangue, langueActuelle } from '@/lib/i18n'
 import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,8 +16,8 @@ import { symboleDevise } from '@/lib/devise'
 const PINK = '#C2779E'
 const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
 
-// LE MONTANT EST DANS LA MONNAIE DE LA PRO. L'euro était écrit en dur : une
-// cliente suisse lisait « 37,60 € » pour un solde de 37,60 francs.
+// LE MONTANT EST DANS LA MONNAIE DE LA PRO. Il était écrit en euros en dur :
+// une cliente britannique lisait « 30,00 € » sur un acompte en livres.
 const fmt = (c: number, devise?: string | null) =>
   `${(c / 100).toFixed(2).replace('.', ',')} ${symboleDevise(devise)}`
 
@@ -28,6 +29,7 @@ function getStripePromise(compte: string) {
 
 type Details = {
   statut: string
+  langue?: string | null
   devise?: string | null
   stripe_account?: string
   client_secret?: string
@@ -43,7 +45,7 @@ type Details = {
 
 export default function PayerWrapper() {
   return (
-    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>Chargement…</p></Cadre>}>
+    <Suspense fallback={<Cadre><p style={{ color: '#9ca3af' }}>{traduire('commun.chargement')}</p></Cadre>}>
       <Payer />
     </Suspense>
   )
@@ -72,7 +74,13 @@ function Payer() {
     if (!token) { setErreur(true); return }
     fetch(`/api/propay/lien?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
-      .then(j => (j.error ? setErreur(true) : setD(j)))
+      .then(j => {
+        if (j.error) { setErreur(true); return }
+        // La page s'ouvre sur un lien nu : la langue arrive avec les détails,
+        // et doit être posée AVANT le premier rendu des textes.
+        poserLangue(j.langue)
+        setD(j)
+      })
       .catch(() => setErreur(true))
   }, [token])
 
@@ -93,20 +101,20 @@ function Payer() {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>Lien indisponible</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>Ce lien a peut-être expiré. Rapproche-toi de ta praticienne.</p>
+        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>{traduire('payer.lienIndisponible')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>{traduire('merci.lienExpire')}</p>
       </Cadre>
     )
   }
-  if (!d) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>Chargement…</p></Cadre>
+  if (!d) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>{traduire('commun.chargement')}</p></Cadre>
 
   if (d.statut === 'paye') {
     return (
       <Cadre>
         <div style={pastille}><span style={{ color: '#fff', fontSize: 30, fontWeight: 700 }}>✓</span></div>
-        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0, fontFamily: "'Playfair Display', serif" }}>Déjà réglé</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 18px' }}>Ce paiement a bien été effectué. Merci 💅</p>
-        <a href={`/paiement/merci?token=${encodeURIComponent(token)}`} style={boutonLien}>Voir ma facture</a>
+        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0, fontFamily: "'Playfair Display', serif" }}>{traduire('payer.dejaRegle')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 18px' }}>{traduire('payer.dejaRegleDetail')}</p>
+        <a href={`/paiement/merci?token=${encodeURIComponent(token)}`} style={boutonLien}>{traduire('payer.voirFacture')}</a>
       </Cadre>
     )
   }
@@ -115,7 +123,7 @@ function Payer() {
     return (
       <Cadre>
         <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
-        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>Paiement indisponible</h1>
+        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>{traduire('payer.indisponible')}</h1>
       </Cadre>
     )
   }
@@ -127,19 +135,23 @@ function Payer() {
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div style={{ fontSize: 24, fontWeight: 700, color: PINK, letterSpacing: 0.5, fontFamily: "'Playfair Display', serif" }}>Glamia</div>
           <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>
-            {d.cliente_prenom ? `Bonjour ${d.cliente_prenom}, ` : ''}règle ta prestation en toute sécurité.
+            {d.cliente_prenom
+              ? traduire('payer.regleEnSecuriteAvecPrenom', { prenom: d.cliente_prenom })
+              : traduire('payer.regleEnSecurite')}
           </p>
         </div>
 
         {/* Détail toujours visible */}
         <div style={carteDetail}>
           <Ligne
-            label={`${d.type === 'acompte' ? 'Acompte' : d.type === 'solde' ? 'Solde' : 'Prestation'}${d.prestation ? ` — ${d.prestation}` : ''}`}
+            label={`${d.type === 'acompte' ? traduire('resa.ligneAcompte')
+              : d.type === 'solde' ? traduire('resa.ligneSolde')
+              : traduire('resa.lignePrestation')}${d.prestation ? ` — ${d.prestation}` : ''}`}
             val={fmt(d.restant ?? 0, d.devise)}
           />
-          <Ligne label="Frais de réservation" val={fmt(d.frais ?? 0, d.devise)} />
+          <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0, d.devise)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: `1px solid ${PINK}33` }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>Total</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: PINK, fontFamily: "'Playfair Display', serif" }}>{traduire('resa.total')}</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0, d.devise)}</span>
           </div>
         </div>
@@ -147,7 +159,7 @@ function Payer() {
         {/* Carte */}
         <Elements
           stripe={getStripePromise(d.stripe_account)}
-          options={{ clientSecret: d.client_secret, locale: 'fr', appearance, fonts }}
+          options={{ clientSecret: d.client_secret, locale: langueActuelle(), appearance, fonts }}
         >
           <Formulaire token={token} total={d.total ?? 0} devise={d.devise} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
         </Elements>
@@ -157,11 +169,9 @@ function Payer() {
               suisse ou canadienne : sa carte locale est parfaitement normale
               chez elle. Ce qui coûte plus cher, c'est une carte d'un AUTRE pays
               que celui de la praticienne — quel que soit ce pays. */}
-          Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés.
+          {traduire('payer.fraisCarteEtrangere')}
         </p>
-        <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>
-          Paiement sécurisé · Glamia Pay
-        </p>
+        <p style={{ fontSize: 10.5, color: '#b8aeb4', textAlign: 'center', marginTop: 8 }}>{traduire('payer.paiementSecurise')}</p>
       </div>
     </Cadre>
   )
@@ -196,7 +206,7 @@ function Formulaire({ token, total, devise, nom, email }: { token: string; total
       ...(retirerLink ? { confirmParams: { payment_method_data: { billing_details: { name: nom || undefined, email } } } } : {}),
     })
     if (error) {
-      setMsg(error.message ?? "Le paiement n'a pas abouti. Réessaie.")
+      setMsg(error.message ?? traduire('payer.echec'))
       setEnCours(false)
       return
     }
@@ -226,7 +236,7 @@ function Formulaire({ token, total, devise, nom, email }: { token: string; total
         padding: '15px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: enCours ? 'default' : 'pointer',
         opacity: enCours ? 0.6 : 1, fontFamily: "'Poppins', sans-serif",
       }}>
-        {enCours ? 'Paiement…' : `Payer ${fmt(total, devise)}`}
+        {enCours ? traduire('payer.enCours') : traduire('payer.payerMontant', { montant: fmt(total, devise) })}
       </button>
       {msg && <p style={{ color: '#c0392b', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{msg}</p>}
     </>

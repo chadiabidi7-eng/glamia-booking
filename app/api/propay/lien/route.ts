@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
-import { symboleDevise } from '@/lib/devise'
 import { libererEmpreintesRdv } from '../../stripe/webhook/route'
+import { traduireDans } from '@/lib/i18n'
+import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (lien d'encaissement de la fiche RDV).
@@ -51,19 +52,19 @@ async function chargerContexte(token: string) {
     .maybeSingle()
   if (!compte?.account_id) return null
 
-  // LA PAGE COMPTE DANS LA MONNAIE DE LA PRO. Elle s'ouvre sur un lien nu, sans
-  // nom de pro dedans : faute de la lire ici, elle écrivait « € » quoi qu'il
-  // arrive. Une cliente suisse lisait « 37,60 € » pour 37,60 francs — le même
-  // défaut que la page de réservation, corrigé là-bas le 5 août.
+  // LA PAGE DE PAIEMENT PARLE LA LANGUE DE LA PRO, ET COMPTE DANS SA MONNAIE.
+  // Elle s'ouvre sur un lien nu, sans slug : sans ces deux valeurs, elle
+  // repartait en français et en euros chez une pro britannique.
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('devise')
+    .select('langue, devise')
     .eq('id', p.pro_id)
     .maybeSingle()
 
   return {
     p,
     account: compte.account_id,
+    langue: (pro as { langue?: string | null } | null)?.langue ?? null,
     devise: (pro as { devise?: string | null } | null)?.devise ?? 'EUR',
   }
 }
@@ -81,14 +82,32 @@ async function envoyerFacture(paiementId: string) {
   }
 }
 
-async function notifierPro(proId: string, title: string, body: string) {
-  const { data: pro } = await supabaseAdmin.from('profiles').select('push_token').eq('id', proId).maybeSingle()
+/** Prévenir la pro, dans SA langue : on lui passe des clés, pas des phrases. */
+async function notifierPro(
+  proId: string,
+  cleTitre: string,
+  cleCorps: string,
+  valeurs?: Record<string, unknown>,
+) {
+  const { data: pro } = await supabaseAdmin
+    .from('profiles').select('push_token, langue, devise').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
+  const langue = (pro as { langue?: string }).langue
+  // La somme repart dans la monnaie de la pro : la phrase ne porte plus d'euro.
+  const valeursAvecDevise = valeurs?.montantCentimes !== undefined
+    ? { ...valeurs, montant: `${(Number(valeurs.montantCentimes) / 100).toFixed(2)} ${symboleDevise((pro as { devise?: string }).devise)}` }
+    : valeurs
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pro.push_token, title, body, sound: 'default', priority: 'high' }),
+      body: JSON.stringify({
+        to: pro.push_token,
+        title: traduireDans(langue, cleTitre),
+        body: traduireDans(langue, cleCorps, valeursAvecDevise),
+        sound: 'default',
+        priority: 'high',
+      }),
     })
   } catch (e) {
     console.error('[api/propay/lien] notif:', e)
@@ -102,20 +121,21 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
-    const { p, account, devise } = ctx
+    const { p, account, langue, devise } = ctx
 
-    if (p.statut === 'paye') return NextResponse.json({ statut: 'paye', devise })
+    if (p.statut === 'paye') return NextResponse.json({ statut: 'paye', langue, devise })
     if (p.statut !== 'en_attente' || !p.stripe_payment_intent_id) {
-      return NextResponse.json({ statut: p.statut, devise })
+      return NextResponse.json({ statut: p.statut, langue, devise })
     }
 
     const intent = await stripe().paymentIntents.retrieve(p.stripe_payment_intent_id, {}, { stripeAccount: account })
-    if (intent.status === 'succeeded') return NextResponse.json({ statut: 'paye', devise })
+    if (intent.status === 'succeeded') return NextResponse.json({ statut: 'paye', langue, devise })
 
     const restant = p.montant
     const frais = p.frais_reservation ?? 0
     return NextResponse.json({
       statut: 'a_payer',
+      langue,
       devise,
       stripe_account: account,
       client_secret: intent.client_secret,
@@ -170,8 +190,9 @@ export async function POST(req: NextRequest) {
       const prenom = p.rdv?.cliente?.prenom ?? null
       await notifierPro(
         p.pro_id,
-        'Paiement reçu 💸',
-        `${(p.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(devise)}${prenom ? ` de ${prenom}` : ''} — ta caisse est créditée`,
+        'notif.paiementRecuTitre',
+        prenom ? 'notif.paiementRecu' : 'notif.paiementRecuSansNom',
+        { montantCentimes: p.montant, prenom: prenom ?? '' },
       )
       await envoyerFacture(p.id)
     }

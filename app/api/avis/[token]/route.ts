@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
+import { traduireDans } from '@/lib/i18n'
 import { avisFenetreMs } from '@/lib/reglages'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,10 +66,10 @@ async function rdvDuJeton(token: string, colonnes: string) {
 }
 
 /** « Camille Dupont » devient « Camille D. ». */
-function nomCourt(prenom?: string | null, nom?: string | null): string {
+function nomCourt(prenom?: string | null, nom?: string | null, langue?: string | null): string {
   const p = (prenom ?? '').trim()
   const n = (nom ?? '').trim()
-  if (!p && !n) return 'Une cliente'
+  if (!p && !n) return traduireDans(langue, 'notif.uneCliente')
   if (!n) return p
   return `${p} ${n[0].toUpperCase()}.`
 }
@@ -91,7 +92,7 @@ function finDuRdv(heureAffichee: string, dureeMin: number | null, fuseau?: strin
 }
 
 type Etat =
-  | { ouvert: true; pro: string; prestations: string; quand: string }
+  | { ouvert: true; pro: string; prestations: string; quand: string; langue: string }
   | { ouvert: false; raison: 'inconnu' | 'annule' | 'trop_tot' | 'trop_tard' | 'deja' }
 
 async function lireEtat(token: string): Promise<Etat> {
@@ -110,7 +111,7 @@ async function lireEtat(token: string): Promise<Etat> {
   // Le fuseau de la pro se lit d'abord : sans lui, l'heure du rendez-vous ne
   // veut rien dire, et c'est elle qu'on s'apprête à comparer à maintenant.
   const { data: pro } = await supabaseAdmin
-    .from('profiles').select('pseudo, prenom, timezone').eq('id', rdv.pro_id).maybeSingle()
+    .from('profiles').select('pseudo, prenom, timezone, langue').eq('id', rdv.pro_id).maybeSingle()
 
   const fin = finDuRdv(rdv.date as string, rdv.duree as number | null, pro?.timezone as string | null)
   const maintenant = Date.now()
@@ -125,9 +126,15 @@ async function lireEtat(token: string): Promise<Etat> {
 
   return {
     ouvert: true,
-    pro: (pro?.pseudo || pro?.prenom || 'ta praticienne') as string,
+    pro: (pro?.pseudo || pro?.prenom || traduireDans((pro as { langue?: string })?.langue, 'notif.taPraticienne')) as string,
     prestations,
     quand: rdv.date as string,
+    // LA PAGE D'AVIS APPARTIENT À LA PRO, comme sa page de réservation. Elle
+    // suivait la langue du NAVIGATEUR, faute de connaître la pro depuis le
+    // navigateur — mais le serveur, lui, vient de la lire. Une cliente
+    // française d'une pro anglaise voyait un formulaire français au bout d'un
+    // parcours anglais.
+    langue: ((pro as { langue?: string })?.langue ?? 'fr'),
   }
 }
 
@@ -256,7 +263,7 @@ export async function POST(
   // l'avis est déjà écrit.
   try {
     const { data: profil } = await supabaseAdmin
-      .from('profiles').select('push_token').eq('id', rdv.pro_id).maybeSingle()
+      .from('profiles').select('push_token, langue').eq('id', rdv.pro_id).maybeSingle()
     if (profil?.push_token) {
       const etoiles = '★'.repeat(note) + '☆'.repeat(5 - note)
       const auteur = nomCourt(cliente?.prenom as string, cliente?.nom as string)
@@ -265,10 +272,10 @@ export async function POST(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: profil.push_token,
-          title: `Nouvel avis ${etoiles}`,
+          title: traduireDans(profil?.langue, 'notif.nouvelAvisTitre', { etoiles }),
           body: etat.prestations
-            ? `${auteur} t'a laissé un avis sur ${etat.prestations}.`
-            : `${auteur} t'a laissé un avis.`,
+            ? traduireDans(profil?.langue, 'notif.avisAvecPrestation', { auteur, prestation: etat.prestations })
+            : traduireDans(profil?.langue, 'notif.avis', { auteur }),
           sound: 'default',
           data: { type: 'avis' },
         }),

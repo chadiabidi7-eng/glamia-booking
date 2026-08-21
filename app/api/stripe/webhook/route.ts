@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
+import { traduireDans } from '@/lib/i18n'
 import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,13 +40,37 @@ export async function libererEmpreintesRdv(rdvId: string) {
   }
 }
 
-async function pousserNotifPro(proId: string, title: string, body: string) {
-  const { data: pro } = await supabaseAdmin.from('profiles').select('push_token').eq('id', proId).maybeSingle()
+/**
+ * Prévenir une pro, DANS SA LANGUE.
+ *
+ * On lui passe des clés, pas des phrases : le serveur sert toutes les pros, et
+ * c'est ici — au moment où l'on va chercher son jeton — qu'on sait enfin
+ * laquelle. Sa langue est lue au même endroit, ça ne coûte rien de plus.
+ */
+async function pousserNotifPro(
+  proId: string,
+  cleTitre: string,
+  cleCorps: string,
+  valeurs?: Record<string, unknown>,
+) {
+  const { data: pro } = await supabaseAdmin
+    .from('profiles').select('push_token, langue, devise').eq('id', proId).maybeSingle()
   if (!pro?.push_token) return
+  const langue = (pro as { langue?: string }).langue
+  // LES SOMMES SONT DANS LA MONNAIE DE LA PRO. Les phrases portaient un « € »
+  // écrit en dur : une pro britannique lisait « 30.00 € » pour un encaissement
+  // en livres. Le montant arrive en centimes, il repart avec son symbole.
+  const valeursAvecDevise = valeurs?.montantCentimes !== undefined
+    ? { ...valeurs, montant: `${(Number(valeurs.montantCentimes) / 100).toFixed(2)} ${symboleDevise((pro as { devise?: string }).devise)}` }
+    : valeurs
   await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: pro.push_token, title, body }),
+    body: JSON.stringify({
+      to: pro.push_token,
+      title: traduireDans(langue, cleTitre),
+      body: traduireDans(langue, cleCorps, valeursAvecDevise),
+    }),
   })
 }
 
@@ -135,8 +160,8 @@ export async function POST(req: NextRequest) {
         if (avant?.charges_enabled === true && !nowEnabled && avant.pro_id) {
           await pousserNotifPro(
             avant.pro_id,
-            'Compte Stripe à régulariser',
-            "Ton compte Stripe n'accepte plus les paiements. Régularise-le dans ta Caisse pour continuer à encaisser.",
+            'notif.compteBloqueTitre',
+            'notif.compteBloque',
           )
         }
         break
@@ -191,10 +216,9 @@ export async function POST(req: NextRequest) {
           const nom = cli ? [cli.prenom, cli.nom].filter(Boolean).join(' ') : null
           await pousserNotifPro(
             paiement.pro_id,
-            'Paiement reçu 💸',
-            // Le symbole vient du paiement lui-même : c'est la monnaie dans
-            // laquelle l'argent a réellement bougé, pas une supposition.
-            `${(paiement.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(intent.currency?.toUpperCase())}${nom ? ` de ${nom}` : ''} — ta caisse est créditée`,
+            'notif.paiementRecuTitre',
+            nom ? 'notif.paiementRecu' : 'notif.paiementRecuSansNom',
+            { montantCentimes: paiement.montant, prenom: nom ?? '' },
           )
           // Facture rose à la cliente (edge fn qui a la clé Resend)
           fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/envoyer-facture`, {
@@ -238,8 +262,9 @@ export async function POST(req: NextRequest) {
           if (paiement) {
             await pousserNotifPro(
               paiement.pro_id,
-              'Acompte contesté ⚠️',
-              `Une cliente conteste un prélèvement de ${(paiement.montant / 100).toFixed(2).replace('.', ',')} ${symboleDevise(litige.currency?.toUpperCase())}. Consulte ton espace Stripe pour répondre au litige.`,
+              'notif.litigeTitre',
+              'notif.litige',
+              { montantCentimes: paiement.montant },
             )
           }
         }
@@ -281,8 +306,8 @@ export async function POST(req: NextRequest) {
         if (event.type === 'payout.failed' && lien?.pro_id) {
           await pousserNotifPro(
             lien.pro_id,
-            'Ton virement n’est pas parti',
-            'Ta banque a refusé le virement de ta caisse. Vérifie ton IBAN dans ta Caisse — ton argent est toujours là.',
+            'notif.virementRateTitre',
+            'notif.virementRate',
           )
         }
         console.log(`[stripe/webhook] virement ${virement.status} — ${(virement.amount / 100).toFixed(2)} ${virement.currency} — ${compte}`)

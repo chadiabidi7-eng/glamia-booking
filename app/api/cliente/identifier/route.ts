@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — reconnaître une cliente à son numéro, ou la créer.
@@ -19,12 +20,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function normalizePhone(tel: string): string {
-  let n = (tel ?? '').replace(/[\s\-.()]/g, '')
-  if (n.startsWith('+33')) n = '0' + n.slice(3)
-  if (n.startsWith('0033')) n = '0' + n.slice(4)
-  return n
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
     }
 
-    const cible = normalizePhone(telephone)
+    const cible = normaliserTelephone(telephone)
     // Un numéro trop court reconnaîtrait n'importe qui : on refuse plutôt que
     // de renvoyer une cliente au hasard à quelqu'un qui tâtonne.
     if (cible.length < 9) {
@@ -54,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: 'lecture' }, { status: 500 })
 
-    const trouvee = (clientes ?? []).find(c => normalizePhone(c.telephone as string) === cible) ?? null
+    const trouvee = (clientes ?? []).find(c => normaliserTelephone(c.telephone as string) === cible) ?? null
     if (trouvee) return NextResponse.json({ cliente: trouvee, creee: false })
 
     if (!creer) return NextResponse.json({ cliente: null })

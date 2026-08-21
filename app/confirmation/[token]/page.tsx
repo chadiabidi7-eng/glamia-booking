@@ -5,6 +5,8 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
 import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
+import { poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
+import { poserPays } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
 // Types
@@ -44,7 +46,7 @@ async function compresserImage(file: File): Promise<string> {
   const dataUrl: string = await new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as string)
-    reader.onerror = () => reject(new Error('Lecture du fichier impossible'))
+    reader.onerror = () => reject(new Error(traduire('resa.lectureImpossible')))
     reader.readAsDataURL(file)
   })
   const img: HTMLImageElement = await new Promise((resolve, reject) => {
@@ -89,7 +91,7 @@ function SectionInspirations({
     if (fichiers.length === 0 || restant <= 0 || envoi) return
     const aTraiter = fichiers.slice(0, restant)
     if (fichiers.length > restant) {
-      alert(`3 photos maximum : ${restant === 1 ? 'seule la première a été gardée' : `seules les ${restant} premières ont été gardées`}.`)
+      alert(traduire('confirmation.troisPhotosMax', { count: restant }))
     }
     setEnvoi(true)
     try {
@@ -105,7 +107,7 @@ function SectionInspirations({
       onAjout(json.inspirations)
     } catch (err) {
       console.error('[confirmation] inspirations:', err)
-      alert("Tes photos n'ont pas pu être envoyées. Réessaie.")
+      alert(traduire('resa.photosNonEnvoyees'))
     } finally {
       setEnvoi(false)
     }
@@ -137,7 +139,7 @@ function SectionInspirations({
         }}>
           <Sparkles size={15} color="#fff" />
         </span>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>Tes inspirations 💅</span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{traduire('resa.tesInspirations')}</span>
       </div>
       <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
         {photos.length >= 3
@@ -170,7 +172,7 @@ function InstructionsBox({ instructions }: { instructions: string | null }) {
     <div style={{ background: '#FFF8E1', borderRadius: 16, padding: 16, border: '1.5px solid #F5C27A', marginBottom: 24, textAlign: 'left', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <FileText size={18} color="#E67E22" />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Instructions pour votre RDV</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#E67E22', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{traduire('confirmation.instructions')}</span>
       </div>
       <p style={{ fontSize: 14, color: '#1f2937', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>{instructions}</p>
     </div>
@@ -219,7 +221,7 @@ const MOIS_LONG = [
 // ─────────────────────────────────────────────
 export default function ConfirmationPageWrapper() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>Chargement...</p></div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>{traduire('commun.chargement')}</p></div>}>
       <ConfirmationPage />
     </Suspense>
   )
@@ -247,6 +249,7 @@ function ConfirmationPage() {
 
   // ── Chargement initial ──────────────────────
   useEffect(() => {
+    poserLangueSansPro();
     if (!token) { setState('error'); return }
 
     const load = async () => {
@@ -258,6 +261,8 @@ function ConfirmationPage() {
         if (!res.ok) { setState('error'); return }
 
         const info: RdvInfo = await res.json()
+        poserLangue((info as { pro_langue?: string }).pro_langue)
+        poserPays((info as { pro_pays?: string }).pro_pays)
         setRdv(info)
         console.log('[confirmation] RDV chargé:', info.id, 'statut:', info.statut)
 
@@ -371,7 +376,7 @@ function ConfirmationPage() {
         // grille à jour. L'écran d'erreur générique la mettait dehors, sans
         // rien lui expliquer, avec son rendez-vous d'origine intact et aucun
         // moyen de comprendre pourquoi.
-        let message = "Ce créneau n'est plus disponible. Choisis-en un autre."
+        let message = traduire('confirmation.creneauPris')
         try {
           const refus = await res.json()
           if (refus?.message) message = refus.message
@@ -401,6 +406,7 @@ function ConfirmationPage() {
       <style>{`
         .glamia-btn-confirm {
           width: 100%;
+import { traduire } from '@/lib/i18n';
           padding: 16px;
           border-radius: 16px;
           border: none;
@@ -443,7 +449,7 @@ function ConfirmationPage() {
         {state === 'loading' && (
           <div style={S.center}>
             <div style={S.spinner} />
-            <p style={S.grayText}>Chargement...</p>
+            <p style={S.grayText}>{traduire('commun.chargement')}</p>
           </div>
         )}
 
@@ -453,11 +459,8 @@ function ConfirmationPage() {
             <div style={S.iconCircle}>
               <span style={{ fontSize: 36 }}>🔗</span>
             </div>
-            <h2 style={S.h2}>Lien expiré</h2>
-            <p style={S.grayText}>
-              Ce lien de confirmation n&apos;est plus valide.<br />
-              Contactez votre professionnelle pour un nouveau lien.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.lienExpire')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.lienExpireDetail')}<br />{traduire('confirmation.demanderNouveauLien')}</p>
           </div>
         )}
 
@@ -467,10 +470,8 @@ function ConfirmationPage() {
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
               <CheckCircle size={36} color={GLAMIA_PINK} />
             </div>
-            <h2 style={S.h2}>RDV déjà confirmé</h2>
-            <p style={S.grayText}>
-              Votre rendez-vous chez <strong>{proDisplayName}</strong> est déjà confirmé.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.dejaConfirme')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}<strong>{proDisplayName}</strong>{traduire('confirmation.estDejaConfirme')}</p>
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
@@ -495,10 +496,8 @@ function ConfirmationPage() {
             <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
               <XCircle size={36} color="#ef4444" />
             </div>
-            <h2 style={S.h2}>RDV annulé</h2>
-            <p style={S.grayText}>
-              Ce rendez-vous a été annulé.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.rdvAnnule')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.rdvAnnuleDetail')}</p>
           </div>
         )}
 
@@ -521,7 +520,7 @@ function ConfirmationPage() {
 
             {/* Infos RDV */}
             <div style={S.card}>
-              <p style={S.cardLabel}>Votre rendez-vous</p>
+              <p style={S.cardLabel}>{traduire('confirmation.votreRdv')}</p>
               <div style={S.cardRow}>
                 <span style={S.cardIcon}><Calendar size={18} color={GLAMIA_PINK} /></span>
                 <span style={S.cardValue}>{formatDateFr(rdv.date)}</span>
@@ -565,14 +564,14 @@ function ConfirmationPage() {
                 onClick={handleConfirmer}
                 disabled={acting}
               >
-                {acting ? 'Confirmation...' : 'Confirmer mon RDV'}
+                {acting ? 'Confirmation...' : traduire('confirmation.confirmerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"
                 onClick={handleAnnuler}
                 disabled={acting}
               >
-                {acting ? 'Annulation...' : 'Annuler mon RDV'}
+                {acting ? 'Annulation...' : traduire('confirmation.annulerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"
@@ -580,14 +579,13 @@ function ConfirmationPage() {
                 disabled={acting}
                 style={{ borderColor: PINK, color: PINK }}
               >
-                <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Décaler mon RDV
-              </button>
+                <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{traduire('confirmation.decaler')}</button>
             </div>
 
             {/* ── Interface de décalage ── */}
             {showDecaler && rdv.horaires && (
               <div style={{ marginTop: 24 }}>
-                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>Choisissez une nouvelle date</p>
+                <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>{traduire('confirmation.choisirNouvelleDate')}</p>
 
                 {/* Navigation mois */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -656,9 +654,9 @@ function ConfirmationPage() {
                       </div>
                     )}
                     {loadingSlots ? (
-                      <p style={{ color: PINK, fontSize: 14 }}>Chargement des créneaux...</p>
+                      <p style={{ color: PINK, fontSize: 14 }}>{traduire('resa.chargementCreneaux')}</p>
                     ) : decSlots.filter(s => s.disponible).length === 0 ? (
-                      <p style={{ color: '#6b7280', fontSize: 14 }}>Aucun créneau disponible ce jour.</p>
+                      <p style={{ color: '#6b7280', fontSize: 14 }}>{traduire('confirmation.aucunCreneau')}</p>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         {decSlots.filter(s => s.disponible).map(s => (
@@ -687,7 +685,7 @@ function ConfirmationPage() {
                     disabled={acting}
                     style={{ marginTop: 16 }}
                   >
-                    {acting ? 'Décalage en cours...' : `Décaler au ${formatDateFr(decDate)} à ${decHeure}`}
+                    {acting ? traduire('resa.decalageEnCours') : `Décaler au ${formatDateFr(decDate)} à ${decHeure}`}
                   </button>
                 )}
               </div>
@@ -701,10 +699,8 @@ function ConfirmationPage() {
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
               <CheckCircle size={44} color={GLAMIA_PINK} />
             </div>
-            <h2 style={S.h2}>RDV confirmé !</h2>
-            <p style={S.grayText}>
-              Votre rendez-vous chez <strong>{proDisplayName}</strong> est confirmé.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.confirme')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}<strong>{proDisplayName}</strong>{traduire('confirmation.estConfirme')}</p>
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
@@ -718,9 +714,7 @@ function ConfirmationPage() {
             <div style={{ marginTop: 16, width: '100%' }}>
               <InstructionsBox instructions={rdv.instructions} />
             </div>
-            <p style={{ ...S.grayText, fontSize: 13 }}>
-              Vous pouvez fermer cette page.
-            </p>
+            <p style={{ ...S.grayText, fontSize: 13 }}>{traduire('confirmation.fermerPage')}</p>
           </div>
         )}
 
@@ -730,13 +724,9 @@ function ConfirmationPage() {
             <div style={{ ...S.iconCircle, background: '#FFEBEE' }}>
               <XCircle size={44} color="#ef4444" />
             </div>
-            <h2 style={S.h2}>RDV annulé</h2>
-            <p style={S.grayText}>
-              Votre rendez-vous a bien été annulé.
-            </p>
-            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
-              Vous pouvez fermer cette page.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.rdvAnnule')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.bienAnnule')}</p>
+            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>{traduire('confirmation.fermerPage')}</p>
           </div>
         )}
 
@@ -746,10 +736,8 @@ function ConfirmationPage() {
             <div style={{ ...S.iconCircle, background: '#E8F5E9' }}>
               <Calendar size={44} color={GLAMIA_PINK} />
             </div>
-            <h2 style={S.h2}>RDV décalé !</h2>
-            <p style={S.grayText}>
-              Votre rendez-vous a bien été décalé.
-            </p>
+            <h2 style={S.h2}>{traduire('confirmation.decale')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.bienDecale')}</p>
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(decDate)} à {decHeure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
@@ -757,9 +745,7 @@ function ConfirmationPage() {
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>
               )}
             </div>
-            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>
-              Vous recevrez un nouvel email de confirmation.
-            </p>
+            <p style={{ ...S.grayText, fontSize: 13, marginTop: 16 }}>{traduire('confirmation.nouvelEmail')}</p>
           </div>
         )}
 
@@ -769,10 +755,8 @@ function ConfirmationPage() {
             <div style={S.iconCircle}>
               <AlertCircle size={36} color="#854F0B" />
             </div>
-            <h2 style={S.h2}>Erreur</h2>
-            <p style={S.grayText}>
-              Une erreur est survenue. Veuillez réessayer ou contacter votre professionnelle.
-            </p>
+            <h2 style={S.h2}>{traduire('commun.erreur')}</h2>
+            <p style={S.grayText}>{traduire('confirmation.erreurDetail')}</p>
           </div>
         )}
       </div>
