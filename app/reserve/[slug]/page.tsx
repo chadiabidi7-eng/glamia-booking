@@ -19,6 +19,7 @@ import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCirc
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs } from '@/lib/heures-dates'
+import { etiquette } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
 // Types
@@ -267,14 +268,14 @@ function formatDuree(min: number) {
 }
 
 function formatDateLong(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString(etiquette(), {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
 
 /** « mardi 18 août » — l'année n'apprend rien quand c'est dans les trois mois. */
 function formatDateCourte(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString(etiquette(), {
     weekday: 'long', day: 'numeric', month: 'long',
   })
 }

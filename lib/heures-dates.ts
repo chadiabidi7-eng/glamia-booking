@@ -33,6 +33,30 @@ export function poserPays(pays: string | null | undefined) {
   paysDeLaPro = pays ?? undefined;
 }
 
+/**
+ * L'étiquette de langue quand on la connaît SANS contexte de page.
+ *
+ * Les routes serveur n'ont pas de « langue courante » : elles traitent la
+ * demande d'une pro, dont elles viennent de lire la langue en base. Elles
+ * écrivaient donc leurs dates en 'fr-FR' en dur — une notification à une pro
+ * anglaise annonçait « mercredi 15 juillet ».
+ */
+export function etiquetteDe(langue: string | null | undefined, pays?: string | null): string {
+  const l = langue === 'en' || langue === 'es' ? langue : 'fr';
+  const p = (pays ?? '').toUpperCase();
+  if (l === 'fr') return p === 'CA' ? 'fr-CA' : 'fr-FR';
+  if (l === 'es') {
+    if (p === 'MX') return 'es-MX';
+    if (p === 'CO') return 'es-CO';
+    if (p === 'AR') return 'es-AR';
+    return 'es-ES';
+  }
+  if (p === 'US') return 'en-US';
+  if (p === 'CA') return 'en-CA';
+  if (p === 'AU') return 'en-AU';
+  return 'en-GB';
+}
+
 export function etiquette(): string {
   const langue = langueActuelle();
   const pays = (paysDeLaPro ?? '').toUpperCase();

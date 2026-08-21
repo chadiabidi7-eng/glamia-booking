@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Camera, CheckCircle, ImagePlus, X } from 'lucide-react'
 import { preparerPhotoAvis, type PhotoPreparee } from '@/lib/photo-avis'
 import { traduire, poserLangueSansPro } from '@/lib/i18n'
+import { etiquette } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // « Laisse ton avis » — la page que la cliente ouvre après son rendez-vous.
@@ -135,7 +136,7 @@ export default function PageAvis() {
     )
   }
 
-  const jour = new Date(etat.quand).toLocaleDateString('fr-FR', {
+  const jour = new Date(etat.quand).toLocaleDateString(etiquette(), {
     weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
   })
 

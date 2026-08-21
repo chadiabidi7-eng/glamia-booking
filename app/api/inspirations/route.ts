@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
+import { etiquetteDe } from '@/lib/heures-dates'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -19,9 +20,9 @@ function normalizePhone(tel: string): string {
 }
 
 // « mercredi 15 juillet à 14:30 » (les dates RDV sont stockées en heure murale, lues en UTC)
-function formatRdvFr(iso: string): string {
+function formatRdvFr(iso: string, langue?: string | null): string {
   const d = new Date(iso)
-  const jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+  const jour = d.toLocaleDateString(etiquetteDe(langue), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
   const heure = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
   return `${jour} à ${heure}`
 }
@@ -174,7 +175,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             to: pro.push_token,
             title: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirationsTitre'),
-            body: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirations', { nom: nomCliente, count: urls.length, date: formatRdvFr(rdv.date) }),
+            body: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirations', { nom: nomCliente, count: urls.length, date: formatRdvFr(rdv.date, (pro as { langue?: string })?.langue) }),
           }),
         })
       }

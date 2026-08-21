@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
+import { etiquetteDe } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     if (pro?.push_token) {
       const [a, m, j] = (jour as string).split('-').map(Number)
-      const jourLisible = new Date(Date.UTC(a, m - 1, j)).toLocaleDateString('fr-FR', {
+      const jourLisible = new Date(Date.UTC(a, m - 1, j)).toLocaleDateString(etiquetteDe(pro?.langue), {
         weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
       })
       const h = Math.floor(duree / 60)
