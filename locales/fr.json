@@ -216,7 +216,12 @@
     "deduitDuPrix": "Déduit du prix de votre prestation. Il vous reste %{reste} à régler sur place.",
     "aucunCreneauCeJour": "Aucun créneau de %{duree} disponible ce jour.",
     "messageDe": "Message de %{pro}",
-    "vousAvezRepondu": "%{question} — vous avez répondu « %{reponse} »"
+    "vousAvezRepondu": "%{question} — vous avez répondu « %{reponse} »",
+    "exemplePrenom": "Sophie",
+    "exempleNom": "Martin",
+    "ligneAcompte": "Acompte",
+    "ligneSolde": "Solde",
+    "lignePrestation": "Prestation"
   },
   "commun": {
     "chargement": "Chargement...",
@@ -337,7 +342,9 @@
     "prestationsModifiees": "%{prenom} a modifié ses prestations du %{date} à %{heure} : %{prestations}",
     "nouveauRdvNom": "%{prenom} %{nom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
     "nouveauRdv": "%{prenom} a pris RDV pour %{prestations} le %{date} à %{heure}%{appel}",
-    "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}"
+    "rdvReprogramme": "%{prenom} a reprogrammé son RDV au %{date} à %{heure}",
+    "rdvConfirmeTitre": "✅ RDV confirmé",
+    "rdvAnnuleTitre": "❌ RDV annulé"
   },
   "creneaux": {
     "jourIndisponible": "Cette journée n'est plus disponible. Choisis une autre date.",

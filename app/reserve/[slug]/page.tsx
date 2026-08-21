@@ -3999,11 +3999,11 @@ export default function ReservationPage() {
                   <div style={{ display: 'flex', gap: 12 }}>
                     <div style={{ flex: 1 }}>
                       <label style={S.label}>{traduire('resa.prenom')}</label>
-                      <input type="text" value={clientePrenom} onChange={e => setClientePrenom(e.target.value)} placeholder="Sophie" style={S.input} autoCapitalize="words" />
+                      <input type="text" value={clientePrenom} onChange={e => setClientePrenom(e.target.value)} placeholder={traduire('resa.exemplePrenom')} style={S.input} autoCapitalize="words" />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={S.label}>{traduire('resa.nom')}</label>
-                      <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder="Martin" style={S.input} autoCapitalize="words" />
+                      <input type="text" value={clienteNom} onChange={e => setClienteNom(e.target.value)} placeholder={traduire('resa.exempleNom')} style={S.input} autoCapitalize="words" />
                     </div>
                   </div>
                   <div style={{ marginTop: 4 }}>

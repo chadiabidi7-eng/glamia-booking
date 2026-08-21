@@ -3,16 +3,17 @@ import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
 import { traduireDans } from '@/lib/i18n'
+import { etiquetteDe } from '@/lib/heures-dates'
 
-const MOIS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
-const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+// Les noms de jours et de mois étaient écrits en français, en dur. Une pro
+// anglaise recevait « mercredi 15 juillet » dans sa notification. On les
+// demande au formateur du navigateur, dans la langue de la pro.
 
-function formatDateFr(iso: string): string {
+function formatDateFr(iso: string, langue?: string | null): string {
   const d = new Date(iso + 'T00:00:00')
-  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+  return d.toLocaleDateString(etiquetteDe(langue), {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
 }
 
 const supabaseAdmin = createClient(
@@ -272,7 +273,7 @@ export async function POST(
           body: JSON.stringify({
             to: proData.push_token,
             title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
-            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr), apres: formatDateFr(newDateStr), heure: newHeureStr }),
+            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
           }),
         })
       }
@@ -305,7 +306,7 @@ export async function POST(
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
-              date: formatDateFr(newDateStr),
+              date: formatDateFr(newDateStr, proData?.langue),
               heure: newHeureStr,
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
               prix_total: rdvFull?.prix ?? 0,
@@ -373,9 +374,9 @@ export async function POST(
       const clientePrenom = cliente?.prenom ?? traduireDans(pro?.langue, 'notif.uneClienteMinuscule')
       const dateStr = (rdv.date as string).slice(0, 10)
       const heureStr = (rdv.date as string).slice(11, 16)
-      const dateFr = formatDateFr(dateStr)
+      const dateFr = formatDateFr(dateStr, pro?.langue)
 
-      const title = action === 'confirmer' ? '✅ RDV confirmé' : '❌ RDV annulé'
+      const title = traduireDans(pro?.langue, action === 'confirmer' ? 'notif.rdvConfirmeTitre' : 'notif.rdvAnnuleTitre')
       const body = action === 'confirmer'
         ? traduireDans(pro?.langue, 'notif.rdvConfirme', { prenom: clientePrenom, date: dateFr, heure: heureStr })
         : traduireDans(pro?.langue, 'notif.rdvAnnule', { prenom: clientePrenom, date: dateFr, heure: heureStr })

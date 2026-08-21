@@ -216,7 +216,12 @@
     "deduitDuPrix": "Taken off the price of your service. %{reste} left to pay on the day.",
     "aucunCreneauCeJour": "No %{duree} slot available on this day.",
     "messageDe": "Message from %{pro}",
-    "vousAvezRepondu": "%{question} — you answered “%{reponse}”"
+    "vousAvezRepondu": "%{question} — you answered “%{reponse}”",
+    "exemplePrenom": "Emily",
+    "exempleNom": "Turner",
+    "ligneAcompte": "Deposit",
+    "ligneSolde": "Balance",
+    "lignePrestation": "Service"
   },
   "commun": {
     "chargement": "Loading...",
@@ -337,7 +342,9 @@
     "prestationsModifiees": "%{prenom} changed her services on %{date} at %{heure}: %{prestations}",
     "nouveauRdvNom": "%{prenom} %{nom} booked %{prestations} on %{date} at %{heure}%{appel}",
     "nouveauRdv": "%{prenom} booked %{prestations} on %{date} at %{heure}%{appel}",
-    "rdvReprogramme": "%{prenom} rescheduled her appointment to %{date} at %{heure}"
+    "rdvReprogramme": "%{prenom} rescheduled her appointment to %{date} at %{heure}",
+    "rdvConfirmeTitre": "✅ Appointment confirmed",
+    "rdvAnnuleTitre": "❌ Appointment cancelled"
   },
   "creneaux": {
     "jourIndisponible": "That day is no longer available. Please choose another date.",

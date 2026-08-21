@@ -130,7 +130,9 @@ function Payer() {
         {/* Détail toujours visible */}
         <div style={carteDetail}>
           <Ligne
-            label={`${d.type === 'acompte' ? 'Acompte' : d.type === 'solde' ? 'Solde' : 'Prestation'}${d.prestation ? ` — ${d.prestation}` : ''}`}
+            label={`${d.type === 'acompte' ? traduire('resa.ligneAcompte')
+              : d.type === 'solde' ? traduire('resa.ligneSolde')
+              : traduire('resa.lignePrestation')}${d.prestation ? ` — ${d.prestation}` : ''}`}
             val={fmt(d.restant ?? 0)}
           />
           <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0)} />
