@@ -40,6 +40,22 @@ export async function POST(req: NextRequest) {
     const pushBody = await pushRes.text()
     console.log('[api/push-notify] Push envoyé:', pushRes.status, pushBody)
 
+    // ── LE JOURNAL DES ENVOIS ──────────────────────────────────────────────
+    // Une ligne par notification partie. Sans elle, impossible de vérifier
+    // qu'à chaque rendez-vous correspond bien une notification à la pro — et
+    // c'est exactement ce contrôle qui a manqué huit jours sur les cartes
+    // refusées. L'écriture ne doit JAMAIS faire échouer l'envoi : une
+    // notification partie et non notée vaut mieux qu'une notification bloquée
+    // par sa comptabilité.
+    if (pushRes.ok) {
+      try {
+        await supabaseAdmin.from('envois_journal')
+          .insert({ pro_id: proId, type: 'notif_nouveau_rdv' })
+      } catch (e) {
+        console.error('[api/push-notify] envoi non noté', e)
+      }
+    }
+
     return NextResponse.json({ sent: true, status: pushRes.status })
   } catch (e) {
     console.error('[api/push-notify] Erreur push:', e)
