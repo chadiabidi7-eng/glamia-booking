@@ -2612,6 +2612,11 @@ export default function ReservationPage() {
             await fetch('/api/propay/reservation', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              // TROIS SECONDES, PAS UNE DE PLUS. C'est un filet de sécurité,
+              // posé juste avant l'encaissement : s'il tarde, il fait attendre
+              // une cliente devant son paiement. Mieux vaut réserver sans filet
+              // qu'abandonner devant un bouton qui tourne.
+              signal: AbortSignal.timeout(3000),
               body: JSON.stringify({
                 pro_id: pro.id,
                 intent_id: propay.intent_id,
