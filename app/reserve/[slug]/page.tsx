@@ -2597,6 +2597,36 @@ export default function ReservationPage() {
             : traduire('resa.cocheEmpreinteResa'))
           return
         }
+        // ── LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI ─────────────────
+        // Si la connexion meurt juste après l'encaissement, il ne restait
+        // qu'un numéro de paiement : ni nom, ni créneau, ni prestation. Une
+        // cliente d'Ilana Douceur a ainsi payé le 24 août 2026 un rendez-vous
+        // qui n'a jamais existé, et personne n'a pu dire ce qu'elle voulait.
+        //
+        // On pose donc la réservation sur le paiement AVANT qu'il parte. Le
+        // vérificateur des paiements sans rendez-vous saura le recréer seul.
+        //
+        // JAMAIS BLOQUANT : si ça échoue, la cliente réserve quand même.
+        if (propay.intent_id) {
+          try {
+            await fetch('/api/propay/reservation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pro_id: pro.id,
+                intent_id: propay.intent_id,
+                reservation: {
+                  date, heure, duree: dureeTotal,
+                  specialite: categoriesStr, technique: techniquesStr,
+                  prix: prixFinal,
+                  prenom: clientePrenom, nom: clienteNom,
+                  telephone, email: clienteEmail,
+                },
+              }),
+            })
+          } catch { /* le filet manque, la réservation continue */ }
+        }
+
         const resultat = await propayRef.current?.confirmer()
         if (!resultat?.ok) {
           setRefusCarte(resultat?.erreur ?? traduire('payer.echecCourt'))
