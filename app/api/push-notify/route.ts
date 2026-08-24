@@ -47,10 +47,14 @@ export async function POST(req: NextRequest) {
     // refusées. L'écriture ne doit JAMAIS faire échouer l'envoi : une
     // notification partie et non notée vaut mieux qu'une notification bloquée
     // par sa comptabilité.
+    // Un refus de la base ne LÈVE PAS d'erreur, il la RENVOIE : sans cette
+    // lecture, un journal qui n'enregistre plus rien passerait inaperçu — et
+    // un registre auquel on ne peut pas se fier est pire que pas de registre.
     if (pushRes.ok) {
       try {
-        await supabaseAdmin.from('envois_journal')
+        const { error: erreurJournal } = await supabaseAdmin.from('envois_journal')
           .insert({ pro_id: proId, type: 'notif_nouveau_rdv' })
+        if (erreurJournal) console.error('[api/push-notify] envoi non noté', erreurJournal.message)
       } catch (e) {
         console.error('[api/push-notify] envoi non noté', e)
       }
