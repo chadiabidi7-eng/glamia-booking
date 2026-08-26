@@ -5338,6 +5338,27 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
   function BlocGlamiaPay({ mode, clientSecret, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille }, ref) {
     const stripeJs = useStripe()
     const elements = useElements()
+
+    // ── QUI DEMANDE LE MAIL : NOUS, OU STRIPE ? ─────────────────────────────
+    // On disait à Stripe « ne demande ni le nom ni le mail, je te les fournis »
+    // — puis on ne fournissait rien quand la cliente n'avait pas d'adresse.
+    // Stripe refusait alors TOUT le paiement, avec une erreur d'intégration.
+    //
+    // Résultat, découvert le 26 août 2026 : AUCUNE CLIENTE SANS ADRESSE MAIL
+    // NE POUVAIT PAYER. Ni acompte, ni empreinte. Elle remplissait tout, elle
+    // validait, ça bloquait — quel que soit son téléphone. 147 clientes sur
+    // 789 sont dans ce cas chez les pros qui demandent un paiement : une sur
+    // cinq. Alyssa, chez Crazynails, a essayé cinq fois.
+    //
+    // On ne se tait donc que sur ce qu'on a vraiment. Le reste, Stripe le
+    // demande lui-même dans le formulaire de carte.
+    //
+    // LA DÉCISION EST FIGÉE AU MONTAGE, exprès : ces réglages ne peuvent pas
+    // changer après l'affichage du formulaire sans que Stripe proteste. Si
+    // elle saisit son mail après coup, le formulaire de carte le redemandera
+    // — un champ de plus vaut mieux qu'un paiement refusé.
+    const [fournitNom] = useState(() => !!nom)
+    const [fournitEmail] = useState(() => !!email)
     // ── CE QUE LE PORTEFEUILLE A DÉJÀ RÉGLÉ ─────────────────────────────────
     // Apple Pay et Google Pay paient depuis LEUR bouton, avant que le
     // rendez-vous existe. La suite de la réservation appelle ensuite
@@ -5397,7 +5418,9 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
         }
         // Nom + email fournis ici (on ne les collecte pas dans le Payment Element,
         // ce qui retire l'invite Link « enregistre tes infos »).
-        const billing_details = { name: nom || undefined, email: email || undefined }
+        const billing_details: { name?: string; email?: string } = {}
+        if (fournitNom) billing_details.name = nom
+        if (fournitEmail) billing_details.email = email
         if (mode === 'empreinte') {
           const { error, setupIntent } = await stripeJs.confirmSetup({
             elements, redirect: 'if_required',
@@ -5421,9 +5444,11 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
         }
         return { ok: true, intentId: paymentIntent.id }
       },
-    }), [stripeJs, elements, mode, clientSecret, nom, email])
+    }), [stripeJs, elements, mode, clientSecret, nom, email, fournitNom, fournitEmail])
 
-    const billingWallet = { name: nom || undefined, email: email || undefined }
+    const billingWallet: { name?: string; email?: string } = {}
+    if (fournitNom) billingWallet.name = nom
+    if (fournitEmail) billingWallet.email = email
 
     return (
       <>
@@ -5482,7 +5507,10 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
       layout: 'tabs',
       // On ne collecte pas nom/email dans l'UI (fournis au confirm) → supprime
       // l'invite Link « enregistre tes infos pour tes prochains paiements ».
-      fields: { billingDetails: { name: 'never', email: 'never' } },
+      fields: { billingDetails: {
+        name: fournitNom ? 'never' : 'auto',
+        email: fournitEmail ? 'never' : 'auto',
+      } },
       // ── APPLE PAY ET GOOGLE PAY, QUAND L'APPAREIL LES A ─────────────────────
       // Le bouton s'affiche tout seul selon le téléphone : Apple Pay sur iPhone,
       // Google Pay sur Android, rien sur un ordinateur qui n'a ni l'un ni
