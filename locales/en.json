@@ -149,7 +149,6 @@
     "troisDecalages": "This appointment has already been moved 3 times. To change it again, contact your practitioner directly.",
     "decalageTropTard": "Less than 24 h before the appointment, moving it online is no longer possible. Contact your practitioner directly.",
     "reprogrammationImpossible": "This appointment couldn't be rescheduled.",
-    "erreurConsole": "Something went wrong. Open the console (F12) to see the detail.",
     "photoRefusee": "That photo couldn't be added. Try another image.",
     "photosNonEnvoyees": "Your photos couldn't be sent. Try again.",
     "unePhotoRefusee": "One photo couldn't be added. Try another image.",
@@ -229,7 +228,8 @@
     "exempleNom": "Turner",
     "ligneAcompte": "Deposit",
     "ligneSolde": "Balance",
-    "lignePrestation": "Service"
+    "lignePrestation": "Service",
+    "erreurConfirmation": "Your booking couldn't be saved. Nothing was charged. Try again in a moment, or message your beauty pro."
   },
   "commun": {
     "chargement": "Loading...",

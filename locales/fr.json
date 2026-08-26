@@ -149,7 +149,6 @@
     "troisDecalages": "Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.",
     "decalageTropTard": "À moins de 24 h du rendez-vous, le décalage en ligne n'est plus possible. Contacte directement ta praticienne.",
     "reprogrammationImpossible": "Impossible de reprogrammer ce rendez-vous.",
-    "erreurConsole": "Une erreur est survenue. Ouvre la console (F12) pour voir le détail.",
     "photoRefusee": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
     "photosNonEnvoyees": "Tes photos n'ont pas pu être envoyées. Réessaie.",
     "unePhotoRefusee": "Une photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
@@ -229,7 +228,8 @@
     "exempleNom": "Martin",
     "ligneAcompte": "Acompte",
     "ligneSolde": "Solde",
-    "lignePrestation": "Prestation"
+    "lignePrestation": "Prestation",
+    "erreurConfirmation": "Ta réservation n'a pas pu être enregistrée. Rien n'a été débité. Réessaie dans un instant, ou écris à ta professionnelle."
   },
   "commun": {
     "chargement": "Chargement...",

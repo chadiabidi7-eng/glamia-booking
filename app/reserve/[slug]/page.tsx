@@ -2947,7 +2947,29 @@ export default function ReservationPage() {
       }
     } catch (e) {
       console.error('[handleConfirm] Erreur globale:', e)
-      alert(traduire('resa.erreurConsole'))
+      // ── ON DIT CE QU'ELLE DOIT FAIRE, ET ON GARDE LE POURQUOI ──────────
+      // Le message d'avant lui demandait d'ouvrir la console avec F12. Sur un
+      // téléphone, cette touche n'existe pas : on lui demandait l'impossible
+      // au moment précis où elle voulait réserver. Deux clientes de Crazynails
+      // sont reparties comme ça le 26 août 2026.
+      //
+      // Elle a besoin de savoir qu'elle n'a rien été débitée et qu'elle peut
+      // réessayer. La cause technique, c'est NOTRE affaire : elle part dans le
+      // journal, sans qu'on l'attende, et sans pouvoir rien casser.
+      fetch('/api/erreur-resa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          pro_id: pro?.id ?? null,
+          slug: typeof slug === 'string' ? slug : null,
+          etape: 'confirmation',
+          message: e instanceof Error ? e.message : String(e),
+          pile: e instanceof Error ? e.stack : null,
+          url: typeof window !== 'undefined' ? window.location.href : null,
+        }),
+      }).catch(() => { /* le signalement ne doit jamais gêner */ })
+      alert(traduire('resa.erreurConfirmation'))
     } finally {
       setSubmitting(false)
     }

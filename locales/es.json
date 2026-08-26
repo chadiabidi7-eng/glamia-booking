@@ -149,7 +149,6 @@
     "troisDecalages": "Esta cita ya se ha cambiado de fecha 3 veces. Para otro cambio, habla directamente con tu profesional.",
     "decalageTropTard": "Con menos de 24 h de antelación ya no se puede cambiar la fecha en línea. Habla directamente con tu profesional.",
     "reprogrammationImpossible": "No se ha podido cambiar la fecha de esta cita.",
-    "erreurConsole": "Se ha producido un error. Abre la consola (F12) para ver el detalle.",
     "photoRefusee": "Esta foto no se ha podido añadir. Prueba con otra imagen.",
     "photosNonEnvoyees": "Tus fotos no se han podido enviar. Inténtalo otra vez.",
     "unePhotoRefusee": "Una foto no se ha podido añadir. Prueba con otra imagen.",
@@ -229,7 +228,8 @@
     "exempleNom": "García",
     "ligneAcompte": "Anticipo",
     "ligneSolde": "Resto",
-    "lignePrestation": "Servicio"
+    "lignePrestation": "Servicio",
+    "erreurConfirmation": "No se ha podido guardar tu reserva. No se te ha cobrado nada. Vuelve a intentarlo o escribe a tu profesional."
   },
   "commun": {
     "chargement": "Cargando...",
