@@ -59,7 +59,7 @@ const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LES FRAIS DE SERVICE GLAMIA — 0,50 € PAR RÉSERVATION PAYÉE.
+// LES FRAIS DE SERVICE GLAMIA — 0,25 € + 2 %, PLAFONNÉS À 1,50 €.
 //
 // POURQUOI ILS EXISTENT (27 août 2026). Le solde de la plateforme partait dans
 // le négatif, un peu plus chaque jour, sans que rien ne l'alimente. Stripe
@@ -80,18 +80,51 @@ const STRIPE_FIXE_CENTIMES = 25
 // CE QUE LA PRO TOUCHE NE CHANGE PAS D'UN CENTIME. La majoration est calculée
 // pour qu'elle reçoive son prix plein, frais Stripe déduits, exactement comme
 // avant. « De sa carte au tien, Glamia n'y touche jamais » reste vrai : ces
-// 50 centimes sont payés par la cliente EN PLUS, jamais prélevés sur elle.
+// frais sont payés par la cliente EN PLUS, jamais prélevés sur elle.
 //
-// LES AUTRES MONNAIES sont l'équivalent d'environ 50 centimes d'euro, arrondi
-// à quelque chose qui se lit. Aujourd'hui seuls l'euro (23 caisses) et le franc
-// suisse (3) servent ; le reste attend une première pro sur place.
-const FRAIS_SERVICE_PAR_DEVISE: Record<string, number> = {
-  eur: 50, chf: 50, gbp: 40, usd: 60, cad: 70, aud: 80, nzd: 90,
-  dkk: 350, sek: 550, nok: 550, pln: 200, czk: 1200, ron: 250,
-  huf: 20000, sgd: 70, hkd: 400, myr: 250, thb: 1800, mxn: 1000,
+// ── UN MONTANT FIXE A ÉTÉ ESSAYÉ LE MATIN MÊME, ET IL ÉTAIT MAUVAIS ─────────
+//
+// 0,50 € par paiement. Deux défauts, tous deux mesurés le jour même.
+//
+// IL NE COUVRAIT PAS : 49 paiements réels sur le mois × 0,50 € = 24,50 €, pour
+// une trentaine d'euros de frais. Le solde aurait continué à descendre, plus
+// lentement. (Les 115 paiements que j'avais comptés d'abord incluaient les
+// EMPREINTES, où aucun argent ne bouge — ni frais pour Glamia, ni frais pour
+// la cliente. Compter une empreinte comme un paiement double la recette
+// imaginaire.)
+//
+// SURTOUT, IL FRAPPAIT LES PETITS ACOMPTES. Sur un acompte de 5 €, les frais
+// atteignaient 17 % du montant, contre 3 % sur un paiement de 60 €. La pro qui
+// demande peu POUR NE PAS EFFRAYER SA CLIENTE se retrouvait avec la page qui
+// paraît la plus chère. Exactement l'inverse de son intention.
+//
+// Le barème actuel est plat : la part Glamia va de 7 % sur un acompte de 5 € à
+// 2,4 % sur un paiement de 60 €, au lieu de 10 % à 0,8 %.
+//
+// LE PLAFOND N'EST PAS DÉCORATIF : sans lui, une pro qui fait payer 300 €
+// d'avance afficherait 6 € de frais sur sa page de réservation.
+//
+// LES AUTRES MONNAIES sont les équivalents arrondis d'environ 0,25 € et 1,50 €.
+// Aujourd'hui seuls l'euro (23 caisses) et le franc suisse (3) servent.
+const BAREME_SERVICE: Record<string, { fixe: number; plafond: number }> = {
+  eur: { fixe: 25, plafond: 150 },      chf: { fixe: 25, plafond: 150 },
+  gbp: { fixe: 20, plafond: 130 },      usd: { fixe: 30, plafond: 180 },
+  cad: { fixe: 35, plafond: 210 },      aud: { fixe: 40, plafond: 240 },
+  nzd: { fixe: 45, plafond: 270 },      sgd: { fixe: 35, plafond: 210 },
+  dkk: { fixe: 175, plafond: 1100 },    sek: { fixe: 275, plafond: 1650 },
+  nok: { fixe: 275, plafond: 1650 },    pln: { fixe: 100, plafond: 600 },
+  czk: { fixe: 600, plafond: 3600 },    ron: { fixe: 125, plafond: 750 },
+  huf: { fixe: 10000, plafond: 60000 }, hkd: { fixe: 200, plafond: 1200 },
+  myr: { fixe: 125, plafond: 750 },     thb: { fixe: 900, plafond: 5400 },
+  mxn: { fixe: 500, plafond: 3000 },
 }
-const fraisService = (devise?: string | null): number =>
-  FRAIS_SERVICE_PAR_DEVISE[(devise ?? 'eur').toLowerCase()] ?? 50
+const PART_VARIABLE = 0.02
+
+/** Ce que Glamia prélève sur un paiement, dans la monnaie de la caisse. */
+const fraisService = (montant: number, devise?: string | null): number => {
+  const b = BAREME_SERVICE[(devise ?? 'eur').toLowerCase()] ?? BAREME_SERVICE.eur
+  return Math.min(b.fixe + Math.round(montant * PART_VARIABLE), b.plafond)
+}
 
 
 type Reglage = { mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
@@ -180,7 +213,7 @@ export function calculerTotalCliente(
   // La commission de plateforme, c'est CE QUI REVIENT À GLAMIA. Gonfler le
   // total sans la déclarer ici ferait atterrir les 50 centimes chez la pro, et
   // les frais Stripe resteraient à la charge de Glamia — l'inverse du but.
-  const commission = Math.round(acompteCentimes * COMMISSION_GLAMIA_PCT) + fraisService(devise)
+  const commission = Math.round(acompteCentimes * COMMISSION_GLAMIA_PCT) + fraisService(acompteCentimes, devise)
   const totalCliente = Math.ceil((acompteCentimes + fraisFixe + commission) / (1 - fraisPct))
   return { commission, totalCliente, frais: totalCliente - acompteCentimes }
 }

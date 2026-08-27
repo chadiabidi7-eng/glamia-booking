@@ -63,13 +63,25 @@ const STRIPE_FIXE_CENTIMES = 25
 // c'est le même service rendu, et la même réservation. La règle et le pourquoi
 // sont écrits en entier dans app/api/propay/intent/route.ts — un seul endroit,
 // pour qu'ils ne divergent pas.
-const FRAIS_SERVICE_PAR_DEVISE: Record<string, number> = {
-  eur: 50, chf: 50, gbp: 40, usd: 60, cad: 70, aud: 80, nzd: 90,
-  dkk: 350, sek: 550, nok: 550, pln: 200, czk: 1200, ron: 250,
-  huf: 20000, sgd: 70, hkd: 400, myr: 250, thb: 1800, mxn: 1000,
+const BAREME_SERVICE: Record<string, { fixe: number; plafond: number }> = {
+  eur: { fixe: 25, plafond: 150 },      chf: { fixe: 25, plafond: 150 },
+  gbp: { fixe: 20, plafond: 130 },      usd: { fixe: 30, plafond: 180 },
+  cad: { fixe: 35, plafond: 210 },      aud: { fixe: 40, plafond: 240 },
+  nzd: { fixe: 45, plafond: 270 },      sgd: { fixe: 35, plafond: 210 },
+  dkk: { fixe: 175, plafond: 1100 },    sek: { fixe: 275, plafond: 1650 },
+  nok: { fixe: 275, plafond: 1650 },    pln: { fixe: 100, plafond: 600 },
+  czk: { fixe: 600, plafond: 3600 },    ron: { fixe: 125, plafond: 750 },
+  huf: { fixe: 10000, plafond: 60000 }, hkd: { fixe: 200, plafond: 1200 },
+  myr: { fixe: 125, plafond: 750 },     thb: { fixe: 900, plafond: 5400 },
+  mxn: { fixe: 500, plafond: 3000 },
 }
-const fraisService = (devise?: string | null): number =>
-  FRAIS_SERVICE_PAR_DEVISE[(devise ?? 'eur').toLowerCase()] ?? 50
+const PART_VARIABLE = 0.02
+
+/** Ce que Glamia prélève sur un paiement, dans la monnaie de la caisse. */
+const fraisService = (montant: number, devise?: string | null): number => {
+  const b = BAREME_SERVICE[(devise ?? 'eur').toLowerCase()] ?? BAREME_SERVICE.eur
+  return Math.min(b.fixe + Math.round(montant * PART_VARIABLE), b.plafond)
+}
 
 export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat: string }> {
   // Suivi du verrou : si une erreur inattendue survient APRÈS le claim, on
@@ -177,7 +189,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
         return { resultat: 'carte_manquante' }
       }
       const acompte = paiement.montant
-      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT) + fraisService(devise)
+      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT) + fraisService(acompte, devise)
       const totalCliente = Math.ceil((acompte + taux.fraisFixe + commission) / (1 - taux.fraisPct))
       try {
         const intent = await stripe().paymentIntents.create(
