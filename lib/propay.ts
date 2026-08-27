@@ -59,6 +59,18 @@ const COMMISSION_GLAMIA_PCT = 0
 const STRIPE_PCT = 0.015
 const STRIPE_FIXE_CENTIMES = 25
 
+// Les frais de service Glamia s'appliquent aussi au prélèvement d'un lapin :
+// c'est le même service rendu, et la même réservation. La règle et le pourquoi
+// sont écrits en entier dans app/api/propay/intent/route.ts — un seul endroit,
+// pour qu'ils ne divergent pas.
+const FRAIS_SERVICE_PAR_DEVISE: Record<string, number> = {
+  eur: 50, chf: 50, gbp: 40, usd: 60, cad: 70, aud: 80, nzd: 90,
+  dkk: 350, sek: 550, nok: 550, pln: 200, czk: 1200, ron: 250,
+  huf: 20000, sgd: 70, hkd: 400, myr: 250, thb: 1800, mxn: 1000,
+}
+const fraisService = (devise?: string | null): number =>
+  FRAIS_SERVICE_PAR_DEVISE[(devise ?? 'eur').toLowerCase()] ?? 50
+
 export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat: string }> {
   // Suivi du verrou : si une erreur inattendue survient APRÈS le claim, on
   // restaure le statut d'origine dans le catch — jamais de ligne figée en
@@ -165,7 +177,7 @@ export async function traiterAnnulationPropay(rdvId: string): Promise<{ resultat
         return { resultat: 'carte_manquante' }
       }
       const acompte = paiement.montant
-      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT)
+      const commission = Math.round(acompte * COMMISSION_GLAMIA_PCT) + fraisService(devise)
       const totalCliente = Math.ceil((acompte + taux.fraisFixe + commission) / (1 - taux.fraisPct))
       try {
         const intent = await stripe().paymentIntents.create(
