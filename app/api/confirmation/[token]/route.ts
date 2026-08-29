@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
+import { adressePourEtape } from '@/lib/adresse-due'
 
 // Les noms de jours et de mois étaient écrits en français, en dur. Une pro
 // anglaise recevait « mercredi 15 juillet » dans sa notification. On les
@@ -52,7 +53,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -116,7 +117,10 @@ export async function GET(
     pro_nom: pro?.nom ?? '',
     pro_pseudo: pro?.pseudo ?? null,
     pro_photo: pro?.avatar_url ?? null,
-    pro_adresse: pro?.adresse ?? null,
+    // On est la veille, au moment de confirmer sa présence : c'est le dernier
+    // des trois moments. Seule la pro qui a choisi « je l'envoie moi-même »
+    // garde son adresse pour elle.
+    pro_adresse: adressePourEtape(pro?.adresse as string | null, (pro as any)?.adresse_moment, 'presence'),
     pro_devise: (pro as any)?.devise ?? 'EUR',
     // La page de confirmation parle la langue de la pro, comme sa page de
     // réservation : c'est la même vitrine, vue plus tard.
@@ -282,7 +286,7 @@ export async function POST(
       if (cliente?.email) {
         const { data: proInfo } = await supabaseAdmin
           .from('profiles')
-          .select('prenom, nom, pseudo, adresse, devise, categorie_autre_nom, pays')
+          .select('prenom, nom, pseudo, adresse, adresse_moment, devise, categorie_autre_nom, pays')
           .eq('id', rdv.pro_id)
           .maybeSingle()
 
@@ -313,7 +317,10 @@ export async function POST(
               duree: rdvFull?.duree ? `${rdvFull.duree} min` : '',
               prix_total: rdvFull?.prix ?? 0,
               devise: (proInfo as any)?.devise ?? 'EUR',
-              adresse: proInfo?.adresse || '',
+              // Le décalage se demande depuis le lien de la veille : la cliente
+              // est à l'étape où l'adresse est due, sauf chez les pros qui
+              // l'envoient elles-mêmes.
+              adresse: adressePourEtape(proInfo?.adresse as string | null, (proInfo as any)?.adresse_moment, 'presence') ?? '',
               techniques: rdvFull ? [{
                 nom: rdvFull.technique ?? '',
                 // Le nom que la pro a donné à sa catégorie. Sans ça, sa

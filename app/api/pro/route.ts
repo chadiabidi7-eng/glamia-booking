@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { adressePourEtape } from '@/lib/adresse-due'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — la page publique d'une pro : son profil, son catalogue.
@@ -27,7 +28,12 @@ const supabaseAdmin = createClient(
 
 // Les seuls champs qui sortent. Tout le reste — mail, téléphone, jeton de
 // notification, dates d'abonnement — ne quitte pas le serveur.
-const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, acompte_config, is_pro, devise, langue, pays, timezone, categorie_autre_nom, categorie_autre_icone, questions_resa'
+//
+// ⚠️ `adresse` EST LU ICI MAIS NE SORT PAS TEL QUEL. C'est l'adresse exacte :
+// pour la plupart des pros, leur domicile. Elle n'est due qu'au moment qu'elles
+// ont choisi, et ce guichet répond AVANT toute réservation. Voir le filtre
+// juste avant la réponse.
+const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, adresse_moment, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, acompte_config, is_pro, devise, langue, pays, timezone, categorie_autre_nom, categorie_autre_icone, questions_resa'
 
 function normaliser(s: string) {
   return (s ?? '')
@@ -106,6 +112,18 @@ export async function POST(req: NextRequest) {
       .select('data, ordre_categories')
       .eq('pro_id', profil.id as string)
       .maybeSingle()
+
+    // L'ADRESSE EXACTE NE SORT QUE SI LA PRO L'A RENDUE PUBLIQUE.
+    //
+    // Ce guichet répond à qui ouvre la page, sans rien avoir réservé. Il
+    // renvoyait l'adresse exacte à tout le monde, quel que soit le moment
+    // choisi — le domicile de 83 pros publié à côté de leurs horaires de
+    // présence. Signalé le 29 août 2026 par une pro de Genève.
+    //
+    // Aux autres moments, la cliente reçoit l'adresse quand elle est due :
+    // à la création du rendez-vous (`/api/rdv/creer`) ou la veille, dans le
+    // mail de confirmation de présence. Jamais ici.
+    profil.adresse = adressePourEtape(profil.adresse as string | null, profil.adresse_moment as string | null, 'page')
 
     return NextResponse.json({
       etat: 'ok',

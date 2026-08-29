@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, minToTime } from '@/lib/creneaux'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
+import { adressePourEtape } from '@/lib/adresse-due'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — créer une réservation.
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, adresse, adresse_moment')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -140,7 +141,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'creation' }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true, id: cree.id })
+    // L'ADRESSE EXACTE PART D'ICI, ET SEULEMENT SI ELLE EST DUE MAINTENANT.
+    //
+    // La page ne la reçoit plus au chargement (voir `/api/pro`). Le rendez-vous
+    // vient d'être créé : pour une pro qui la donne « à la réservation », c'est
+    // exactement le moment. Pour « la veille » et « je l'envoie moi-même », on
+    // ne renvoie rien — l'écran de fin n'a alors aucune adresse à afficher.
+    return NextResponse.json({
+      ok: true,
+      id: cree.id,
+      adresse: adressePourEtape(pro.adresse as string | null, pro.adresse_moment as string | null, 'reservation'),
+    })
   } catch (e) {
     console.error('[rdv/creer] erreur', e)
     return NextResponse.json({ error: 'erreur_interne' }, { status: 500 })
