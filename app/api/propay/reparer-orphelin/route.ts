@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
+import { adressePourEtape } from '@/lib/adresse-due'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UN PAIEMENT SANS RENDEZ-VOUS SE REPOSE TOUT SEUL.
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
     if (r.em) {
       try {
         const { data: pro } = await supabaseAdmin
-          .from('profiles').select('pseudo, prenom, nom, adresse, devise, pays')
+          .from('profiles').select('pseudo, prenom, nom, adresse, adresse_moment, devise, pays')
           .eq('id', proId).maybeSingle()
         await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'}/functions/v1/confirmation-booking`,
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
               date: r.d, heure: r.h,
               prix_total: Number(r.p) || 0,
               devise: pro?.devise ?? 'EUR',
-              adresse: pro?.adresse || '',
+              adresse: adressePourEtape(pro?.adresse as string | null, (pro as any)?.adresse_moment, 'reservation') ?? '',
             }),
           },
         )

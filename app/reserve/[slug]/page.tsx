@@ -70,7 +70,7 @@ type Offre = {
 // deviendraient inconnus à la compilation.
 //
 // `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
-const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, adresse, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
+const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
 
 /**
  * Les créneaux d'une ou plusieurs journées, calculés par le serveur.
@@ -1311,6 +1311,11 @@ export default function ReservationPage() {
   const [inspirations, setInspirations] = useState<string[]>([])
   const [inspirationsStatut, setInspirationsStatut] = useState<'aucune' | 'envoyees' | 'echec'>('aucune')
   const [compressionEnCours, setCompressionEnCours] = useState(false)
+  // L'adresse exacte, remise par le serveur au moment de créer le rendez-vous —
+  // et seulement si la pro la donne dès la réservation. Elle n'arrive jamais
+  // avec le profil : la page ne l'a pas avant, et ne l'a pas du tout pour une
+  // pro qui la réserve à la veille.
+  const [adresseObtenue, setAdresseObtenue] = useState<string | null>(null)
   const step5Ref = useRef<HTMLDivElement>(null)
 
   // ── Glissements d'écran automatiques (fluidité du parcours) ──
@@ -2050,26 +2055,18 @@ export default function ReservationPage() {
     // Email de confirmation à jour pour la cliente
     if (clienteEmail.trim()) {
       try {
-        await fetch(
-          'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
-          {
+        await fetch('/api/rdv/mail-confirmation', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              pro_id: pro.id,
               cliente_email: clienteEmail.trim(),
               cliente_prenom: clientePrenom.trim(),
-              pro_nom: pro.pseudo || `${pro.prenom} ${pro.nom}`,
-              langue: langueActuelle(),
-              pays: pro.pays ?? null,
               date: dateAffichee,
               heure: heureAffichee,
               duree: formatDuree(duree),
               prix_total: prix,
-              devise: pro.devise ?? 'EUR',
-              adresse: pro.adresse || '',
+              etape: 'reservation' as const,
               techniques: techs.map(t => ({
                 nom: t.nom,
                 // Le mail porte le nom que la pro a choisi. Il reçoit la
@@ -2081,8 +2078,7 @@ export default function ReservationPage() {
                 duree_minutes: t.duree,
               })),
             }),
-          },
-        )
+        })
       } catch (e) {
         console.error('[appliquerModifPresta] Erreur envoi email:', e)
       }
@@ -2231,38 +2227,26 @@ export default function ReservationPage() {
       const rdvReprog = rdvsAVenir.find(r => r.id === reprogRdvId)
       if (clienteEmail.trim() && rdvReprog) {
         try {
-          const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
-          await fetch(
-            'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
-            {
-              method: 'POST',
-              // Authorization requis : la gateway Supabase (verify_jwt) rejette
-              // les appels sans clé — l'email partait en 401 silencieux
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({
-                cliente_email: clienteEmail.trim(),
-                cliente_prenom: clientePrenom.trim(),
-                pro_nom: proNomComplet,
-                langue: langueActuelle(),
-                pays: pro.pays ?? null,
-                date: formatDateLong(reprogDate),
-                heure: reprogHeure,
-                duree: formatDuree(rdvReprog.duree),
-                prix_total: rdvReprog.prix ?? 0,
-                devise: pro.devise ?? 'EUR',
-                adresse: pro.adresse || '',
-                techniques: [{
-                  nom: rdvReprog.technique,
-                  specialite: libelleCategorie(rdvReprog.specialite, pro?.categorie_autre_nom),
-                  prix: rdvReprog.prix ?? 0,
-                  duree_minutes: rdvReprog.duree,
-                }],
-              }),
-            },
-          )
+          await fetch('/api/rdv/mail-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pro_id: pro.id,
+              cliente_email: clienteEmail.trim(),
+              cliente_prenom: clientePrenom.trim(),
+              date: formatDateLong(reprogDate),
+              heure: reprogHeure,
+              duree: formatDuree(rdvReprog.duree),
+              prix_total: rdvReprog.prix ?? 0,
+              etape: 'reservation' as const,
+              techniques: [{
+                nom: rdvReprog.technique,
+                specialite: libelleCategorie(rdvReprog.specialite, pro?.categorie_autre_nom),
+                prix: rdvReprog.prix ?? 0,
+                duree_minutes: rdvReprog.duree,
+              }],
+            }),
+          })
           console.log('[handleReprogrammer] Email confirmation envoyé')
         } catch (e) {
           console.error('[handleReprogrammer] Erreur envoi email:', e)
@@ -2753,6 +2737,12 @@ export default function ReservationPage() {
       }
       const nouveau = { id: creation.id as string }
 
+      // L'ADRESSE EXACTE ARRIVE ICI, ET SEULEMENT SI ELLE EST DUE MAINTENANT.
+      // Elle ne fait plus partie du profil chargé au premier affichage : le
+      // serveur ne la donne qu'une fois le rendez-vous créé, et uniquement aux
+      // pros qui la donnent « sur ma page » ou « à la réservation ».
+      setAdresseObtenue((creation.adresse as string | null) ?? null)
+
       // ── Glamia Pay : rattacher le paiement au rendez-vous ──
       // ON INSISTE, jusqu'à trois fois. Un simple hoquet de réseau ici laisserait
       // un paiement encaissé sans aucune trace : de l'argent pris à une cliente
@@ -2856,25 +2846,21 @@ export default function ReservationPage() {
         console.warn('[handleConfirm] Cliente sans email, confirmation non envoyée')
       } else {
         try {
-          const proNomComplet = pro.pseudo || `${pro.prenom} ${pro.nom}`
           const rdvDateTime = new Date(`${date}T${heure}:00`)
           const dansMotins24h = (rdvDateTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000
+          // LE MAIL PART DU SERVEUR, PLUS DU NAVIGATEUR. Le nom de la pro, sa
+          // langue, sa devise et son adresse sont relus en base : cette page ne
+          // dit plus que le rendez-vous. Voir `/api/rdv/mail-confirmation`.
           const emailBody = {
+            pro_id: pro.id,
             cliente_email: clienteEmail.trim(),
             cliente_prenom: clientePrenom.trim(),
-            pro_nom: proNomComplet,
-            // La langue et le pays voyagent avec le mail : sans eux, la
-            // confirmation repartait en français chez une pro anglaise, avec
-            // des dates anglaises au milieu.
-            langue: langueActuelle(),
-            pays: pro.pays ?? null,
             date: formatDateLong(date),
             heure,
             duree: formatDuree(dureeTotal),
             prix_total: prixFinal,
-            devise: pro.devise ?? 'EUR',
-            adresse: pro.adresse || '',
             skip_rappel_notice: dansMotins24h,
+            etape: 'reservation' as const,
             techniques: techniquesSelectionnees.map(t => ({
               nom: t.nom,
               specialite: t.categorie,
@@ -2883,18 +2869,12 @@ export default function ReservationPage() {
             })),
           }
           console.log('[handleConfirm] Données envoyées:', emailBody)
-          console.log('[handleConfirm] Appel Edge Function confirmation-booking...')
-          const res = await fetch(
-            'https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/confirmation-booking',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify(emailBody),
-            },
-          )
+          console.log('[handleConfirm] Appel /api/rdv/mail-confirmation...')
+          const res = await fetch('/api/rdv/mail-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emailBody),
+          })
           const resData = await res.json()
           console.log('[handleConfirm] Résultat:', res.status, resData)
           if (!res.ok) console.error('[handleConfirm] Erreur Edge Function:', resData)
@@ -3214,10 +3194,13 @@ export default function ReservationPage() {
             </div>
           )}
 
-          {/* Adresse — uniquement sur la page de confirmation, style discret */}
-          {pro?.adresse && (
+          {/* Adresse — uniquement sur la page de confirmation, style discret.
+              Elle vient de la réponse du serveur à la création du rendez-vous,
+              jamais du profil : une pro qui la donne « la veille » n'en envoie
+              rien ici, et il n'y a donc rien à afficher. */}
+          {(adresseObtenue || pro?.adresse) && (
             <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <MapPin size={14} color={GLAMIA_PINK} />{pro.adresse}
+              <MapPin size={14} color={GLAMIA_PINK} />{adresseObtenue || pro?.adresse}
             </p>
           )}
 
