@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot } from '@/lib/creneaux'
+import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot, delaiEntreClientes } from '@/lib/creneaux'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { adressePourEtape } from '@/lib/adresse-due'
@@ -53,7 +53,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -99,7 +99,7 @@ export async function GET(
       (pro as any)?.planning_variable === true,
       (pro as any)?.timezone ?? undefined,
       (pro as any)?.creneaux_a_la_suite === true,
-      (pro as any)?.temps_preparation ?? 0,
+      delaiEntreClientes(pro as any),
     )
   }
 
@@ -193,7 +193,7 @@ export async function POST(
 
     const { data: proRegles } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone, langue, pays')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -223,7 +223,7 @@ export async function POST(
         horairesSpec: ((proRegles as any).horaires_specifiques ?? {}) as never,
         planningVar: (proRegles as any).planning_variable === true,
         aLaSuite: (proRegles as any).creneaux_a_la_suite === true,
-        preparation: (proRegles as any).temps_preparation ?? 0,
+        preparation: delaiEntreClientes(proRegles as any),
         fuseau: (proRegles as any).timezone ?? undefined,
       })
 

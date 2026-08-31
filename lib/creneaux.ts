@@ -14,6 +14,42 @@ import { traduire } from '@/lib/i18n'
 // sur ces règles qu'on ne peut pas se permettre deux avis.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LE TEMPS ENTRE DEUX CLIENTES — la règle, écrite une seule fois.
+//
+// Sept routes la lisaient, chacune à sa façon : `temps_preparation` pris tel
+// quel, quel que soit le planning. Deux défauts en sortaient.
+//
+// UN. En planning LIBRE, le délai s'appliquait même avec « Rendez-vous
+// empilés » éteint — c'est-à-dire au moment précis où le réglage disparaît de
+// l'écran de la pro. Elle subissait un délai qu'elle ne pouvait plus lire.
+//
+// DEUX. En planning HABITUEL, elle héritait du délai posé en planning libre.
+// Pour elle, changer de planning l'avait annulé ; il continuait d'agir. Chaque
+// planning a maintenant sa colonne, et `temps_preparation_habituel` démarre à
+// zéro pour tout le monde : personne n'hérite de rien.
+//
+// ⚠️ L'APP CALCULE LA MÊME CHOSE DE SON CÔTÉ, avec la même règle mot pour mot
+// (`hooks/useDisponibilites.ts`). Les deux changent ensemble, sinon la pro voit
+// des heures que sa page refuse.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Les colonnes à demander pour pouvoir appliquer la règle. */
+export const CHAMPS_DELAI = 'planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel'
+
+export function delaiEntreClientes(pro: {
+  planning_variable?: boolean | null
+  creneaux_a_la_suite?: boolean | null
+  temps_preparation?: number | null
+  temps_preparation_habituel?: number | null
+} | null | undefined): number {
+  if (!pro) return 0
+  if (pro.planning_variable === true) {
+    return pro.creneaux_a_la_suite === true ? (pro.temps_preparation ?? 0) : 0
+  }
+  return pro.temps_preparation_habituel ?? 0
+}
+
 export type HorairesJour = { actif?: boolean; active?: boolean; debut: string; fin: string; pause?: { debut: string; fin: string } }
 export type HorairesHebdo = Record<number, HorairesJour>
 
