@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable, minToTime } from '@/lib/creneaux'
+import { creneauReservable, minToTime, delaiEntreClientes } from '@/lib/creneaux'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — un créneau est-il encore réservable ?
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro, error: errPro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       horairesSpec: (pro.horaires_specifiques ?? {}) as never,
       planningVar: pro.planning_variable === true,
       aLaSuite: (pro as any).creneaux_a_la_suite === true,
-      preparation: (pro as any).temps_preparation ?? 0,
+      preparation: delaiEntreClientes(pro as any),
       // Le serveur tourne en temps universel : sans ça, le délai minimum se
       // calculerait avec deux heures de retard sur l'heure réelle de la pro.
       fuseau: pro.timezone ?? undefined,

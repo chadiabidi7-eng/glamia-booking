@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable } from '@/lib/creneaux'
+import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
 import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ async function creneauIndisponible(
 
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, timezone')
+    .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
     .eq('id', proId)
     .maybeSingle()
   // Profil illisible : on ne bloque pas une cliente sur une panne de lecture.
@@ -154,7 +154,7 @@ async function creneauIndisponible(
     horairesSpec: ((pro as any).horaires_specifiques ?? {}) as never,
     planningVar: (pro as any).planning_variable === true,
       aLaSuite: (pro as any).creneaux_a_la_suite === true,
-      preparation: (pro as any).temps_preparation ?? 0,
+      preparation: delaiEntreClientes(pro as any),
     fuseau: (pro as any).timezone ?? undefined,
   })
 
