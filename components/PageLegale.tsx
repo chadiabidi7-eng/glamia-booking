@@ -54,7 +54,7 @@ function Paragraphe({ texte, lang }: { texte: string; lang?: string }) {
   return <p>{texte}</p>;
 }
 
-export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidentialite'; lang?: string }) {
+export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidentialite' | 'suppression'; lang?: string }) {
   const locale = lang || 'fr';
   const t = (cle: string) => i18n.t(`${bloc}.${cle}`, { locale });
   const sections = i18n.t(`${bloc}.sections`, { locale }) as unknown as Section[];
