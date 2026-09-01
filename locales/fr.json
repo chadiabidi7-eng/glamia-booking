@@ -646,5 +646,54 @@
     "condHandicap": "Accès handicapé",
     "condParking": "Parking à proximité",
     "condAnimaux": "Animaux sur place"
+  },
+  "suppression": {
+    "titre": "Supprimer votre compte Glamia",
+    "maj": "Dernière mise à jour : 1er septembre 2026",
+    "contact": "Une question sur la suppression ? Écrivez-nous à :",
+    "sections": [
+      {
+        "titre": "1. Depuis l'application, en trois gestes",
+        "paragraphes": [
+          "La suppression se fait directement dans Glamia, l'application de gestion de rendez-vous pour les professionnelles de la beauté, éditée par Bloom Studio.",
+          "Ouvrez l'application, allez dans l'onglet Paramètres, descendez jusqu'à « Supprimer mon compte », et confirmez.",
+          "Vous n'avez besoin de personne : la suppression part immédiatement, sans passer par nous."
+        ]
+      },
+      {
+        "titre": "2. Ce qui est supprimé, tout de suite",
+        "paragraphes": [
+          "Votre compte et vos identifiants de connexion.",
+          "Votre fiche professionnelle : nom, pseudo, adresse, horaires, photo, message d'accueil, lien de réservation.",
+          "Toutes vos clientes, avec leurs coordonnées, leurs notes, leurs photos et leur historique.",
+          "Tous vos rendez-vous, passés et à venir.",
+          "Toutes vos prestations et vos tarifs.",
+          "Les données gardées sur votre téléphone par l'application.",
+          "Votre page de réservation cesse aussitôt de répondre : plus personne ne peut réserver chez vous."
+        ]
+      },
+      {
+        "titre": "3. Ce qui est conservé, et pourquoi",
+        "paragraphes": [
+          "Les traces de facturation et de paiement sont conservées le temps imposé par la loi comptable et fiscale — dix ans en France. Nous n'avons pas le droit de les effacer plus tôt.",
+          "Ces traces ne contiennent que ce qui est nécessaire à une comptabilité : montants, dates, numéros de facture. Elles ne servent à rien d'autre.",
+          "Votre abonnement, lui, se résilie là où vous l'avez souscrit : dans les réglages de votre compte Google Play ou App Store. Supprimer le compte Glamia n'arrête pas le prélèvement."
+        ]
+      },
+      {
+        "titre": "4. Supprimer une partie seulement",
+        "paragraphes": [
+          "Vous pouvez effacer une cliente, un rendez-vous ou une prestation à tout moment depuis l'application, sans supprimer votre compte.",
+          "Si vous voulez que nous effacions une donnée précise, écrivez-nous : nous le faisons sous trente jours."
+        ]
+      },
+      {
+        "titre": "5. Si vous n'avez plus accès à l'application",
+        "paragraphes": [
+          "Écrivez-nous depuis l'adresse e-mail de votre compte Glamia, en demandant la suppression. Nous vérifions qu'il s'agit bien de vous, puis nous supprimons tout, sous trente jours.",
+          "Si vous êtes une cliente et que vous voulez être effacée du fichier d'une professionnelle, adressez-vous d'abord à elle : c'est elle qui décide de ce qu'elle garde sur vous. Nous pouvons intervenir si elle ne répond pas."
+        ]
+      }
+    ]
   }
 }

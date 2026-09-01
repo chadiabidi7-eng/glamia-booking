@@ -649,5 +649,54 @@
     "condHandicap": "Acceso adaptado",
     "condParking": "Aparcamiento cerca",
     "condAnimaux": "Se admiten mascotas"
+  },
+  "suppression": {
+    "titre": "Eliminar tu cuenta de Glamia",
+    "maj": "Última actualización: 1 de septiembre de 2026",
+    "contact": "¿Una pregunta sobre la eliminación? Escríbenos a:",
+    "sections": [
+      {
+        "titre": "1. Desde la app, en tres gestos",
+        "paragraphes": [
+          "La eliminación se hace dentro de Glamia, la app de gestión de citas para profesionales de la belleza, editada por Bloom Studio.",
+          "Abre la app, ve a la pestaña Ajustes, baja hasta « Eliminar mi cuenta » y confirma.",
+          "No necesitas a nadie: la eliminación sale de inmediato, sin pasar por nosotros."
+        ]
+      },
+      {
+        "titre": "2. Lo que se elimina, en el acto",
+        "paragraphes": [
+          "Tu cuenta y tus datos de acceso.",
+          "Tu ficha profesional: nombre, alias, dirección, horarios, foto, mensaje de bienvenida, enlace de reservas.",
+          "Todas tus clientas, con sus datos, sus notas, sus fotos y su historial.",
+          "Todas tus citas, pasadas y futuras.",
+          "Todos tus servicios y tus precios.",
+          "Los datos que la app guarda en tu móvil.",
+          "Tu página de reservas deja de responder al instante: ya nadie puede reservar contigo."
+        ]
+      },
+      {
+        "titre": "3. Lo que se conserva, y por qué",
+        "paragraphes": [
+          "Los registros de facturación y de pago se conservan el tiempo que exige la ley contable y fiscal — diez años en Francia. No tenemos derecho a borrarlos antes.",
+          "Esos registros solo contienen lo que necesita una contabilidad: importes, fechas, números de factura. No sirven para nada más.",
+          "Tu suscripción se cancela donde la contrataste: en los ajustes de tu cuenta de Google Play o App Store. Eliminar la cuenta de Glamia no detiene el cobro."
+        ]
+      },
+      {
+        "titre": "4. Eliminar solo una parte",
+        "paragraphes": [
+          "Puedes borrar una clienta, una cita o un servicio en cualquier momento desde la app, sin eliminar tu cuenta.",
+          "Si quieres que borremos un dato concreto, escríbenos: lo hacemos en treinta días."
+        ]
+      },
+      {
+        "titre": "5. Si ya no puedes abrir la app",
+        "paragraphes": [
+          "Escríbenos desde el correo de tu cuenta de Glamia pidiendo la eliminación. Comprobamos que eres tú y lo eliminamos todo, en treinta días.",
+          "Si eres clienta y quieres que te borren del fichero de una profesional, dírigete primero a ella: es ella quien decide lo que guarda sobre ti. Podemos intervenir si no responde."
+        ]
+      }
+    ]
   }
 }

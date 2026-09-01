@@ -652,5 +652,54 @@
     "condHandicap": "Step-free access",
     "condParking": "Parking nearby",
     "condAnimaux": "Pets welcome"
+  },
+  "suppression": {
+    "titre": "Delete your Glamia account",
+    "maj": "Last updated: 1 September 2026",
+    "contact": "A question about deletion? Write to us at:",
+    "sections": [
+      {
+        "titre": "1. From the app, in three steps",
+        "paragraphes": [
+          "Deletion happens inside Glamia, the appointment app for beauty professionals, published by Bloom Studio.",
+          "Open the app, go to the Settings tab, scroll to « Delete my account », and confirm.",
+          "You don't need anyone: the deletion goes through immediately, without going via us."
+        ]
+      },
+      {
+        "titre": "2. What is deleted, straight away",
+        "paragraphes": [
+          "Your account and your sign-in details.",
+          "Your professional profile: name, handle, address, hours, photo, welcome message, booking link.",
+          "All your clients, with their contact details, notes, photos and history.",
+          "All your appointments, past and future.",
+          "All your services and prices.",
+          "The data the app keeps on your phone.",
+          "Your booking page stops answering at once: nobody can book with you any more."
+        ]
+      },
+      {
+        "titre": "3. What is kept, and why",
+        "paragraphes": [
+          "Billing and payment records are kept for as long as accounting and tax law requires — ten years in France. We are not allowed to erase them sooner.",
+          "Those records hold only what accounting needs: amounts, dates, invoice numbers. They serve no other purpose.",
+          "Your subscription is cancelled where you took it out: in your Google Play or App Store account settings. Deleting your Glamia account does not stop the billing."
+        ]
+      },
+      {
+        "titre": "4. Deleting only part of it",
+        "paragraphes": [
+          "You can erase a client, an appointment or a service at any time from the app, without deleting your account.",
+          "If you want us to erase a specific piece of data, write to us: we do it within thirty days."
+        ]
+      },
+      {
+        "titre": "5. If you can no longer open the app",
+        "paragraphes": [
+          "Write to us from the email address of your Glamia account, asking for deletion. We check it is really you, then we delete everything, within thirty days.",
+          "If you are a client and want to be removed from a professional's records, ask her first: she decides what she keeps about you. We can step in if she does not answer."
+        ]
+      }
+    ]
   }
 }
