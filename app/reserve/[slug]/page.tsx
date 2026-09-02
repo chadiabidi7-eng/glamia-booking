@@ -2581,6 +2581,43 @@ export default function ReservationPage() {
             : traduire('resa.cocheEmpreinteResa'))
           return
         }
+
+        // ── ON VÉRIFIE LE CRÉNEAU AVANT DE TOUCHER À SA CARTE ──────────────
+        //
+        // LE 3 SEPTEMBRE 2026 À MINUIT, une cliente de Lmk Beautyroom a payé
+        // trois fois 21,58 CHF en une minute pour un rendez-vous à midi. La pro
+        // ne travaillait ce jour-là que de 17 h à 19 h : la création a refusé
+        // les trois fois. On lui a rendu son argent à chaque tour — mais les
+        // frais, eux, ne reviennent jamais, et c'est la PRO qui les a payés.
+        // 4,74 CHF pour trois transactions que personne n'avait demandées, et
+        // une cliente repartie sans créneau.
+        //
+        // Le défaut n'était pas le refus, c'était l'ordre : on encaissait
+        // d'abord, on vérifiait ensuite. On demande donc maintenant si le
+        // créneau tient TOUJOURS, juste avant de présenter la carte.
+        //
+        // DEUX SECONDES, PAS PLUS, ET JAMAIS BLOQUANT. Une cliente attend
+        // devant son bouton. Si la vérification traîne ou tombe, on laisse
+        // passer : la création vérifiera de toute façon, et le pire qu'on
+        // risque alors est ce qui se passait déjà avant.
+        try {
+          const controle = await fetch('/api/creneaux/verifier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(2000),
+            body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeTotal }),
+          })
+          const verdict = await controle.json().catch(() => ({ ok: true }))
+          if (verdict?.ok === false) {
+            // Sa carte n'a pas bougé : on le lui dit, et on la renvoie
+            // choisir une heure qui existe vraiment.
+            alert(verdict?.message || traduire('confirmation.creneauPris'))
+            setHeure('')
+            setStep(4)
+            setRdvVersion(v => v + 1)
+            return
+          }
+        } catch { /* filet indisponible : on continue, la création tranchera */ }
         // ── LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI ─────────────────
         // Si la connexion meurt juste après l'encaissement, il ne restait
         // qu'un numéro de paiement : ni nom, ni créneau, ni prestation. Une
