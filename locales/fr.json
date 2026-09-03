@@ -274,13 +274,13 @@
     "recharge": "Recharge cette page dans quelques secondes.",
     "valide": "Paiement validé",
     "prevenue": "Merci ! Ta praticienne a été prévenue 💅",
-    "facture": "Enregistrer ma facture (PDF)"
+    "facture": "Enregistrer mon reçu (PDF)"
   },
   "payer": {
     "lienIndisponible": "Lien indisponible",
     "dejaRegle": "Déjà réglé",
     "dejaRegleDetail": "Ce paiement a bien été effectué. Merci 💅",
-    "voirFacture": "Voir ma facture",
+    "voirFacture": "Voir mon reçu",
     "indisponible": "Paiement indisponible",
     "paiementSecurise": "Paiement sécurisé · Glamia Pay",
     "echec": "Le paiement n'a pas abouti. Réessaie.",

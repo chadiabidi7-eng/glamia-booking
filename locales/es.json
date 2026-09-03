@@ -284,13 +284,13 @@
     "recharge": "Recarga esta página dentro de unos segundos.",
     "valide": "Pago confirmado",
     "prevenue": "¡Gracias! Tu profesional ya lo sabe 💅",
-    "facture": "Guardar mi factura (PDF)"
+    "facture": "Guardar mi recibo (PDF)"
   },
   "payer": {
     "lienIndisponible": "Enlace no disponible",
     "dejaRegle": "Ya pagado",
     "dejaRegleDetail": "Este pago se ha realizado correctamente. Gracias 💅",
-    "voirFacture": "Ver mi factura",
+    "voirFacture": "Ver mi recibo",
     "indisponible": "Pago no disponible",
     "paiementSecurise": "Pago seguro · Glamia Pay",
     "echec": "El pago no ha salido bien. Inténtalo otra vez.",
