@@ -542,7 +542,11 @@ export default function ReservationPage() {
   const [clienteNom,    setClienteNom]    = useState('')
   const [clienteEmail,  setClienteEmail]  = useState('')
   const [clienteId,     setClienteId]     = useState<string | null>(null)
-  const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown'>('idle')
+  const [phoneStatus,   setPhoneStatus]   = useState<'idle' | 'checking' | 'known' | 'unknown' | 'refuse'>('idle')
+  // Le refus tombé à la saisie du numéro : « indisponible » (cliente bloquée,
+  // formulé sans jamais le dire) ou « nouvelles_fermees » (page réservée aux
+  // clientes, avec le lien Instagram de la pro pour ne pas fermer la porte).
+  const [refusResa, setRefusResa] = useState<{ type: string; instagram?: string | null } | null>(null)
 
   // ── LA VITRINE ── ce que la page montre avant de réserver.
   // Tout est là, mais tout est plié : la première étape reste celle où l'on
@@ -1692,7 +1696,18 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: pro.id, telephone: normalized }),
       })
       if (!rep.ok) throw new Error('identification')
-      const { cliente: found } = await rep.json()
+      const reponse = await rep.json()
+
+      // Le serveur a refusé ce numéro : cliente bloquée (discret, le mot
+      // n'existe pas) ou page réservée aux clientes. On s'arrête là, avant
+      // tout le reste du parcours.
+      if (reponse?.refus) {
+        setRefusResa({ type: reponse.refus, instagram: reponse.instagram ?? null })
+        setPhoneStatus('refuse')
+        return
+      }
+
+      const { cliente: found } = reponse
 
       if (found) {
         setClienteId(found.id)
@@ -3484,6 +3499,29 @@ export default function ReservationPage() {
 
             {phoneStatus === 'checking' && (
               <button style={{ ...S.btn, opacity: 0.7 }} disabled>{traduire('resa.verification')}</button>
+            )}
+
+            {/* ── LE REFUS, TOMBÉ À LA SAISIE DU NUMÉRO ──────────────────────
+                Cliente bloquée : une phrase neutre, le mot « bloquée »
+                n'existe pas — protéger la pro, pas déclarer une guerre.
+                Nouvelles fermées : la porte se referme sur une invitation,
+                le lien Instagram de la pro. */}
+            {phoneStatus === 'refuse' && refusResa && (
+              <div style={{ ...S.infoBox, textAlign: 'center', padding: '28px 20px' }}>
+                <p style={{ fontSize: 15, color: '#4b5563', lineHeight: 1.6, margin: 0 }}>
+                  {refusResa.type === 'nouvelles_fermees'
+                    ? traduire('resa.nouvellesFermees', { pro: pro?.pseudo || pro?.prenom || '' })
+                    : traduire('resa.numeroIndisponible')}
+                </p>
+                {refusResa.type === 'nouvelles_fermees' && refusResa.instagram && (
+                  <a
+                    href={`https://instagram.com/${String(refusResa.instagram).replace(/^@/, '')}`}
+                    target="_blank" rel="noreferrer"
+                    style={{ display: 'inline-block', marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    {traduire('resa.suivreInsta')}
+                  </a>
+                )}
+              </div>
             )}
 
 

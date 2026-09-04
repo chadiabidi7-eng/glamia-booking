@@ -51,6 +51,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, raison: garde.raison }, { status: 429 })
     }
 
+    // ── LA CEINTURE DU BLOCAGE (4 septembre 2026) ─────────────────────────────
+    // Le guichet d'identification refuse déjà les clientes bloquées à la
+    // saisie du numéro — mais la page est publique et un appel direct le
+    // contournerait. Le refus de créer est donc redit ici, où le rendez-vous
+    // naît. Même message discret : jamais le mot « bloquée ».
+    const { data: clienteBloc } = await supabaseAdmin
+      .from('clientes')
+      .select('bloquee_le')
+      .eq('id', cliente_id)
+      .eq('pro_id', pro_id)
+      .maybeSingle()
+    if (clienteBloc?.bloquee_le) {
+      console.warn('[rdv/creer] cliente bloquée', pro_id, cliente_id)
+      return NextResponse.json({ ok: false, raison: 'indisponible' }, { status: 403 })
+    }
+
     const { data: pro } = await supabaseAdmin
       .from('profiles')
       .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, adresse, adresse_moment')
