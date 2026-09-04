@@ -605,6 +605,10 @@ export default function ReservationPage() {
   const [offresId, setOffresId] = useState<string | null>(null)
   const [avecPrenom, setAvecPrenom] = useState<string | null>(null)
   const idsPremiereDispo = (equipe ?? []).filter(m => m.role !== 'independante').map(m => m.id)
+  // ÉQUIPE : une offre du salon qui contient une prestation que la praticienne
+  // choisie n'assure pas ne lui est pas proposée — le serveur la refuserait.
+  const offresCompatibles = offresEligibles.filter(o =>
+    o.prestations_ids.every(id => Object.values(catalogue).some(l => l.some(t => t.id === id && t.active !== false))))
   // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
@@ -4334,9 +4338,9 @@ export default function ReservationPage() {
             )}
 
             {/* Offres en cours */}
-            {offresEligibles.length > 0 && (
+            {offresCompatibles.length > 0 && (
               <OffresSection
-                offres={offresEligibles}
+                offres={offresCompatibles}
                 offreAppliquee={offreAppliquee}
                 catalogue={catalogue}
                 devise={pro?.devise}

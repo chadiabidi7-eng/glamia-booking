@@ -17,7 +17,7 @@ async function sessionDe(email) {
 }
 
 const action = process.argv[2]
-const LILA = 'demo.google@glamia.pro'  // compte test Lila Nails
+const LILA = process.env.PILOTE ?? 'chadi.abidi7@gmail.com'  // compte test Lila Nails
 const lila = await sessionDe(LILA)
 console.log('pilote :', lila.id)
 
