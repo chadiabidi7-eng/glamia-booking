@@ -229,7 +229,10 @@
     "ligneAcompte": "Anticipo",
     "ligneSolde": "Resto",
     "lignePrestation": "Servicio",
-    "erreurConfirmation": "No se ha podido guardar tu reserva. No se te ha cobrado nada. Vuelve a intentarlo o escribe a tu profesional."
+    "erreurConfirmation": "No se ha podido guardar tu reserva. No se te ha cobrado nada. Vuelve a intentarlo o escribe a tu profesional.",
+    "nouvellesFermees": "%{pro} no acepta nuevas clientas por el momento 🌸",
+    "suivreInsta": "Síguela en Instagram para enterarte",
+    "numeroIndisponible": "La reserva en línea no está disponible para este número. Puedes contactar directamente con tu profesional."
   },
   "commun": {
     "chargement": "Cargando...",

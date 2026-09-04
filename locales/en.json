@@ -229,7 +229,10 @@
     "ligneAcompte": "Deposit",
     "ligneSolde": "Balance",
     "lignePrestation": "Service",
-    "erreurConfirmation": "Your booking couldn't be saved. Nothing was charged. Try again in a moment, or message your beauty pro."
+    "erreurConfirmation": "Your booking couldn't be saved. Nothing was charged. Try again in a moment, or message your beauty pro.",
+    "nouvellesFermees": "%{pro} isn't taking new clients at the moment 🌸",
+    "suivreInsta": "Follow her on Instagram to be notified",
+    "numeroIndisponible": "Online booking isn't available for this number. You can contact your professional directly."
   },
   "commun": {
     "chargement": "Loading...",

@@ -44,13 +44,43 @@ export async function POST(req: NextRequest) {
     // numéros sont stockés dans des formats variés (espaces, +33, 0033).
     const { data: clientes, error } = await supabaseAdmin
       .from('clientes')
-      .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur, reduction_rdv_restants')
+      .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur, reduction_rdv_restants, bloquee_le')
       .eq('pro_id', pro_id)
 
     if (error) return NextResponse.json({ error: 'lecture' }, { status: 500 })
 
     const trouvee = (clientes ?? []).find(c => normaliserTelephone(c.telephone as string) === cible) ?? null
-    if (trouvee) return NextResponse.json({ cliente: trouvee, creee: false })
+
+    // ── LES DEUX VERROUS DE LA PRO (4 septembre 2026) ─────────────────────────
+    // Ils vivent ICI, au guichet, parce que le numéro est la première chose
+    // que la page demande : le refus tombe immédiatement, personne ne remplit
+    // un parcours pour être refusée à la fin.
+    //
+    // CLIENTE BLOQUÉE — le refus est DISCRET, et c'est voulu. Le mot
+    // « bloquée » n'apparaît nulle part : le but est de protéger la pro, pas
+    // de déclencher une confrontation au salon ou en commentaires. On ne
+    // renvoie RIEN de sa fiche — pour la page, ce numéro n'a simplement pas
+    // accès à la réservation en ligne.
+    if (trouvee && trouvee.bloquee_le) {
+      return NextResponse.json({ refus: 'indisponible' })
+    }
+    if (trouvee) {
+      const { bloquee_le: _b, ...publique } = trouvee as Record<string, unknown>
+      return NextResponse.json({ cliente: publique, creee: false })
+    }
+
+    // PAGE RÉSERVÉE AUX CLIENTES — un numéro absent du fichier est refusé,
+    // avec le renvoi vers son Instagram : un refus qui recrute au lieu de
+    // fermer la porte. Une cliente CONNUE ne passe jamais par ici : pour
+    // elle, ce mode n'a aucune existence visible.
+    const { data: profil } = await supabaseAdmin
+      .from('profiles')
+      .select('resa_reservee_aux_clientes, instagram')
+      .eq('id', pro_id)
+      .maybeSingle()
+    if (profil?.resa_reservee_aux_clientes) {
+      return NextResponse.json({ refus: 'nouvelles_fermees', instagram: profil.instagram ?? null })
+    }
 
     if (!creer) return NextResponse.json({ cliente: null })
 
