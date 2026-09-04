@@ -1202,7 +1202,7 @@ export default function ReservationPage() {
   const [calMonth, setCalMonth] = useState(todayJs.getMonth())
 
   // ── Step 4 : Heure ───────────────────────────
-  const [slots,        setSlots]        = useState<Slot[]>([])
+  const [slots,        setSlots]        = useState<SlotQui[]>([])
   // Liste d'attente, proposée quand la journée choisie est complète.
   const [attenteOuverte, setAttenteOuverte] = useState(false)
   const [attentePrenom, setAttentePrenom] = useState('')
