@@ -1753,6 +1753,18 @@ export default function ReservationPage() {
       const m = equipe?.find(x => x.id === id)
       setAvecPrenom(m ? (m.pseudo || m.prenom) : null)
       if (!garder) { setTechniquesSelectionnees([]); setOffreAppliquee(null) }
+      else {
+        // Les mêmes prestations, mais SES durées et SES prix : on relit chaque
+        // ligne dans le catalogue de la praticienne choisie ; ce qu'elle
+        // n'assure pas disparaît de la sélection.
+        const cat = (d.catalogue ?? {}) as CataloguePrestations
+        setTechniquesSelectionnees(prev => prev.flatMap(sel => {
+          const tech = (cat[sel.categorie] ?? []).find(x => x.nom === sel.nom)
+          if (!tech || tech.active === false) return []
+          return [{ ...sel, prix: tech.prix, duree: tech.duree, prix_type: tech.prix_type, quantifiable: tech.quantifiable }]
+        }))
+        setOffreAppliquee(null)
+      }
       if (!garderDate) { setPremierCreneau(null); setAucunCreneauProche(false); setDate(''); setHeure('') }
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (e) {
