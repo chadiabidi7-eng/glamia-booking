@@ -605,10 +605,6 @@ export default function ReservationPage() {
   const [offresId, setOffresId] = useState<string | null>(null)
   const [avecPrenom, setAvecPrenom] = useState<string | null>(null)
   const idsPremiereDispo = (equipe ?? []).filter(m => m.role !== 'independante').map(m => m.id)
-  // ÉQUIPE : une offre du salon qui contient une prestation que la praticienne
-  // choisie n'assure pas ne lui est pas proposée — le serveur la refuserait.
-  const offresCompatibles = offresEligibles.filter(o =>
-    o.prestations_ids.every(id => Object.values(catalogue).some(l => l.some(t => t.id === id && t.active !== false))))
   // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
@@ -1191,6 +1187,10 @@ export default function ReservationPage() {
 
   // ── Step 2 : Multi-select techniques ─────────
   const [techniquesSelectionnees, setTechniquesSelectionnees] = useState<TechSelec[]>([])
+  // ÉQUIPE : une offre du salon qui contient une prestation que la praticienne
+  // choisie n'assure pas ne lui est pas proposée — le serveur la refuserait.
+  const offresCompatibles = offresEligibles.filter(o =>
+    o.prestations_ids.every(id => Object.values(catalogue).some(l => l.some(t => t.id === id && t.active !== false))))
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Set<string>>(new Set())
   // Les questions de la pro, et ce que la cliente y a répondu.
   const [questions, setQuestions] = useState<QuestionResa[]>([])
