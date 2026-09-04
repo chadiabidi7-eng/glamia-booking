@@ -1,3 +1,4 @@
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 import { createClient } from '@supabase/supabase-js'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,16 +91,15 @@ export async function prixReelDuPanier(
 ): Promise<PrixReel | null> {
   if (!Array.isArray(demandees) || demandees.length === 0) return null
 
-  const { data } = await supabaseAdmin
-    .from('prestations')
-    .select('data')
-    .eq('pro_id', proId)
-    .maybeSingle()
+  // ÉQUIPE : le catalogue effectif de la praticienne (celui du salon,
+  // surchargé de ses durées), et les offres du salon.
+  const ctx = await contexteDe(supabaseAdmin, proId)
+  const { data: effectif } = await catalogueDe(supabaseAdmin, ctx)
 
-  const catalogue = (data?.data ?? null) as Record<string, PrestationCatalogue[]> | null
+  const catalogue = (effectif ?? null) as Record<string, PrestationCatalogue[]> | null
   if (!catalogue) return null
 
-  const offre = await offreValide(proId, offreDemandee)
+  const offre = await offreValide(ctx.catalogueId, offreDemandee)
   /** Cette prestation est-elle couverte par l'offre ? (même test que la page :
       l'offre désigne des identifiants, le panier des noms.) */
   const couverte = (nom: string, categorie: string) =>
@@ -235,12 +235,13 @@ export async function remisesVerifiees(
     return { prix: prixPanier, fidelite: null, reduction: null }
   }
 
+  const ctx = await contexteDe(supabaseAdmin, proId)
   const [{ data: fiche }, { data: cliente }, { data: pro }] = await Promise.all([
     clienteId
       ? supabaseAdmin
           .from('fidelite_clientes')
           .select('recompense_disponible, tampons')
-          .eq('pro_id', proId)
+          .eq('pro_id', ctx.fichierId)
           .eq('cliente_id', clienteId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -254,7 +255,7 @@ export async function remisesVerifiees(
     supabaseAdmin
       .from('profiles')
       .select('fidelite_config')
-      .eq('id', proId)
+      .eq('id', ctx.salonId)
       .maybeSingle(),
   ])
 

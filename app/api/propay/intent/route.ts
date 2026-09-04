@@ -1,3 +1,4 @@
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 import { createClient } from '@supabase/supabase-js'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { NextRequest, NextResponse } from 'next/server'
@@ -236,10 +237,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_params' }, { status: 400 })
   }
 
-  // Config + compte Stripe de la pro
-  const [{ data: profil }, { data: compte }] = await Promise.all([
-    supabaseAdmin.from('profiles').select('acompte_config, pro_pay_actif').eq('id', proId).maybeSingle(),
-    supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled, pays, devise').eq('pro_id', proId).maybeSingle(),
+  // Config + compte Stripe de la pro.
+  // ÉQUIPE : la règle d'acompte est celle du SALON, la caisse celle du compte
+  // qui encaisse (le pilote pour une collaboratrice), le fichier celui qui
+  // dit si la cliente est nouvelle. Pour une pro seule, tout est elle.
+  const ctx = await contexteDe(supabaseAdmin, proId)
+  const [{ data: profil }, { data: caisse }, { data: compte }] = await Promise.all([
+    supabaseAdmin.from('profiles').select('acompte_config').eq('id', ctx.salonId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('pro_pay_actif').eq('id', ctx.caisseId).maybeSingle(),
+    supabaseAdmin.from('stripe_comptes').select('account_id, charges_enabled, pays, devise').eq('pro_id', ctx.caisseId).maybeSingle(),
   ])
 
   // Glamia Pay = abonnement Glamia Pro Pay, et lui seul. Ni l'essai gratuit
@@ -251,7 +257,7 @@ export async function POST(req: NextRequest) {
   // interdire. Sans ce refus ici, l'acompte continuerait d'être demandé à ses
   // clientes après la fin de son abonnement.
   const config = (profil?.acompte_config ?? {}) as Config
-  if (!profil?.pro_pay_actif || !config.actif || !compte?.charges_enabled) {
+  if (!caisse?.pro_pay_actif || !config.actif || !compte?.charges_enabled) {
     return NextResponse.json({ actif: false })
   }
 
@@ -260,7 +266,7 @@ export async function POST(req: NextRequest) {
   // simple empreinte à ses fidèles, un acompte à une inconnue. Quand elle n'a
   // rien réglé de particulier (`nouvelles` absent), tout le monde a la même
   // règle et on ne va même pas lire le fichier clientes.
-  const nouvelle = config.nouvelles ? await estUneNouvelleCliente(proId, body.telephone) : false
+  const nouvelle = config.nouvelles ? await estUneNouvelleCliente(ctx.fichierId, body.telephone) : false
   const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
 
   // ── L'ACOMPTE SE CALCULE SUR LE VRAI PRIX ────────────────────────────────
@@ -281,7 +287,7 @@ export async function POST(req: NextRequest) {
   const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id)
   let prixServeur: number | null = panier?.prix ?? null
   if (panier) {
-    const fiche = await ficheClienteParTelephone(proId, body.telephone)
+    const fiche = await ficheClienteParTelephone(ctx.fichierId, body.telephone)
     const remises = await remisesVerifiees(
       proId, fiche, panier.prix, body.fidelite_appliquee, body.reduction_appliquee,
     )
@@ -329,7 +335,7 @@ export async function POST(req: NextRequest) {
     if (mode === 'empreinte') {
       // Carte enregistrée avec 3DS, prélèvement futur possible hors session
       const customer = await stripe().customers.create(
-        { metadata: { glamia_pro_id: proId } },
+        { metadata: { glamia_pro_id: ctx.caisseId, glamia_praticienne_id: proId } },
         { stripeAccount },
       )
       const setup = await stripe().setupIntents.create(
@@ -350,7 +356,7 @@ export async function POST(req: NextRequest) {
           // de sa réservation — juste la carte et les portefeuilles du
           // téléphone.
           automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
-          metadata: { glamia_pro_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte), glamia_cfg: glamiaCfg },
+          metadata: { glamia_pro_id: ctx.caisseId, glamia_praticienne_id: proId, glamia_type: 'empreinte', glamia_acompte: String(acompte), glamia_cfg: glamiaCfg },
         },
         { stripeAccount },
       )
@@ -369,7 +375,7 @@ export async function POST(req: NextRequest) {
     // Acompte réel OU prestation complète : payé maintenant + frais de résa
     const { commission, totalCliente, frais } = calculerTotalCliente(acompte, paysCaisse)
     const customer = await stripe().customers.create(
-      { metadata: { glamia_pro_id: proId } },
+      { metadata: { glamia_pro_id: ctx.caisseId, glamia_praticienne_id: proId } },
       { stripeAccount },
     )
     const paiement = await stripe().paymentIntents.create(
@@ -383,7 +389,7 @@ export async function POST(req: NextRequest) {
         // empêche Apple Pay et Google Pay d'apparaître.
         automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
         application_fee_amount: commission,
-        metadata: { glamia_pro_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais), glamia_cfg: glamiaCfg },
+        metadata: { glamia_pro_id: ctx.caisseId, glamia_praticienne_id: proId, glamia_type: mode, glamia_acompte: String(acompte), glamia_frais: String(frais), glamia_cfg: glamiaCfg },
       },
       { stripeAccount },
     )

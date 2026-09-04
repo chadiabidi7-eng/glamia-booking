@@ -5,6 +5,8 @@ import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 import { avisFenetreMs } from '@/lib/reglages'
 import { normaliserTelephone } from '@/lib/telephone'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — ce qui appartient à UNE cliente : ses rendez-vous à venir
@@ -36,11 +38,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
     }
 
+    // ÉQUIPE : la fiche vit dans le fichier (le sien, ou celui du pilote), et
+    // ses rendez-vous peuvent être chez n'importe qui dans le salon — on les
+    // suit par la cliente, pas par la praticienne.
+    const ctx = await contexteDe(supabaseAdmin, pro_id)
     const { data: fiche } = await supabaseAdmin
       .from('clientes')
       .select('id, telephone')
       .eq('id', cliente_id)
-      .eq('pro_id', pro_id)
+      .eq('pro_id', ctx.fichierId)
       .maybeSingle()
 
     if (!fiche || normaliserTelephone(fiche.telephone as string) !== normaliserTelephone(telephone)) {
@@ -79,7 +85,6 @@ export async function POST(req: NextRequest) {
         .from('rendez_vous')
         .select('id, date, duree, technique, techniques, token_avis')
         .eq('cliente_id', cliente_id)
-        .eq('pro_id', pro_id)
         .neq('statut', 'annule')
         .lt('date', new Date().toISOString())
         .gte('date', new Date(Date.now() - remonteeMs).toISOString())
@@ -120,9 +125,8 @@ export async function POST(req: NextRequest) {
 
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
-      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le')
+      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le, pro_id')
       .eq('cliente_id', cliente_id)
-      .eq('pro_id', pro_id)
       .gte('date', new Date().toISOString())
       .neq('statut', 'annule')
       .order('date', { ascending: true })
@@ -167,7 +171,7 @@ export async function POST(req: NextRequest) {
     const { data: fidelite } = await supabaseAdmin
       .from('fidelite_clientes')
       .select('tampons, cartes_completees, recompense_disponible')
-      .eq('pro_id', pro_id)
+      .eq('pro_id', ctx.fichierId)
       .eq('cliente_id', cliente_id)
       .maybeSingle()
 

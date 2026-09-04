@@ -232,7 +232,18 @@
     "erreurConfirmation": "Your booking couldn't be saved. Nothing was charged. Try again in a moment, or message your beauty pro.",
     "nouvellesFermees": "%{pro} isn't taking new clients at the moment 🌸",
     "suivreInsta": "Follow her on Instagram to be notified",
-    "numeroIndisponible": "Online booking isn't available for this number. You can contact your professional directly."
+    "numeroIndisponible": "Online booking isn't available for this number. You can contact your professional directly.",
+    "avecQui": "With whom?",
+    "avecQuiSous": "Choose who will take care of you.",
+    "premiereDisponible": "First available",
+    "premiereDisponibleSous": "We'll offer the first free slot, whoever it is with.",
+    "aucuneDispoProche": "No availability in the next 3 months",
+    "desLe": "From %{date} at %{heure}",
+    "avec": "With %{prenom}",
+    "changer": "Change",
+    "peutTeRecevoir": "%{prenom} can see you as soon as %{date}.",
+    "voirSesDispos": "See %{prenom}'s availability",
+    "libelleAvec": "With"
   },
   "commun": {
     "chargement": "Loading...",

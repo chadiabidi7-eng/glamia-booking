@@ -4,6 +4,8 @@ import { creneauReservable, minToTime, delaiEntreClientes } from '@/lib/creneaux
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — créer une réservation.
@@ -56,22 +58,29 @@ export async function POST(req: NextRequest) {
     // saisie du numéro — mais la page est publique et un appel direct le
     // contournerait. Le refus de créer est donc redit ici, où le rendez-vous
     // naît. Même message discret : jamais le mot « bloquée ».
+    // ÉQUIPE : l'agenda est celui de la praticienne (pro_id) ; le fichier,
+    // le salon et le catalogue peuvent être ceux du pilote.
+    const ctx = await contexteDe(supabaseAdmin, pro_id)
+    if (ctx.suspendu) return NextResponse.json({ ok: false, raison: 'indisponible' }, { status: 403 })
     const { data: clienteBloc } = await supabaseAdmin
       .from('clientes')
       .select('bloquee_le')
       .eq('id', cliente_id)
-      .eq('pro_id', pro_id)
+      .eq('pro_id', ctx.fichierId)
       .maybeSingle()
     if (clienteBloc?.bloquee_le) {
       console.warn('[rdv/creer] cliente bloquée', pro_id, cliente_id)
       return NextResponse.json({ ok: false, raison: 'indisponible' }, { status: 403 })
     }
 
-    const { data: pro } = await supabaseAdmin
-      .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, adresse, adresse_moment')
-      .eq('id', pro_id)
-      .maybeSingle()
+    const [{ data: pro }, { data: salon }] = await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+        .eq('id', pro_id)
+        .maybeSingle(),
+      supabaseAdmin.from('profiles').select('adresse, adresse_moment').eq('id', ctx.salonId).maybeSingle(),
+    ])
 
     if (!pro) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
 
@@ -166,7 +175,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       id: cree.id,
-      adresse: adressePourEtape(pro.adresse as string | null, pro.adresse_moment as string | null, 'reservation'),
+      adresse: adressePourEtape((salon?.adresse ?? null) as string | null, (salon?.adresse_moment ?? null) as string | null, 'reservation'),
     })
   } catch (e) {
     console.error('[rdv/creer] erreur', e)

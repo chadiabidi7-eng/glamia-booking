@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI.
@@ -42,8 +44,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'params' }, { status: 400 })
     }
 
+    const ctx = await contexteDe(supabaseAdmin, pro_id)
     const { data: compte } = await supabaseAdmin
-      .from('stripe_comptes').select('account_id').eq('pro_id', pro_id).maybeSingle()
+      .from('stripe_comptes').select('account_id').eq('pro_id', ctx.caisseId).maybeSingle()
     if (!compte?.account_id) return NextResponse.json({ error: 'compte' }, { status: 404 })
 
     // Le strict nécessaire pour reposer le rendez-vous : quand, quoi, pour qui.

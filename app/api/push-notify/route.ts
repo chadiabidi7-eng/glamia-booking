@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -13,19 +14,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'proId, title et body requis' }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin
+  // ÉQUIPE : la praticienne est prévenue, et son pilote aussi quand il a la
+  // visibilité sur son agenda. Une pro seule : elle, comme avant.
+  const ctx = await contexteDe(supabaseAdmin, proId)
+  const ids = await destinatairesPush(supabaseAdmin, ctx)
+  const { data: lignes, error } = await supabaseAdmin
     .from('profiles')
-    .select('push_token')
-    .eq('id', proId)
-    .maybeSingle()
+    .select('id, push_token')
+    .in('id', ids)
 
   if (error) {
     console.error('[api/push-notify] Erreur lecture profil:', error)
     return NextResponse.json({ error: 'profile_read_failed' }, { status: 500 })
   }
 
-  const pushToken = data?.push_token
-  if (!pushToken) {
+  const jetons = (lignes ?? []).map(l => l.push_token as string | null).filter((j): j is string => !!j)
+  if (jetons.length === 0) {
     console.warn('[api/push-notify] Push token absent pour pro_id:', proId)
     return NextResponse.json({ sent: false, reason: 'no_push_token' })
   }
@@ -34,7 +38,7 @@ export async function POST(req: NextRequest) {
     const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pushToken, title, body }),
+      body: JSON.stringify(jetons.map(to => ({ to, title, body }))),
     })
 
     const pushBody = await pushRes.text()

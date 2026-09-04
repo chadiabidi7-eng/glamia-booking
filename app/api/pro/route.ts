@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — la page publique d'une pro : son profil, son catalogue.
@@ -46,22 +48,29 @@ function normaliser(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { slug } = await req.json() as { slug?: string }
-    if (!slug) return NextResponse.json({ error: 'slug_manquant' }, { status: 400 })
+    const { slug, pro_id } = await req.json() as { slug?: string; pro_id?: string }
+    if (!slug && !pro_id) return NextResponse.json({ error: 'slug_manquant' }, { status: 400 })
 
-    // 1. Par la colonne slug — indexée, instantanée quel que soit l'effectif.
-    const { data: exact } = await supabaseAdmin
-      .from('profiles')
-      .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
-      .eq('slug', slug)
-      .order('created_at', { ascending: true })
-      .limit(1)
+    // ÉQUIPE : la page peut demander une PRATICIENNE précise (la cliente a
+    // choisi « avec qui »). On répond alors comme pour un slug, sur ce compte.
+    const { data: exact } = pro_id
+      ? await supabaseAdmin
+          .from('profiles')
+          .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
+          .eq('id', pro_id)
+          .limit(1)
+      : await supabaseAdmin
+          .from('profiles')
+          .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
+          .eq('slug', slug!)
+          .order('created_at', { ascending: true })
+          .limit(1)
 
     let pro = exact?.[0] ?? null
 
     // 2. Repli : reconstitution du slug depuis l'identité. Sert aux liens
     //    partagés avant que la colonne existe, ou sous une autre forme.
-    if (!pro) {
+    if (!pro && slug) {
       const cible = normaliser(slug)
       const { data: tous } = await supabaseAdmin
         .from('profiles')
@@ -83,6 +92,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (!pro) return NextResponse.json({ etat: 'introuvable' })
+
+    // ── ÉQUIPE : une membre porte le salon de son pilote ─────────────────────
+    // Une collaboratrice n'a ni règlement, ni adresse, ni fidélité à elle :
+    // tout ça est le salon. Sa page montre donc le salon du pilote, avec SON
+    // agenda et SON identité. Son accès suit celui du pilote : elle ne paie
+    // rien, c'est lui qui a les places.
+    const ctx = await contexteDe(supabaseAdmin, pro.id as string)
+    if (ctx.membre && ctx.piloteId) {
+      const { data: pilote } = await supabaseAdmin
+        .from('profiles')
+        .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
+        .eq('id', ctx.piloteId)
+        .maybeSingle()
+      if (pilote) {
+        const p = pro as Record<string, unknown>
+        const pi = pilote as Record<string, unknown>
+        // L'accès est celui du pilote, pour les deux natures de compte.
+        p.abonnement_actif = pi.abonnement_actif; p.pro_pay_actif = pi.pro_pay_actif; p.trial_ends_at = pi.trial_ends_at
+        if (ctx.suspendu) { p.abonnement_actif = false; p.pro_pay_actif = false; p.trial_ends_at = null }
+        if (ctx.role === 'collaboratrice') {
+          for (const champ of ['message_accueil', 'adresse', 'adresse_moment', 'instagram', 'tiktok', 'snapchat', 'fidelite_config', 'acompte_config', 'devise', 'langue', 'pays', 'categorie_autre_nom', 'categorie_autre_icone', 'questions_resa']) {
+            p[champ] = pi[champ]
+          }
+        }
+      }
+    }
 
     // La page ne s'ouvre que si l'abonnement est actif ou l'essai en cours.
     // Ne jamais se fier à `is_pro` seul : il n'est synchronisé qu'au lancement
@@ -107,11 +142,18 @@ export async function POST(req: NextRequest) {
 
     if (!accesActif) return NextResponse.json({ etat: 'ferme', pro: { pseudo: profil.pseudo, prenom: profil.prenom, instagram: profil.instagram, tiktok: profil.tiktok, snapchat: profil.snapchat } })
 
-    const { data: prest } = await supabaseAdmin
-      .from('prestations')
-      .select('data, ordre_categories')
-      .eq('pro_id', profil.id as string)
-      .maybeSingle()
+    const prest = await catalogueDe(supabaseAdmin, ctx)
+
+    // ÉQUIPE : quand ce compte a des membres, la page propose « Avec qui ? ».
+    // Le pilote est la première carte ; une membre qui a son propre lien
+    // n'affiche pas ce choix (sa page, c'est elle).
+    const membres = ctx.membre ? [] : await membresDuSalon(supabaseAdmin, profil.id as string)
+    const equipe = membres.length > 0
+      ? [
+          { id: profil.id, prenom: profil.prenom, nom: profil.nom, pseudo: profil.pseudo, avatar_url: profil.avatar_url ?? profil.photo_url ?? null, role: 'pilote' },
+          ...membres,
+        ]
+      : null
 
     // L'ADRESSE EXACTE NE SORT QUE SI LA PRO L'A RENDUE PUBLIQUE.
     //
@@ -130,6 +172,12 @@ export async function POST(req: NextRequest) {
       pro: profil,
       catalogue: prest?.data ?? null,
       ordreCategories: prest?.ordre_categories ?? null,
+      equipe,
+      // Ce que la page doit adresser au SALON plutôt qu'à la praticienne :
+      // la vitrine (avis, adresse, règlement), les offres, la fidélité.
+      salon_id: ctx.salonId,
+      offres_id: ctx.catalogueId,
+      praticienne: ctx.membre ? { role: ctx.role, prenom: profil.prenom, pseudo: profil.pseudo } : null,
     })
   } catch (e) {
     console.error('[api/pro] erreur', e)

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 import { stripe } from '@/lib/stripe-serveur'
 import { journaliserOrphelin } from '@/lib/orphelins'
 
@@ -41,10 +42,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_params' }, { status: 400 })
   }
 
+  // ÉQUIPE : l'intent vit sur la caisse, qui peut être celle du pilote.
+  const ctx = await contexteDe(supabaseAdmin, proId)
+  const caisseId = ctx.caisseId
   const { data: compte } = await supabaseAdmin
     .from('stripe_comptes')
     .select('account_id')
-    .eq('pro_id', proId)
+    .eq('pro_id', caisseId)
     .maybeSingle()
   if (!compte) return NextResponse.json({ error: 'compte_introuvable' }, { status: 404 })
   const stripeAccount = compte.account_id
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
     // de prélèvement possible).
     if (intentId.startsWith('seti_')) {
       const setup = await stripe().setupIntents.retrieve(intentId, {}, { stripeAccount })
-      if (setup.metadata?.glamia_pro_id !== proId) {
+      if (setup.metadata?.glamia_pro_id !== caisseId) {
         return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
       }
       return NextResponse.json({ success: true, rembourse: false })
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     // Acompte / total (PaymentIntent) : rembourser si capturé.
     const paiement = await stripe().paymentIntents.retrieve(intentId, {}, { stripeAccount })
-    if (paiement.metadata?.glamia_pro_id !== proId) {
+    if (paiement.metadata?.glamia_pro_id !== caisseId) {
       return NextResponse.json({ error: 'non_autorise' }, { status: 403 })
     }
     if (paiement.status !== 'succeeded') {

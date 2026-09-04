@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 import { generateSlots, minToTime, delaiEntreClientes } from '@/lib/creneaux'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
         .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
         .eq('id', pro_id)
         .maybeSingle(),
-      supabaseAdmin.from('prestations').select('data').eq('pro_id', pro_id).maybeSingle(),
+      contexteDe(supabaseAdmin, pro_id).then(ctx => catalogueDe(supabaseAdmin, ctx)),
     ])
     if (!pro) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
 

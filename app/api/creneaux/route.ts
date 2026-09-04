@@ -27,15 +27,40 @@ const MAX_DATES = 95
 
 export async function POST(req: NextRequest) {
   try {
-    const { pro_id, duree, dates, exclure_rdv } = await req.json() as {
-      pro_id?: string; duree?: number; dates?: string[]; exclure_rdv?: string
+    const { pro_id, pro_ids, duree, dates, exclure_rdv } = await req.json() as {
+      pro_id?: string; pro_ids?: string[]; duree?: number; dates?: string[]; exclure_rdv?: string
     }
 
-    if (!pro_id || typeof duree !== 'number' || duree <= 0 || !Array.isArray(dates) || dates.length === 0) {
+    if ((!pro_id && !Array.isArray(pro_ids)) || typeof duree !== 'number' || duree <= 0 || !Array.isArray(dates) || dates.length === 0) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
     }
     if (dates.length > MAX_DATES) {
       return NextResponse.json({ error: 'trop_de_dates' }, { status: 400 })
+    }
+
+    // ── ÉQUIPE : « la première disponible » ──────────────────────────────────
+    // Plusieurs agendas d'un coup : on calcule chacun, on fusionne par jour,
+    // et chaque créneau dit QUI le tient. La cliente choisit une heure, la
+    // page sait chez qui la poser.
+    if (Array.isArray(pro_ids) && pro_ids.length > 0) {
+      const ids = [...new Set(pro_ids.filter(x => typeof x === 'string'))].slice(0, 6)
+      const parPro = await Promise.all(ids.map(async id => {
+        const rep = await POST(new NextRequest(req.url, { method: 'POST', body: JSON.stringify({ pro_id: id, duree, dates }), headers: { 'Content-Type': 'application/json' } }))
+        const corps = await rep.json().catch(() => ({})) as { creneaux?: Record<string, Slot[]> }
+        return { id, creneaux: corps.creneaux ?? {} }
+      }))
+      const fusion: Record<string, (Slot & { qui: string })[]> = {}
+      for (const date of dates) {
+        const parHeure = new Map<string, Slot & { qui: string }>()
+        for (const { id, creneaux } of parPro) {
+          for (const s of creneaux[date] ?? []) {
+            if (!s.disponible) continue
+            if (!parHeure.has(s.heure)) parHeure.set(s.heure, { ...s, qui: id })
+          }
+        }
+        fusion[date] = [...parHeure.values()].sort((a, b) => a.heure.localeCompare(b.heure))
+      }
+      return NextResponse.json({ creneaux: fusion })
     }
 
     const { data: pro } = await supabaseAdmin

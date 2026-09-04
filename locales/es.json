@@ -232,7 +232,18 @@
     "erreurConfirmation": "No se ha podido guardar tu reserva. No se te ha cobrado nada. Vuelve a intentarlo o escribe a tu profesional.",
     "nouvellesFermees": "%{pro} no acepta nuevas clientas por el momento 🌸",
     "suivreInsta": "Síguela en Instagram para enterarte",
-    "numeroIndisponible": "La reserva en línea no está disponible para este número. Puedes contactar directamente con tu profesional."
+    "numeroIndisponible": "La reserva en línea no está disponible para este número. Puedes contactar directamente con tu profesional.",
+    "avecQui": "¿Con quién?",
+    "avecQuiSous": "Elige a la persona que te atenderá.",
+    "premiereDisponible": "La primera disponible",
+    "premiereDisponibleSous": "Te proponemos el primer hueco libre, sea con quien sea.",
+    "aucuneDispoProche": "Sin hueco en los próximos 3 meses",
+    "desLe": "Desde el %{date} a las %{heure}",
+    "avec": "Con %{prenom}",
+    "changer": "Cambiar",
+    "peutTeRecevoir": "%{prenom} puede atenderte desde el %{date}.",
+    "voirSesDispos": "Ver la disponibilidad de %{prenom}",
+    "libelleAvec": "Con"
   },
   "commun": {
     "chargement": "Cargando...",

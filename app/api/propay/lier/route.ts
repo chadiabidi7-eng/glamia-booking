@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
 import { calculerAcompte } from '../intent/route'
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest) {
   if (!rdv || rdv.pro_id !== proId) {
     return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
   }
+  // ÉQUIPE : l'argent est allé sur la CAISSE (le pilote pour une
+  // collaboratrice) ; la ligne de paiement garde qui a réalisé la prestation.
+  const ctx = await contexteDe(supabaseAdmin, proId)
+  const caisseId = ctx.caisseId
   if (rdv.statut === 'annule') {
     return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
   }
@@ -56,7 +61,7 @@ export async function POST(req: NextRequest) {
   const { data: profilPro } = await supabaseAdmin
     .from('profiles')
     .select('acompte_config')
-    .eq('id', proId)
+    .eq('id', ctx.salonId)
     .maybeSingle()
   const configPro = (profilPro?.acompte_config ?? {}) as Parameters<typeof calculerAcompte>[1]
   const prixCentimes = Math.round(Number(rdv.prix ?? 0) * 100)
@@ -81,7 +86,7 @@ export async function POST(req: NextRequest) {
   const { data: compte } = await supabaseAdmin
     .from('stripe_comptes')
     .select('account_id, devise')
-    .eq('pro_id', proId)
+    .eq('pro_id', caisseId)
     .maybeSingle()
   if (!compte) return NextResponse.json({ error: 'compte_introuvable' }, { status: 404 })
   const stripeAccount = compte.account_id
@@ -93,7 +98,7 @@ export async function POST(req: NextRequest) {
     if (intentId.startsWith('seti_')) {
       // ── Empreinte : SetupIntent réussi ──
       const setup = await stripe().setupIntents.retrieve(intentId, {}, { stripeAccount })
-      if (setup.status !== 'succeeded' || setup.metadata?.glamia_pro_id !== proId) {
+      if (setup.status !== 'succeeded' || setup.metadata?.glamia_pro_id !== caisseId) {
         return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
       }
       const acompteEmpreinte = parseInt(String(setup.metadata?.glamia_acompte ?? '0'), 10)
@@ -104,7 +109,8 @@ export async function POST(req: NextRequest) {
       }
       const { error } = await supabaseAdmin.from('paiements').insert({
         rdv_id: rdvId,
-        pro_id: proId,
+        pro_id: caisseId,
+        praticienne_id: caisseId !== proId ? proId : null,
         type: 'acompte',
         mode: 'empreinte',
         statut: 'empreinte_posee',
@@ -135,7 +141,7 @@ export async function POST(req: NextRequest) {
 
     // ── Acompte réel : PaymentIntent réussi ──
     const paiement = await stripe().paymentIntents.retrieve(intentId, {}, { stripeAccount })
-    if (paiement.status !== 'succeeded' || paiement.metadata?.glamia_pro_id !== proId) {
+    if (paiement.status !== 'succeeded' || paiement.metadata?.glamia_pro_id !== caisseId) {
       return NextResponse.json({ error: 'intent_non_confirme' }, { status: 409 })
     }
     const estTotal = paiement.metadata?.glamia_type === 'total'
@@ -155,7 +161,8 @@ export async function POST(req: NextRequest) {
     }
     const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
-      pro_id: proId,
+      pro_id: caisseId,
+      praticienne_id: caisseId !== proId ? proId : null,
       type: estTotal ? 'total' : 'acompte',
       mode: estTotal ? 'total' : 'acompte',
       statut: estTotal ? 'paye' : 'acompte_paye',

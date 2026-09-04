@@ -78,18 +78,36 @@ const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_ur
  * La page ne lit plus les rendez-vous : elle demande des heures libres et n'en
  * apprend pas davantage. Ni qui occupe, ni pour quoi, ni à quel prix.
  */
+// ÉQUIPE : un créneau peut dire QUI le tient (« la première disponible »).
+type SlotQui = Slot & { qui?: string }
+
 async function creneauxServeur(
-  proId: string, duree: number, dates: string[], exclureRdv?: string,
-): Promise<Record<string, Slot[]>> {
+  proId: string, duree: number, dates: string[], exclureRdv?: string, proIds?: string[],
+): Promise<Record<string, SlotQui[]>> {
   const rep = await fetch('/api/creneaux', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv }),
+    body: JSON.stringify(proIds && proIds.length > 1
+      ? { pro_ids: proIds, duree, dates }
+      : { pro_id: proId, duree, dates, exclure_rdv: exclureRdv }),
   })
   if (!rep.ok) throw new Error('creneaux')
   const { creneaux } = await rep.json()
-  return (creneaux ?? {}) as Record<string, Slot[]>
+  return (creneaux ?? {}) as Record<string, SlotQui[]>
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉQUIPE (4 septembre 2026). Quand plusieurs personnes travaillent sur la même
+// page, la cliente choisit AVEC QUI avant les prestations : chez une
+// indépendante rattachée les prix diffèrent, chez une collaboratrice les
+// durées. Chaque carte dit la prochaine disponibilité — c'est ce qui sauve le
+// rendez-vous quand la patronne est complète et son assistante libre demain.
+// ─────────────────────────────────────────────────────────────────────────────
+type MembreCarte = {
+  id: string; prenom: string; nom?: string | null; pseudo?: string | null; avatar_url?: string | null
+  role: 'pilote' | 'collaboratrice' | 'independante'
+}
+
 
 type ProInfo = {
   id: string
@@ -577,6 +595,16 @@ export default function ReservationPage() {
   // La prochaine ouverture dans l'agenda de la pro. Cherchée dès l'ouverture,
   // sans faire attendre la page : la ligne apparaît quand la réponse arrive.
   const [prochaineDispo, setProchaineDispo] = useState<{ date: string; heure: string } | null>(null)
+  // ── ÉQUIPE ──
+  const [equipe, setEquipe] = useState<MembreCarte[] | null>(null)
+  /** La praticienne choisie (null tant qu'une équipe existe et qu'on n'a pas choisi). */
+  const [praticienne, setPraticienne] = useState<string | null>(null)
+  const [premiereDispo, setPremiereDispo] = useState(false)
+  const [dispoParMembre, setDispoParMembre] = useState<Record<string, { date: string; heure: string } | null>>({})
+  const [salonId, setSalonId] = useState<string | null>(null)
+  const [offresId, setOffresId] = useState<string | null>(null)
+  const [avecPrenom, setAvecPrenom] = useState<string | null>(null)
+  const idsPremiereDispo = (equipe ?? []).filter(m => m.role !== 'independante').map(m => m.id)
   // Le bandeau d'accueil : l'onglet montré, l'avis montré dedans, et l'arrêt
   // définitif dès qu'on y touche.
   const [onglet, setOnglet] = useState<'avis' | 'adresse' | 'accueil'>('avis')
@@ -1334,7 +1362,7 @@ export default function ReservationPage() {
   }
 
   // ── Premier créneau disponible ─────────────
-  const [premierCreneau, setPremierCreneau] = useState<{ date: string; heure: string } | null>(null)
+  const [premierCreneau, setPremierCreneau] = useState<{ date: string; heure: string; qui?: string } | null>(null)
   const [loadingPremierCreneau, setLoadingPremierCreneau] = useState(false)
   const [aucunCreneauProche, setAucunCreneauProche] = useState(false)
   // Jours du mois affiché n'ayant AUCUN créneau libre pour la durée choisie.
@@ -1473,7 +1501,7 @@ export default function ReservationPage() {
         const rep = await fetch('/api/pro', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug }),
+          body: JSON.stringify(praticienne && praticienne !== pro.id ? { pro_id: praticienne } : (praticienne ? { pro_id: praticienne } : { slug })),
         })
         if (!rep.ok) return
         const d = await rep.json()
@@ -1522,7 +1550,7 @@ export default function ReservationPage() {
       if (minuteur) window.clearInterval(minuteur)
       document.removeEventListener('visibilitychange', auRetour)
     }
-  }, [pro?.id, slug, step])
+  }, [pro?.id, slug, step, praticienne])
 
   // ── LA VITRINE ──
   // Chargée dès que la pro est connue. La visite n'est comptée qu'à la
@@ -1535,7 +1563,7 @@ export default function ReservationPage() {
     fetch('/api/pro/vitrine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pro_id: pro.id, compter }),
+      body: JSON.stringify({ pro_id: salonId ?? pro.id, compter }),
     })
       .then(r => r.json())
       .then(d => { if (!d?.error) setVitrine(d as Vitrine) })
@@ -1543,6 +1571,21 @@ export default function ReservationPage() {
       .catch(e => console.error('[vitrine]', e))
       .finally(() => setVitrinePrete(true))
   }, [pro?.id])
+
+  // ── ÉQUIPE : la prochaine disponibilité de CHACUNE, pour les cartes ──
+  useEffect(() => {
+    if (!equipe) return
+    let vivant = true
+    equipe.forEach(m => {
+      fetch('/api/pro/prochaine-dispo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: m.id }),
+      })
+        .then(r => r.json())
+        .then(d => { if (vivant) setDispoParMembre(prev => ({ ...prev, [m.id]: d?.date && d?.heure ? { date: d.date, heure: d.heure } : null })) })
+        .catch(() => { if (vivant) setDispoParMembre(prev => ({ ...prev, [m.id]: null })) })
+    })
+    return () => { vivant = false }
+  }, [equipe])
 
   // ── LA PROCHAINE DISPONIBILITÉ ──
   // C'est la question que se pose une cliente avant toute autre : est-ce que
@@ -1625,6 +1668,26 @@ export default function ReservationPage() {
       // lib/i18n.ts pour le raisonnement complet.
       poserLangue(found.langue)
       poserPays(found.pays)
+      appliquerPro(found, d)
+      // ÉQUIPE : plusieurs praticiennes sur ce lien → la cliente choisira.
+      setEquipe(Array.isArray(d.equipe) && d.equipe.length > 1 ? d.equipe : null)
+      setSalonId(d.salon_id ?? found.id)
+      setOffresId(d.offres_id ?? found.id)
+      setPraticienne(Array.isArray(d.equipe) && d.equipe.length > 1 ? null : found.id)
+      setAvecPrenom(d.praticienne ? (d.praticienne.pseudo || d.praticienne.prenom) : null)
+      setPageState('ready')
+
+      // ON PRÉVIENT LE TÉLÉPHONE DE LA PRO qu'une cliente est là, pour qu'il
+      // relise son calendrier iPhone (voir le commentaire de reveillerLaPro).
+      reveillerLaPro(slug)
+    } catch (e) {
+      console.error('[loadPro]', e)
+      setPageState('notfound')
+    }
+  }
+
+  /** Le profil public, tel que la page s'en sert — pour la pro du lien, ou une praticienne choisie. */
+  function appliquerPro(found: any, d: any) {
       setPro({
         id:               found.id,
         prenom:           found.prenom,
@@ -1660,22 +1723,36 @@ export default function ReservationPage() {
       setAcompteActif(((found.acompte_config as { actif?: boolean } | null)?.actif) === true)
       setQuestions(questionsDepuisProfil((found as { questions_resa?: unknown }).questions_resa))
 
-      if (d.catalogue) setCatalogue(d.catalogue as CataloguePrestations)
+      setCatalogue((d.catalogue ?? {}) as CataloguePrestations)
       if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
-      setPageState('ready')
+  }
 
-      // ON PRÉVIENT LE TÉLÉPHONE DE LA PRO qu'une cliente est là, pour qu'il
-      // relise son calendrier iPhone. Elle peut avoir bloqué son jeudi sans
-      // rouvrir Glamia depuis : sans ce signal, la grille affichée ici
-      // ignorerait ce blocage jusqu'à ce qu'elle ouvre son app.
-      //
-      // Le serveur ne réveille QUE cette pro-là, seulement si elle a relié son
-      // calendrier, et au plus une fois toutes les cinq minutes. On ne regarde
-      // même pas la réponse : la page de résa ne doit jamais dépendre de ça.
-      reveillerLaPro(slug)
+  /**
+   * ÉQUIPE : la cliente a choisi avec qui. On recharge le profil et le
+   * catalogue de cette praticienne (le serveur y met le salon du pilote).
+   * `garder` conserve les prestations déjà cochées — elles ont les mêmes
+   * identifiants d'une collaboratrice à l'autre.
+   */
+  async function choisirPraticienne(id: string, garder = false, garderDate = false) {
+    try {
+      const rep = await fetch('/api/pro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pro_id: id }),
+      })
+      if (!rep.ok) throw new Error('api/pro')
+      const d = await rep.json()
+      if (d.etat !== 'ok' || !d.pro) return
+      appliquerPro(d.pro, d)
+      setPraticienne(id)
+      setPremiereDispo(false)
+      const m = equipe?.find(x => x.id === id)
+      setAvecPrenom(m ? (m.pseudo || m.prenom) : null)
+      if (!garder) { setTechniquesSelectionnees([]); setOffreAppliquee(null) }
+      if (!garderDate) { setPremierCreneau(null); setAucunCreneauProche(false); setDate(''); setHeure('') }
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (e) {
-      console.error('[loadPro]', e)
-      setPageState('notfound')
+      console.error('[choisirPraticienne]', e)
     }
   }
 
@@ -1750,7 +1827,7 @@ export default function ReservationPage() {
   async function chargerOffresEligibles(proId: string, tel: string) {
     try {
       const { data, error } = await supabase.rpc('get_eligible_offers', {
-        p_pro_id: proId,
+        p_pro_id: offresId ?? proId,
         p_telephone: tel,
       })
       if (error) { console.error('[chargerOffresEligibles]', error); return }
@@ -2359,7 +2436,7 @@ export default function ReservationPage() {
     try {
       // Appel impossible → on ne propose RIEN plutôt que d'afficher tous les
       // créneaux libres (risque de double réservation). Le catch s'en charge.
-      const creneaux = await creneauxServeur(pro.id, dureeTotal, [date])
+      const creneaux = await creneauxServeur(pro.id, dureeTotal, [date], undefined, premiereDispo ? idsPremiereDispo : undefined)
       const frais = creneaux[date] ?? []
       setSlots(frais)
       jourDesSlots.current = date
@@ -2465,7 +2542,7 @@ export default function ReservationPage() {
         // Appel impossible : on ne marque RIEN comme complet. Griser à tort
         // fermerait la porte à des clientes qui pouvaient réserver. Le catch
         // laisse donc l'ensemble vide.
-        const creneaux = await creneauxServeur(pro.id, dureeTotal, aTester)
+        const creneaux = await creneauxServeur(pro.id, dureeTotal, aTester, undefined, premiereDispo ? idsPremiereDispo : undefined)
         if (annule) return
 
         const complets = new Set<string>()
@@ -2512,13 +2589,13 @@ export default function ReservationPage() {
         aTester.push(dateStr)
       }
 
-      const creneaux = aTester.length ? await creneauxServeur(pro.id, dureeTotal, aTester) : {}
+      const creneaux = aTester.length ? await creneauxServeur(pro.id, dureeTotal, aTester, undefined, premiereDispo ? idsPremiereDispo : undefined) : {}
 
       let trouve = false
       for (const dateStr of aTester) {
         const available = (creneaux[dateStr] ?? []).find(s => s.disponible)
         if (available) {
-          setPremierCreneau({ date: dateStr, heure: available.heure })
+          setPremierCreneau({ date: dateStr, heure: available.heure, qui: available.qui })
           trouve = true
           break
         }
@@ -4207,9 +4284,54 @@ export default function ReservationPage() {
             STEP 2 — Techniques multi-select
             (sections accordéon, toutes spécialités)
         ──────────────────────────────────────── */}
-        {step === 2 && (
+        {/* ── ÉQUIPE — « Avec qui ? » ─────────────────────────────────────
+            Avant les prestations : chez une indépendante rattachée les prix
+            diffèrent, chez une collaboratrice les durées. Chaque carte dit la
+            prochaine disponibilité, c'est ce qui décide la cliente. */}
+        {step === 2 && equipe && !praticienne && (
           <div>
             <BackBtn onClick={() => setStep(1)} />
+            <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><User size={20} color={GLAMIA_PINK} />{traduire('resa.avecQui')}</h2>
+            <p style={S.sub}>{traduire('resa.avecQuiSous')}</p>
+            {equipe.every(m => m.role !== 'independante') && (
+              <button
+                onClick={() => { setPremiereDispo(true); setPraticienne(equipe[0].id); setAvecPrenom(null); setTechniquesSelectionnees([]); setOffreAppliquee(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                style={{ ...S.card, width: '100%', textAlign: 'left', cursor: 'pointer', marginBottom: 12, border: `1.5px solid ${PINK}`, background: PINK_LIGHT, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 22, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Clock size={20} color="#fff" /></div>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#1f2937', fontSize: 15 }}>{traduire('resa.premiereDisponible')}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#6b7280' }}>{traduire('resa.premiereDisponibleSous')}</p>
+                </div>
+              </button>
+            )}
+            {equipe.map(m => {
+              const dispo = dispoParMembre[m.id]
+              const nom = m.pseudo || m.prenom
+              return (
+                <button key={m.id} onClick={() => choisirPraticienne(m.id)}
+                  style={{ ...S.card, width: '100%', textAlign: 'left', cursor: 'pointer', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {m.avatar_url
+                    ? <img src={m.avatar_url} alt="" style={{ width: 44, height: 44, borderRadius: 22, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 44, height: 44, borderRadius: 22, background: PINK_LIGHT, color: PINK, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{nom?.[0]?.toUpperCase() ?? '?'}</div>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#1f2937', fontSize: 15 }}>{nom}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 12.5, color: dispo === null ? '#9ca3af' : PINK, fontWeight: 600 }}>
+                      {dispo === undefined ? '…' : dispo === null ? traduire('resa.aucuneDispoProche') : traduire('resa.desLe', { date: formatDateLong(dispo.date), heure: dispo.heure })}
+                    </p>
+                  </div>
+                  <span style={{ color: '#cfc5ce', fontSize: 20 }}>›</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {step === 2 && (!equipe || praticienne) && (
+          <div>
+            <BackBtn onClick={() => { if (equipe) { setPraticienne(null); setPremiereDispo(false); setAvecPrenom(null) } else setStep(1) }} />
+            {equipe && avecPrenom && !premiereDispo && (
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 12px' }}>{traduire('resa.avec', { prenom: avecPrenom })} · <button onClick={() => { setPraticienne(null); setPremiereDispo(false); setAvecPrenom(null) }} style={{ color: PINK, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>{traduire('resa.changer')}</button></p>
+            )}
 
             {/* Offres en cours */}
             {offresEligibles.length > 0 && (
@@ -4560,6 +4682,32 @@ export default function ReservationPage() {
                 </p>
               </div>
             )}
+            {/* ÉQUIPE : la praticienne choisie n'a rien avant un mois, une
+                autre a de la place — on le dit, avant que la cliente reparte. */}
+            {equipe && praticienne && !premiereDispo && !loadingPremierCreneau && (() => {
+              const limite = new Date(); limite.setDate(limite.getDate() + 30)
+              const limiteStr = buildDateStr(limite.getFullYear(), limite.getMonth(), limite.getDate())
+              const loin = aucunCreneauProche || (premierCreneau ? premierCreneau.date > limiteStr : false)
+              if (!loin) return null
+              const alternatives = equipe
+                .filter(m => m.id !== praticienne && dispoParMembre[m.id] && (!premierCreneau || dispoParMembre[m.id]!.date < premierCreneau.date))
+                .sort((a, b) => dispoParMembre[a.id]!.date.localeCompare(dispoParMembre[b.id]!.date))
+              const alt = alternatives[0]
+              if (!alt) return null
+              const d = dispoParMembre[alt.id]!
+              const memeCatalogue = alt.role !== 'independante' && (equipe.find(m => m.id === praticienne)?.role !== 'independante')
+              return (
+                <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20, border: `1.5px solid ${PINK}` }}>
+                  <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 600, margin: '0 0 10px', lineHeight: 1.5 }}>
+                    {traduire('resa.peutTeRecevoir', { prenom: alt.pseudo || alt.prenom, date: formatDateLong(d.date) })}
+                  </p>
+                  <button onClick={() => { choisirPraticienne(alt.id, memeCatalogue); setStep(memeCatalogue ? 3 : 2) }}
+                    style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: PINK, color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+                    {traduire('resa.voirSesDispos', { prenom: alt.pseudo || alt.prenom })}
+                  </button>
+                </div>
+              )
+            })()}
             {premierCreneau && !loadingPremierCreneau && (
               <div style={{
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
@@ -4573,7 +4721,8 @@ export default function ReservationPage() {
                   {premierCreneau.heure}
                 </p>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    if (premiereDispo && premierCreneau.qui) await choisirPraticienne(premierCreneau.qui, true, true)
                     setDate(premierCreneau.date)
                     setHeure(premierCreneau.heure)
                     setStep(5)
@@ -4753,7 +4902,7 @@ export default function ReservationPage() {
                 {slotsLibres.map(s => (
                   <button
                     key={s.heure}
-                    onClick={() => { setCreneauPerdu(null); setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
+                    onClick={async () => { if (premiereDispo && s.qui) await choisirPraticienne(s.qui, true, true); setCreneauPerdu(null); setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
@@ -4788,6 +4937,7 @@ export default function ReservationPage() {
 
               {/* Infos principales */}
               {[
+                ...(avecPrenom ? [{ icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleAvec'), value: avecPrenom }] : []),
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleCliente'), value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleDate'), value: formatDateLong(date) },
                 { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeTotal)}` },
@@ -5242,7 +5392,7 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Sticky footer récap techniques (step 2) ── */}
-      {step === 2 && techniquesSelectionnees.length > 0 && (
+      {step === 2 && (!equipe || praticienne) && techniquesSelectionnees.length > 0 && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20,
           background: '#fff', borderTop: '1px solid #f3f4f6',

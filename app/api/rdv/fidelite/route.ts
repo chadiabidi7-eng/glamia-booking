@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — mise à jour de la carte de fidélité lors d'une NOUVELLE
@@ -46,11 +48,14 @@ export async function POST(req: NextRequest) {
   }
 
   const cId = rdv.cliente_id as string | null
-  const proId = rdv.pro_id as string
+  // ÉQUIPE : les tampons vont sur la carte du FICHIER (celle du salon quand
+  // il est partagé), et la règle est celle du salon.
+  const ctx = await contexteDe(supabaseAdmin, rdv.pro_id as string)
+  const proId = ctx.fichierId
   if (!cId) return NextResponse.json({ success: true, skipped: 'sans_cliente' })
 
   const { data: profil } = await supabaseAdmin
-    .from('profiles').select('fidelite_config').eq('id', proId).maybeSingle()
+    .from('profiles').select('fidelite_config').eq('id', ctx.salonId).maybeSingle()
   const config = (profil?.fidelite_config ?? {}) as Config
   if (!config.active) return NextResponse.json({ success: true, skipped: 'inactif' })
   const nbRonds = config.nb_ronds ?? 10

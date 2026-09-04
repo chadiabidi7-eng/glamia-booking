@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — reconnaître une cliente à son numéro, ou la créer.
@@ -33,6 +35,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
     }
 
+    // ÉQUIPE : le fichier clientes peut être celui du pilote (partagé), et le
+    // mode « réservée à mes clientes » comme l'Instagram sont ceux du salon.
+    const ctx = await contexteDe(supabaseAdmin, pro_id)
+
     const cible = normaliserTelephone(telephone)
     // Un numéro trop court reconnaîtrait n'importe qui : on refuse plutôt que
     // de renvoyer une cliente au hasard à quelqu'un qui tâtonne.
@@ -45,7 +51,7 @@ export async function POST(req: NextRequest) {
     const { data: clientes, error } = await supabaseAdmin
       .from('clientes')
       .select('id, prenom, nom, telephone, email, reduction_type, reduction_valeur, reduction_rdv_restants, bloquee_le')
-      .eq('pro_id', pro_id)
+      .eq('pro_id', ctx.fichierId)
 
     if (error) return NextResponse.json({ error: 'lecture' }, { status: 500 })
 
@@ -76,7 +82,7 @@ export async function POST(req: NextRequest) {
     const { data: profil } = await supabaseAdmin
       .from('profiles')
       .select('resa_reservee_aux_clientes, instagram')
-      .eq('id', pro_id)
+      .eq('id', ctx.salonId)
       .maybeSingle()
     if (profil?.resa_reservee_aux_clientes) {
       return NextResponse.json({ refus: 'nouvelles_fermees', instagram: profil.instagram ?? null })
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
     const { data: creee, error: errCreation } = await supabaseAdmin
       .from('clientes')
       .insert({
-        pro_id,
+        pro_id: ctx.fichierId,
         prenom: (prenom ?? '').trim(),
         nom: (nom ?? '').trim(),
         telephone: cible,

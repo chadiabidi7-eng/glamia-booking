@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { contexteDe, catalogueDe, membresDuSalon, destinatairesPush } from '@/lib/equipe'
 import { adressePourEtape, type EtapeParcours } from '@/lib/adresse-due'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,13 +53,24 @@ export async function POST(req: NextRequest) {
     // LE NOM, LA LANGUE, LA DEVISE ET L'ADRESSE VIENNENT DE LA BASE, PAS DU
     // NAVIGATEUR. Un mail au nom d'une autre pro, dans une autre devise, ne
     // doit pas pouvoir se fabriquer depuis la page.
-    const { data: pro } = await supabaseAdmin
-      .from('profiles')
-      .select('prenom, nom, pseudo, adresse, adresse_moment, langue, pays, devise, categorie_autre_nom')
-      .eq('id', proId)
-      .maybeSingle()
+    // ÉQUIPE : le mail porte l'identité du SALON (adresse, langue, devise,
+    // nom), et dit avec qui — « Afropermanent · avec Sarah ».
+    const ctx = await contexteDe(supabaseAdmin, proId)
+    const [{ data: pro }, { data: praticienne }] = await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('prenom, nom, pseudo, adresse, adresse_moment, langue, pays, devise, categorie_autre_nom')
+        .eq('id', ctx.salonId)
+        .maybeSingle(),
+      ctx.membre && ctx.role === 'collaboratrice'
+        ? supabaseAdmin.from('profiles').select('prenom, pseudo').eq('id', proId).maybeSingle()
+        : Promise.resolve({ data: null as { prenom?: string | null; pseudo?: string | null } | null }),
+    ])
 
     if (!pro) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
+    const nomSalon = (pro.pseudo as string) || `${pro.prenom ?? ''} ${pro.nom ?? ''}`.trim()
+    const avec = praticienne ? ((praticienne.pseudo as string) || (praticienne.prenom as string) || '') : ''
+    const nomPro = avec ? `${nomSalon} · ${avec}` : nomSalon
 
     const adresse = adressePourEtape(
       pro.adresse as string | null,
@@ -75,7 +87,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         cliente_email: email,
         cliente_prenom: (body.cliente_prenom ?? '').trim(),
-        pro_nom: (pro.pseudo as string) || `${pro.prenom ?? ''} ${pro.nom ?? ''}`.trim(),
+        pro_nom: nomPro,
         langue: pro.langue ?? null,
         pays: pro.pays ?? null,
         date: body.date ?? '',

@@ -232,7 +232,18 @@
     "erreurConfirmation": "Ta réservation n'a pas pu être enregistrée. Rien n'a été débité. Réessaie dans un instant, ou écris à ta professionnelle.",
     "nouvellesFermees": "%{pro} ne prend plus de nouvelles clientes pour le moment 🌸",
     "suivreInsta": "La suivre sur Instagram pour être prévenue",
-    "numeroIndisponible": "La réservation en ligne n'est pas disponible pour ce numéro. Tu peux contacter directement ta professionnelle."
+    "numeroIndisponible": "La réservation en ligne n'est pas disponible pour ce numéro. Tu peux contacter directement ta professionnelle.",
+    "avecQui": "Avec qui ?",
+    "avecQuiSous": "Choisissez la personne qui vous recevra.",
+    "premiereDisponible": "La première disponible",
+    "premiereDisponibleSous": "On vous propose le premier créneau libre, peu importe avec qui.",
+    "aucuneDispoProche": "Aucune place dans les 3 prochains mois",
+    "desLe": "Dès le %{date} à %{heure}",
+    "avec": "Avec %{prenom}",
+    "changer": "Changer",
+    "peutTeRecevoir": "%{prenom} peut vous recevoir dès le %{date}.",
+    "voirSesDispos": "Voir les disponibilités de %{prenom}",
+    "libelleAvec": "Avec"
   },
   "commun": {
     "chargement": "Chargement...",
