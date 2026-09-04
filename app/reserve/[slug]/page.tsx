@@ -1751,7 +1751,7 @@ export default function ReservationPage() {
       setPraticienne(id)
       setPremiereDispo(false)
       const m = equipe?.find(x => x.id === id)
-      setAvecPrenom(m ? (m.pseudo || m.prenom) : null)
+      setAvecPrenom(d.praticienne ? (d.praticienne.pseudo || d.praticienne.prenom) : (m ? (m.pseudo || m.prenom) : null))
       if (!garder) { setTechniquesSelectionnees([]); setOffreAppliquee(null) }
       else {
         // Les mêmes prestations, mais SES durées et SES prix : on relit chaque
@@ -3405,7 +3405,7 @@ export default function ReservationPage() {
               {pro?.pseudo ? (
                 <>
                   <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro.pseudo}</p>
-                  <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0' }}>{pro.prenom}</p>
+                  <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0' }}>{avecPrenom && !premiereDispo ? traduire('resa.avec', { prenom: avecPrenom }) : pro.prenom}</p>
                 </>
               ) : (
                 <>

@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
     // agenda et SON identité. Son accès suit celui du pilote : elle ne paie
     // rien, c'est lui qui a les places.
     const ctx = await contexteDe(supabaseAdmin, pro.id as string)
+    // Le prénom de la praticienne, gardé AVANT que l'identité du salon ne prenne sa place.
+    const praticienneNom = { prenom: (pro as Record<string, unknown>).prenom as string, pseudo: (pro as Record<string, unknown>).pseudo as string | null }
     if (ctx.membre && ctx.piloteId) {
       const { data: pilote } = await supabaseAdmin
         .from('profiles')
@@ -112,7 +114,10 @@ export async function POST(req: NextRequest) {
         p.abonnement_actif = pi.abonnement_actif; p.pro_pay_actif = pi.pro_pay_actif; p.trial_ends_at = pi.trial_ends_at
         if (ctx.suspendu) { p.abonnement_actif = false; p.pro_pay_actif = false; p.trial_ends_at = null }
         if (ctx.role === 'collaboratrice') {
-          for (const champ of ['message_accueil', 'adresse', 'adresse_moment', 'instagram', 'tiktok', 'snapchat', 'fidelite_config', 'acompte_config', 'devise', 'langue', 'pays', 'categorie_autre_nom', 'categorie_autre_icone', 'questions_resa']) {
+          // Une collaboratrice est une extension du salon : la page porte le
+          // nom, la photo et les réseaux du salon ; elle n'apparaît que comme
+          // « avec Sarah ».
+          for (const champ of ['prenom', 'nom', 'pseudo', 'avatar_url', 'photo_url', 'message_accueil', 'adresse', 'adresse_moment', 'instagram', 'tiktok', 'snapchat', 'fidelite_config', 'acompte_config', 'devise', 'langue', 'pays', 'categorie_autre_nom', 'categorie_autre_icone', 'questions_resa']) {
             p[champ] = pi[champ]
           }
         }
@@ -177,7 +182,7 @@ export async function POST(req: NextRequest) {
       // la vitrine (avis, adresse, règlement), les offres, la fidélité.
       salon_id: ctx.salonId,
       offres_id: ctx.catalogueId,
-      praticienne: ctx.membre ? { role: ctx.role, prenom: profil.prenom, pseudo: profil.pseudo } : null,
+      praticienne: ctx.membre ? { role: ctx.role, prenom: praticienneNom.prenom, pseudo: praticienneNom.pseudo } : null,
     })
   } catch (e) {
     console.error('[api/pro] erreur', e)
