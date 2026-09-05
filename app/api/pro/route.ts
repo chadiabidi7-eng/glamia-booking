@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { assistantesDe } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — la page publique d'une pro : son profil, son catalogue.
@@ -125,11 +126,16 @@ export async function POST(req: NextRequest) {
     // mail de confirmation de présence. Jamais ici.
     profil.adresse = adressePourEtape(profil.adresse as string | null, profil.adresse_moment as string | null, 'page')
 
+    // ÉQUIPE : les assistantes de la pro, avec ce qu'elles font et leurs
+    // durées. Vide pour une pro seule — la page ne change alors en rien.
+    const equipe = await assistantesDe(supabaseAdmin, profil.id as string)
+
     return NextResponse.json({
       etat: 'ok',
       pro: profil,
       catalogue: prest?.data ?? null,
       ordreCategories: prest?.ordre_categories ?? null,
+      equipe,
     })
   } catch (e) {
     console.error('[api/pro] erreur', e)

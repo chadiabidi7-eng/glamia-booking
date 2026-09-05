@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable, minToTime, delaiEntreClientes } from '@/lib/creneaux'
+import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
+import { profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CE CRÉNEAU EST-IL ENCORE LIBRE ? — À DEMANDER AVANT DE DÉBITER LA CARTE.
@@ -34,7 +35,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  let body: { pro_id?: unknown; date?: unknown; heure?: unknown; duree?: unknown }
+  let body: { pro_id?: unknown; date?: unknown; heure?: unknown; duree?: unknown; praticienne_id?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
   const date = body.date
   const heure = body.heure
   const duree = Number(body.duree)
+  // ÉQUIPE : chez qui ? null = la pro elle-même.
+  const praticienneId = typeof body.praticienne_id === 'string' && /^[0-9a-f-]{36}$/i.test(body.praticienne_id) ? body.praticienne_id : null
 
   if (typeof proId !== 'string' || !/^[0-9a-f-]{36}$/i.test(proId)
     || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -54,26 +57,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { data: pro } = await supabaseAdmin
-      .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
-      .eq('id', proId)
-      .maybeSingle()
+    // Les heures de celle qui recevra (la pro, ou son assistante), et SES
+    // rendez-vous à elle : ceux de l'autre ne l'occupent pas.
+    const pro = await profilHorairesPour(supabaseAdmin, proId, praticienneId)
 
     if (!pro) return NextResponse.json({ ok: false, raison: 'pro_introuvable' }, { status: 404 })
 
-    const { data: rdvs } = await supabaseAdmin
-      .from('rendez_vous')
-      .select('date, duree')
-      .eq('pro_id', proId)
-      .gte('date', `${date}T00:00:00.000Z`)
-      .lte('date', `${date}T23:59:59.999Z`)
-      .neq('statut', 'annule')
-
-    const rdvExistants = (rdvs ?? []).map(r => {
-      const d = new Date(r.date as string)
-      return { heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 }
-    })
+    const rdvExistants = await rdvExistantsDe(supabaseAdmin, proId, praticienneId, date)
 
     // Exactement le même juge que `rdv/creer`, avec exactement les mêmes
     // données. Deux règles différentes rouvriraient le défaut d'un autre côté :

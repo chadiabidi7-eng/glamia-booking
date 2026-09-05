@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  const { proId, title, body } = await req.json()
+  const { proId, title, body, praticienneId } = await req.json()
 
   if (!proId || !title || !body) {
     return NextResponse.json({ error: 'proId, title et body requis' }, { status: 400 })
@@ -24,8 +24,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'profile_read_failed' }, { status: 500 })
   }
 
-  const pushToken = data?.push_token
-  if (!pushToken) {
+  // ÉQUIPE : l'assistante qui reçoit est prévenue aussi, sur son téléphone.
+  const destinataires: string[] = []
+  if (data?.push_token) destinataires.push(data.push_token as string)
+  if (typeof praticienneId === 'string' && /^[0-9a-f-]{36}$/i.test(praticienneId)) {
+    const { data: elle } = await supabaseAdmin
+      .from('profiles')
+      .select('push_token')
+      .eq('id', praticienneId)
+      .eq('pilote_id', proId)
+      .is('equipe_retire_le', null)
+      .maybeSingle()
+    if (elle?.push_token && elle.push_token !== data?.push_token) destinataires.push(elle.push_token as string)
+  }
+  const pushToken = destinataires.length === 1 ? destinataires[0] : destinataires
+  if (destinataires.length === 0) {
     console.warn('[api/push-notify] Push token absent pour pro_id:', proId)
     return NextResponse.json({ sent: false, reason: 'no_push_token' })
   }

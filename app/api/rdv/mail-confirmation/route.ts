@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { adressePourEtape, type EtapeParcours } from '@/lib/adresse-due'
+import { assistanteValide, avecPrenom } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Le mail « Votre RDV est bien enregistré », envoyé depuis le serveur.
@@ -37,6 +38,8 @@ type Corps = {
   techniques?: { nom: string; specialite: string; prix: number; duree_minutes: number }[]
   /** L'étape du parcours d'où part le mail. Par défaut : la réservation. */
   etape?: EtapeParcours
+  /** ÉQUIPE : l'assistante qui reçoit, s'il y en a une. */
+  praticienne_id?: string | null
 }
 
 export async function POST(req: NextRequest) {
@@ -66,6 +69,14 @@ export async function POST(req: NextRequest) {
       body.etape ?? 'reservation',
     )
 
+    // ÉQUIPE : le mail est au nom de la pro, « · avec Sarah » quand c'est
+    // l'assistante qui reçoit. Le prénom est relu en base, jamais recopié.
+    let nomPro = (pro.pseudo as string) || `${pro.prenom ?? ''} ${pro.nom ?? ''}`.trim()
+    if (typeof body.praticienne_id === 'string' && body.praticienne_id) {
+      const elle = await assistanteValide(supabaseAdmin, proId, body.praticienne_id)
+      if (elle?.prenom) nomPro = `${nomPro} · ${avecPrenom(pro.langue as string | null, elle.prenom)}`
+    }
+
     const rep = await fetch(FONCTION_ENVOI, {
       method: 'POST',
       headers: {
@@ -75,7 +86,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         cliente_email: email,
         cliente_prenom: (body.cliente_prenom ?? '').trim(),
-        pro_nom: (pro.pseudo as string) || `${pro.prenom ?? ''} ${pro.nom ?? ''}`.trim(),
+        pro_nom: nomPro,
         langue: pro.langue ?? null,
         pays: pro.pays ?? null,
         date: body.date ?? '',

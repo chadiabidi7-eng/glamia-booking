@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, minToTime, delaiEntreClientes } from '@/lib/creneaux'
+import { assistantesDe, creneauxDe } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA PROCHAINE DISPONIBILITÉ, DÈS L'OUVERTURE DE LA PAGE.
@@ -75,10 +76,30 @@ export async function POST(req: NextRequest) {
       jours.push(new Date(aujourdhui.getTime() + i * 86400000).toISOString().slice(0, 10))
     }
 
+    // ── ÉQUIPE : la première libre, que ce soit la pro ou son assistante ────
+    // Même horizon, même durée ; on prend la plus tôt des deux. La pro seule
+    // reprend le chemin d'avant, sans requête de plus.
+    const assistantes = await assistantesDe(supabaseAdmin, pro_id)
+    if (assistantes.length > 0) {
+      const personnes: (string | null)[] = [null, ...assistantes.map(a => a.id)]
+      let meilleur: { date: string; heure: string; qui: string | null } | null = null
+      for (const qui of personnes) {
+        const creneaux = await creneauxDe(supabaseAdmin, pro_id, qui, duree, jours)
+        for (const jour of jours) {
+          const premier = (creneaux[jour] ?? []).find(s => s.disponible)
+          if (!premier) continue
+          if (!meilleur || jour < meilleur.date || (jour === meilleur.date && premier.heure < meilleur.heure)) meilleur = { date: jour, heure: premier.heure, qui }
+          break
+        }
+      }
+      return NextResponse.json(meilleur ? { ...meilleur, duree } : { date: null, heure: null })
+    }
+
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
       .select('date, duree')
       .eq('pro_id', pro_id)
+      .is('praticienne_id', null)
       .neq('statut', 'annule')
       .gte('date', `${jours[0]}T00:00:00.000Z`)
       .lte('date', `${jours[jours.length - 1]}T23:59:59.999Z`)

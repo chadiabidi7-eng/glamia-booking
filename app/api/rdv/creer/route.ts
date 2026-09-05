@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable, minToTime, delaiEntreClientes } from '@/lib/creneaux'
+import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
+import { assistanteValide, dureeChezAssistante, profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
 import { adressePourEtape } from '@/lib/adresse-due'
@@ -29,13 +30,21 @@ const supabaseAdmin = createClient(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { pro_id, cliente_id, date, heure, duree } = body as {
-      pro_id?: string; cliente_id?: string; date?: string; heure?: string; duree?: number
+    const { pro_id, cliente_id, date, heure, duree, praticienne_id } = body as {
+      pro_id?: string; cliente_id?: string; date?: string; heure?: string; duree?: number; praticienne_id?: string | null
     }
 
     if (!pro_id || !cliente_id || !date || !heure || typeof duree !== 'number' || duree <= 0) {
       return NextResponse.json({ error: 'parametres_invalides' }, { status: 400 })
     }
+
+    // ── ÉQUIPE : avec qui. Le rendez-vous reste chez la pro ; il porte qui le
+    // fait. On refuse un identifiant qui n'est pas une assistante de CETTE pro.
+    const assistante = typeof praticienne_id === 'string' && praticienne_id ? await assistanteValide(supabaseAdmin, pro_id, praticienne_id) : null
+    if (typeof praticienne_id === 'string' && praticienne_id && !assistante) {
+      return NextResponse.json({ ok: false, raison: 'assistante_inconnue' }, { status: 409 })
+    }
+    const praticienneId = assistante?.id ?? null
 
     // ── LA GARDE CONTRE LES RÉSERVATIONS EN MASSE ───────────────────────────
     // Posée avant toute écriture. La page est publique et sans limite d'appels :
@@ -75,28 +84,21 @@ export async function POST(req: NextRequest) {
 
     if (!pro) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
 
-    const { data: rdvs } = await supabaseAdmin
-      .from('rendez_vous')
-      .select('date, duree')
-      .eq('pro_id', pro_id)
-      .gte('date', `${date}T00:00:00.000Z`)
-      .lte('date', `${date}T23:59:59.999Z`)
-      .neq('statut', 'annule')
+    // Les heures de celle qui recevra, et ses rendez-vous à elle.
+    const heures = praticienneId ? await profilHorairesPour(supabaseAdmin, pro_id, praticienneId) : pro
+    if (!heures) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
 
-    const rdvExistants = (rdvs ?? []).map(r => {
-      const d = new Date(r.date as string)
-      return { heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 }
-    })
+    const rdvExistants = await rdvExistantsDe(supabaseAdmin, pro_id, praticienneId, date)
 
     const verdict = creneauReservable({
       date, heure, duree,
-      horaires: (pro.horaires ?? {}) as never,
+      horaires: (heures.horaires ?? {}) as never,
       rdvExistants,
-      bloques: Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
-      horairesSpec: (pro.horaires_specifiques ?? {}) as never,
-      planningVar: pro.planning_variable === true,
-      aLaSuite: (pro as any).creneaux_a_la_suite === true,
-      preparation: delaiEntreClientes(pro as any),
+      bloques: Array.isArray(heures.creneaux_bloques) ? heures.creneaux_bloques : [],
+      horairesSpec: (heures.horaires_specifiques ?? {}) as never,
+      planningVar: heures.planning_variable === true,
+      aLaSuite: (heures as any).creneaux_a_la_suite === true,
+      preparation: delaiEntreClientes(heures as any),
       // Le serveur tourne en temps universel : sans ça, le délai minimum se
       // calculerait avec deux heures de retard sur l'heure réelle de la pro.
       fuseau: pro.timezone ?? undefined,
@@ -128,13 +130,23 @@ export async function POST(req: NextRequest) {
       ? await remisesVerifiees(pro_id, cliente_id, reel.prix, body.fidelite_appliquee, body.reduction_appliquee)
       : null
 
+    // ÉQUIPE : chez l'assistante, la durée est la sienne (le prix reste celui
+    // de la pro). Une prestation qu'elle n'assure pas : on refuse.
+    let dureeReelle = reel?.duree ?? duree
+    if (praticienneId && reel) {
+      const chezElle = await dureeChezAssistante(supabaseAdmin, pro_id, praticienneId, reel.techniques)
+      if (chezElle === null) return NextResponse.json({ ok: false, raison: 'prestation_inconnue' }, { status: 409 })
+      dureeReelle = chezElle
+    }
+
     const { data: cree, error } = await supabaseAdmin
       .from('rendez_vous')
       .insert({
         pro_id,
         cliente_id,
+        praticienne_id: praticienneId,
         date: `${date}T${heure}:00.000Z`,
-        duree: reel?.duree ?? duree,
+        duree: dureeReelle,
         specialite: body.specialite ?? null,
         technique: body.technique ?? null,
         techniques: reel?.techniques ?? body.techniques ?? [],

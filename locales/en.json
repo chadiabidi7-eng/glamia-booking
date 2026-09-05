@@ -232,7 +232,11 @@
     "erreurConfirmation": "Your booking couldn't be saved. Nothing was charged. Try again in a moment, or message your beauty pro.",
     "nouvellesFermees": "%{pro} isn't taking new clients at the moment 🌸",
     "suivreInsta": "Follow her on Instagram to be notified",
-    "numeroIndisponible": "Online booking isn't available for this number. You can contact your professional directly."
+    "numeroIndisponible": "Online booking isn't available for this number. You can contact your professional directly.",
+    "avec": "with %{prenom}",
+    "avecQui": "With whom?",
+    "peuImporte": "No preference",
+    "avecMaj": "With %{prenom}"
   },
   "commun": {
     "chargement": "Loading...",
