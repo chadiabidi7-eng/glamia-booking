@@ -4624,6 +4624,19 @@ export default function ReservationPage() {
                 </p>
               </div>
             )}
+            {/* ÉQUIPE : « Peu importe · Lila · Sarah ». Aussi sur le choix de la date : le calendrier suit la personne choisie. */}
+            {assistantesPossibles.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
+                {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: pro?.pseudo || pro?.prenom || '' }, ...assistantesPossibles.map((a: AssistantePage) => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                  <button
+                    key={o.cle}
+                    onClick={() => { setAvecQui(o.cle); setQuiChoisi(null) }}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${avecQui === o.cle ? PINK : '#e5e7eb'}`, background: avecQui === o.cle ? PINK : '#fff', color: avecQui === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    {o.libelle}
+                  </button>
+                ))}
+              </div>
+            )}
             {premierCreneau && !loadingPremierCreneau && (
               <div style={{
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
