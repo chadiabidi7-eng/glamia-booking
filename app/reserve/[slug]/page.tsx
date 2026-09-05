@@ -1445,6 +1445,14 @@ export default function ReservationPage() {
   /** La durée du rendez-vous tel qu'il sera posé : celle de qui le fait. */
   const dureeChoisie = quiChoisi ? (assistantesPossibles.find((a: AssistantePage & { duree: number }) => a.id === quiChoisi)?.duree ?? dureeTotal) : dureeTotal
   const prenomDe = (id: string | null | undefined) => equipe.find(a => a.id === id)?.prenom ?? ''
+  /** La durée d'UNE prestation telle qu'elle sera faite : celle de l'assistante choisie, sinon celle du catalogue. */
+  const dureeDe = (t: { nom: string; categorie: string; duree: number }): number => {
+    if (!quiChoisi) return t.duree
+    const a = equipe.find(x => x.id === quiChoisi)
+    const tech = (catalogue[t.categorie] ?? []).find(x => x.nom === t.nom)
+    const reglage = a && tech?.id ? a.prestations[tech.id] : undefined
+    return reglage?.duree ?? t.duree
+  }
   const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
   /** Cette prestation est-elle couverte par le pack appliqué ? */
   const estDansPack = (t: { categorie: string; nom: string }) =>
@@ -3219,8 +3227,8 @@ export default function ReservationPage() {
                   {/* Dans un pack, le prix à l'unité n'existe plus : l'afficher
                       empêchait les lignes de s'additionner au total. */}
                   {estDansPack(t)
-                    ? formatDuree(t.duree * (t.quantite ?? 1))
-                    : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}</>}
+                    ? formatDuree(dureeDe(t) * (t.quantite ?? 1))
+                    : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}</>}
                 </span>
               </div>
             ))}
@@ -4901,7 +4909,7 @@ export default function ReservationPage() {
                           <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
-                          {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                          {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}
                         </span>
                       </div>
                     ))}
@@ -5336,7 +5344,7 @@ export default function ReservationPage() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                    {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}
                   </span>
                 </div>
               ))}
