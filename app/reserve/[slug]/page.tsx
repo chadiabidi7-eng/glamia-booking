@@ -3261,9 +3261,9 @@ export default function ReservationPage() {
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeTotal)}</>
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                 ) : (
-                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
+                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
                 )}
               </span>
             </div>
@@ -4863,7 +4863,9 @@ export default function ReservationPage() {
               {[
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleCliente'), value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleDate'), value: formatDateLong(date) },
-                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeTotal)}` },
+                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeChoisie)}` },
+                // ÉQUIPE : avec qui, quand ce n'est pas la pro.
+                ...(quiChoisi ? [{ icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.avecQui'), value: prenomDe(quiChoisi) }] : []),
                 ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: traduire('resa.total'),
@@ -4926,11 +4928,11 @@ export default function ReservationPage() {
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                         {prixFinal !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                         ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeChoisie)}</>
                         ) : (
-                          <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
+                          <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
                         )}
                       </span>
                     </div>
@@ -5347,7 +5349,7 @@ export default function ReservationPage() {
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
                   <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</>
-                ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}
+                ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}
               </span>
               {/* ON N'AVANCE PAS SANS AVOIR RÉPONDU. Une question qu'on peut
                   sauter ne sert à rien : la dépose serait oubliée exactement
