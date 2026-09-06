@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
+import { creneauReservable, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { assistanteValide, dureeChezAssistante, profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, adresse, adresse_moment')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, adresse, adresse_moment')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
       horairesSpec: (heures.horaires_specifiques ?? {}) as never,
       planningVar: heures.planning_variable === true,
       aLaSuite: (heures as any).creneaux_a_la_suite === true,
+      delai: delaiDe(pro as any),
       preparation: delaiEntreClientes(heures as any),
       // Le serveur tourne en temps universel : sans ça, le délai minimum se
       // calculerait avec deux heures de retard sur l'heure réelle de la pro.

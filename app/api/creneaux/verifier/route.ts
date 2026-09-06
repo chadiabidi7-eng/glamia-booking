@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
+import { creneauReservable, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
       planningVar: pro.planning_variable === true,
       aLaSuite: (pro as { creneaux_a_la_suite?: boolean }).creneaux_a_la_suite === true,
       preparation: delaiEntreClientes(pro as never),
+      delai: delaiDe(pro as never),
       // Le serveur tourne en temps universel : sans le fuseau de la pro, le
       // délai minimum se calculerait avec des heures de décalage.
       fuseau: pro.timezone ?? undefined,

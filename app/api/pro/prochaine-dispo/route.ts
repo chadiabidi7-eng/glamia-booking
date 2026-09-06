@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSlots, minToTime, delaiEntreClientes } from '@/lib/creneaux'
+import { generateSlots, minToTime, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { assistantesDe, creneauxDe } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const [{ data: pro }, { data: catalogue }] = await Promise.all([
       supabaseAdmin
         .from('profiles')
-        .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+        .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme')
         .eq('id', pro_id)
         .maybeSingle(),
       supabaseAdmin.from('prestations').select('data').eq('pro_id', pro_id).maybeSingle(),
@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
         pro.timezone ?? undefined,
         pro.creneaux_a_la_suite === true,
         delaiEntreClientes(pro),
+        delaiDe(pro),
       )
       const premier = slots.find(s => s.disponible)
       if (premier) {

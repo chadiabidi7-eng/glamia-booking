@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateSlots, minToTime, delaiEntreClientes, type Slot } from '@/lib/creneaux'
+import { generateSlots, minToTime, delaiEntreClientes, delaiDe, type Slot } from '@/lib/creneaux'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ÉQUIPE — une pro, une assistante, et une page de réservation qui fusionne
@@ -23,11 +23,12 @@ export type Reglage = { assure: boolean; duree: number | null }
 export type AssistanteResa = { id: string; prenom: string; prestations: Record<string, Reglage> }
 export type SlotQui = Slot & { qui: string | null }
 
-export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone'
+export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme'
 
 type ProfilHoraires = {
   horaires: unknown; horaires_specifiques: unknown; creneaux_bloques: unknown; planning_variable: boolean | null
   creneaux_a_la_suite: boolean | null; temps_preparation: number | null; temps_preparation_habituel: number | null; timezone: string | null
+  delai_resa_min?: number | null; resa_jour_meme?: boolean | null
 }
 
 /** Les assistantes actives d'une pro, avec ce qu'elles font et leurs durées. Vide pour une pro seule. */
@@ -83,7 +84,10 @@ export async function profilHorairesPour(admin: SupabaseClient, piloteId: string
   if (!praticienneId) return pro as ProfilHoraires
   const { data: elle } = await admin.from('profiles').select(CHAMPS_HORAIRES).eq('id', praticienneId).eq('pilote_id', piloteId).maybeSingle()
   if (!elle) return null
-  return { ...(elle as ProfilHoraires), timezone: (pro as ProfilHoraires).timezone }
+  // Le délai avant un rendez-vous est un choix de la pro pour sa page : il
+  // vaut pour tout le monde, l'assistante comprise.
+  const p = pro as ProfilHoraires
+  return { ...(elle as ProfilHoraires), timezone: p.timezone, delai_resa_min: p.delai_resa_min, resa_jour_meme: p.resa_jour_meme }
 }
 
 /** Les rendez-vous qui occupent CETTE personne (la pro : ceux sans assistante), rangés par jour. */
@@ -138,6 +142,7 @@ export async function creneauxDe(
       profil.timezone ?? undefined,
       profil.creneaux_a_la_suite === true,
       delaiEntreClientes(profil),
+      delaiDe(profil),
     )
   }
   return resultat

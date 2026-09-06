@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSlots, minToTime, type Slot, delaiEntreClientes } from '@/lib/creneaux'
+import { generateSlots, minToTime, type Slot, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { creneauxDe, fusionner } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
         pro.timezone ?? undefined,
         pro.creneaux_a_la_suite === true,
         delaiEntreClientes(pro),
+        delaiDe(pro),
       )
     }
 
