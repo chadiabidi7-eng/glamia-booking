@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSlots, minToTime, type Slot, delaiEntreClientes } from '@/lib/creneaux'
+import { generateSlots, minToTime, type Slot, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
+import { creneauxDe, fusionner } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — les créneaux libres d'une ou plusieurs journées.
@@ -27,8 +28,10 @@ const MAX_DATES = 95
 
 export async function POST(req: NextRequest) {
   try {
-    const { pro_id, duree, dates, exclure_rdv } = await req.json() as {
+    const { pro_id, duree, dates, exclure_rdv, personnes } = await req.json() as {
       pro_id?: string; duree?: number; dates?: string[]; exclure_rdv?: string
+      /** ÉQUIPE : qui peut recevoir, et en combien de temps chacune. `id` null = la pro. */
+      personnes?: { id: string | null; duree: number }[]
     }
 
     if (!pro_id || typeof duree !== 'number' || duree <= 0 || !Array.isArray(dates) || dates.length === 0) {
@@ -38,9 +41,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'trop_de_dates' }, { status: 400 })
     }
 
+    // ── ÉQUIPE : les horaires de la pro et de son assistante, fusionnés ─────
+    // Chaque personne a ses heures, ses rendez-vous et sa durée pour la
+    // prestation ; on calcule chacune, puis on superpose. Quand les deux sont
+    // libres, la pro passe d'abord (elle est première dans la liste). Chaque
+    // créneau dit qui le tient — la page l'écrit « avec Sarah » quand ce n'est
+    // pas la pro.
+    if (Array.isArray(personnes) && personnes.length > 0) {
+      const propres = personnes
+        .filter(p => p && (p.id === null || typeof p.id === 'string') && typeof p.duree === 'number' && p.duree > 0)
+        .slice(0, 6)
+      const parPersonne = await Promise.all(propres.map(async p => ({
+        id: p.id,
+        creneaux: await creneauxDe(supabaseAdmin, pro_id, p.id, p.duree, dates, exclure_rdv),
+      })))
+      return NextResponse.json({ creneaux: fusionner(dates, parPersonne) })
+    }
+
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -81,6 +101,7 @@ export async function POST(req: NextRequest) {
         pro.timezone ?? undefined,
         pro.creneaux_a_la_suite === true,
         delaiEntreClientes(pro),
+        delaiDe(pro),
       )
     }
 

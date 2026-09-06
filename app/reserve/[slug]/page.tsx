@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
@@ -80,16 +80,29 @@ const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_ur
  */
 async function creneauxServeur(
   proId: string, duree: number, dates: string[], exclureRdv?: string,
-): Promise<Record<string, Slot[]>> {
+  // ÉQUIPE : qui peut recevoir, et en combien de temps. Absent pour une pro seule.
+  personnes?: PersonneCreneaux[],
+): Promise<Record<string, SlotQui[]>> {
   const rep = await fetch('/api/creneaux', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv }),
+    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes }),
   })
   if (!rep.ok) throw new Error('creneaux')
   const { creneaux } = await rep.json()
-  return (creneaux ?? {}) as Record<string, Slot[]>
+  return (creneaux ?? {}) as Record<string, SlotQui[]>
 }
+
+// ── ÉQUIPE (5 septembre 2026) ─────────────────────────────────────────────────
+// Une pro et son assistante partagent le même lien. La page reçoit l'équipe
+// avec le catalogue : pour chaque assistante, ce qu'elle assure et ses durées.
+// Les créneaux sont calculés pour chacune puis fusionnés par le serveur ;
+// chaque heure dit QUI la tient. La cliente choisit « Peu importe », la pro
+// ou l'assistante ; les créneaux que seule l'assistante tient portent « avec
+// Sarah ». Pour une pro seule, `equipe` est vide et rien ne change.
+type AssistantePage = { id: string; prenom: string; prestations: Record<string, { assure: boolean; duree: number | null }> }
+type PersonneCreneaux = { id: string | null; duree: number }
+type SlotQui = Slot & { qui?: string | null }
 
 type ProInfo = {
   id: string
@@ -294,12 +307,12 @@ function formatRdvHeure(isoStr: string) {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
-async function envoyerPushNotif(proId: string, title: string, body: string) {
+async function envoyerPushNotif(proId: string, title: string, body: string, praticienneId?: string | null) {
   try {
     const res = await fetch('/api/push-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proId, title, body }),
+      body: JSON.stringify({ proId, title, body, praticienneId: praticienneId ?? null }),
     })
     const data = await res.json()
     console.log('[envoyerPushNotif] Résultat:', data)
@@ -1174,7 +1187,11 @@ export default function ReservationPage() {
   const [calMonth, setCalMonth] = useState(todayJs.getMonth())
 
   // ── Step 4 : Heure ───────────────────────────
-  const [slots,        setSlots]        = useState<Slot[]>([])
+  const [slots,        setSlots]        = useState<SlotQui[]>([])
+  // ÉQUIPE : l'équipe de la pro, le choix de la cliente, et qui tient l'heure choisie.
+  const [equipe, setEquipe] = useState<AssistantePage[]>([])
+  const [avecQui, setAvecQui] = useState<'peu_importe' | 'pro' | string>('peu_importe')
+  const [quiChoisi, setQuiChoisi] = useState<string | null>(null)
   // Liste d'attente, proposée quand la journée choisie est complète.
   const [attenteOuverte, setAttenteOuverte] = useState(false)
   const [attentePrenom, setAttentePrenom] = useState('')
@@ -1399,6 +1416,43 @@ export default function ReservationPage() {
   const questionsSansReponse = questionsEnCours.filter(q => !reponses[q.id])
 
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
+
+  // ── ÉQUIPE : qui peut faire ce panier, et en combien de temps ─────────────
+  // Une assistante n'apparaît que si elle assure TOUT le panier ; sa durée est
+  // la sienne quand elle en a réglé une, celle du catalogue sinon.
+  const dureeChezAssistante = (a: AssistantePage): number | null => {
+    let total = 0
+    for (const sel of techniquesSelectionnees) {
+      const tech = (catalogue[sel.categorie] ?? []).find(t => t.nom === sel.nom)
+      const reglage = tech?.id ? a.prestations[tech.id] : undefined
+      if (reglage && !reglage.assure) return null
+      total += (reglage?.duree ?? sel.duree) * (sel.quantite ?? 1)
+    }
+    return total
+  }
+  const assistantesPossibles = useMemo(
+    () => equipe.map(a => ({ ...a, duree: dureeChezAssistante(a) })).filter(a => a.duree !== null && a.duree > 0) as (AssistantePage & { duree: number })[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [equipe, techniquesSelectionnees, catalogue],
+  )
+  const personnes = useMemo<PersonneCreneaux[] | undefined>(() => {
+    if (equipe.length === 0) return undefined
+    const liste: PersonneCreneaux[] = []
+    if (avecQui === 'peu_importe' || avecQui === 'pro') liste.push({ id: null, duree: dureeTotal })
+    for (const a of assistantesPossibles) if (avecQui === 'peu_importe' || avecQui === a.id) liste.push({ id: a.id, duree: a.duree })
+    return liste
+  }, [equipe.length, avecQui, assistantesPossibles, dureeTotal])
+  /** La durée du rendez-vous tel qu'il sera posé : celle de qui le fait. */
+  const dureeChoisie = quiChoisi ? (assistantesPossibles.find((a: AssistantePage & { duree: number }) => a.id === quiChoisi)?.duree ?? dureeTotal) : dureeTotal
+  const prenomDe = (id: string | null | undefined) => equipe.find(a => a.id === id)?.prenom ?? ''
+  /** La durée d'UNE prestation telle qu'elle sera faite : celle de l'assistante choisie, sinon celle du catalogue. */
+  const dureeDe = (t: { nom: string; categorie: string; duree: number }): number => {
+    if (!quiChoisi) return t.duree
+    const a = equipe.find(x => x.id === quiChoisi)
+    const tech = (catalogue[t.categorie] ?? []).find(x => x.nom === t.nom)
+    const reglage = a && tech?.id ? a.prestations[tech.id] : undefined
+    return reglage?.duree ?? t.duree
+  }
   const prixTotalBrut = techniquesSelectionnees.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
   /** Cette prestation est-elle couverte par le pack appliqué ? */
   const estDansPack = (t: { categorie: string; nom: string }) =>
@@ -1661,6 +1715,7 @@ export default function ReservationPage() {
       setQuestions(questionsDepuisProfil((found as { questions_resa?: unknown }).questions_resa))
 
       if (d.catalogue) setCatalogue(d.catalogue as CataloguePrestations)
+      setEquipe(Array.isArray(d.equipe) ? (d.equipe as AssistantePage[]) : [])
       if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
       setPageState('ready')
 
@@ -2339,7 +2394,8 @@ export default function ReservationPage() {
   // de profil, autant dire jamais.
   useEffect(() => {
     if (step === 4 && date && dureeTotal > 0 && pro) loadSlots()
-  }, [step, date, rdvVersion, pro])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, date, rdvVersion, pro, avecQui])
 
   // Le jour auquel appartient la grille affichée. Sert à distinguer un vrai
   // changement de jour d'un simple recalcul.
@@ -2359,7 +2415,7 @@ export default function ReservationPage() {
     try {
       // Appel impossible → on ne propose RIEN plutôt que d'afficher tous les
       // créneaux libres (risque de double réservation). Le catch s'en charge.
-      const creneaux = await creneauxServeur(pro.id, dureeTotal, [date])
+      const creneaux = await creneauxServeur(pro.id, dureeTotal, [date], undefined, personnes)
       const frais = creneaux[date] ?? []
       setSlots(frais)
       jourDesSlots.current = date
@@ -2424,7 +2480,8 @@ export default function ReservationPage() {
   // ── Premier créneau : recherche automatique ──
   useEffect(() => {
     if (step === 3 && pro && dureeTotal > 0) findPremierCreneau()
-  }, [step, pro, dureeTotal])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, pro, dureeTotal, avecQui])
 
   // ── Jours complets du mois affiché ────────────────────────────────────────
   // Le calendrier ne connaissait que « passé » et « jour off » : un jour plein
@@ -2456,8 +2513,8 @@ export default function ReservationPage() {
         for (let jour = 1; jour <= nbJours; jour++) {
           const dateStr = buildDateStr(calYear, calMonth, jour)
           if (new Date(calYear, calMonth, jour) < debutDuJour) continue
-          if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
-          if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+          if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
+          if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
           aTester.push(dateStr)
         }
         if (annule || aTester.length === 0) return
@@ -2465,7 +2522,7 @@ export default function ReservationPage() {
         // Appel impossible : on ne marque RIEN comme complet. Griser à tort
         // fermerait la porte à des clientes qui pouvaient réserver. Le catch
         // laisse donc l'ensemble vide.
-        const creneaux = await creneauxServeur(pro.id, dureeTotal, aTester)
+        const creneaux = await creneauxServeur(pro.id, dureeTotal, aTester, undefined, personnes)
         if (annule) return
 
         const complets = new Set<string>()
@@ -2481,7 +2538,8 @@ export default function ReservationPage() {
     })()
 
     return () => { annule = true }
-  }, [step, pro, dureeTotal, calYear, calMonth, rdvVersion])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, pro, dureeTotal, calYear, calMonth, rdvVersion, avecQui])
 
   async function findPremierCreneau() {
     if (!pro || dureeTotal === 0) return
@@ -2507,12 +2565,12 @@ export default function ReservationPage() {
         const d = new Date(now)
         d.setDate(d.getDate() + i)
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
-        if (!isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
-        if (isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+        if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
+        if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
         aTester.push(dateStr)
       }
 
-      const creneaux = aTester.length ? await creneauxServeur(pro.id, dureeTotal, aTester) : {}
+      const creneaux = aTester.length ? await creneauxServeur(pro.id, dureeTotal, aTester, undefined, personnes) : {}
 
       let trouve = false
       for (const dateStr of aTester) {
@@ -2620,7 +2678,7 @@ export default function ReservationPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: AbortSignal.timeout(2000),
-            body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeTotal }),
+            body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeChoisie, praticienne_id: quiChoisi }),
           })
           const verdict = await controle.json().catch(() => ({ ok: true }))
           if (verdict?.ok === false) {
@@ -2719,7 +2777,9 @@ export default function ReservationPage() {
           // Sert UNIQUEMENT à la garde contre les réservations en masse, qui
           // n'en garde qu'une empreinte — jamais le numéro en clair.
           telephone: telNormalized,
-          date, heure, duree: dureeTotal,
+          date, heure, duree: dureeChoisie,
+          // ÉQUIPE : qui fait le rendez-vous (null = la pro).
+          praticienne_id: quiChoisi,
           specialite: categoriesStr,
           technique: techniquesStr,
           techniques: techniquesSelectionnees,
@@ -2909,10 +2969,11 @@ export default function ReservationPage() {
             cliente_prenom: clientePrenom.trim(),
             date: formatDateLong(date),
             heure,
-            duree: formatDuree(dureeTotal),
+            duree: formatDuree(dureeChoisie),
             prix_total: prixFinal,
             skip_rappel_notice: dansMotins24h,
             etape: 'reservation' as const,
+            praticienne_id: quiChoisi,
             techniques: techniquesSelectionnees.map(t => ({
               nom: t.nom,
               specialite: t.categorie,
@@ -2968,13 +3029,15 @@ export default function ReservationPage() {
         envoyerPushNotif(
           pro.id,
           traduire(rappel ? 'notif.nouvelleClienteContactTitre' : 'notif.nouvelleClienteTitre'),
-          traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
+          traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel }),
+          quiChoisi,
         )
       } else {
         envoyerPushNotif(
           pro.id,
           traduire(rappel ? 'notif.nouveauRdvContactTitre' : 'notif.nouveauRdvTitre'),
-          traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel })
+          traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppel }),
+          quiChoisi,
         )
       }
     } catch (e) {
@@ -3123,7 +3186,8 @@ export default function ReservationPage() {
             {[
               { icon: <User size={18} color={GLAMIA_PINK} />, label: `${clientePrenom} ${clienteNom}` },
               { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
-              { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeTotal)}` },
+              { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeChoisie)}` },
+              ...(quiChoisi ? [{ icon: <User size={18} color={GLAMIA_PINK} />, label: traduire('resa.avecMaj', { prenom: prenomDe(quiChoisi) }) }] : []),
               ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? formatPrix(prixFinal, pro?.devise) : formatPrix(prixTotal, pro?.devise) }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -3163,8 +3227,8 @@ export default function ReservationPage() {
                   {/* Dans un pack, le prix à l'unité n'existe plus : l'afficher
                       empêchait les lignes de s'additionner au total. */}
                   {estDansPack(t)
-                    ? formatDuree(t.duree * (t.quantite ?? 1))
-                    : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}</>}
+                    ? formatDuree(dureeDe(t) * (t.quantite ?? 1))
+                    : <>{t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}</>}
                 </span>
               </div>
             ))}
@@ -3205,9 +3269,9 @@ export default function ReservationPage() {
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeTotal)}</>
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                 ) : (
-                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
+                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
                 )}
               </span>
             </div>
@@ -4560,6 +4624,19 @@ export default function ReservationPage() {
                 </p>
               </div>
             )}
+            {/* ÉQUIPE : « Peu importe · Lila · Sarah ». Aussi sur le choix de la date : le calendrier suit la personne choisie. */}
+            {assistantesPossibles.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
+                {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: pro?.pseudo || pro?.prenom || '' }, ...assistantesPossibles.map((a: AssistantePage) => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                  <button
+                    key={o.cle}
+                    onClick={() => { setAvecQui(o.cle); setQuiChoisi(null) }}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${avecQui === o.cle ? PINK : '#e5e7eb'}`, background: avecQui === o.cle ? PINK : '#fff', color: avecQui === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    {o.libelle}
+                  </button>
+                ))}
+              </div>
+            )}
             {premierCreneau && !loadingPremierCreneau && (
               <div style={{
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
@@ -4611,7 +4688,8 @@ export default function ReservationPage() {
                 const dateStr = buildDateStr(calYear, calMonth, day)
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
-                const isOff   = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
+                // ÉQUIPE : avec une assistante, un jour de repos de la pro n'est pas fermé pour autant — le serveur tranche (jours complets).
+                const isOff   = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques))
                 const isComplet = joursComplets.has(dateStr)
                 // Un jour complet reste CLIQUABLE : c'est justement là qu'on
                 // propose la liste d'attente. Il garde son apparence « complet »
@@ -4678,6 +4756,20 @@ export default function ReservationPage() {
                 <p style={{ margin: 0, color: '#B42318', fontSize: 13.5, lineHeight: 1.45 }}>
                   Le créneau de {creneauPerdu} vient d&apos;être pris. Choisissez-en un autre.
                 </p>
+              </div>
+            )}
+
+            {/* ÉQUIPE : « Peu importe · Lila · Sarah ». Seulement s'il y a une assistante capable de faire ce panier. */}
+            {assistantesPossibles.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
+                {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: pro?.pseudo || pro?.prenom || '' }, ...assistantesPossibles.map((a: AssistantePage) => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                  <button
+                    key={o.cle}
+                    onClick={() => { setAvecQui(o.cle); setQuiChoisi(null) }}
+                    style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${avecQui === o.cle ? PINK : '#e5e7eb'}`, background: avecQui === o.cle ? PINK : '#fff', color: avecQui === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    {o.libelle}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -4753,7 +4845,7 @@ export default function ReservationPage() {
                 {slotsLibres.map(s => (
                   <button
                     key={s.heure}
-                    onClick={() => { setCreneauPerdu(null); setHeure(s.heure); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
+                    onClick={() => { setCreneauPerdu(null); setHeure(s.heure); setQuiChoisi(s.qui ?? null); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
                     style={{
                       padding: '12px 0',
                       borderRadius: 12,
@@ -4767,6 +4859,8 @@ export default function ReservationPage() {
                     }}
                   >
                     {s.heure}
+                    {/* ÉQUIPE : ce créneau, seule l'assistante peut le tenir. */}
+                    {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: heure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: prenomDe(s.qui) })}</span> : null}
                   </button>
                 ))}
               </div>
@@ -4790,7 +4884,9 @@ export default function ReservationPage() {
               {[
                 { icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleCliente'), value: `${clientePrenom} ${clienteNom}` },
                 { icon: <Calendar size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleDate'), value: formatDateLong(date) },
-                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeTotal)}` },
+                { icon: <Clock size={20} color={GLAMIA_PINK} />, label: traduire('resa.libelleHeure'), value: `${heure} · ${formatDuree(dureeChoisie)}` },
+                // ÉQUIPE : avec qui, quand ce n'est pas la pro.
+                ...(quiChoisi ? [{ icon: <User size={20} color={GLAMIA_PINK} />, label: traduire('resa.avecQui'), value: prenomDe(quiChoisi) }] : []),
                 ...(prixFinal > 0 || prixTotal > 0 ? [{
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: traduire('resa.total'),
@@ -4826,7 +4922,7 @@ export default function ReservationPage() {
                           <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
-                          {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                          {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}
                         </span>
                       </div>
                     ))}
@@ -4853,11 +4949,11 @@ export default function ReservationPage() {
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
                         {prixFinal !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                         ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
-                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeTotal)}</>
+                          <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span>{formatPrix(prixTotal, pro?.devise)} · {formatDuree(dureeChoisie)}</>
                         ) : (
-                          <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}</>
+                          <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
                         )}
                       </span>
                     </div>
@@ -5261,7 +5357,7 @@ export default function ReservationPage() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(t.duree * (t.quantite ?? 1))}
+                    {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}
                   </span>
                 </div>
               ))}
@@ -5274,7 +5370,7 @@ export default function ReservationPage() {
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
                 {prixFinal !== prixTotal ? (
                   <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</>
-                ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeTotal)}
+                ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}
               </span>
               {/* ON N'AVANCE PAS SANS AVOIR RÉPONDU. Une question qu'on peut
                   sauter ne sert à rien : la dépose serait oubliée exactement

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   // Le RDV doit exister et appartenir à cette pro
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, pro_id, prix, statut')
+    .select('id, pro_id, prix, statut, praticienne_id')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv || rdv.pro_id !== proId) {
@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
       const { error } = await supabaseAdmin.from('paiements').insert({
         rdv_id: rdvId,
         pro_id: proId,
+        // ÉQUIPE : qui a fait la prestation — le reçu le dira.
+        praticienne_id: (rdv.praticienne_id as string | null) ?? null,
         type: 'acompte',
         mode: 'empreinte',
         statut: 'empreinte_posee',
@@ -156,6 +158,8 @@ export async function POST(req: NextRequest) {
     const { data: ligne, error } = await supabaseAdmin.from('paiements').insert({
       rdv_id: rdvId,
       pro_id: proId,
+      // ÉQUIPE : qui a fait la prestation — le reçu le dira.
+      praticienne_id: (rdv.praticienne_id as string | null) ?? null,
       type: estTotal ? 'total' : 'acompte',
       mode: estTotal ? 'total' : 'acompte',
       statut: estTotal ? 'paye' : 'acompte_paye',

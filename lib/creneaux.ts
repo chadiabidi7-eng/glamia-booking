@@ -112,8 +112,27 @@ export function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
   return bloques.some(b => b.touteLaJournee && isDateInPeriod(dateStr, b))
 }
 
-/** Le délai minimum entre l'instant présent et un rendez-vous réservable. */
-const DELAI_MINIMUM_MIN = 60
+/**
+ * LE DÉLAI AVANT UN RENDEZ-VOUS — un réglage de la pro (6 septembre 2026).
+ *
+ * Jusqu'ici, une heure pour tout le monde, écrite en dur. Une pro a demandé à
+ * interdire le jour même ; d'autres voudront deux ou trois heures. Deux
+ * réglages sur son profil : `delai_resa_min` (minutes, 60 par défaut) et
+ * `resa_jour_meme` (vrai par défaut). Une pro qui n'y touche pas garde
+ * exactement le comportement d'avant.
+ *
+ * Le délai ne concerne que les clientes : la pro, depuis son app, pose ce
+ * qu'elle veut quand elle veut.
+ */
+export type DelaiResa = { minutes: number; jourMeme: boolean }
+export const DELAI_RESA_DEFAUT: DelaiResa = { minutes: 60, jourMeme: true }
+export function delaiDe(pro: { delai_resa_min?: number | null; resa_jour_meme?: boolean | null } | null | undefined): DelaiResa {
+  const m = Number(pro?.delai_resa_min)
+  return {
+    minutes: Number.isFinite(m) && m >= 0 ? m : DELAI_RESA_DEFAUT.minutes,
+    jourMeme: pro?.resa_jour_meme !== false,
+  }
+}
 
 /** Le fuseau de repli : la quasi-totalité des pros sont en France. */
 export const FUSEAU_DEFAUT = 'Europe/Paris'
@@ -163,6 +182,7 @@ export function generateSlots(
   fuseau?: string,
   aLaSuite?: boolean,
   preparation = 0,
+  delai: DelaiResa = DELAI_RESA_DEFAUT,
 ): Slot[] {
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
@@ -202,7 +222,12 @@ export function generateSlots(
   // branche « ce n'est pas aujourd'hui » et rouvrait toute la journée : la
   // grille l'interdit à l'écran, mais le contrôle serveur l'aurait acceptée.
   if (date < maintenant.date) return []
-  const limiteMin = date === maintenant.date ? maintenant.minutes + DELAI_MINIMUM_MIN : 0
+  // « Pas le jour même » : aujourd'hui n'a aucun créneau, quelle que soit l'heure.
+  if (date === maintenant.date && !delai.jourMeme) return []
+  // Le délai peut dépasser la journée (24 h, 48 h) : il déborde sur les jours
+  // suivants. On le ramène en minutes depuis le début du jour demandé.
+  const joursEcart = Math.round((Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) - Date.UTC(+maintenant.date.slice(0, 4), +maintenant.date.slice(5, 7) - 1, +maintenant.date.slice(8, 10))) / 86400000)
+  const limiteMin = maintenant.minutes + delai.minutes - joursEcart * 1440
 
   // ── LE TEMPS DE PRÉPARATION ENTRE DEUX CLIENTES ──────────────────────────
   // La pro ne passe pas d'une cliente à l'autre sans respirer : ranger,
@@ -319,8 +344,9 @@ export function creneauReservable(args: {
   fuseau?: string
   aLaSuite?: boolean
   preparation?: number
+  delai?: DelaiResa
 }): { ok: true } | { ok: false; raison: string; message: string } {
-  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation } = args
+  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai } = args
 
   if (isDayBlocked(date, bloques)) {
     return { ok: false, raison: 'jour_bloque', message: traduire('creneaux.jourIndisponible') }
@@ -329,7 +355,7 @@ export function creneauReservable(args: {
     return { ok: false, raison: 'jour_ferme', message: traduire('creneaux.jourFerme') }
   }
 
-  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation)
+  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai)
   const slot = slots.find(s => s.heure === heure)
 
   // Absent de la grille : hors horaires, trop proche, ou durée qui déborde.
