@@ -70,8 +70,11 @@ export async function POST(req: NextRequest) {
       // Rien n'a été capturé (paiement non abouti) → rien à rembourser.
       return NextResponse.json({ success: true, rembourse: false })
     }
+    // La cliente récupère tout, frais de service Glamia compris — et la pro ne
+    // paie pas ce geste de sa poche : Glamia rend sa part en même temps.
+    // (Décision de Chadi, 7 septembre 2026, sur le cas Sun.naaiils.)
     await stripe().refunds.create(
-      { payment_intent: paiement.id },
+      { payment_intent: paiement.id, refund_application_fee: true },
       { stripeAccount, idempotencyKey: `orphelin_remb_${paiement.id}` },
     )
     // Journal + notif admin (une seule fois, idempotent). Cause 'doublon' : la
