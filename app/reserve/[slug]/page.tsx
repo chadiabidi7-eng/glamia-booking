@@ -2617,6 +2617,35 @@ export default function ReservationPage() {
     if (echecs > 0) alert(echecs === 1 ? traduire('resa.unePhotoRefusee') : traduire('resa.photosRefusees', { count: echecs }))
   }
 
+  // ── LE CRÉNEAU TIENT-IL TOUJOURS ? ─────────────────────────────────────
+  // Une seule fonction, appelée par le formulaire de carte ET par le bouton
+  // Apple Pay / Google Pay, juste avant que l'argent parte. Deux secondes,
+  // jamais bloquant : si le filet ne répond pas, on laisse passer, la
+  // création tranchera.
+  async function controlerCreneau(): Promise<{ ok: true } | { ok: false; message?: string }> {
+    if (!pro) return { ok: true }
+    try {
+      const controle = await fetch('/api/creneaux/verifier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(2000),
+        body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeChoisie, praticienne_id: quiChoisi }),
+      })
+      const verdict = await controle.json().catch(() => ({ ok: true }))
+      if (verdict?.ok === false) return { ok: false, message: verdict?.message }
+    } catch { /* filet indisponible : on continue, la création tranchera */ }
+    return { ok: true }
+  }
+
+  // Le créneau n'existe plus : on le lui dit, on efface l'heure et on la
+  // renvoie en choisir une qui existe vraiment.
+  function surCreneauRefuse(message?: string) {
+    alert(message || traduire('confirmation.creneauPris'))
+    setHeure('')
+    setStep(4)
+    setRdvVersion(v => v + 1)
+  }
+
   async function handleConfirm() {
     if (!pro || techniquesSelectionnees.length === 0 || !date || !heure) return
     setRefusCarte(null)
@@ -2673,24 +2702,13 @@ export default function ReservationPage() {
         // devant son bouton. Si la vérification traîne ou tombe, on laisse
         // passer : la création vérifiera de toute façon, et le pire qu'on
         // risque alors est ce qui se passait déjà avant.
-        try {
-          const controle = await fetch('/api/creneaux/verifier', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(2000),
-            body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeChoisie, praticienne_id: quiChoisi }),
-          })
-          const verdict = await controle.json().catch(() => ({ ok: true }))
-          if (verdict?.ok === false) {
-            // Sa carte n'a pas bougé : on le lui dit, et on la renvoie
-            // choisir une heure qui existe vraiment.
-            alert(verdict?.message || traduire('confirmation.creneauPris'))
-            setHeure('')
-            setStep(4)
-            setRdvVersion(v => v + 1)
-            return
-          }
-        } catch { /* filet indisponible : on continue, la création tranchera */ }
+        const verdict = await controlerCreneau()
+        if (!verdict.ok) {
+          // Sa carte n'a pas bougé : on le lui dit, et on la renvoie
+          // choisir une heure qui existe vraiment.
+          surCreneauRefuse(verdict.message)
+          return
+        }
         // ── LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI ─────────────────
         // Si la connexion meurt juste après l'encaissement, il ne restait
         // qu'un numéro de paiement : ni nom, ni créneau, ni prestation. Une
@@ -5254,6 +5272,8 @@ export default function ReservationPage() {
                           ? traduire('resa.cochePaiement')
                           : traduire('resa.cocheEmpreinte')))}
                     surPaiementPortefeuille={() => { handleConfirm() }}
+                    verifierCreneau={controlerCreneau}
+                    surCreneauRefuse={surCreneauRefuse}
                   />
                 </Elements>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
@@ -5488,8 +5508,12 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
   consentementDonne: boolean
   surRefusConsentement: () => void
   surPaiementPortefeuille: () => void
+  /** Le créneau tient-il toujours ? Demandé juste avant l'encaissement. */
+  verifierCreneau: () => Promise<{ ok: true } | { ok: false; message?: string }>
+  /** Il ne tient plus : la page la renvoie choisir une heure. */
+  surCreneauRefuse: (message?: string) => void
 }>(
-  function BlocGlamiaPay({ mode, clientSecret, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille }, ref) {
+  function BlocGlamiaPay({ mode, clientSecret, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille, verifierCreneau, surCreneauRefuse }, ref) {
     const stripeJs = useStripe()
     const elements = useElements()
 
@@ -5623,8 +5647,29 @@ const BlocGlamiaPay = forwardRef<PropayHandle, {
             if (!consentementDonne) { surRefusConsentement(); return }
             resolve({ business: { name: 'Glamia' } })
           }}
-          onConfirm={async () => {
+          onConfirm={async (event) => {
             if (!stripeJs || !elements) return
+            // ── ON VÉRIFIE LE CRÉNEAU AVANT D'ENCAISSER, ICI AUSSI ──────────
+            //
+            // LE 7 SEPTEMBRE 2026 À 12H35, une cliente de Sun.naaiils a payé
+            // 16,05 € avec le bouton du téléphone pour un créneau que la page
+            // a refusé la seconde d'après. La correction du 3 septembre ne
+            // protégeait que le formulaire de carte : ici, on encaissait
+            // d'abord et on vérifiait ensuite — l'ordre qu'on venait de
+            // corriger.
+            //
+            // Ce moment est le bon : la cliente a validé dans Apple Pay ou
+            // Google Pay, mais rien n'est prélevé tant qu'on n'a pas confirmé
+            // le paiement à Stripe. Si le créneau ne tient plus, on dit au
+            // portefeuille que ça n'a pas abouti, il se referme, et sa carte
+            // n'a pas bougé. Même filet que la carte : deux secondes, jamais
+            // bloquant.
+            const verdict = await verifierCreneau()
+            if (!verdict.ok) {
+              event.paymentFailed({ reason: 'fail' })
+              surCreneauRefuse(verdict.message)
+              return
+            }
             const commun = { elements, redirect: 'if_required' as const }
             if (mode === 'empreinte') {
               const { error, setupIntent } = await stripeJs.confirmSetup({
