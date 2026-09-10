@@ -130,8 +130,12 @@ export async function GET(req: NextRequest) {
   // Avant de lire quoi que ce soit. `compte_test` est la colonne qui exempte
   // déjà ce compte de la garde anti-abus : c'est exactement le périmètre où
   // réserver en boucle ne coûte rien à personne.
+  // `pro_pay_actif` se lit ici et pas dans `/api/pro` : ce guichet le retire
+  // exprès de sa réponse. Sans lui, le contrôle annoncerait « Glamia Pay
+  // inactif » sur un salon qui l'a — un faux « sans objet », c'est-à-dire un
+  // scénario qu'on croit couvert et qui ne l'est pas.
   const { data: marque } = await supabaseAdmin
-    .from('profiles').select('id, compte_test').eq('slug', slug).maybeSingle()
+    .from('profiles').select('id, compte_test, pro_pay_actif').eq('slug', slug).maybeSingle()
   if (!marque) {
     return NextResponse.json({ ok: false, verdict: `aucun salon au slug « ${slug} »`, scenarios: [] }, { status: 503 })
   }
@@ -165,7 +169,7 @@ export async function GET(req: NextRequest) {
 
   const fideliteConfig = fiche.fidelite_config as { active?: boolean; nb_ronds?: number } | null
   const acompteConfig = fiche.acompte_config as { actif?: boolean; mode?: string } | null
-  const proPay = fiche.pro_pay_actif === true
+  const proPay = marque.pro_pay_actif === true
   const questions = Array.isArray(fiche.questions_resa) ? fiche.questions_resa as Record<string, unknown>[] : []
 
   // Les offres passent par la même fonction que la page — pas par un guichet.
