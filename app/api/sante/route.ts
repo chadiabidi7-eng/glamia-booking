@@ -165,7 +165,9 @@ export async function GET(req: NextRequest) {
   const fiche = accueil.pro as Record<string, unknown>
   const proId = fiche.id as string
   const prestations = aplatirCatalogue(accueil.catalogue)
-  const equipe = Array.isArray(accueil.equipe) ? accueil.equipe as { id: string; prenom?: string }[] : []
+  const equipe = Array.isArray(accueil.equipe)
+    ? accueil.equipe as { id: string; prenom?: string; prestations?: Record<string, { assure?: boolean; duree?: number | null }> }[]
+    : []
 
   const fideliteConfig = fiche.fidelite_config as { active?: boolean; nb_ronds?: number } | null
   const acompteConfig = fiche.acompte_config as { actif?: boolean; mode?: string } | null
@@ -343,19 +345,26 @@ export async function GET(req: NextRequest) {
     return null
   })
 
+  // Chez l'assistante, la prestation ne peut pas être prise au hasard : elle a
+  // sa propre liste et sa propre durée, et `/api/rdv/creer` refuse ce qu'elle
+  // n'assure pas. On choisit donc dans SA liste, avec SA durée.
   await jouer('equipe', async () => {
     if (!equipe.length) return 'aucune assistante déclarée dans l’app'
+    const assistante = equipe[0]
+    const nom = assistante.prenom ?? 'l’assistante'
+    const sienne = prestations
+      .map(x => ({ presta: x, reglage: assistante.prestations?.[x.id] }))
+      .find(x => x.reglage && x.reglage.assure !== false)
+    if (!sienne) return `${nom} n’assure aucune prestation du catalogue`
     if (!ecrire) return 'écriture désactivée'
     if (!clienteId) return 'la cliente n’a pas été identifiée'
-    const presta = prestations[0]
-    if (!presta) return 'aucune prestation active au catalogue'
-    const assistante = equipe[0]
-    const quand = await premierLibre(presta.duree, assistante.id)
-    if (!quand) return `aucun créneau chez ${assistante.prenom ?? 'l’assistante'} sur ${JOURS_FOUILLES} jours`
+    const duree = sienne.reglage?.duree ?? sienne.presta.duree
+    const quand = await premierLibre(duree, assistante.id)
+    if (!quand) return `aucun créneau de ${duree} min chez ${nom} sur ${JOURS_FOUILLES} jours`
     await reserver({
-      clienteId, ...quand, duree: presta.duree, prix: presta.prix,
+      clienteId, ...quand, duree, prix: sienne.presta.prix,
       praticienneId: assistante.id,
-      lignes: [{ nom: presta.nom, categorie: presta.categorie, quantite: 1 }],
+      lignes: [{ nom: sienne.presta.nom, categorie: sienne.presta.categorie, quantite: 1 }],
     })
     return null
   })
