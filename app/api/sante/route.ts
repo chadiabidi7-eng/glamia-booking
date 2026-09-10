@@ -86,11 +86,21 @@ export async function GET(req: NextRequest) {
   const scenarios: Scenario[] = []
   const aSupprimer: string[] = []
 
+  // Sur un aperçu protégé, les guichets exigent le même laissez-passer que
+  // celui qui nous a appelés : notre requête serveur vers serveur n'en a
+  // aucun. On repasse simplement celui qu'on a reçu. En production, où rien
+  // n'est protégé, ces en-têtes sont absents et cela ne change rien.
+  const laissezPasser: Record<string, string> = { 'Content-Type': 'application/json' }
+  for (const cle of ['cookie', 'x-vercel-protection-bypass']) {
+    const valeur = req.headers.get(cle)
+    if (valeur) laissezPasser[cle] = valeur
+  }
+
   /** Appelle un guichet du booking, exactement comme le ferait la page. */
   const appeler = async (chemin: string, corps: unknown): Promise<Record<string, unknown>> => {
     const rep = await fetch(`${base}${chemin}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: laissezPasser,
       body: JSON.stringify(corps),
       cache: 'no-store',
     })
