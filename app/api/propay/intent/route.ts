@@ -128,7 +128,13 @@ const fraisService = (montant: number, devise?: string | null): number => {
 
 
 type Reglage = { mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
-type Config = Reglage & { actif?: boolean; nouvelles?: Reglage | null }
+type Config = Reglage & {
+  actif?: boolean
+  nouvelles?: Reglage | null
+  /** Deux publics, deux interrupteurs. Absent = allumé, pour les deux. */
+  habituees_actif?: boolean
+  nouvelles_actif?: boolean
+}
 
 
 /**
@@ -255,12 +261,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ actif: false })
   }
 
-  // ── LE RÉGLAGE DES NOUVELLES CLIENTES ──────────────────────────────────────
+  // ── DEUX PUBLICS, DEUX INTERRUPTEURS ───────────────────────────────────────
   // La pro peut demander davantage à qui ne connaît pas encore son salon : une
-  // simple empreinte à ses fidèles, un acompte à une inconnue. Quand elle n'a
-  // rien réglé de particulier (`nouvelles` absent), tout le monde a la même
-  // règle et on ne va même pas lire le fichier clientes.
-  const nouvelle = config.nouvelles ? await estUneNouvelleCliente(proId, body.telephone) : false
+  // simple empreinte à ses fidèles, un acompte à une inconnue. Et depuis le
+  // 18 septembre 2026, elle peut aussi ne RIEN demander à l'un des deux — ce
+  // qui était impossible : `nouvelles` ne faisait que surcharger le réglage de
+  // base, et le seul interrupteur coupait tout. Pour demander aux nouvelles il
+  // fallait donc demander aussi aux habituées.
+  //
+  // ABSENT = ALLUMÉ, POUR LES DEUX. C'est ce qui fait qu'aucune pro réglée
+  // avant ce jour ne voit son comportement changer.
+  //
+  // ON NE LIT LE FICHIER CLIENTES QUE SI LA RÉPONSE EN DÉPEND : quand les deux
+  // publics sont allumés et qu'aucune règle propre n'existe, tout le monde a
+  // la même chose et savoir qui elle est ne sert à rien.
+  const habitueesActif = config.habituees_actif ?? true
+  const nouvellesActif = config.nouvelles_actif ?? true
+  const ilFautSavoir = !!config.nouvelles || !habitueesActif || !nouvellesActif
+  const nouvelle = ilFautSavoir ? await estUneNouvelleCliente(proId, body.telephone) : false
+
+  // Son public à elle est éteint : la page ne demande rien, exactement comme si
+  // la pro n'avait jamais allumé Glamia Pay.
+  if (nouvelle ? !nouvellesActif : !habitueesActif) {
+    return NextResponse.json({ actif: false })
+  }
+
   const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
 
   // ── L'ACOMPTE SE CALCULE SUR LE VRAI PRIX ────────────────────────────────
