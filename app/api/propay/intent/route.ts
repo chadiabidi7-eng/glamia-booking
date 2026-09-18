@@ -128,7 +128,13 @@ const fraisService = (montant: number, devise?: string | null): number => {
 
 
 type Reglage = { mode?: 'empreinte' | 'acompte' | 'total'; type?: 'pourcent' | 'fixe'; valeur?: number }
-type Config = Reglage & { actif?: boolean; nouvelles?: Reglage | null }
+type Config = Reglage & {
+  actif?: boolean
+  nouvelles?: Reglage | null
+  /** Les deux interrupteurs de l'app (2.6+). Absents = allumés. */
+  habituees_actif?: boolean
+  nouvelles_actif?: boolean
+}
 
 
 /**
@@ -260,7 +266,30 @@ export async function POST(req: NextRequest) {
   // simple empreinte à ses fidèles, un acompte à une inconnue. Quand elle n'a
   // rien réglé de particulier (`nouvelles` absent), tout le monde a la même
   // règle et on ne va même pas lire le fichier clientes.
-  const nouvelle = config.nouvelles ? await estUneNouvelleCliente(proId, body.telephone) : false
+  //
+  // ── ET CHAQUE PUBLIC A SON INTERRUPTEUR ───────────────────────────────────
+  // Depuis l'app 2.6, la pro peut éteindre un seul des deux : rien demandé aux
+  // clientes qu'elle connaît, acompte aux inconnues — ou l'inverse. L'app le
+  // note dans deux champs ; ici on ne les lisait pas, et l'interrupteur éteint
+  // ne changeait rien : la cliente payait quand même.
+  //
+  // ABSENTS = ALLUMÉS. Les pros réglées avant cette version n'ont ni l'un ni
+  // l'autre dans leur configuration : elles doivent continuer exactement comme
+  // avant.
+  const habitueesActif = config.habituees_actif ?? true
+  const nouvellesActif = config.nouvelles_actif ?? true
+
+  // Il faut savoir à qui on a affaire dès qu'un des deux est éteint, même sans
+  // règle « nouvelles » : c'est ce qui décide si on demande quoi que ce soit.
+  const publicAConnaitre = !!config.nouvelles || !habitueesActif || !nouvellesActif
+  const nouvelle = publicAConnaitre ? await estUneNouvelleCliente(proId, body.telephone) : false
+
+  // Son public est éteint : elle ne laisse rien, comme l'écran de la pro l'a
+  // promis. Le reste de la caisse continue de tourner pour l'autre public.
+  if (nouvelle ? !nouvellesActif : !habitueesActif) {
+    return NextResponse.json({ actif: false })
+  }
+
   const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
 
   // ── L'ACOMPTE SE CALCULE SUR LE VRAI PRIX ────────────────────────────────
