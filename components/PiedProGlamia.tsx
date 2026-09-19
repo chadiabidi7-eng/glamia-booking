@@ -90,16 +90,20 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
         // et sale en vrai : le texte de la page se lisait au travers, et la
         // pilule avait l'air posée par erreur au milieu du contenu. Un beige
         // plein la pose franchement au-dessus.
-        background: '#FDF6F0',
+        // LE ROSE PÂLE DE LA MAISON, PAS LE BEIGE. Le beige tirait vers le
+        // papier et se confondait avec le fond crème de la page ; ce rose est
+        // assez présent pour détacher la pilule des cartes blanches, assez
+        // clair pour ne pas crier.
+        background: '#F9EEF4',
         border: '1px solid rgba(194,119,158,0.42)',
         // LE FILET ROSE : l'œil a besoin d'un point d'accroche coloré, et
         // quatre pixels sur la tranche suffisent. Repeindre tout le fond en
         // rose faisait de la pilule une réclame ; une arête colorée la fait
         // seulement exister.
         borderLeft: '4px solid #C2779E',
-        borderRadius: 16,
-        boxShadow: '0 8px 26px rgba(122,62,95,0.22)',
-        padding: '10px 10px 10px 14px',
+        borderRadius: 14,
+        boxShadow: '0 6px 20px rgba(122,62,95,0.20)',
+        padding: '7px 8px 7px 12px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
         <div style={{ minWidth: 0 }}>
@@ -111,13 +115,13 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
               sans comprendre. Mis en second rang typographique, il précise
               sans voler la vedette au nom. */}
           <p style={{
-            margin: 0, fontSize: 14, fontWeight: 800, color: ROSE,
-            letterSpacing: '0.15em', lineHeight: 1.2,
+            margin: 0, fontSize: 12, fontWeight: 800, color: ROSE,
+            letterSpacing: '0.13em', lineHeight: 1.15,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             GLAMIA
             <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+              fontSize: 8.5, fontWeight: 700, letterSpacing: '0.09em',
               textTransform: 'uppercase', opacity: 0.7,
             }}>{' · '}{traduire('resa.proPourLesPros')}</span>
           </p>
@@ -126,12 +130,14 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
             // et roses, cette ligne devenait plus large et plus forte que le
             // nom : on lisait « TON AGENDA… » avant « GLAMIA ». Minuscules,
             // poids normal, gris rosé — elle complète, elle ne concurrence pas.
-            margin: '2px 0 0', fontSize: 11, fontWeight: 500,
-            color: '#A3899A', letterSpacing: 0, lineHeight: 1.3,
+            margin: '1px 0 0', fontSize: 9.5, fontWeight: 500,
+            color: '#A3899A', letterSpacing: 0, lineHeight: 1.25,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{traduire('resa.proBaseline')}</p>
         </div>
-        {lien(<BadgeAppStore hauteur={36} />)}
+        {/* Le badge est l'élément le plus haut de la pilule : c'est lui qui
+            commande sa hauteur, plus que le texte. */}
+        {lien(<BadgeAppStore hauteur={30} />)}
       </div>
     )
   }
