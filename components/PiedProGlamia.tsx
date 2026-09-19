@@ -34,7 +34,23 @@
 
 import { traduire } from '@/lib/i18n'
 
-const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia-beauty/id6760552102'
+// ── LE LIEN DE CAMPAGNE APP STORE ───────────────────────────────────────────
+// `pt` est le jeton fournisseur du compte Apple, `ct` le nom de la campagne.
+// Apple compte alors les téléchargements PAR CAMPAGNE dans App Store Connect
+// (Analyses → Acquisition → Campagnes).
+//
+// POURQUOI PAS UN SIMPLE LIEN : depuis Safari iOS, le badge ouvre l'App Store
+// en natif et le référent web se perd en route. On verrait zéro téléchargement
+// et on croirait le bandeau inutile, alors qu'il aurait amené des pros. Le
+// jeton, lui, voyage dans l'URL et Apple l'enregistre lui-même.
+//
+// LE `ct` EST UN LIBELLÉ LIBRE : rien à déclarer chez Apple pour en ajouter un.
+// D'où deux noms, qui diront lequel des deux écrans convertit.
+//
+// ET CE CHIFFRE RESTE MUET SOUS CINQ INSTALLATIONS : Apple masque une campagne
+// tant que moins de cinq comptes différents l'ont utilisée.
+const APP_STORE = (campagne: string) =>
+  `https://apps.apple.com/app/apple-store/id6760552102?pt=128654461&ct=${campagne}&mt=8`
 const ROSE = '#C2779E'
 
 type Variante = 'barre' | 'carte'
@@ -75,7 +91,8 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
   }
 
   const lien = (enfants: React.ReactNode, style?: React.CSSProperties) => (
-    <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={compter}
+    <a href={APP_STORE(variante === 'carte' ? 'page-fermee' : 'bandeau-resa')}
+       target="_blank" rel="noopener noreferrer" onClick={compter}
        style={{ textDecoration: 'none', display: 'inline-flex', ...style }}>{enfants}</a>
   )
 
