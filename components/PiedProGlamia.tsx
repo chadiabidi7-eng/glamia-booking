@@ -105,10 +105,22 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
         <div style={{ minWidth: 0 }}>
           {/* Le nom porte l'interlettrage d'un logotype : c'est ce qui le fait
               lire comme une marque et non comme un mot dans une phrase. */}
+          {/* « POUR LES PROS » SE LIT AVANT TOUT LE RESTE, et c'est le but :
+              « l'appli des indépendantes beauté » pouvait s'entendre comme
+              « l'appli pour EN TROUVER une », et une cliente la téléchargeait
+              sans comprendre. Mis en second rang typographique, il précise
+              sans voler la vedette au nom. */}
           <p style={{
             margin: 0, fontSize: 14, fontWeight: 800, color: ROSE,
             letterSpacing: '0.15em', lineHeight: 1.2,
-          }}>GLAMIA</p>
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            GLAMIA
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', opacity: 0.7,
+            }}>{' · '}{traduire('resa.proPourLesPros')}</span>
+          </p>
           <p style={{
             margin: '2px 0 0', fontSize: 9.5, fontWeight: 700,
             color: '#B0688E', textTransform: 'uppercase',
