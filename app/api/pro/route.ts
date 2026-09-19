@@ -106,7 +106,10 @@ export async function POST(req: NextRequest) {
     // Ces trois champs servaient à décider ici : ils ne sortent pas.
     const { abonnement_actif: _a, pro_pay_actif: _p, trial_ends_at: _t, ...profil } = pro as Record<string, unknown>
 
-    if (!accesActif) return NextResponse.json({ etat: 'ferme', pro: { pseudo: profil.pseudo, prenom: profil.prenom, instagram: profil.instagram, tiktok: profil.tiktok, snapchat: profil.snapchat } })
+    // L'identifiant sort aussi : le pied de page « Rejoins Glamia » compte les
+    // clics par pro, et une page fermée est justement celle qu'une consœur
+    // ouvre par curiosité. Il est déjà public dans la réponse normale.
+    if (!accesActif) return NextResponse.json({ etat: 'ferme', pro: { id: profil.id, pseudo: profil.pseudo, prenom: profil.prenom, instagram: profil.instagram, tiktok: profil.tiktok, snapchat: profil.snapchat } })
 
     const { data: prest } = await supabaseAdmin
       .from('prestations')

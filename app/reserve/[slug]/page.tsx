@@ -9,6 +9,7 @@ import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
+import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
@@ -1662,7 +1663,9 @@ export default function ReservationPage() {
         // Page fermée (abonnement expiré) : on garde de quoi afficher son nom
         // et ses réseaux, rien de plus.
         setPro({
-          id: '', prenom: d.pro?.prenom ?? '', nom: '',
+          // L'identifiant sert au comptage du pied de page : sans lui, on ne
+          // saurait pas quelle page fermée nous ramène des pros.
+          id: d.pro?.id ?? '', prenom: d.pro?.prenom ?? '', nom: '',
           pseudo: d.pro?.pseudo ?? undefined,
           horaires: DEFAULT_HORAIRES, creneaux_bloques: [], horaires_specifiques: {},
           planning_variable: false,
@@ -3173,7 +3176,13 @@ export default function ReservationPage() {
             </div>
           )}
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 12 }}>{traduire('resa.indisponible')}</h1>
-          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: socials.length > 0 ? 24 : 0, lineHeight: 1.6 }}>{traduire('resa.contactez')}<strong style={{ color: '#1f2937' }}>{nomAffiche}</strong>{traduire('resa.surSesReseaux')}</p>
+          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: socials.length > 0 ? 24 : 0, lineHeight: 1.6 }}>{/* LES ESPACES SONT ICI, PAS DANS LES TRADUCTIONS. « Contactez » et « sur
+                ses réseaux sociaux » sont deux morceaux de phrase : collés au nom,
+                ils donnaient « ContactezButterflylashes.gpsur ses ». Une espace
+                posée en bout de traduction se perd au premier nettoyage. */}
+            {traduire('resa.contactez')}{' '}
+            <strong style={{ color: PINK }}>{nomAffiche}</strong>{' '}
+            {traduire('resa.surSesReseaux')}</p>
           {socials.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {socials.map((s) => (
@@ -3182,14 +3191,26 @@ export default function ReservationPage() {
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
                 >
-                  <s.Logo size={22} />
-                  <span>{s.label}</span>
+                  {/* LARGEUR FIXE, SINON LES LOGOS SE DÉCALENT. Chaque libellé
+                      n'a pas la même longueur : centrer le couple logo+texte
+                      posait les trois pastilles à trois hauteurs de gauche
+                      différentes. Le groupe garde donc une largeur commune, et
+                      c'est lui qu'on centre. */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, width: 130 }}>
+                    <s.Logo size={22} />
+                    <span>{s.label}</span>
+                  </span>
                 </a>
               ))}
             </div>
           )}
+
+          {/* ── VARIANTE « CARTE » : une pro qui tombe sur la page fermée d'une
+              consœur cherche déjà ce qu'on vend. Aucune cliente ne réserve
+              ici : personne à déranger, on peut être franc. */}
+          <PiedProGlamia proId={pro?.id || undefined} variante="carte" />
         </div>
       </div>
     )
@@ -3439,7 +3460,10 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
+      {/* La réserve du bas tient compte du bandeau « Rejoins Glamia », qui
+          flotte au-dessus du contenu : sans elle, la dernière ligne de la page
+          se lit sous la pilule. */}
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '235px' : '95px'}` }}>
 
         {/* ── Bannière pro ── */}
         <style>{`
@@ -4751,7 +4775,7 @@ export default function ReservationPage() {
                   cliquera jamais sur un jour rose. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}<span style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}{' '}<span style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -5492,6 +5516,13 @@ export default function ReservationPage() {
             </p>
           </div>
         </div>
+      )}
+      {/* ── VARIANTE « BARRE » : collée en bas, impossible à manquer.
+          Sauf à l'étape 2, où le récapitulatif des prestations occupe déjà le
+          bas de l'écran : deux barres superposées cacheraient le total et le
+          bouton Continuer. */}
+      {!(step === 2 && techniquesSelectionnees.length > 0) && (
+        <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
       )}
     </div>
   )

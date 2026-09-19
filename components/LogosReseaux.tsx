@@ -3,73 +3,93 @@
 //
 // La page fermée proposait « Instagram Instagram », « TikTok TikTok » : le nom
 // du réseau était écrit deux fois. L'emplacement de l'icône existait bien dans
-// le code, mais il contenait le MOT « Instagram » au lieu d'un dessin — un
-// détail qui saute aux yeux de toutes les clientes d'une pro dont la page s'est
-// fermée, c'est-à-dire au pire moment.
+// le code, mais il contenait le MOT « Instagram » au lieu d'un dessin.
 //
 // POURQUOI DES TRACÉS ÉCRITS À LA MAIN : la bibliothèque d'icônes du projet
 // (lucide-react) a retiré tous les logos de marque. Aucun `Instagram` à
-// importer, ni ici ni ailleurs — vérifié sur la version installée.
+// importer, ni ici ni ailleurs.
 //
 // ET POURQUOI PAS UNE IMAGE DISTANTE : une cliente qui ouvre cette page est
 // souvent dans les transports, sur un réseau qui laisse tomber les images
 // tierces. Un logo qui ne charge pas laisse un carré vide à la place du seul
 // moyen de joindre la pro. Le SVG est du texte : il arrive avec la page.
 //
-// CHAQUE LOGO GARDE SES COULEURS DE MARQUE, sur une pastille ronde — c'est
-// l'icône de l'application telle qu'elle est sur le téléphone de la cliente.
-// Elle la reconnaît sans lire.
+// CE SONT LES ICÔNES D'APPLICATION, pas des approximations. Trois détails font
+// toute la différence entre « officiel » et « bricolé », et les trois avaient
+// été ratés : le glyphe Instagram est un CONTOUR fin, jamais une masse pleine ;
+// le fantôme Snapchat est BLANC sur le jaune, jamais noir ; et la note TikTok
+// porte ses deux ombres décalées, cyan et rose, sans lesquelles ce n'est
+// qu'une croche quelconque.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Props = { size?: number }
+
+/** Le carré arrondi commun aux trois : c'est la forme d'une icône d'app. */
+function Pastille({ size, fond, children }: { size: number; fond: string; children: React.ReactNode }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: size, height: size, borderRadius: size * 0.26,
+      background: fond, flexShrink: 0, overflow: 'hidden',
+    }}>{children}</span>
+  )
+}
 
 /** Le dégradé d'Instagram porte un identifiant unique : deux dégradés de même
  *  nom dans une page et le navigateur n'en garde qu'un. */
 export function LogoInstagram({ size = 22 }: Props) {
   return (
-    <span style={{ display: 'inline-flex', width: size, height: size, borderRadius: size * 0.28, overflow: 'hidden' }}>
+    <Pastille size={size} fond="#fff">
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <defs>
-          <linearGradient id="glamia-ig" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FEDA75" />
-            <stop offset="25%" stopColor="#FA7E1E" />
-            <stop offset="50%" stopColor="#D62976" />
-            <stop offset="75%" stopColor="#962FBF" />
-            <stop offset="100%" stopColor="#4F5BD5" />
-          </linearGradient>
+          <radialGradient id="glamia-ig-fond" cx="30%" cy="107%" r="150%">
+            <stop offset="0%" stopColor="#FFDD55" />
+            <stop offset="10%" stopColor="#FFDD55" />
+            <stop offset="50%" stopColor="#FF543E" />
+            <stop offset="100%" stopColor="#C837AB" />
+          </radialGradient>
         </defs>
-        <rect width="24" height="24" fill="url(#glamia-ig)" />
-        <path
-          fill="#fff"
-          d="M12 6.865a5.135 5.135 0 1 0 0 10.27 5.135 5.135 0 0 0 0-10.27zm0 8.468a3.333 3.333 0 1 1 0-6.666 3.333 3.333 0 0 1 0 6.666zm6.538-8.671a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0zM12 4.54c-2.003 0-2.253.008-3.04.044-.786.036-1.322.16-1.79.343a3.61 3.61 0 0 0-1.306.85 3.61 3.61 0 0 0-.85 1.306c-.183.468-.307 1.004-.343 1.79C4.635 9.66 4.626 9.91 4.626 12s.009 2.34.045 3.127c.036.786.16 1.322.343 1.79.19.483.44.892.85 1.306.414.41.823.66 1.306.85.468.183 1.004.307 1.79.343.787.036 1.037.045 3.04.045s2.253-.009 3.04-.045c.786-.036 1.322-.16 1.79-.343a3.61 3.61 0 0 0 1.306-.85c.41-.414.66-.823.85-1.306.183-.468.307-1.004.343-1.79.036-.787.045-1.037.045-3.127s-.009-2.34-.045-3.127c-.036-.786-.16-1.322-.343-1.79a3.61 3.61 0 0 0-.85-1.306 3.61 3.61 0 0 0-1.306-.85c-.468-.183-1.004-.307-1.79-.343C14.253 4.548 14.003 4.54 12 4.54zm0 1.8c1.966 0 2.2.008 2.976.043.718.033 1.108.153 1.368.254.344.134.59.294.848.552.258.258.418.504.552.848.101.26.221.65.254 1.368.035.776.043 1.01.043 2.976s-.008 2.2-.043 2.976c-.033.718-.153 1.108-.254 1.368a2.28 2.28 0 0 1-.552.848c-.258.258-.504.418-.848.552-.26.101-.65.221-1.368.254-.776.035-1.01.043-2.976.043s-2.2-.008-2.976-.043c-.718-.033-1.108-.153-1.368-.254a2.28 2.28 0 0 1-.848-.552 2.28 2.28 0 0 1-.552-.848c-.101-.26-.221-.65-.254-1.368-.035-.776-.043-1.01-.043-2.976s.008-2.2.043-2.976c.033-.718.153-1.108.254-1.368.134-.344.294-.59.552-.848a2.28 2.28 0 0 1 .848-.552c.26-.101.65-.221 1.368-.254C9.8 6.348 10.034 6.34 12 6.34z"
+        <rect width="24" height="24" fill="url(#glamia-ig-fond)" />
+        {/* Le boîtier, l'objectif et le témoin : des traits, pas des pleins. */}
+        <rect
+          x="5.1" y="5.1" width="13.8" height="13.8" rx="4.4"
+          fill="none" stroke="#fff" strokeWidth="1.65"
         />
+        <circle cx="12" cy="12" r="3.5" fill="none" stroke="#fff" strokeWidth="1.65" />
+        <circle cx="16.7" cy="7.4" r="1.05" fill="#fff" />
       </svg>
-    </span>
+    </Pastille>
   )
 }
 
 export function LogoTikTok({ size = 22 }: Props) {
+  // La note et ses deux ombres : cyan décalée à gauche, rose à droite, la
+  // blanche par-dessus. C'est ce décalage qui fait reconnaître TikTok.
+  const note = 'M16.6 5.82a4.28 4.28 0 0 1-1.03-2.82h-2.9v11.6a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1-2.59-2.59 2.59 2.59 0 0 1 3.3-2.49v-2.95a5.51 5.51 0 0 0-.71-.05A5.51 5.51 0 0 0 4.57 14.5a5.51 5.51 0 0 0 5.51 5.51 5.51 5.51 0 0 0 5.51-5.51V8.9a7.14 7.14 0 0 0 4.17 1.34V7.34a4.25 4.25 0 0 1-3.16-1.52z'
   return (
-    <span style={{ display: 'inline-flex', width: size, height: size, borderRadius: size * 0.28, overflow: 'hidden', background: '#000' }}>
+    <Pastille size={size} fond="#000">
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path
-          fill="#fff"
-          d="M16.6 5.82a4.28 4.28 0 0 1-1.03-2.82h-2.9v11.6a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1-2.59-2.59 2.59 2.59 0 0 1 3.3-2.49v-2.95a5.51 5.51 0 0 0-.71-.05A5.51 5.51 0 0 0 4.57 14.5a5.51 5.51 0 0 0 5.51 5.51 5.51 5.51 0 0 0 5.51-5.51V8.9a7.14 7.14 0 0 0 4.17 1.34V7.34a4.25 4.25 0 0 1-3.16-1.52z"
-        />
+        <path d={note} fill="#25F4EE" transform="translate(-0.9 0.5)" />
+        <path d={note} fill="#FE2C55" transform="translate(0.9 -0.3)" />
+        <path d={note} fill="#fff" />
       </svg>
-    </span>
+    </Pastille>
   )
 }
 
 export function LogoSnapchat({ size = 22 }: Props) {
   return (
-    <span style={{ display: 'inline-flex', width: size, height: size, borderRadius: size * 0.28, overflow: 'hidden', background: '#FFFC00' }}>
+    <Pastille size={size} fond="#FFFC00">
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        {/* Le fantôme est BLANC — c'est l'icône telle qu'elle est sur le
+            téléphone. En noir, on reconnaît un fantôme, pas Snapchat. */}
         <path
-          fill="#000"
-          d="M12.1 4c1.95.02 3.56 1.4 3.9 3.3.1.6.06 1.22.03 1.83-.01.2-.02.4-.03.6.05.03.13.05.25.05.2-.01.43-.08.67-.2a.74.74 0 0 1 .32-.07c.12 0 .24.02.34.06.3.1.48.32.48.55.01.3-.25.56-.79.78-.06.02-.14.05-.23.08-.3.09-.75.24-.87.54-.06.15-.04.35.08.58v.01c.04.09 1 2.29 3.13 2.64.17.03.28.18.27.34a.3.3 0 0 1-.03.15c-.16.37-.83.65-2.05.83-.04.06-.08.25-.11.38-.02.12-.05.24-.09.36-.05.18-.17.27-.36.27h-.02c-.09 0-.2-.02-.35-.05a4.6 4.6 0 0 0-.83-.09c-.2 0-.4.02-.6.05-.4.07-.75.31-1.14.58-.58.4-1.23.85-2.22.85h-.21c-.96 0-1.6-.44-2.17-.84-.4-.28-.74-.51-1.14-.58a3.9 3.9 0 0 0-.6-.05c-.34 0-.6.04-.84.09-.14.03-.26.05-.35.05-.19 0-.31-.09-.36-.27a3.4 3.4 0 0 1-.09-.36c-.03-.13-.07-.32-.11-.38-1.22-.18-1.9-.46-2.05-.83a.3.3 0 0 1-.03-.15c0-.16.1-.31.27-.34 2.14-.35 3.1-2.55 3.13-2.64v-.01c.13-.23.15-.43.09-.58-.13-.3-.58-.45-.87-.54a3.4 3.4 0 0 1-.23-.08c-.54-.22-.8-.48-.79-.78 0-.23.18-.45.48-.55.1-.04.22-.06.34-.06.08 0 .2.01.32.07.24.12.47.19.67.2.12 0 .2-.02.25-.05l-.03-.6c-.03-.61-.07-1.23.03-1.83A3.92 3.92 0 0 1 12.1 4z"
+          fill="#fff"
+          stroke="#fff"
+          strokeWidth="0.35"
+          d="M12.1 3.4c2.1.02 3.83 1.5 4.2 3.55.1.64.06 1.31.03 1.97l-.03.65c.05.03.14.05.27.05.21-.1.46-.09.72-.22a.8.8 0 0 1 .35-.07c.13 0 .26.02.37.06.32.11.52.35.52.6.02.32-.27.6-.85.84-.07.02-.16.05-.25.08-.32.1-.81.26-.94.58-.06.16-.04.38.09.62v.01c.04.1 1.07 2.47 3.37 2.85.18.03.3.19.29.37a.32.32 0 0 1-.03.16c-.17.4-.9.7-2.21.9-.05.06-.09.27-.12.41-.02.13-.05.26-.1.39-.05.19-.18.29-.39.29h-.02c-.1 0-.22-.02-.38-.05a5 5 0 0 0-.9-.1c-.21 0-.43.02-.65.05-.44.08-.81.34-1.23.63-.63.43-1.33.92-2.4.92h-.23c-1.04 0-1.73-.48-2.35-.91-.43-.3-.8-.55-1.24-.63a4.2 4.2 0 0 0-.65-.05c-.36 0-.65.04-.9.1-.16.03-.29.05-.38.05-.2 0-.34-.1-.4-.29a3.7 3.7 0 0 1-.09-.4c-.03-.13-.07-.34-.12-.4-1.31-.2-2.04-.5-2.21-.9a.32.32 0 0 1-.03-.16c-.01-.18.11-.34.3-.37 2.29-.38 3.32-2.75 3.36-2.85v-.01c.13-.24.15-.46.09-.62-.13-.32-.62-.48-.94-.58a3.7 3.7 0 0 1-.25-.08c-.58-.24-.87-.52-.85-.84 0-.25.2-.49.52-.6.11-.04.24-.06.37-.06.09 0 .22.01.35.07.26.13.51.21.72.22.13 0 .22-.02.27-.05l-.03-.65c-.03-.66-.07-1.33.03-1.97C8.27 4.9 10 3.42 12.1 3.4z"
         />
       </svg>
-    </span>
+    </Pastille>
   )
 }
