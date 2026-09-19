@@ -8,16 +8,18 @@
 // qu'on lui ait jamais parlé. C'est notre seule occasion de l'atteindre.
 //
 // DEUX ENDROITS, DEUX TONS :
-//   `barre` — collée en bas d'une page vivante, elle doit se remarquer sans
-//             gêner celle qui réserve. D'où le rose plein : un bandeau blanc
-//             se confond avec la page et personne ne le voit jamais.
+//   `barre` — collée en bas d'une page vivante. Elle doit être TROUVABLE, pas
+//             voyante : la cliente qui réserve est chez sa praticienne, pas
+//             chez nous. D'où un bandeau fin, clair, sans animation ni
+//             pastille — deux lignes et le badge, rien de plus.
 //   `carte` — sur une page fermée, où plus aucune cliente ne réserve. Là on
 //             peut prendre de la place et parler franchement.
 //
 // LE BADGE EST CELUI D'APPLE, pas un bouton maison : il se reconnaît sans lire
 // et annonce la boutique autant que le geste. Dessiné ici plutôt que chargé en
 // image — sur un réseau faible, une image distante laisserait un carré vide.
-// (Et `public/icon.png`, que référence /app/[dest], n'existe même pas.)
+// (Et `public/icon.png`, que référence /app/[dest], n'existe même pas : c'est
+// aussi pourquoi il n'y a aucun logo dans le bandeau.)
 //
 // ON COMPTE LE CLIC AVEC `sendBeacon`. Le lien ouvre l'App Store dans la
 // foulée : un `fetch` serait annulé par la navigation et raterait justement
@@ -42,9 +44,9 @@ type Props = {
 function BadgeAppStore({ hauteur = 44 }: { hauteur?: number }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 7,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
       background: '#000', color: '#fff', borderRadius: hauteur * 0.2,
-      padding: `0 ${hauteur * 0.3}px`, height: hauteur,
+      padding: `0 ${hauteur * 0.28}px`, height: hauteur,
       textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
     }}>
       <svg width={hauteur * 0.5} height={hauteur * 0.5} viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
@@ -55,21 +57,6 @@ function BadgeAppStore({ hauteur = 44 }: { hauteur?: number }) {
         <span style={{ fontSize: hauteur * 0.33, fontWeight: 600, letterSpacing: '-0.01em' }}>App Store</span>
       </span>
     </span>
-  )
-}
-
-/** La pastille de marque, dessinée : aucun fichier image à charger. */
-function PastilleG({ taille = 38 }: { taille?: number }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: taille, height: taille, borderRadius: taille * 0.3, flexShrink: 0,
-      background: 'rgba(255,255,255,0.22)',
-      border: '1px solid rgba(255,255,255,0.45)',
-      color: '#fff', fontWeight: 800, fontSize: taille * 0.5,
-      letterSpacing: '-0.03em', lineHeight: 1,
-      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
-    }}>G</span>
   )
 }
 
@@ -86,53 +73,38 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
        style={{ textDecoration: 'none', display: 'inline-flex', ...style }}>{enfants}</a>
   )
 
-  // ── LE BANDEAU DU BAS ──
+  // ── LE BANDEAU DU BAS : fin, clair, immobile ──
   if (variante === 'barre') {
     return (
-      <>
-        {/* Elle monte du bas après une seconde : posée d'emblée, elle se
-            confond avec la page et l'œil ne la voit plus. Qui arrive pour
-            réserver a le temps de lire l'écran avant qu'elle n'apparaisse. */}
-        <style>{`
-          @keyframes glamia-monte {
-            from { transform: translateY(105%); opacity: 0 }
-            to   { transform: translateY(0);    opacity: 1 }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .glamia-barre-pro { animation: none !important }
-          }
-        `}</style>
-        <div
-          className="glamia-barre-pro"
-          style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 15,
-            background: 'linear-gradient(135deg, #C2779E 0%, #B0668F 55%, #9C5480 100%)',
-            borderTopLeftRadius: 20, borderTopRightRadius: 20,
-            boxShadow: '0 -6px 22px rgba(156,84,128,0.30)',
-            padding: '11px 16px calc(11px + env(safe-area-inset-bottom))',
-            animation: 'glamia-monte 0.5s cubic-bezier(0.22,1,0.36,1) 1.1s both',
-          }}
-        >
-          <div style={{
-            maxWidth: 480, margin: '0 auto',
-            display: 'flex', alignItems: 'center', gap: 11,
-          }}>
-            <PastilleG taille={38} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                margin: 0, fontSize: 13.5, fontWeight: 800, color: '#fff',
-                lineHeight: 1.25, letterSpacing: '-0.01em',
-              }}>{traduire('resa.proAccroche')}</p>
-              <p style={{
-                margin: '1px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.82)',
-                lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis',
-                display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
-              }}>{traduire('resa.proBaseline')}</p>
-            </div>
-            {lien(<BadgeAppStore hauteur={38} />)}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 15,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'saturate(180%) blur(12px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+        borderTop: '1px solid #EFE6EC',
+        padding: '7px 16px calc(7px + env(safe-area-inset-bottom))',
+      }}>
+        <div style={{
+          maxWidth: 480, margin: '0 auto',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div style={{ minWidth: 0 }}>
+            {/* Deux lignes, jamais trois : chacune sur une seule ligne, coupée
+                par des points de suspension plutôt que de pousser le bandeau
+                en hauteur sur un téléphone étroit. */}
+            <p style={{
+              margin: 0, fontSize: 12.5, fontWeight: 700, color: '#2D2D2D',
+              lineHeight: 1.3, letterSpacing: '-0.01em',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{traduire('resa.proAccroche')}</p>
+            <p style={{
+              margin: '1px 0 0', fontSize: 10.5, color: '#9A9AA5', lineHeight: 1.3,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{traduire('resa.proBaseline')}</p>
           </div>
+          {lien(<BadgeAppStore hauteur={32} />)}
         </div>
-      </>
+      </div>
     )
   }
 
