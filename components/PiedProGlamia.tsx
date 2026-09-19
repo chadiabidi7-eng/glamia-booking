@@ -1,35 +1,41 @@
 'use client'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// « REJOINS GLAMIA » — LA MAIN TENDUE AUX PROS QUI PASSENT PAR LÀ.
+// « GLAMIA — L'APPLI DES INDÉPENDANTES BEAUTÉ »
 //
 // Une page de réservation ne circule pas qu'entre clientes : une prothésiste
 // voit passer le lien d'une consœur, l'ouvre par curiosité, et repart sans
 // qu'on lui ait jamais parlé. C'est notre seule occasion de l'atteindre.
 //
 // DEUX ENDROITS, DEUX TONS :
-//   `barre` — collée en bas d'une page vivante. Elle doit être TROUVABLE, pas
-//             voyante : la cliente qui réserve est chez sa praticienne, pas
-//             chez nous. D'où un bandeau fin, clair, sans animation ni
-//             pastille — deux lignes et le badge, rien de plus.
-//   `carte` — sur une page fermée, où plus aucune cliente ne réserve. Là on
-//             peut prendre de la place et parler franchement.
+//   `barre` — sur une page vivante. Elle doit être TROUVABLE, pas voyante :
+//             la cliente est chez sa praticienne, pas chez nous.
+//   `carte` — sur une page fermée, où plus personne ne réserve. Là on peut
+//             prendre de la place et parler franchement.
 //
-// LE BADGE EST CELUI D'APPLE, pas un bouton maison : il se reconnaît sans lire
-// et annonce la boutique autant que le geste. Dessiné ici plutôt que chargé en
-// image — sur un réseau faible, une image distante laisserait un carré vide.
-// (Et `public/icon.png`, que référence /app/[dest], n'existe même pas : c'est
-// aussi pourquoi il n'y a aucun logo dans le bandeau.)
+// POURQUOI UNE PILULE ET NON UNE BARRE PLEINE LARGEUR : collée bord à bord,
+// elle se lit comme un bandeau système — la barre d'adresse, un message de
+// cookies, quelque chose qu'on chasse du regard. Détachée des bords et
+// arrondie sur ses quatre angles, elle devient un objet posé sur la page :
+// on la voit, mais elle n'interrompt rien.
 //
-// ON COMPTE LE CLIC AVEC `sendBeacon`. Le lien ouvre l'App Store dans la
-// foulée : un `fetch` serait annulé par la navigation et raterait justement
-// les clics qui aboutissent. Le comptage ne peut rien bloquer — tout est dans
-// un try/catch, le lien reste un `<a href>` ordinaire.
+// LE BEIGE TRANSLUCIDE ET LE FLOU laissent deviner la page derrière. C'est ce
+// qui l'empêche de peser : un aplat opaque coupe l'écran en deux, un verre
+// dépoli le prolonge.
+//
+// LE BADGE EST CELUI D'APPLE, dessiné ici plutôt que chargé en image — sur un
+// réseau faible, une image distante laisserait un carré vide. (Et
+// `public/icon.png`, que référence /app/[dest], n'existe même pas.)
+//
+// ON COMPTE LE CLIC AVEC `sendBeacon` : le lien ouvre l'App Store dans la
+// foulée, et un `fetch` serait annulé par la navigation — on raterait
+// justement les clics qui aboutissent.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { traduire } from '@/lib/i18n'
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia-beauty/id6760552102'
+const ROSE = '#C2779E'
 
 type Variante = 'barre' | 'carte'
 
@@ -45,7 +51,7 @@ function BadgeAppStore({ hauteur = 44 }: { hauteur?: number }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
-      background: '#000', color: '#fff', borderRadius: hauteur * 0.2,
+      background: '#000', color: '#fff', borderRadius: hauteur * 0.22,
       padding: `0 ${hauteur * 0.28}px`, height: hauteur,
       textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
     }}>
@@ -73,37 +79,39 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
        style={{ textDecoration: 'none', display: 'inline-flex', ...style }}>{enfants}</a>
   )
 
-  // ── LE BANDEAU DU BAS : fin, clair, immobile ──
+  // ── LA PILULE DU BAS ──
   if (variante === 'barre') {
     return (
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 15,
-        background: 'rgba(255,255,255,0.94)',
-        backdropFilter: 'saturate(180%) blur(12px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(12px)',
-        borderTop: '1px solid #EFE6EC',
-        padding: '7px 16px calc(7px + env(safe-area-inset-bottom))',
+        position: 'fixed', zIndex: 15,
+        left: 12, right: 12, bottom: 'calc(12px + env(safe-area-inset-bottom))',
+        maxWidth: 456, margin: '0 auto',
+        // Le verre dépoli : beige de la maison, laissé translucide pour qu'on
+        // devine la page en dessous.
+        background: 'rgba(253,246,240,0.82)',
+        backdropFilter: 'saturate(180%) blur(16px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+        border: '1px solid rgba(194,119,158,0.22)',
+        borderRadius: 18,
+        boxShadow: '0 8px 26px rgba(122,62,95,0.13), inset 0 1px 0 rgba(255,255,255,0.65)',
+        padding: '8px 10px 8px 15px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
-        <div style={{
-          maxWidth: 480, margin: '0 auto',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        }}>
-          <div style={{ minWidth: 0 }}>
-            {/* Deux lignes, jamais trois : chacune sur une seule ligne, coupée
-                par des points de suspension plutôt que de pousser le bandeau
-                en hauteur sur un téléphone étroit. */}
-            <p style={{
-              margin: 0, fontSize: 12.5, fontWeight: 700, color: '#2D2D2D',
-              lineHeight: 1.3, letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{traduire('resa.proAccroche')}</p>
-            <p style={{
-              margin: '1px 0 0', fontSize: 10.5, color: '#9A9AA5', lineHeight: 1.3,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{traduire('resa.proBaseline')}</p>
-          </div>
-          {lien(<BadgeAppStore hauteur={32} />)}
+        <div style={{ minWidth: 0 }}>
+          {/* Le nom porte l'interlettrage d'un logotype : c'est ce qui le fait
+              lire comme une marque et non comme un mot dans une phrase. */}
+          <p style={{
+            margin: 0, fontSize: 13, fontWeight: 800, color: ROSE,
+            letterSpacing: '0.14em', lineHeight: 1.2,
+          }}>GLAMIA</p>
+          <p style={{
+            margin: '2px 0 0', fontSize: 9, fontWeight: 600,
+            color: 'rgba(194,119,158,0.78)', textTransform: 'uppercase',
+            letterSpacing: '0.07em', lineHeight: 1.25,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{traduire('resa.proBaseline')}</p>
         </div>
+        {lien(<BadgeAppStore hauteur={32} />)}
       </div>
     )
   }
