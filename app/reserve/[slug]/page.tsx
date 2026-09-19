@@ -3194,11 +3194,10 @@ export default function ReservationPage() {
             </div>
           )}
 
-          {/* Une pro qui tombe sur la page fermée d'une consœur cherche déjà
-              ce qu'on vend : la porte est grande ouverte, autant la lui
-              montrer. Aucune cliente ne vient réserver ici, il n'y a personne
-              à déranger. */}
-          <PiedProGlamia proId={pro?.id || undefined} ecran="ferme" margeBasse={0} />
+          {/* ── VARIANTE « CARTE » : une pro qui tombe sur la page fermée d'une
+              consœur cherche déjà ce qu'on vend. Aucune cliente ne réserve
+              ici : personne à déranger, on peut être franc. */}
+          <PiedProGlamia proId={pro?.id || undefined} variante="carte" />
         </div>
       </div>
     )
@@ -3446,6 +3445,9 @@ export default function ReservationPage() {
           </p>
         </div>
       </div>
+
+      {/* ── VARIANTE « HAUT » : vue dès l'ouverture, puis oubliée en descendant. */}
+      <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="haut" />
 
       {/* ── Content ── */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
@@ -5502,16 +5504,13 @@ export default function ReservationPage() {
           </div>
         </div>
       )}
-      {/* ── LA MAIN TENDUE AUX PROS ──────────────────────────────────────
-          Sous tout le reste, à la taille d'une mention légale. À l'étape 2 un
-          récapitulatif collant occupe le bas de l'écran : on pousse le pied
-          plus bas pour qu'il ne se glisse pas dessous. */}
-      <PiedProGlamia
-        proId={pro?.id}
-        slug={typeof slug === 'string' ? slug : undefined}
-        ecran="parcours"
-        margeBasse={step === 2 && techniquesSelectionnees.length > 0 ? 190 : 24}
-      />
+      {/* ── VARIANTE « BARRE » : collée en bas, impossible à manquer.
+          Sauf à l'étape 2, où le récapitulatif des prestations occupe déjà le
+          bas de l'écran : deux barres superposées cacheraient le total et le
+          bouton Continuer. */}
+      {!(step === 2 && techniquesSelectionnees.length > 0) && (
+        <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
+      )}
     </div>
   )
 }
