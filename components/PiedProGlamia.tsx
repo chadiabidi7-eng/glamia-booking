@@ -26,7 +26,6 @@
 import { traduire } from '@/lib/i18n'
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia-beauty/id6760552102'
-const ROSE = '#C2779E'
 
 type Variante = 'haut' | 'barre' | 'carte'
 
@@ -106,8 +105,7 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
       background: '#FDF3F8', border: '1px solid #F2E2EC', borderRadius: 18,
       padding: '20px 18px', textAlign: 'center', marginTop: 20,
     }}>
-      <p style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 800, color: '#3f3037' }}>{traduire('resa.proAccroche')}</p>
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: ROSE, fontWeight: 600 }}>{traduire('resa.proBaseline')}</p>
+      <p style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 800, color: '#3f3037' }}>{traduire('resa.proAccroche')}</p>
       {lien(<BadgeAppStore hauteur={46} />)}
     </div>
   )

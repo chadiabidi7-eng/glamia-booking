@@ -3185,10 +3185,17 @@ export default function ReservationPage() {
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
                 >
-                  <s.Logo size={22} />
-                  <span>{s.label}</span>
+                  {/* LARGEUR FIXE, SINON LES LOGOS SE DÉCALENT. Chaque libellé
+                      n'a pas la même longueur : centrer le couple logo+texte
+                      posait les trois pastilles à trois hauteurs de gauche
+                      différentes. Le groupe garde donc une largeur commune, et
+                      c'est lui qu'on centre. */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, width: 130 }}>
+                    <s.Logo size={22} />
+                    <span>{s.label}</span>
+                  </span>
                 </a>
               ))}
             </div>
