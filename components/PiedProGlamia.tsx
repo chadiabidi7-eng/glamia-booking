@@ -86,14 +86,14 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
         position: 'fixed', zIndex: 15,
         left: 12, right: 12, bottom: 'calc(12px + env(safe-area-inset-bottom))',
         maxWidth: 456, margin: '0 auto',
-        // Le verre dépoli : beige de la maison, laissé translucide pour qu'on
-        // devine la page en dessous.
-        background: 'rgba(253,246,240,0.82)',
-        backdropFilter: 'saturate(180%) blur(16px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(16px)',
-        border: '1px solid rgba(194,119,158,0.22)',
-        borderRadius: 18,
-        boxShadow: '0 8px 26px rgba(122,62,95,0.13), inset 0 1px 0 rgba(255,255,255,0.65)',
+        // OPAQUE, ET NON TRANSLUCIDE. Le verre dépoli était joli sur maquette
+        // et sale en vrai : le texte de la page se lisait au travers, et la
+        // pilule avait l'air posée par erreur au milieu du contenu. Un beige
+        // plein la pose franchement au-dessus.
+        background: '#FDF6F0',
+        border: '1px solid rgba(194,119,158,0.28)',
+        borderRadius: 16,
+        boxShadow: '0 6px 22px rgba(122,62,95,0.16)',
         padding: '8px 10px 8px 15px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>

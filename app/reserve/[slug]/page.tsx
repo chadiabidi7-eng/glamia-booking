@@ -3460,7 +3460,10 @@ export default function ReservationPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
+      {/* La réserve du bas tient compte du bandeau « Rejoins Glamia », qui
+          flotte au-dessus du contenu : sans elle, la dernière ligne de la page
+          se lit sous la pilule. */}
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '250px' : '110px'}` }}>
 
         {/* ── Bannière pro ── */}
         <style>{`
