@@ -91,27 +91,32 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
         // pilule avait l'air posée par erreur au milieu du contenu. Un beige
         // plein la pose franchement au-dessus.
         background: '#FDF6F0',
-        border: '1px solid rgba(194,119,158,0.28)',
+        border: '1px solid rgba(194,119,158,0.42)',
+        // LE FILET ROSE : l'œil a besoin d'un point d'accroche coloré, et
+        // quatre pixels sur la tranche suffisent. Repeindre tout le fond en
+        // rose faisait de la pilule une réclame ; une arête colorée la fait
+        // seulement exister.
+        borderLeft: '4px solid #C2779E',
         borderRadius: 16,
-        boxShadow: '0 6px 22px rgba(122,62,95,0.16)',
-        padding: '8px 10px 8px 15px',
+        boxShadow: '0 8px 26px rgba(122,62,95,0.22)',
+        padding: '10px 10px 10px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
         <div style={{ minWidth: 0 }}>
           {/* Le nom porte l'interlettrage d'un logotype : c'est ce qui le fait
               lire comme une marque et non comme un mot dans une phrase. */}
           <p style={{
-            margin: 0, fontSize: 13, fontWeight: 800, color: ROSE,
-            letterSpacing: '0.14em', lineHeight: 1.2,
+            margin: 0, fontSize: 14, fontWeight: 800, color: ROSE,
+            letterSpacing: '0.15em', lineHeight: 1.2,
           }}>GLAMIA</p>
           <p style={{
-            margin: '2px 0 0', fontSize: 9, fontWeight: 600,
-            color: 'rgba(194,119,158,0.78)', textTransform: 'uppercase',
+            margin: '2px 0 0', fontSize: 9.5, fontWeight: 700,
+            color: '#B0688E', textTransform: 'uppercase',
             letterSpacing: '0.07em', lineHeight: 1.25,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{traduire('resa.proBaseline')}</p>
         </div>
-        {lien(<BadgeAppStore hauteur={32} />)}
+        {lien(<BadgeAppStore hauteur={36} />)}
       </div>
     )
   }
