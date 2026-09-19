@@ -3176,7 +3176,13 @@ export default function ReservationPage() {
             </div>
           )}
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 12 }}>{traduire('resa.indisponible')}</h1>
-          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: socials.length > 0 ? 24 : 0, lineHeight: 1.6 }}>{traduire('resa.contactez')}<strong style={{ color: '#1f2937' }}>{nomAffiche}</strong>{traduire('resa.surSesReseaux')}</p>
+          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: socials.length > 0 ? 24 : 0, lineHeight: 1.6 }}>{/* LES ESPACES SONT ICI, PAS DANS LES TRADUCTIONS. « Contactez » et « sur
+                ses réseaux sociaux » sont deux morceaux de phrase : collés au nom,
+                ils donnaient « ContactezButterflylashes.gpsur ses ». Une espace
+                posée en bout de traduction se perd au premier nettoyage. */}
+            {traduire('resa.contactez')}{' '}
+            <strong style={{ color: PINK }}>{nomAffiche}</strong>{' '}
+            {traduire('resa.surSesReseaux')}</p>
           {socials.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {socials.map((s) => (
