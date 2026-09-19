@@ -3604,7 +3604,8 @@ export default function ReservationPage() {
                   <a
                     href={`https://instagram.com/${String(refusResa.instagram).replace(/^@/, '')}`}
                     target="_blank" rel="noreferrer"
-                    style={{ display: 'inline-block', marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    <LogoInstagram size={20} />
                     {traduire('resa.suivreInsta')}
                   </a>
                 )}
