@@ -4775,7 +4775,7 @@ export default function ReservationPage() {
                   cliquera jamais sur un jour rose. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}<span style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}{' '}<span style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

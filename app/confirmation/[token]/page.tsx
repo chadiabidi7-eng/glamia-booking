@@ -471,7 +471,10 @@ import { traduire } from '@/lib/i18n';
               <CheckCircle size={36} color={GLAMIA_PINK} />
             </div>
             <h2 style={S.h2}>{traduire('confirmation.dejaConfirme')}</h2>
-            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}<strong>{proDisplayName}</strong>{traduire('confirmation.estDejaConfirme')}</p>
+            {/* Les espaces sont ici : « Votre rendez-vous chez » et « est déjà
+                confirmé. » sont deux morceaux de phrase, et collés au nom ils
+                donnaient « chezSarahest déjà confirmé ». */}
+            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}{' '}<strong>{proDisplayName}</strong>{' '}{traduire('confirmation.estDejaConfirme')}</p>
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
@@ -700,7 +703,7 @@ import { traduire } from '@/lib/i18n';
               <CheckCircle size={44} color={GLAMIA_PINK} />
             </div>
             <h2 style={S.h2}>{traduire('confirmation.confirme')}</h2>
-            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}<strong>{proDisplayName}</strong>{traduire('confirmation.estConfirme')}</p>
+            <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}{' '}<strong>{proDisplayName}</strong>{' '}{traduire('confirmation.estConfirme')}</p>
             <div style={S.infoBox}>
               <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>

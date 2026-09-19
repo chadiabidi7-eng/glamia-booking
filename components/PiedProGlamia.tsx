@@ -102,10 +102,17 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
   // ── LA CARTE : là où personne n'est en train de réserver ──
   return (
     <div style={{
-      background: '#FDF3F8', border: '1px solid #F2E2EC', borderRadius: 18,
-      padding: '20px 18px', textAlign: 'center', marginTop: 20,
+      background: 'linear-gradient(160deg, #FFF1F7 0%, #FCE7F1 55%, #F7DCEC 100%)',
+      border: '1px solid #F4D3E4', borderRadius: 20,
+      padding: '22px 18px 20px', textAlign: 'center', marginTop: 20,
+      boxShadow: '0 6px 18px rgba(194,119,158,0.10)',
     }}>
-      <p style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 800, color: '#3f3037' }}>{traduire('resa.proAccroche')}</p>
+      <p style={{ margin: '0 0 6px', fontSize: 16.5, fontWeight: 800, color: '#7A3E5F', lineHeight: 1.3 }}>
+        {traduire('resa.proAccroche')}
+      </p>
+      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9A6A82', lineHeight: 1.5 }}>
+        {traduire('resa.proBaseline')}
+      </p>
       {lien(<BadgeAppStore hauteur={46} />)}
     </div>
   )
