@@ -9,6 +9,7 @@ import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
+import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
@@ -1662,7 +1663,9 @@ export default function ReservationPage() {
         // Page fermée (abonnement expiré) : on garde de quoi afficher son nom
         // et ses réseaux, rien de plus.
         setPro({
-          id: '', prenom: d.pro?.prenom ?? '', nom: '',
+          // L'identifiant sert au comptage du pied de page : sans lui, on ne
+          // saurait pas quelle page fermée nous ramène des pros.
+          id: d.pro?.id ?? '', prenom: d.pro?.prenom ?? '', nom: '',
           pseudo: d.pro?.pseudo ?? undefined,
           horaires: DEFAULT_HORAIRES, creneaux_bloques: [], horaires_specifiques: {},
           planning_variable: false,
@@ -3190,6 +3193,12 @@ export default function ReservationPage() {
               ))}
             </div>
           )}
+
+          {/* Une pro qui tombe sur la page fermée d'une consœur cherche déjà
+              ce qu'on vend : la porte est grande ouverte, autant la lui
+              montrer. Aucune cliente ne vient réserver ici, il n'y a personne
+              à déranger. */}
+          <PiedProGlamia proId={pro?.id || undefined} ecran="ferme" margeBasse={0} />
         </div>
       </div>
     )
@@ -5493,6 +5502,16 @@ export default function ReservationPage() {
           </div>
         </div>
       )}
+      {/* ── LA MAIN TENDUE AUX PROS ──────────────────────────────────────
+          Sous tout le reste, à la taille d'une mention légale. À l'étape 2 un
+          récapitulatif collant occupe le bas de l'écran : on pousse le pied
+          plus bas pour qu'il ne se glisse pas dessous. */}
+      <PiedProGlamia
+        proId={pro?.id}
+        slug={typeof slug === 'string' ? slug : undefined}
+        ecran="parcours"
+        margeBasse={step === 2 && techniquesSelectionnees.length > 0 ? 190 : 24}
+      />
     </div>
   )
 }
