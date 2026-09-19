@@ -7,27 +7,29 @@
 // voit passer le lien d'une consœur, l'ouvre par curiosité, et repart sans
 // qu'on lui ait jamais parlé. C'est notre seule occasion de l'atteindre.
 //
-// TROIS VARIANTES, POSÉES EN MÊME TEMPS POUR CHOISIR SUR PIÈCE :
-//   `haut`  — sous l'en-tête du salon, vue dès l'ouverture puis oubliée
-//   `barre` — collée en bas de l'écran, impossible à manquer, toujours là
-//   `carte` — un bloc franc, pour les écrans où personne ne réserve
+// DEUX ENDROITS, DEUX TONS :
+//   `barre` — collée en bas d'une page vivante, elle doit se remarquer sans
+//             gêner celle qui réserve. D'où le rose plein : un bandeau blanc
+//             se confond avec la page et personne ne le voit jamais.
+//   `carte` — sur une page fermée, où plus aucune cliente ne réserve. Là on
+//             peut prendre de la place et parler franchement.
 //
-// LE BADGE EST CELUI D'APPLE, pas un bouton maison : « Rejoins Glamia » ne dit
-// pas où aller, alors que le badge noir se reconnaît sans lire et annonce à la
-// fois la boutique et le geste. Il est dessiné ici plutôt que chargé en image :
-// une cliente sur un réseau faible verrait un carré vide à la place.
+// LE BADGE EST CELUI D'APPLE, pas un bouton maison : il se reconnaît sans lire
+// et annonce la boutique autant que le geste. Dessiné ici plutôt que chargé en
+// image — sur un réseau faible, une image distante laisserait un carré vide.
+// (Et `public/icon.png`, que référence /app/[dest], n'existe même pas.)
 //
 // ON COMPTE LE CLIC AVEC `sendBeacon`. Le lien ouvre l'App Store dans la
 // foulée : un `fetch` serait annulé par la navigation et raterait justement
-// les clics qui aboutissent. Et le comptage ne peut rien bloquer — tout est
-// dans un try/catch, le lien reste un `<a href>` ordinaire.
+// les clics qui aboutissent. Le comptage ne peut rien bloquer — tout est dans
+// un try/catch, le lien reste un `<a href>` ordinaire.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { traduire } from '@/lib/i18n'
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia-beauty/id6760552102'
 
-type Variante = 'haut' | 'barre' | 'carte'
+type Variante = 'barre' | 'carte'
 
 type Props = {
   /** La pro dont la page est visitée : c'est elle qui nous amène la nouvelle. */
@@ -40,19 +42,34 @@ type Props = {
 function BadgeAppStore({ hauteur = 44 }: { hauteur?: number }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
+      display: 'inline-flex', alignItems: 'center', gap: 7,
       background: '#000', color: '#fff', borderRadius: hauteur * 0.2,
-      padding: `0 ${hauteur * 0.32}px`, height: hauteur,
-      textDecoration: 'none', whiteSpace: 'nowrap',
+      padding: `0 ${hauteur * 0.3}px`, height: hauteur,
+      textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
     }}>
-      <svg width={hauteur * 0.52} height={hauteur * 0.52} viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+      <svg width={hauteur * 0.5} height={hauteur * 0.5} viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
         <path d="M17.05 12.04c-.03-2.8 2.29-4.15 2.39-4.21-1.3-1.9-3.33-2.16-4.05-2.19-1.72-.17-3.36 1.01-4.24 1.01-.87 0-2.22-.99-3.65-.96-1.88.03-3.61 1.09-4.58 2.77-1.95 3.39-.5 8.41 1.4 11.16.93 1.35 2.04 2.86 3.5 2.81 1.4-.06 1.93-.91 3.63-.91 1.69 0 2.17.91 3.65.88 1.51-.03 2.46-1.37 3.38-2.73 1.07-1.57 1.51-3.09 1.53-3.17-.03-.01-2.94-1.13-2.97-4.46zM14.28 3.9c.77-.94 1.29-2.24 1.15-3.54-1.11.05-2.46.74-3.26 1.67-.71.83-1.34 2.16-1.17 3.43 1.24.1 2.5-.63 3.28-1.56z" />
       </svg>
       <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05, textAlign: 'left' }}>
-        <span style={{ fontSize: hauteur * 0.2, opacity: 0.9 }}>{traduire('resa.proBadgeLigne1')}</span>
-        <span style={{ fontSize: hauteur * 0.34, fontWeight: 600, letterSpacing: '-0.01em' }}>App Store</span>
+        <span style={{ fontSize: hauteur * 0.19, opacity: 0.9 }}>{traduire('resa.proBadgeLigne1')}</span>
+        <span style={{ fontSize: hauteur * 0.33, fontWeight: 600, letterSpacing: '-0.01em' }}>App Store</span>
       </span>
     </span>
+  )
+}
+
+/** La pastille de marque, dessinée : aucun fichier image à charger. */
+function PastilleG({ taille = 38 }: { taille?: number }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: taille, height: taille, borderRadius: taille * 0.3, flexShrink: 0,
+      background: 'rgba(255,255,255,0.22)',
+      border: '1px solid rgba(255,255,255,0.45)',
+      color: '#fff', fontWeight: 800, fontSize: taille * 0.5,
+      letterSpacing: '-0.03em', lineHeight: 1,
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+    }}>G</span>
   )
 }
 
@@ -69,33 +86,53 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
        style={{ textDecoration: 'none', display: 'inline-flex', ...style }}>{enfants}</a>
   )
 
-  // ── EN HAUT : une bande fine, sous l'en-tête ──
-  if (variante === 'haut') {
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-        flexWrap: 'wrap', padding: '10px 16px',
-        background: '#FDF3F8', borderBottom: '1px solid #F2E2EC',
-      }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#6b5560' }}>{traduire('resa.proAccroche')}</span>
-        {lien(<BadgeAppStore hauteur={36} />)}
-      </div>
-    )
-  }
-
-  // ── EN BAS, COLLÉE : visible dès l'ouverture et à chaque instant ──
+  // ── LE BANDEAU DU BAS ──
   if (variante === 'barre') {
     return (
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 15,
-        background: 'rgba(255,255,255,0.97)', borderTop: '1px solid #F2E2EC',
-        boxShadow: '0 -2px 14px rgba(0,0,0,0.06)',
-        padding: '8px 16px calc(8px + env(safe-area-inset-bottom))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#6b5560' }}>{traduire('resa.proAccroche')}</span>
-        {lien(<BadgeAppStore hauteur={38} />)}
-      </div>
+      <>
+        {/* Elle monte du bas après une seconde : posée d'emblée, elle se
+            confond avec la page et l'œil ne la voit plus. Qui arrive pour
+            réserver a le temps de lire l'écran avant qu'elle n'apparaisse. */}
+        <style>{`
+          @keyframes glamia-monte {
+            from { transform: translateY(105%); opacity: 0 }
+            to   { transform: translateY(0);    opacity: 1 }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .glamia-barre-pro { animation: none !important }
+          }
+        `}</style>
+        <div
+          className="glamia-barre-pro"
+          style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 15,
+            background: 'linear-gradient(135deg, #C2779E 0%, #B0668F 55%, #9C5480 100%)',
+            borderTopLeftRadius: 20, borderTopRightRadius: 20,
+            boxShadow: '0 -6px 22px rgba(156,84,128,0.30)',
+            padding: '11px 16px calc(11px + env(safe-area-inset-bottom))',
+            animation: 'glamia-monte 0.5s cubic-bezier(0.22,1,0.36,1) 1.1s both',
+          }}
+        >
+          <div style={{
+            maxWidth: 480, margin: '0 auto',
+            display: 'flex', alignItems: 'center', gap: 11,
+          }}>
+            <PastilleG taille={38} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0, fontSize: 13.5, fontWeight: 800, color: '#fff',
+                lineHeight: 1.25, letterSpacing: '-0.01em',
+              }}>{traduire('resa.proAccroche')}</p>
+              <p style={{
+                margin: '1px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.82)',
+                lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis',
+                display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
+              }}>{traduire('resa.proBaseline')}</p>
+            </div>
+            {lien(<BadgeAppStore hauteur={38} />)}
+          </div>
+        </div>
+      </>
     )
   }
 

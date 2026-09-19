@@ -3459,9 +3459,6 @@ export default function ReservationPage() {
         </div>
       </div>
 
-      {/* ── VARIANTE « HAUT » : vue dès l'ouverture, puis oubliée en descendant. */}
-      <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="haut" />
-
       {/* ── Content ── */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '220px' : '80px'}` }}>
 
