@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
+import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
@@ -3151,11 +3152,15 @@ export default function ReservationPage() {
 
   if (pageState === 'blocked') {
     const nomAffiche = pro?.pseudo || pro?.prenom || ''
+    // LE LOGO DU RÉSEAU, PAS SON NOM UNE SECONDE FOIS. Ce champ portait la
+    // CHAÎNE « Instagram », affichée telle quelle juste avant le libellé : les
+    // boutons disaient « Instagram Instagram ». L'emplacement de l'icône était
+    // prévu, le dessin n'était jamais arrivé.
     const socials = [
-      pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, icon: 'Instagram' },
-      pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     icon: 'TikTok' },
-      pro?.snapchat  && { label: 'Snapchat',  href: `https://snapchat.com/add/${pro.snapchat}`, icon: 'Snapchat' },
-    ].filter(Boolean) as { label: string; href: string; icon: string }[]
+      pro?.instagram && { label: 'Instagram', href: `https://instagram.com/${pro.instagram}`, Logo: LogoInstagram },
+      pro?.tiktok    && { label: 'TikTok',    href: `https://tiktok.com/@${pro.tiktok}`,     Logo: LogoTikTok },
+      pro?.snapchat  && { label: 'Snapchat',  href: `https://snapchat.com/add/${pro.snapchat}`, Logo: LogoSnapchat },
+    ].filter(Boolean) as { label: string; href: string; Logo: typeof LogoInstagram }[]
 
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: PINK_LIGHT }}>
@@ -3179,7 +3184,7 @@ export default function ReservationPage() {
                   rel="noopener noreferrer"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
                 >
-                  <span>{s.icon}</span>
+                  <s.Logo size={22} />
                   <span>{s.label}</span>
                 </a>
               ))}
