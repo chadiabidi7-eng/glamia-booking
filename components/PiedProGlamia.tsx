@@ -120,10 +120,22 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             GLAMIA
+            {/* UNE PASTILLE, PAS UNE NUANCE DE ROSE. À soixante-dix pour cent
+                d'opacité, la mention s'effaçait au moment même où elle devait
+                sauter aux yeux. Sur fond plein elle se lit d'un coup d'oeil, et
+                elle se détache du nom — on ne lira plus « Glamia Pour Les Pros »
+                d'une seule traite.
+
+                ELLE GRANDIT SANS COÛTER DE HAUTEUR : c'est GLAMIA, plus grand,
+                qui commande la hauteur de la ligne. */}
+            {' '}
             <span style={{
-              fontSize: 8.5, fontWeight: 700, letterSpacing: '0.09em',
-              textTransform: 'uppercase', opacity: 0.7,
-            }}>{' · '}{traduire('resa.proPourLesPros')}</span>
+              display: 'inline-block', verticalAlign: 'middle',
+              fontSize: 9.5, fontWeight: 800, letterSpacing: '0.06em',
+              textTransform: 'uppercase', color: '#fff', background: ROSE,
+              padding: '1.5px 6px', borderRadius: 6, lineHeight: 1.25,
+              marginLeft: 3, position: 'relative', top: -1,
+            }}>{traduire('resa.proPourLesPros')}</span>
           </p>
           <p style={{
             // EN BAS DE LA HIÉRARCHIE, ET ELLE Y RESTE. En capitales grasses
