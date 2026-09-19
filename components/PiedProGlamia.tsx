@@ -122,9 +122,12 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
             }}>{' · '}{traduire('resa.proPourLesPros')}</span>
           </p>
           <p style={{
-            margin: '2px 0 0', fontSize: 9.5, fontWeight: 700,
-            color: '#B0688E', textTransform: 'uppercase',
-            letterSpacing: '0.07em', lineHeight: 1.25,
+            // EN BAS DE LA HIÉRARCHIE, ET ELLE Y RESTE. En capitales grasses
+            // et roses, cette ligne devenait plus large et plus forte que le
+            // nom : on lisait « TON AGENDA… » avant « GLAMIA ». Minuscules,
+            // poids normal, gris rosé — elle complète, elle ne concurrence pas.
+            margin: '2px 0 0', fontSize: 11, fontWeight: 500,
+            color: '#A3899A', letterSpacing: 0, lineHeight: 1.3,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{traduire('resa.proBaseline')}</p>
         </div>
