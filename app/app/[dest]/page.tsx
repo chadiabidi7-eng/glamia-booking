@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { traduire } from '@/lib/i18n'
 
-const APP_STORE_URL = 'https://apps.apple.com/us/app/glamia/id6760552102'
+const APP_STORE_URL = 'https://apps.apple.com/app/id6760552102'
 
 // Destinations autorisées → écrans de l'app (deep link glamia://)
 const DESTINATIONS: Record<string, string> = {
