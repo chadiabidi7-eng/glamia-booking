@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
+import { oublierPaiementEnCours } from '@/lib/paiements-en-cours'
 import { calculerAcompte } from '../intent/route'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,6 +133,8 @@ export async function POST(req: NextRequest) {
         }
         throw error
       }
+      // L'empreinte a trouvé son rendez-vous : plus rien à surveiller.
+      await oublierPaiementEnCours(setup.id)
       return NextResponse.json({ success: true, statut: 'empreinte_posee' })
     }
 
@@ -190,6 +193,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ paiement_id: ligne.id }),
       }).catch(e => console.error('[api/propay/lier] facture:', e))
     }
+    // Le paiement a trouvé son rendez-vous : plus rien à surveiller.
+    await oublierPaiementEnCours(paiement.id)
     return NextResponse.json({ success: true, statut: 'acompte_paye' })
   } catch (e) {
     console.error('[api/propay/lier]', e)
