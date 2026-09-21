@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { noterPaiementEnCours } from '@/lib/paiements-en-cours'
 import { stripe } from '@/lib/stripe-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +69,22 @@ export async function POST(req: NextRequest) {
     } else {
       await stripe().paymentIntents.update(intent_id, { metadata: majMeta }, { stripeAccount: compte.account_id })
     }
+
+    // ── ET ON DÉCLENCHE LA MINUTERIE DES QUINZE MINUTES ─────────────────────
+    // C'EST ICI, ET NULLE PART AILLEURS. La minuterie ne doit pas partir quand
+    // le paiement s'ouvre : il s'ouvre dès que la cliente ARRIVE à l'étape du
+    // paiement, et elle y lit encore le règlement du salon, répond au
+    // formulaire, hésite. Une cliente qui paie à la dix-huitième minute verrait
+    // son paiement annulé sous ses doigts.
+    //
+    // Cette route-ci est posée à trois secondes du départ chez la banque, juste
+    // avant que la cliente valide. C'est le seul repère honnête : à partir de
+    // là, quinze minutes sans réponse veut vraiment dire qu'elle a abandonné.
+    //
+    // SI ELLE ÉCHOUE, la porte reste entrouverte POUR CE PAIEMENT-LÀ — exactement
+    // comme le filet des métadonnées juste au-dessus. C'est le même compromis :
+    // aucune surveillance ne vaut de bloquer une cliente devant son écran.
+    await noterPaiementEnCours(intent_id, pro_id, compte.account_id as string)
 
     return NextResponse.json({ ok: true })
   } catch (e) {
