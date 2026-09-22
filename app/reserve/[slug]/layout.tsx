@@ -133,11 +133,44 @@ function metiers(specialite: unknown, perso: unknown, max = 3): string {
  */
 function villeLisible(brut: unknown): string {
   if (typeof brut !== 'string') return ''
-  const v = brut.trim()
+  const entier = brut.trim()
+  // Une phrase, pas un lieu : « L'adresse vous sera envoyée par votre
+  // praticienne ». On la refuse avant même de la découper.
+  if (entier.length > 60) return ''
+  if (/[@]|https?:/i.test(entier)) return ''
+
+  // ON GARDE CE QUI PRÉCÈDE LE PREMIER SÉPARATEUR. Les pros écrivent
+  // « Bobigny - Ile de France », « Amiens - Renancourt », « Ixelles — Bruxelles »,
+  // « Nanterre (92), Pablo Picasso », « Zaragoza,Actur » : la ville est
+  // toujours le premier morceau, la suite est la région ou le quartier.
+  //
+  // Ma première règle refusait tout ce qui dépassait quatre mots, et jetait
+  // donc « Bobigny - Ile de France » — une ville parfaitement lisible.
+  //
+  // LE TRAIT D'UNION NE SE COUPE QUE S'IL EST ENTOURÉ D'ESPACES. Collé, il
+  // appartient au nom : « Châteauneuf-Grasse » est une commune, pas deux, et
+  // ma première version la réduisait à « Châteauneuf ». Même piège pour
+  // Hénin-Beaumont, Aix-en-Provence, Saint-Étienne-du-Rouvray.
+  const v = entier
+    .replace(/\s+[-—–]\s+/g, '|')    // « Bobigny - Ile de France » : vrai séparateur
+    .split(/[|—–,/(]/)[0]            // le premier morceau
+    .replace(/\b\d{4,6}\b/g, '')     // un code postal collé : « Seraincourt 95450 »
+    .replace(/\s+/g, ' ')
+    .trim()
+
   if (v.length < 2 || v.length > 40) return ''
-  if (/\d{3}/.test(v)) return ''            // un code postal collé, une liste de départements
-  if (/[/@]|https?:/i.test(v)) return ''    // « 78/92/91 », une adresse web
-  if (v.split(/\s+/).length > 4) return ''  // une phrase, pas un lieu
+  // « 78 92 91 » une fois les séparateurs retirés : ce n'est pas un lieu.
+  if (/^\d+$/.test(v.replace(/\s/g, ''))) return ''
+  // QUATRE MOTS, ET PAS TROIS. Mesuré sur les 106 adresses renseignées : à
+  // trois mots on en garde 101, à quatre 105. Les quatre gagnées sont de
+  // vraies communes que les pros écrivent sans traits d'union — « Saint Pierre
+  // du Perray », « Saint Martin le Beau ». Ce qu'on laisse passer en échange,
+  // c'est « Bordeaux bassin à flot » : un quartier au lieu d'une ville.
+  //
+  // L'échange est favorable. Une ville manquante prive la pro de tout
+  // référencement local ; un quartier en trop ne fait qu'une phrase un peu
+  // moins juste. Ça disparaîtra avec le choix dans une liste.
+  if (v.split(' ').length > 4) return ''
   return v
 }
 

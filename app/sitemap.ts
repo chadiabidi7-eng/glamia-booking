@@ -54,6 +54,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 22 septembre 2026. Une adresse qui redirige n'a rien à faire dans une
   // liste soumise à Google — il la signale comme une erreur, et ça jette un
   // doute sur tout le reste du fichier.
+  //
+  // CONSÉQUENCE À CONNAÎTRE : ce repli est désormais VIDE. Le 22 septembre, une
+  // colonne demandée qui n'existait pas a fait échouer la lecture, et le
+  // fichier est sorti sans une seule adresse — sans erreur, sans alerte, sans
+  // que rien ne le dise. C'est la trace ci-dessous qui l'a révélé, et elle est
+  // le seul témoin : une liste vide ne se distingue pas d'une liste légitime.
   const fixes: MetadataRoute.Sitemap = []
 
   try {
@@ -62,9 +68,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // VIVANTE = ABONNÉE, OU ESSAI EN COURS. Même règle que le guichet qui sert
     // la page, et `compte_test` sort d'office : les comptes de démonstration
     // n'ont rien à faire dans un moteur de recherche.
+    // `profiles` N'A PAS DE DATE DE DERNIÈRE MODIFICATION. J'avais demandé
+    // `updated_at` par analogie avec les autres tables : la colonne n'existe
+    // pas, la lecture échouait, et le fichier sortait vide sans rien casser
+    // d'autre — exactement le genre de panne qu'on ne voit jamais.
+    //
+    // `last_active_at` est le meilleur signal disponible : une pro vue
+    // récemment a sans doute retouché ses prestations ou ses horaires. Ce
+    // n'est qu'une indication pour Google, pas une promesse.
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .select('slug, updated_at, abonnement_actif, trial_ends_at')
+      .select('slug, last_active_at, created_at, abonnement_actif, trial_ends_at')
       .not('slug', 'is', null)
       .neq('compte_test', true)
       .or(`abonnement_actif.eq.true,trial_ends_at.gt.${maintenant}`)
@@ -79,9 +93,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter(p => typeof p.slug === 'string' && p.slug.length > 0)
       .map(p => ({
         url: `${SITE}/reserve/${p.slug}`,
-        // `updated_at` dit à Google si quelque chose a bougé depuis son
-        // dernier passage. Absente, on ne ment pas : on met aujourd'hui.
-        lastModified: p.updated_at ? new Date(p.updated_at as string) : new Date(),
+        // Sa dernière venue dans l'app, à défaut sa date d'inscription. Ni
+        // l'une ni l'autre : on ne ment pas, on met aujourd'hui.
+        lastModified: p.last_active_at
+          ? new Date(p.last_active_at as string)
+          : p.created_at ? new Date(p.created_at as string) : new Date(),
         // Une pro change ses horaires et ses prix souvent : on invite le
         // moteur à repasser régulièrement.
         changeFrequency: 'weekly' as const,
