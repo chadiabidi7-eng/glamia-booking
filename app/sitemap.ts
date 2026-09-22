@@ -50,10 +50,11 @@ const supabaseAdmin = createClient(
 )
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Les pages qu'on montre toujours, quoi qu'il arrive en base.
-  const fixes: MetadataRoute.Sitemap = [
-    { url: SITE, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
-  ]
+  // ON NE LISTE PAS LA RACINE : elle redirige vers glamia.pro depuis le
+  // 22 septembre 2026. Une adresse qui redirige n'a rien à faire dans une
+  // liste soumise à Google — il la signale comme une erreur, et ça jette un
+  // doute sur tout le reste du fichier.
+  const fixes: MetadataRoute.Sitemap = []
 
   try {
     const maintenant = new Date().toISOString()
