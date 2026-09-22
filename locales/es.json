@@ -256,7 +256,11 @@
   },
   "meta": {
     "reserveDescription": "Reserva tu cita de belleza en línea",
-    "siteDescription": "Reserva en línea con tu profesional de la belleza"
+    "siteDescription": "Reserva en línea con tu profesional de la belleza",
+    "titrePro": "%{pro} — %{metiers}",
+    "titreProVille": "%{pro} — %{metiers} en %{ville}",
+    "descriptionPro": "%{prestations} — %{pro}. Reserva en línea.",
+    "descriptionProVille": "%{prestations} — %{pro}, %{ville}. Reserva en línea."
   },
   "confirmation": {
     "lienExpire": "Enlace caducado",
