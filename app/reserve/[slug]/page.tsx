@@ -2679,6 +2679,24 @@ export default function ReservationPage() {
         setSubmitting(false)
         return
       }
+      // ── NI UN PAIEMENT PAS ENCORE CONNU ─────────────────────────────────
+      // Le réglage de la pro arrive du serveur en ~0,9 seconde. Pendant ce
+      // temps `propay` vaut null — et null n'est pas une panne : la garde
+      // ci-dessus ne voyait rien, pendant que le bloc de paiement juste en
+      // dessous, conditionné à `propay?.actif`, était PUREMENT SAUTÉ.
+      //
+      // Une cliente qui appuyait tout de suite réservait donc sans rien
+      // payer, et la pro ne voyait qu'un rendez-vous de plus. Constaté par
+      // Chadi le 22 septembre 2026 sur sa propre page, puis mesuré : la
+      // fenêtre dure 0,87 seconde en moyenne (0,76 à 0,98 sur trois essais).
+      //
+      // ON S'ARRÊTE AU LIEU DE DEVINER, exactement comme pour la panne.
+      // Le créneau n'est pas pris, elle réessaie dans la seconde.
+      if (acompteActif && propay === null) {
+        alert(traduire('resa.unInstant'))
+        setSubmitting(false)
+        return
+      }
       let propayIntentId: string | null = null
       if (propay?.actif) {
         if (!propayConsent) {
@@ -5366,12 +5384,29 @@ export default function ReservationPage() {
               </div>
             )}
 
+            {/* ── LE BOUTON N'OUVRE PAS AVANT DE SAVOIR CE QU'ON DEMANDE ──
+                Deuxième verrou, en plus de la garde dans handleConfirm. Celui-ci
+                empêche le clic ; l'autre rattrape ce qui passerait quand même —
+                touche Entrée, double-tap, clic pendant le rendu. Un seul des
+                deux ne suffit pas : c'est par le bouton que le rendez-vous du
+                22 septembre est passé sans acompte.
+
+                Le bouton dit qu'il attend au lieu de faire semblant d'être
+                prêt : le même « un instant » que le cadre juste au-dessus. */}
             <button
               onClick={handleConfirm}
-              disabled={submitting}
-              style={{ ...S.btn, opacity: submitting ? 0.7 : 1, boxShadow: `0 4px 20px ${PINK}55` }}
+              disabled={submitting || (acompteActif && propay === null)}
+              style={{
+                ...S.btn,
+                opacity: submitting || (acompteActif && propay === null) ? 0.7 : 1,
+                boxShadow: `0 4px 20px ${PINK}55`,
+              }}
             >
-              {submitting ? 'Enregistrement...' : traduire('resa.confirmerReservation')}
+              {submitting
+                ? 'Enregistrement...'
+                : acompteActif && propay === null
+                  ? traduire('resa.unInstant')
+                  : traduire('resa.confirmerReservation')}
             </button>
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
