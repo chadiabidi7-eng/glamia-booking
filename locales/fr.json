@@ -649,7 +649,11 @@
   },
   "meta": {
     "reserveDescription": "Réservez votre rendez-vous beauté en ligne",
-    "siteDescription": "Réservation en ligne chez votre professionnelle de beauté"
+    "siteDescription": "Réservation en ligne chez votre professionnelle de beauté",
+    "titrePro": "%{pro} — %{metiers}",
+    "titreProVille": "%{pro} — %{metiers} à %{ville}",
+    "descriptionPro": "%{prestations} — %{pro}. Réservation en ligne.",
+    "descriptionProVille": "%{prestations} — %{pro}, %{ville}. Réservation en ligne."
   },
   "vitrine": {
     "condAccompagnant": "Accompagnant accepté",

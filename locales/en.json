@@ -655,7 +655,11 @@
   },
   "meta": {
     "reserveDescription": "Book your beauty appointment online",
-    "siteDescription": "Book online with your beauty professional"
+    "siteDescription": "Book online with your beauty professional",
+    "titrePro": "%{pro} — %{metiers}",
+    "titreProVille": "%{pro} — %{metiers} in %{ville}",
+    "descriptionPro": "%{prestations} — %{pro}. Book online.",
+    "descriptionProVille": "%{prestations} — %{pro}, %{ville}. Book online."
   },
   "vitrine": {
     "condAccompagnant": "Companions welcome",
