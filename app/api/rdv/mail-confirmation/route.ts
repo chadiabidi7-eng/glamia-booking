@@ -87,6 +87,11 @@ export async function POST(req: NextRequest) {
         cliente_email: email,
         cliente_prenom: (body.cliente_prenom ?? '').trim(),
         pro_nom: nomPro,
+        // QUI ENVOIE, POUR QUE LA CLIENTE PUISSE RÉPONDRE. Sans cette ligne la
+        // fonction d'envoi ne sait pas de quelle pro il s'agit : le mail
+        // partait sans adresse de réponse, et les réponses des clientes
+        // arrivaient chez Glamia au lieu d'arriver chez elle.
+        pro_id: proId,
         langue: pro.langue ?? null,
         pays: pro.pays ?? null,
         date: body.date ?? '',

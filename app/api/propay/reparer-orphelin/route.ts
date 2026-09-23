@@ -145,6 +145,8 @@ export async function POST(req: NextRequest) {
               cliente_email: r.em,
               cliente_prenom: r.pr ?? '',
               pro_nom: pro?.pseudo || `${pro?.prenom ?? ''} ${pro?.nom ?? ''}`.trim(),
+              // Pour que la réponse de la cliente arrive chez sa pro.
+              pro_id: proId,
               pays: pro?.pays ?? null,
               date: r.d, heure: r.h,
               prix_total: Number(r.p) || 0,

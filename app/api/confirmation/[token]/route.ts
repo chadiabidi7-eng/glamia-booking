@@ -311,6 +311,11 @@ export async function POST(
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
+              // QUI ENVOIE, POUR QUE LA CLIENTE PUISSE RÉPONDRE. Sans cette
+              // ligne le serveur ne sait pas de quelle pro il s'agit : le mail
+              // partait sans adresse de réponse, et les réponses des clientes
+              // arrivaient chez Glamia au lieu d'arriver chez elle.
+              pro_id: rdv.pro_id,
               langue: proData?.langue ?? null,
               pays: (proInfo as { pays?: string | null } | null)?.pays ?? null,
               date: formatDateFr(newDateStr, proData?.langue),
