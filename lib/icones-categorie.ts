@@ -29,6 +29,7 @@
 /** Le rond, et le trait posé dessus. Mêmes couleurs que les dessins existants. */
 export const FOND_ICONE = '#C2779E';   // rose Glamia
 export const TRAIT_ICONE = '#E9C29C';  // le beige des silhouettes
+export const OMBRE_ICONE = '#8E4E72';  // le prune sous le trait : du relief, comme les dessins
 
 /**
  * Les icônes proposées, par leur nom Lucide.

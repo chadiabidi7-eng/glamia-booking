@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     const { data: prest } = await supabaseAdmin
       .from('prestations')
-      .select('data, ordre_categories')
+      .select('data, ordre_categories, categories_perso')
       .eq('pro_id', profil.id as string)
       .maybeSingle()
 
@@ -138,6 +138,8 @@ export async function POST(req: NextRequest) {
       pro: profil,
       catalogue: prest?.data ?? null,
       ordreCategories: prest?.ordre_categories ?? null,
+      // Les catégories que la pro a créées : leur icône, par nom (3.0).
+      categoriesPerso: prest?.categories_perso ?? {},
       equipe,
     })
   } catch (e) {

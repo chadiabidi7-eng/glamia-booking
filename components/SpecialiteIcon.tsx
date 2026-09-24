@@ -48,6 +48,11 @@ type Props = {
   className?: string;
 };
 
+/** Ce nom a-t-il un dessin ? (Un nom créé par la pro n'en a pas.) */
+export function aUnDessin(specialite: string): boolean {
+  return !!PAR_NOM[aplatir(specialite ?? '')]
+}
+
 export default function SpecialiteIcon({ specialite, size = 32, className }: Props) {
   const file = PAR_NOM[aplatir(specialite ?? '')];
   if (!file) return null;
