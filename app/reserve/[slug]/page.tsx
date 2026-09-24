@@ -4447,7 +4447,7 @@ export default function ReservationPage() {
                             const selected = selT !== undefined
                             const quantite = selT?.quantite ?? 1
                             // Détails optionnels configurés par la pro (photos / description)
-                            const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 3)
+                            const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5)
                             const descTech = (t.description ?? '').trim()
                             const aDetails = photosTech.length > 0 || descTech !== ''
                             const depliee = aDetails && techniqueDepliee === t.id
