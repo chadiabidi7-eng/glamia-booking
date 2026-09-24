@@ -66,6 +66,13 @@ export type CreneauBloque = {
 export type PlageHoraire = { debut: string; fin: string }
 export type JourSpecifique = { actif: boolean; plages: PlageHoraire[] }
 export type HorairesSpecifiques = Record<string, JourSpecifique>
+// ── UN JOUR DIFFÉRENT (24 septembre 2026) ──────────────────────────────────
+// En planning habituel, une date peut avoir SES horaires à elle — « vendredi
+// prochain je finis à 20h » — sans toucher à tous les vendredis. Même forme
+// que les jours du planning libre, colonne `jours_differents` sur le profil.
+// Ne vaut QU'EN PLANNING HABITUEL : en libre, chaque jour a déjà les siens.
+// ⚠️ L'app applique la même règle (hooks/useDisponibilites.ts).
+export type JoursDifferents = HorairesSpecifiques
 
 export type Slot = { heure: string; disponible: boolean }
 
@@ -92,12 +99,15 @@ export function minToTime(m: number) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export function isDayWorking(dateStr: string, horaires: HorairesHebdo, horairesSpec?: HorairesSpecifiques, planningVar?: boolean) {
+export function isDayWorking(dateStr: string, horaires: HorairesHebdo, horairesSpec?: HorairesSpecifiques, planningVar?: boolean, joursDifferents?: JoursDifferents | null) {
   if (planningVar) {
     const spec = horairesSpec?.[dateStr]
     // En mode variable : dispo uniquement si des plages existent
     return !!(spec?.plages && spec.plages.length > 0)
   }
+  // Un jour différent l'emporte sur l'habitude, pour cette date seulement.
+  const different = joursDifferents?.[dateStr]
+  if (different) return different.actif !== false && !!(different.plages && different.plages.length > 0)
   const jour = new Date(dateStr + 'T00:00:00').getDay()
   const h = horaires[jour]
   return h?.actif === true || h?.active === true
@@ -183,6 +193,7 @@ export function generateSlots(
   aLaSuite?: boolean,
   preparation = 0,
   delai: DelaiResa = DELAI_RESA_DEFAUT,
+  joursDifferents?: JoursDifferents | null,
 ): Slot[] {
   if (bloques.some(b => b.touteLaJournee && isDateInPeriod(date, b))) return []
 
@@ -192,6 +203,11 @@ export function generateSlots(
     const spec = horairesSpec?.[date]
     if (!spec?.plages || spec.plages.length === 0) return []
     plages = spec.plages.map(p => ({ start: timeToMin(p.debut), end: timeToMin(p.fin) }))
+  } else if (joursDifferents?.[date]) {
+    // Un jour différent : ses plages à lui, rien d'autre.
+    const different = joursDifferents[date]
+    if (different.actif === false || !different.plages || different.plages.length === 0) return []
+    plages = different.plages.map(p => ({ start: timeToMin(p.debut), end: timeToMin(p.fin) }))
   } else {
     const jour = new Date(date + 'T00:00:00').getDay()
     const h = horaires[jour]
@@ -345,17 +361,18 @@ export function creneauReservable(args: {
   aLaSuite?: boolean
   preparation?: number
   delai?: DelaiResa
+  joursDifferents?: JoursDifferents | null
 }): { ok: true } | { ok: false; raison: string; message: string } {
-  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai } = args
+  const { date, heure, duree, horaires, rdvExistants, bloques = [], horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai, joursDifferents } = args
 
   if (isDayBlocked(date, bloques)) {
     return { ok: false, raison: 'jour_bloque', message: traduire('creneaux.jourIndisponible') }
   }
-  if (!isDayWorking(date, horaires, horairesSpec, planningVar)) {
+  if (!isDayWorking(date, horaires, horairesSpec, planningVar, joursDifferents)) {
     return { ok: false, raison: 'jour_ferme', message: traduire('creneaux.jourFerme') }
   }
 
-  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai)
+  const slots = generateSlots(date, duree, horaires, rdvExistants, bloques, horairesSpec, planningVar, fuseau, aLaSuite, preparation, delai, joursDifferents)
   const slot = slots.find(s => s.heure === heure)
 
   // Absent de la grille : hors horaires, trop proche, ou durée qui déborde.

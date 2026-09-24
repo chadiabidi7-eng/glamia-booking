@@ -23,10 +23,10 @@ export type Reglage = { assure: boolean; duree: number | null }
 export type AssistanteResa = { id: string; prenom: string; prestations: Record<string, Reglage> }
 export type SlotQui = Slot & { qui: string | null }
 
-export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme'
+export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme'
 
 type ProfilHoraires = {
-  horaires: unknown; horaires_specifiques: unknown; creneaux_bloques: unknown; planning_variable: boolean | null
+  horaires: unknown; horaires_specifiques: unknown; jours_differents?: unknown; creneaux_bloques: unknown; planning_variable: boolean | null
   creneaux_a_la_suite: boolean | null; temps_preparation: number | null; temps_preparation_habituel: number | null; timezone: string | null
   delai_resa_min?: number | null; resa_jour_meme?: boolean | null
 }
@@ -143,6 +143,7 @@ export async function creneauxDe(
       profil.creneaux_a_la_suite === true,
       delaiEntreClientes(profil),
       delaiDe(profil),
+      (profil.jours_differents ?? {}) as never,
     )
   }
   return resultat

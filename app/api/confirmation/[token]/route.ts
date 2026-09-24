@@ -53,7 +53,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -101,6 +101,7 @@ export async function GET(
       (pro as any)?.creneaux_a_la_suite === true,
       delaiEntreClientes(pro as any),
       delaiDe(pro as any),
+      ((pro as any)?.jours_differents ?? {}) as never,
     )
   }
 
@@ -135,6 +136,7 @@ export async function GET(
     slots,
     // Ce qu'il faut au petit calendrier pour griser les bonnes journées.
     horaires_specifiques: (pro as any)?.horaires_specifiques ?? null,
+    jours_differents: (pro as any)?.jours_differents ?? null,
     creneaux_bloques: Array.isArray((pro as any)?.creneaux_bloques) ? (pro as any).creneaux_bloques : [],
     planning_variable: (pro as any)?.planning_variable === true,
   })
@@ -194,7 +196,7 @@ export async function POST(
 
     const { data: proRegles } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -223,6 +225,7 @@ export async function POST(
         bloques: Array.isArray((proRegles as any).creneaux_bloques) ? (proRegles as any).creneaux_bloques : [],
         horairesSpec: ((proRegles as any).horaires_specifiques ?? {}) as never,
         planningVar: (proRegles as any).planning_variable === true,
+        joursDifferents: ((proRegles as any).jours_differents ?? {}) as never,
         aLaSuite: (proRegles as any).creneaux_a_la_suite === true,
         preparation: delaiEntreClientes(proRegles as any),
         fuseau: (proRegles as any).timezone ?? undefined,

@@ -34,7 +34,7 @@ const supabaseAdmin = createClient(
 // pour la plupart des pros, leur domicile. Elle n'est due qu'au moment qu'elles
 // ont choisi, et ce guichet répond AVANT toute réservation. Voir le filtre
 // juste avant la réponse.
-const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, adresse_moment, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, acompte_config, is_pro, devise, langue, pays, timezone, categorie_autre_nom, categorie_autre_icone, questions_resa'
+const CHAMPS_PUBLICS = 'id, prenom, nom, pseudo, slug, avatar_url, photo_url, message_accueil, adresse, adresse_moment, instagram, tiktok, snapchat, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, fidelite_config, acompte_config, is_pro, devise, langue, pays, timezone, categorie_autre_nom, categorie_autre_icone, questions_resa'
 
 function normaliser(s: string) {
   return (s ?? '')

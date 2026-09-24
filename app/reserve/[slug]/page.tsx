@@ -72,7 +72,7 @@ type Offre = {
 // deviendraient inconnus à la compilation.
 //
 // `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
-const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, instagram, tiktok, snapchat, horaires, horaires_specifiques, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
+const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, instagram, tiktok, snapchat, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
 
 /**
  * Les créneaux d'une ou plusieurs journées, calculés par le serveur.
@@ -115,6 +115,7 @@ type ProInfo = {
   horaires: HorairesHebdo
   creneaux_bloques: CreneauBloque[]
   horaires_specifiques: HorairesSpecifiques
+  jours_differents?: HorairesSpecifiques | null
   planning_variable: boolean
   instagram?: string
   tiktok?: string
@@ -1539,6 +1540,7 @@ export default function ReservationPage() {
           horaires: d.pro.horaires ?? prev.horaires,
           creneaux_bloques: Array.isArray(d.pro.creneaux_bloques) ? d.pro.creneaux_bloques : prev.creneaux_bloques,
           horaires_specifiques: (d.pro.horaires_specifiques && typeof d.pro.horaires_specifiques === 'object') ? d.pro.horaires_specifiques : prev.horaires_specifiques,
+          jours_differents: (d.pro.jours_differents && typeof d.pro.jours_differents === 'object') ? d.pro.jours_differents : prev.jours_differents,
           planning_variable: d.pro.planning_variable === true,
         } : prev)
         // Force le recalcul des créneaux : un RDV a pu être pris entretemps.
@@ -1692,6 +1694,7 @@ export default function ReservationPage() {
         horaires:              found.horaires ?? DEFAULT_HORAIRES,
         creneaux_bloques:      Array.isArray(found.creneaux_bloques) ? found.creneaux_bloques : [],
         horaires_specifiques:  (found.horaires_specifiques && typeof found.horaires_specifiques === 'object') ? found.horaires_specifiques : {},
+        jours_differents: (found.jours_differents && typeof found.jours_differents === 'object') ? found.jours_differents : {},
         planning_variable:     found.planning_variable === true,
         instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
@@ -2517,7 +2520,7 @@ export default function ReservationPage() {
         for (let jour = 1; jour <= nbJours; jour++) {
           const dateStr = buildDateStr(calYear, calMonth, jour)
           if (new Date(calYear, calMonth, jour) < debutDuJour) continue
-          if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
+          if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
           if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
           aTester.push(dateStr)
         }
@@ -2569,7 +2572,7 @@ export default function ReservationPage() {
         const d = new Date(now)
         d.setDate(d.getDate() + i)
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
-        if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable)) continue
+        if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
         if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
         aTester.push(dateStr)
       }
@@ -4089,7 +4092,7 @@ export default function ReservationPage() {
                                   const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
                                   const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
                                   const isPast = dayDate < today0
-                                  const isOff = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques)
+                                  const isOff = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques)
                                   const isDisabled = isPast || isOff
                                   const isSelected = reprogDate === dateStr
 
@@ -4755,7 +4758,7 @@ export default function ReservationPage() {
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
                 // ÉQUIPE : avec une assistante, un jour de repos de la pro n'est pas fermé pour autant — le serveur tranche (jours complets).
-                const isOff   = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable) || isDayBlocked(dateStr, pro!.creneaux_bloques))
+                const isOff   = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
                 const isComplet = joursComplets.has(dateStr)
                 // Un jour complet reste CLIQUABLE : c'est justement là qu'on
                 // propose la liste d'attente. Il garde son apparence « complet »
