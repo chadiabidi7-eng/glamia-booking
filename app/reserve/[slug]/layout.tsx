@@ -4,12 +4,6 @@ import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { traduireDans } from '@/lib/i18n'
 import LangueDeLaPro from './LangueDeLaPro'
-import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google'
-
-// Les polices de la DA Glamia, pour la vitrine (3.0) : Fraunces pour les titres,
-// Plus Jakarta Sans pour le texte. Le parcours de réservation garde les siennes.
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', weight: ['400', '500'], style: ['normal', 'italic'] })
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', weight: ['400', '500', '600', '700'] })
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -282,5 +276,5 @@ export default async function ReserveLayout({
     // Une base qui ne répond pas ne doit pas empêcher la page de s'ouvrir :
     // on repart sur le français, comme avant.
   }
-  return <div className={`${fraunces.variable} ${jakarta.variable}`}><LangueDeLaPro langue={langue}>{children}</LangueDeLaPro></div>
+  return <LangueDeLaPro langue={langue}>{children}</LangueDeLaPro>
 }

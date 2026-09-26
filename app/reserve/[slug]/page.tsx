@@ -3452,7 +3452,7 @@ export default function ReservationPage() {
   // Main booking UI
   // ─────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: step === 1 && vitrineOuverte ? '#FAF4ED' : '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* ── Header ── (pas pendant la vitrine : son profil est le premier bloc) */}
       <div style={{ display: step === 1 && vitrineOuverte ? 'none' : undefined, position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
