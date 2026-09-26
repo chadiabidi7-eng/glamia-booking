@@ -1,5 +1,14 @@
 {
   "resa": {
+    "bioDe": "About",
+    "lesSoins": "Services",
+    "voirTousLesSoins": "See all services",
+    "photos": "Photos",
+    "voirTout": "See all",
+    "avisDeSesClientes": "Client reviews",
+    "voirTousLesAvis": "See all reviews",
+    "emplacementTitre": "Location",
+    "conditionsTitre": "Conditions",
     "sesPrestations": "Services",
     "reserver": "Book",
     "avisImporte": "imported",

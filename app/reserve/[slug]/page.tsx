@@ -13,11 +13,12 @@ import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
+import Vitrine from '@/components/reserve/Vitrine';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
@@ -586,6 +587,9 @@ export default function ReservationPage() {
     reglement: string | null
     formulaire: { nouvelles: QuestionFormulaire[]; connues: QuestionFormulaire[] }
     demander_inspirations: boolean
+    // 3.0 — « Personnaliser ma page », et la position floutée pour la carte.
+    bio?: string | null; couverture?: string | null; photos?: string[]
+    ville?: string | null; position?: { lat: number; lon: number } | null
   }
   type QuestionFormulaire = {
     id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
@@ -3448,10 +3452,10 @@ export default function ReservationPage() {
   // Main booking UI
   // ─────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: step === 1 && vitrineOuverte ? '#FAF4ED' : '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* ── Header ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
+      {/* ── Header ── (pas pendant la vitrine : son profil est le premier bloc) */}
+      <div style={{ display: step === 1 && vitrineOuverte ? 'none' : undefined, position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
             {pro?.photo_url ? (
@@ -3539,7 +3543,8 @@ export default function ReservationPage() {
           }
         `}</style>
 
-        {pro?.message_accueil && (
+        {/* Pendant la vitrine, la bio parle à sa place. */}
+        {pro?.message_accueil && !(step === 1 && vitrineOuverte) && (
           <p style={{
             fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
           }}>
@@ -3588,83 +3593,74 @@ export default function ReservationPage() {
               </div>
             </div>
 
-            {visionneuse.photos.length > 1 && (
-              <div style={{
-                position: 'absolute', bottom: 34, left: 0, right: 0,
-                display: 'flex', justifyContent: 'center', gap: 6,
+            {/* La croix, toujours en haut à droite. */}
+            <button onClick={e => { e.stopPropagation(); setVisionneuse(null) }} aria-label={traduire('resa.fermer')}
+              style={{ position: 'absolute', top: 'calc(18px + env(safe-area-inset-top))', right: 18, width: 42, height: 42, borderRadius: 21, border: 0, background: 'rgba(255,255,255,0.14)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <X size={22} />
+            </button>
+
+            {visionneuse.photos.length > 1 && (<>
+              {/* Les flèches, pour passer d'une photo à l'autre sans glisser. */}
+              {([-1, 1] as const).map(sens => (
+                <button key={sens} aria-label={sens < 0 ? '←' : '→'}
+                  onClick={e => { e.stopPropagation(); setVisionneuse(v => v ? { ...v, index: (v.index + sens + v.photos.length) % v.photos.length } : v) }}
+                  style={{ position: 'absolute', top: '50%', [sens < 0 ? 'left' : 'right']: 10, transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: 22, border: 0, background: 'rgba(0,0,0,0.35)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                  {sens < 0 ? <ChevronLeft size={26} /> : <ChevronRight size={26} />}
+                </button>
+              ))}
+
+              {/* Les miniatures : on voit tout, on touche celle qu'on veut. */}
+              <div onClick={e => e.stopPropagation()} style={{
+                position: 'absolute', bottom: 'calc(22px + env(safe-area-inset-bottom))', left: 12, right: 12,
+                display: 'flex', gap: 8, overflowX: 'auto', padding: 8, borderRadius: 18,
+                background: 'rgba(255,255,255,0.08)', scrollbarWidth: 'none', justifyContent: visionneuse.photos.length < 6 ? 'center' : 'flex-start',
               }}>
-                {visionneuse.photos.map((_, i) => (
-                  <span key={i} style={{
-                    width: i === visionneuse.index ? 16 : 6, height: 6, borderRadius: 3,
-                    background: i === visionneuse.index ? '#fff' : 'rgba(255,255,255,0.4)',
-                    transition: 'width .3s, background .3s',
-                  }} />
+                {visionneuse.photos.map((ph, i) => (
+                  <button key={i} onClick={() => setVisionneuse(v => v ? { ...v, index: i } : v)}
+                    style={{ flex: 'none', width: 54, height: 54, padding: 0, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${i === visionneuse.index ? '#fff' : 'transparent'}`, opacity: i === visionneuse.index ? 1 : 0.6, background: '#333' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ph} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </button>
                 ))}
               </div>
-            )}
+            </>)}
           </div>
         )}
 
         {step === 1 && vitrinePrete && vitrineOuverte && (
-          <div>
-            {prochaineDispo && (
-              <div className="glamia-apparait" style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 18, fontSize: 14.5, color: '#4A424C' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none' }} />
-                <span>{traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) })}</span>
-              </div>
-            )}
-
-            {/* ── SES PRESTATIONS : ce qu'elle fait, à quel prix, et en photos ── */}
-            {specialitesActives.length > 0 && (
-              <div>
-                <h2 style={{ ...S.h2, marginBottom: 12 }}>{traduire('resa.sesPrestations')}</h2>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {specialitesActives.map(sp => (
-                    <div key={sp.nom} style={{ background: '#fff', border: '1px solid #EFE4EA', borderRadius: 18, padding: '14px 14px 6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6 }}>
-                        <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} size={22} />
-                        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{libelleCategorie(sp.nom, pro?.categorie_autre_nom)}</span>
-                      </div>
-                      {sp.techniques.map((t, i) => {
-                        const photos = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5)
-                        return (
-                          <div key={t.id ?? t.nom} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: i > 0 ? '1px solid #F4EEF1' : 'none' }}>
-                            {photos.length > 0 && (
-                              <button onClick={() => setVisionneuse({ photos, index: 0 })} aria-label={t.nom}
-                                style={{ width: 56, height: 56, borderRadius: 12, overflow: 'hidden', padding: 0, border: 0, flexShrink: 0, cursor: 'pointer', background: PINK_LIGHT }}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={photos[0]} alt="" style={{ width: 56, height: 56, objectFit: 'cover', display: 'block' }} loading="lazy" />
-                              </button>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: '#1f2937' }}>{t.nom}</p>
-                              {(t.description ?? '').trim() !== '' && (
-                                <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#9ca3af', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{t.description}</p>
-                              )}
-                            </div>
-                            <span style={{ fontSize: 13.5, color: '#4A424C', flexShrink: 0, textAlign: 'right' }}>
-                              {t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit'))}
-                              <br /><span style={{ fontSize: 12, color: '#9ca3af' }}>{formatDuree(t.duree)}</span>
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {blocVitrine}
-
-            {/* Le bouton, toujours à portée de pouce. */}
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, padding: '12px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, #fff 70%, rgba(255,255,255,0))' }}>
-              <button onClick={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
-                style={{ ...S.btn, maxWidth: 448, margin: '0 auto', display: 'block' }}>
-                {traduire('resa.reserver')}
-              </button>
-            </div>
-          </div>
+          <Vitrine
+            nom={(pro?.pseudo || pro?.prenom || '').trim()}
+            photoProfil={pro?.photo_url || null}
+            note={vitrine?.avis_actifs && vitrine?.note ? Number(vitrine.note) : null}
+            nbAvis={vitrine?.nb_avis ?? 0}
+            ville={vitrine?.ville ?? vitrine?.adresse?.ville ?? null}
+            reseaux={<>
+              {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={22} />}
+              {pro?.tiktok && <SocialLink reseau="tiktok" pseudo={pro.tiktok} size={22} />}
+              {pro?.snapchat && <SocialLink reseau="snapchat" pseudo={pro.snapchat} size={22} />}
+            </>}
+            prochaineDispo={prochaineDispo ? traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) }) : null}
+            couverture={vitrine?.couverture ?? null}
+            bio={vitrine?.bio ?? null}
+            categories={specialitesActives.map(sp => ({
+              nom: sp.nom,
+              libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
+              soins: sp.techniques.map(t => ({
+                cle: t.id ?? `${sp.nom}-${t.nom}`,
+                nom: t.nom,
+                photos: (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5),
+                duree: formatDuree(t.duree),
+                prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
+              })),
+            }))}
+            photos={vitrine?.photos ?? []}
+            avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
+            position={vitrine?.position ?? null}
+            phraseAdresse={attente}
+            conditions={conditions}
+            ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
+            onReserver={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
+          />
         )}
 
         {step === 1 && vitrinePrete && !vitrineOuverte && (

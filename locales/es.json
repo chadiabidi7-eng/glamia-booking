@@ -1,5 +1,14 @@
 {
   "resa": {
+    "bioDe": "La bio de",
+    "lesSoins": "Los servicios",
+    "voirTousLesSoins": "Ver todos los servicios",
+    "photos": "Fotos",
+    "voirTout": "Ver todo",
+    "avisDeSesClientes": "Reseñas de sus clientas",
+    "voirTousLesAvis": "Ver todas las reseñas",
+    "emplacementTitre": "Ubicación",
+    "conditionsTitre": "Condiciones",
     "sesPrestations": "Sus servicios",
     "reserver": "Reservar",
     "avisImporte": "importada",

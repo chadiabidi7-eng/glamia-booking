@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profil } = await supabaseAdmin
     .from('profiles')
-    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations')
+    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail')
     .eq('id', proId)
     .maybeSingle()
 
@@ -99,7 +99,27 @@ export async function POST(req: NextRequest) {
     }))
   }
 
+  // ── LA POSITION, FLOUTÉE (3.0) ──
+  // Pour le cercle de la carte « Emplacement » : jamais le point exact, un
+  // décalage de 150 à 400 m toujours le même pour une même pro. À défaut
+  // d'adresse donnée dans la 3.0, celle déduite de son ancienne adresse.
+  let position: { lat: number; lon: number } | null =
+    typeof profil.adresse_lat === 'number' && typeof profil.adresse_lon === 'number'
+      ? { lat: profil.adresse_lat as number, lon: profil.adresse_lon as number } : null
+  let villeConnue = ((profil.ville as string) || '').trim() || null
+  if (!position || !villeConnue) {
+    const { data: loc } = await supabaseAdmin.from('pros_localisees').select('lat, lon, ville').eq('pro_id', proId).maybeSingle()
+    if (loc) { position ??= { lat: loc.lat as number, lon: loc.lon as number }; villeConnue ??= loc.ville as string }
+  }
+  if (position) position = flouter(proId, position.lat, position.lon)
+
   return NextResponse.json({
+    // 3.0 : ce que la pro a mis dans « Personnaliser ma page ».
+    bio: ((profil.bio as string) ?? '').trim() || null,
+    couverture: (profil.photo_couverture as string) || null,
+    photos: Array.isArray(profil.photos_travail) ? (profil.photos_travail as string[]).filter(u => typeof u === 'string').slice(0, 15) : [],
+    ville: villeConnue,
+    position,
     avis_actifs: avisActifs,
     note,
     nb_avis: nbAvis,
@@ -127,4 +147,15 @@ export async function POST(req: NextRequest) {
       : (profil.formulaire ?? { nouvelles: [], connues: [] }),
     demander_inspirations: profil.demander_inspirations !== false,
   })
+}
+
+/** Un décalage de 150 à 400 m, toujours le même pour une même pro (même règle que la recherche). */
+function flouter(id: string, lat: number, lon: number): { lat: number; lon: number } {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619) }
+  const angle = ((h >>> 0) % 360) * Math.PI / 180
+  const metres = 150 + ((h >>> 9) % 250)
+  const dLat = (metres * Math.cos(angle)) / 111320
+  const dLon = (metres * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180))
+  return { lat: Math.round((lat + dLat) * 1e5) / 1e5, lon: Math.round((lon + dLon) * 1e5) / 1e5 }
 }
