@@ -4482,7 +4482,7 @@ export default function ReservationPage() {
                                         photos en miniatures, et un appui les ouvre en grand avec
                                         le défilement. Toucher ailleurs sur la carte choisit le soin. */}
                                     {descTech !== '' && (
-                                      <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{descTech}</p>
+                                      <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap', textAlign: 'justify', hyphens: 'auto' }}>{descTech}</p>
                                     )}
                                     {photosTech.length > 0 && (
                                       <span style={{ display: 'flex', gap: 6, marginTop: 8 }}>
