@@ -3546,13 +3546,6 @@ export default function ReservationPage() {
         {/* 3.0 : la bio de la vitrine remplace le message d'accueil — il ne
             revient plus aux étapes suivantes. Une pro sans bio voit son ancien
             message repris comme bio (voir la vitrine). */}
-        {false && pro?.message_accueil && (
-          <p style={{
-            fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
-          }}>
-            {pro.message_accueil}
-          </p>
-        )}
 
         {/* ────────────────────────────────────────
             STEP 1 — Identification
