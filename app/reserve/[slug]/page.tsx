@@ -572,7 +572,7 @@ export default function ReservationPage() {
   type Vitrine = {
     avis_actifs: boolean; note: number | null; nb_avis: number
     avis: { auteur: string; note: number; texte: string | null; prestations: string | null
-            reponse: string | null; cree_le: string
+            reponse: string | null; cree_le: string; importe?: boolean
             photos: { vignette: string; pleine: string }[] }[]
     adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
     accueil: Record<string, boolean | null>
@@ -715,7 +715,9 @@ export default function ReservationPage() {
           fontSize: 12, fontWeight: 800,
         }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}{a.importe && (
+            <span style={{ fontSize: 12, fontWeight: 400, color: '#A79DAB' }}> ({traduire('resa.avisImporte')})</span>
+          )}</span>
           {a.prestations && (
             <span style={{
               display: 'block', fontSize: 11.5, color: '#A79DAB',

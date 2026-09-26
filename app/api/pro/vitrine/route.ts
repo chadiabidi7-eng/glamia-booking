@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     const [{ data: moyenne }, { data: derniers }] = await Promise.all([
       supabaseAdmin.from('avis_note_par_pro').select('note, nombre').eq('pro_id', proId).maybeSingle(),
       supabaseAdmin.from('avis_clientes')
-        .select('auteur, note, texte, photos, prestations, reponse, cree_le')
+        .select('auteur, note, texte, photos, prestations, reponse, cree_le, source')
         .eq('pro_id', proId).is('retire_le', null)
         .order('cree_le', { ascending: false })
         .limit(AVIS_MAX),
@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
       prestations: a.prestations,
       reponse: a.reponse,
       cree_le: a.cree_le,
+      // Un avis repris d'une autre plateforme le dit, sans la nommer.
+      importe: !!a.source,
       // La vignette pour la page, la pleine pour l'ouverture.
       photos: ((a.photos ?? []) as string[]).map(url => ({
         vignette: url.includes('-pleine.jpg') ? url.replace('-pleine.jpg', '-vignette.jpg') : url,
