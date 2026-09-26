@@ -14,6 +14,7 @@ import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
 import Vitrine from '@/components/reserve/Vitrine';
+import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
@@ -1195,7 +1196,6 @@ export default function ReservationPage() {
   const [questions, setQuestions] = useState<QuestionResa[]>([])
   const [reponses, setReponses] = useState<Record<string, string>>({})
   // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
-  const [techniqueDepliee, setTechniqueDepliee] = useState<string | null>(null)
   // Visionneuse plein écran : toutes les photos de la technique + index affiché
   const [photoOverlay, setPhotoOverlay] = useState<{ photos: string[]; index: number } | null>(null)
 
@@ -3666,25 +3666,7 @@ export default function ReservationPage() {
                 tout. Le point vert dit « c'est ouvert » avant même qu'on ait lu
                 la date. Rien ne s'affiche si l'agenda est plein sur trois mois :
                 une ligne vide inquiéterait plus qu'elle n'informerait. */}
-            {phoneStatus === 'idle' && prochaineDispo && (
-              <div className="glamia-apparait" style={{
-                display: 'flex', alignItems: 'center', gap: 9,
-                marginBottom: 14, fontSize: 14.5, color: '#4A424C',
-              }}>
-                <span style={{
-                  width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none',
-                }} />
-                {/* L'heure passait par un remplacement à la main — « 17:30 »
-                    devenait « 17h30 », une écriture française, sur une page
-                    par ailleurs en anglais. On repasse par formatHeure. */}
-                <span>
-                  {traduire('resa.prochaineDispo', {
-                    date: formatDateCourte(prochaineDispo.date),
-                    heure: formatHeure(prochaineDispo.heure),
-                  })}
-                </span>
-              </div>
-            )}
+            {/* La prochaine dispo n'est plus répétée ici : la vitrine l'a déjà dite. */}
 
             {phoneStatus === 'idle' && blocReglement}
 
@@ -4261,89 +4243,40 @@ export default function ReservationPage() {
                   </div>
                 ) : null}
 
-                {/* Carte de fidélité */}
-                {fideliteConfig?.active && (
-                  <div style={{
-                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
-                    padding: 16, marginBottom: 20,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.carteFidelite')}</span>
-                      {/* Récompense du prochain RDV : existante ou palier atteint
-                          par le prochain passage — même logique que le prix */}
-                      {(() => {
-                        const tampons = fideliteFiche?.tampons ?? 0
-                        const prochaine = fideliteFiche?.recompense_disponible
-                          ?? fideliteConfig.paliers.find(p => p.position === tampons + 1)
-                          ?? null
-                        if (!prochaine) return null
-                        const label = prochaine.type === 'gratuit' ? traduire('resa.offert') : prochaine.type === 'euros' ? `-${formatPrix(prochaine.valeur, pro?.devise)}` : `-${prochaine.valeur}%`
-                        return (
-                          <span style={{
-                            background: PINK, color: '#fff', borderRadius: 10,
-                            padding: '2px 8px', fontSize: 10, fontWeight: 700, marginLeft: 'auto',
-                          }}>
-                            {traduire('resa.auProchainRdv', { label })}
-                          </span>
-                        )
-                      })()}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
-                        const pos = i + 1
-                        const tampons = fideliteFiche?.tampons ?? 0
-                        const estTamponné = pos <= tampons
-                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? traduire('resa.offert') : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                            <div style={{
-                              width: 36, height: 36, borderRadius: 18,
-                              border: `${palier ? '2.5px' : '2px'} solid ${estTamponné || palier ? PINK : '#e0d6cf'}`,
-                              background: estTamponné ? PINK : '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {estTamponné && (
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                              )}
-                            </div>
-                            {palier ? (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
-                            ) : (
-                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {(() => {
-                      const tampons = fideliteFiche?.tampons ?? 0
-                      const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
-                      if (!prochainPalier) return null
-                      const label = prochainPalier.type === 'gratuit' ? 'offert' : prochainPalier.type === 'euros' ? `-${formatPrix(prochainPalier.valeur, pro?.devise)}` : `-${prochainPalier.valeur}%`
-                      // « Encore 2 RDV avant -10 € » laissait croire que la
-                      // réduction tombait au rendez-vous SUIVANT le palier.
-                      // Elle tombe sur celui-là. On nomme donc le rendez-vous
-                      // concerné au lieu de compter ce qui reste avant.
-                      //
-                      // Même formulation que dans l'app, corrigée le matin
-                      // même : les deux écrans montrent la même carte à la
-                      // même personne, ils doivent dire la même chose.
-                      const n = prochainPalier.position - tampons
-                      return (
-                        <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                          {n === 1 ? traduire('resa.prochainRdv', { label }) : traduire('resa.paliersDansNRdv', { label, count: n })}
-                        </p>
-                      )
-                    })()}
-                    {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
-                      <p style={{ fontSize: 10, fontWeight: 700, color: '#C2779E', backgroundColor: '#FFF0F5', borderRadius: 10, padding: '2px 8px', textAlign: 'center', marginTop: 6, marginBottom: 0, display: 'inline-block' }}>
-                        {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
-                )}
+                {/* Carte de fidélité — le visuel de l'app (3.0) */}
+                {fideliteConfig?.active && (() => {
+                  const tampons = fideliteFiche?.tampons ?? 0
+                  const libelle = (p: { type: string; valeur: number }) => p.type === 'gratuit' ? traduire('resa.offert') : p.type === 'euros' ? `-${formatPrix(p.valeur, pro?.devise)}` : `-${p.valeur}%`
+                  const prochaine = fideliteFiche?.recompense_disponible ?? fideliteConfig.paliers.find(p => p.position === tampons + 1) ?? null
+                  const prochainPalier = fideliteConfig.paliers.filter(p => p.position > tampons).sort((a, b) => a.position - b.position)[0]
+                  const n = prochainPalier ? prochainPalier.position - tampons : 0
+                  return (
+                    <CarteFidelite
+                      nbRonds={fideliteConfig.nb_ronds}
+                      paliers={fideliteConfig.paliers}
+                      tampons={tampons}
+                      libelle={libelle}
+                      droite={prochaine ? (
+                        <span style={{ background: PINK, color: '#fff', borderRadius: 10, padding: '3px 9px', fontSize: 10.5, fontWeight: 700 }}>
+                          {traduire('resa.auProchainRdv', { label: libelle(prochaine) })}
+                        </span>
+                      ) : undefined}
+                      pied={<>
+                        {/* On nomme le rendez-vous qui récompense, pas ce qui reste avant (même phrase que dans l'app). */}
+                        {prochainPalier && (
+                          <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                            {n === 1 ? traduire('resa.prochainRdv', { label: libelle(prochainPalier) }) : traduire('resa.paliersDansNRdv', { label: libelle(prochainPalier), count: n })}
+                          </p>
+                        )}
+                        {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
+                          <p style={{ fontSize: 10.5, fontWeight: 700, color: PINK, background: '#fff', borderRadius: 10, padding: '2px 8px', margin: '6px 0 0', display: 'inline-block' }}>
+                            {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </>}
+                    />
+                  )
+                })()}
 
               </div>
             )}
@@ -4374,42 +4307,17 @@ export default function ReservationPage() {
                 {blocRefus}
                 {boutonRendezVous(identiteRemplie)}
 
-                {/* Carte de fidélité vierge pour nouvelle cliente */}
+                {/* Carte de fidélité vierge pour nouvelle cliente — le visuel de l'app (3.0) */}
                 {fideliteConfig?.active && (
-                  <div style={{
-                    background: '#FFF9FB', borderRadius: 16, border: '1.5px solid #F4C0D1',
-                    padding: 16, marginBottom: 16,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={PINK} stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.carteFidelite')}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-                      {Array.from({ length: fideliteConfig.nb_ronds }, (_, i) => {
-                        const pos = i + 1
-                        const palier = fideliteConfig.paliers.find(p => p.position === pos)
-                        const palierLabel = palier ? (palier.type === 'gratuit' ? traduire('resa.offert') : palier.type === 'euros' ? `-${formatPrix(palier.valeur, pro?.devise)}` : `-${palier.valeur}%`) : ''
-                        return (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                            <div style={{
-                              width: 36, height: 36, borderRadius: 18,
-                              border: `${palier ? '2.5px' : '2px'} solid ${palier ? PINK : '#e0d6cf'}`,
-                              background: '#fff',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }} />
-                            {palier ? (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: PINK }}>{palierLabel}</span>
-                            ) : (
-                              <span style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{pos}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {fideliteConfig.paliers.length > 0 && (
-                      <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>{traduire('resa.fideliteDetail')}</p>
-                    )}
-                  </div>
+                  <CarteFidelite
+                    nbRonds={fideliteConfig.nb_ronds}
+                    paliers={fideliteConfig.paliers}
+                    tampons={0}
+                    libelle={p => p.type === 'gratuit' ? traduire('resa.offert') : p.type === 'euros' ? `-${formatPrix(p.valeur, pro?.devise)}` : `-${p.valeur}%`}
+                    pied={fideliteConfig.paliers.length > 0
+                      ? <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{traduire('resa.fideliteDetail')}</p>
+                      : undefined}
+                  />
                 )}
 
               </div>
@@ -4528,8 +4436,6 @@ export default function ReservationPage() {
                             // Détails optionnels configurés par la pro (photos / description)
                             const photosTech = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5)
                             const descTech = (t.description ?? '').trim()
-                            const aDetails = photosTech.length > 0 || descTech !== ''
-                            const depliee = aDetails && techniqueDepliee === t.id
                             return (
                               <div key={t.id} style={{ marginBottom: 6 }}>
                                 <button
@@ -4571,77 +4477,29 @@ export default function ReservationPage() {
                                         return <>{t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit'))} · {formatDuree(t.duree)}</>
                                       })()}
                                     </p>
-                                    {/* Pastille détails — affordance explicite, tap séparé de la sélection */}
-                                    {aDetails && (
-                                      <span
-                                        onClick={(e) => { e.stopPropagation(); setTechniqueDepliee(prev => (prev === t.id ? null : t.id)) }}
-                                        aria-label={depliee ? traduire('resa.masquerDetails') : traduire('resa.voirDetails')}
-                                        style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
-                                          padding: photosTech.length > 0 ? '3px 10px 3px 4px' : '3px 10px',
-                                          borderRadius: 999,
-                                          background: depliee ? PINK_LIGHT : '#fff',
-                                          border: `1px solid ${depliee ? PINK : '#e8dce3'}`,
-                                          fontSize: 12, fontWeight: 600, color: PINK, cursor: 'pointer',
-                                          width: 'fit-content',
-                                        }}
-                                      >
-                                        {photosTech.length > 0 && (
-                                          <span style={{ display: 'inline-flex' }}>
-                                            {photosTech.map((url, pi) => (
-                                              <img
-                                                key={pi}
-                                                src={url}
-                                                alt=""
-                                                loading="lazy"
-                                                style={{
-                                                  width: 22, height: 22, borderRadius: '50%', objectFit: 'cover',
-                                                  border: '1.5px solid #fff', marginLeft: pi === 0 ? 0 : -8,
-                                                  position: 'relative', zIndex: photosTech.length - pi,
-                                                  background: '#f3f4f6',
-                                                }}
-                                              />
-                                            ))}
-                                          </span>
-                                        )}
-                                        En savoir plus
-                                        <ChevronDown
-                                          size={13}
-                                          style={{ transition: 'transform 0.25s ease', transform: depliee ? 'rotate(180deg)' : 'none' }}
-                                        />
+                                    {/* LE TEXTE ET LES PHOTOS, SUR LA CARTE (3.0, Chadi) : plus de
+                                        bouton « En savoir plus ». Le texte se lit tel quel ; les
+                                        photos en miniatures, et un appui les ouvre en grand avec
+                                        le défilement. Toucher ailleurs sur la carte choisit le soin. */}
+                                    {descTech !== '' && (
+                                      <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{descTech}</p>
+                                    )}
+                                    {photosTech.length > 0 && (
+                                      <span style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                        {photosTech.map((url, pi) => (
+                                          <img
+                                            key={pi}
+                                            src={url}
+                                            alt={`${t.nom} — photo ${pi + 1}`}
+                                            loading="lazy"
+                                            onClick={e => { e.stopPropagation(); setPhotoOverlay({ photos: photosTech, index: pi }) }}
+                                            style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6', border: '1px solid #fff' }}
+                                          />
+                                        ))}
                                       </span>
                                     )}
                                   </div>
                                 </button>
-                                {/* Détails dépliables : photos + description */}
-                                {aDetails && (
-                                  <div style={{
-                                    maxHeight: depliee ? 420 : 0, opacity: depliee ? 1 : 0,
-                                    overflow: 'hidden', transition: 'max-height 0.3s ease, opacity 0.25s ease',
-                                  }}>
-                                    <div style={{ margin: '4px 0 2px', padding: 12, borderRadius: 12, background: '#fff', border: '1px solid #f3f4f6' }}>
-                                      {photosTech.length > 0 && (
-                                        <div style={{ display: 'flex', gap: 8, marginBottom: descTech !== '' ? 10 : 0 }}>
-                                          {photosTech.map((url, pi) => (
-                                            <img
-                                              key={pi}
-                                              src={url}
-                                              alt={`${t.nom} — photo ${pi + 1}`}
-                                              loading="lazy"
-                                              onClick={() => setPhotoOverlay({ photos: photosTech, index: pi })}
-                                              style={{ width: 92, height: 138, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
-                                            />
-                                          ))}
-                                        </div>
-                                      )}
-                                      {descTech !== '' && (
-                                        <p style={{ margin: 0, fontSize: 13, color: '#555555', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                                          {descTech}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
                                 {selected && t.quantifiable && (
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px 2px 44px' }}>
                                     <span style={{ fontSize: 13, color: '#6b7280' }}>
