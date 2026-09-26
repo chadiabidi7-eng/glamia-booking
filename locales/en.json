@@ -1,5 +1,7 @@
 {
   "resa": {
+    "sesPrestations": "Services",
+    "reserver": "Book",
     "avisImporte": "imported",
     "reglement": "House rules",
     "refusDefaut": "I can't take you for this request.",

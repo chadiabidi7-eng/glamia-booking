@@ -1,5 +1,7 @@
 {
   "resa": {
+    "sesPrestations": "Ses prestations",
+    "reserver": "Réserver",
     "avisImporte": "importé",
     "reglement": "Règlement",
     "refusDefaut": "Je ne peux pas vous recevoir pour cette demande.",

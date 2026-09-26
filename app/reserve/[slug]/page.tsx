@@ -548,6 +548,13 @@ export default function ReservationPage() {
 
   // ── Navigation ───────────────────────────────
   const [step, setStep] = useState(1)
+  // LA VITRINE D'ABORD (3.0, 27 sept. 2026 — Chadi). La page demandait le
+  // numéro avant même de montrer ce que fait la pro. Désormais elle arrive sur
+  // sa présentation : ses prestations avec leurs photos, ses avis, son
+  // emplacement, et un bouton « Réserver ». C'est là seulement qu'on demande
+  // le numéro. Un lien qui amène à un créneau précis (liste d'attente,
+  // désistement) va droit au but, sans vitrine.
+  const [vitrineOuverte, setVitrineOuverte] = useState(true)
 
   // Changement d'étape → remonter en haut (l'étape 5 gère son propre scroll vers le récap)
   useEffect(() => {
@@ -1261,6 +1268,7 @@ export default function ReservationPage() {
       }
     }
 
+    setVitrineOuverte(false)
     if (retrouvees.length > 0) setTechniquesSelectionnees(retrouvees)
     else if (/^\d{4}-\d{2}-\d{2}$/.test(jourUrl) && /^\d{2}:\d{2}$/.test(heureUrl)) creneauVise.current = { jour: jourUrl, heure: heureUrl }
     setDate(jourUrl)
@@ -3481,7 +3489,8 @@ export default function ReservationPage() {
             )}
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar — pas pendant la vitrine : on ne lui demande encore rien. */}
+          {!(step === 1 && vitrineOuverte) && <>
           <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
             {STEP_LABELS().map((_, i) => (
               <div
@@ -3497,6 +3506,7 @@ export default function ReservationPage() {
           <p style={{ fontSize: 11, color: PINK, fontWeight: 600, margin: 0 }}>
             {traduire('resa.etapeSur', { n: step, total: STEP_LABELS().length, nom: STEP_LABELS()[step - 1] })}
           </p>
+          </>}
         </div>
       </div>
 
@@ -3595,8 +3605,71 @@ export default function ReservationPage() {
           </div>
         )}
 
-        {step === 1 && vitrinePrete && (
+        {step === 1 && vitrinePrete && vitrineOuverte && (
           <div>
+            {prochaineDispo && (
+              <div className="glamia-apparait" style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 18, fontSize: 14.5, color: '#4A424C' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none' }} />
+                <span>{traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) })}</span>
+              </div>
+            )}
+
+            {/* ── SES PRESTATIONS : ce qu'elle fait, à quel prix, et en photos ── */}
+            {specialitesActives.length > 0 && (
+              <div>
+                <h2 style={{ ...S.h2, marginBottom: 12 }}>{traduire('resa.sesPrestations')}</h2>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {specialitesActives.map(sp => (
+                    <div key={sp.nom} style={{ background: '#fff', border: '1px solid #EFE4EA', borderRadius: 18, padding: '14px 14px 6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6 }}>
+                        <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} size={22} />
+                        <span style={{ fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{libelleCategorie(sp.nom, pro?.categorie_autre_nom)}</span>
+                      </div>
+                      {sp.techniques.map((t, i) => {
+                        const photos = (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5)
+                        return (
+                          <div key={t.id ?? t.nom} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: i > 0 ? '1px solid #F4EEF1' : 'none' }}>
+                            {photos.length > 0 && (
+                              <button onClick={() => setVisionneuse({ photos, index: 0 })} aria-label={t.nom}
+                                style={{ width: 56, height: 56, borderRadius: 12, overflow: 'hidden', padding: 0, border: 0, flexShrink: 0, cursor: 'pointer', background: PINK_LIGHT }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={photos[0]} alt="" style={{ width: 56, height: 56, objectFit: 'cover', display: 'block' }} loading="lazy" />
+                              </button>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: '#1f2937' }}>{t.nom}</p>
+                              {(t.description ?? '').trim() !== '' && (
+                                <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#9ca3af', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{t.description}</p>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 13.5, color: '#4A424C', flexShrink: 0, textAlign: 'right' }}>
+                              {t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit'))}
+                              <br /><span style={{ fontSize: 12, color: '#9ca3af' }}>{formatDuree(t.duree)}</span>
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {blocVitrine}
+
+            {/* Le bouton, toujours à portée de pouce. */}
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, padding: '12px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, #fff 70%, rgba(255,255,255,0))' }}>
+              <button onClick={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
+                style={{ ...S.btn, maxWidth: 448, margin: '0 auto', display: 'block' }}>
+                {traduire('resa.reserver')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && vitrinePrete && !vitrineOuverte && (
+          <div>
+            {phoneStatus === 'idle' && <BackBtn onClick={() => { setVitrineOuverte(true); window.scrollTo({ top: 0 }) }} />}
             {/* ── QUAND EST-CE QU'ELLE PEUT VENIR ─────────────────────────────
                 La première question d'une cliente, et la seule qui décide de
                 tout. Le point vert dit « c'est ouvert » avant même qu'on ait lu
@@ -4352,7 +4425,6 @@ export default function ReservationPage() {
             )}
             </div>
 
-            {phoneStatus === 'idle' && blocVitrine}
           </div>
         )}
 
