@@ -1211,6 +1211,11 @@ export default function ReservationPage() {
   // dans le lien. On les repose pour qu'il ne reste que le téléphone à donner —
   // sans ça la cliente refait tout le parcours pour une place qui part vite.
   const repriseFaite = useRef(false)
+  // LE CRÉNEAU D'UN MAIL DE DÉSISTEMENT : un jour et une heure, sans
+  // prestation — c'est la cliente qui choisit ses soins. Choisir un soin efface
+  // le jour (la durée change) ; on le garde donc ici, à part, et on l'y ramène
+  // une fois ses soins choisis. Une seule fois : ensuite, parcours normal.
+  const creneauVise = useRef<{ jour: string; heure: string } | null>(null)
   const [repriseAttente, setRepriseAttente] = useState(false)
 
   const identiteRemplie = !!clientePrenom.trim() && !!clienteNom.trim()
@@ -1257,6 +1262,7 @@ export default function ReservationPage() {
     }
 
     if (retrouvees.length > 0) setTechniquesSelectionnees(retrouvees)
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(jourUrl) && /^\d{2}:\d{2}$/.test(heureUrl)) creneauVise.current = { jour: jourUrl, heure: heureUrl }
     setDate(jourUrl)
     setHeure(heureUrl)
     setRepriseAttente(retrouvees.length > 0)
@@ -2432,6 +2438,14 @@ export default function ReservationPage() {
       const frais = creneaux[date] ?? []
       setSlots(frais)
       jourDesSlots.current = date
+
+      // L'heure annoncée par le mail de désistement, si ses soins y tiennent.
+      // Sinon elle voit les autres heures libres du jour, sans rien choisi.
+      const vise = creneauVise.current
+      if (vise && vise.jour === date) {
+        creneauVise.current = null
+        if (frais.some(c => c.heure === vise.heure && c.disponible)) { setHeure(vise.heure); return }
+      }
 
       // SON CRÉNEAU VIENT-IL DE PARTIR ? Elle a choisi 14 h 30, une autre
       // cliente l'a pris, ou la pro l'a bloqué. Sans ce contrôle, elle ne
@@ -5471,7 +5485,12 @@ export default function ReservationPage() {
                   comme avant. Et il y a toujours une réponse qui ne change
                   rien — répondre ne coûte qu'un appui. */}
               <button
-                onClick={() => { if (questionsSansReponse.length === 0) setStep(3) }}
+                onClick={() => {
+                  if (questionsSansReponse.length > 0) return
+                  // Venue d'un mail de désistement : droit au jour annoncé.
+                  if (creneauVise.current) { setDate(creneauVise.current.jour); setHeure(''); setStep(4); return }
+                  setStep(3)
+                }}
                 disabled={questionsSansReponse.length > 0}
                 title={questionsSansReponse.length > 0 ? traduire('resa.repondsQuestion') : undefined}
                 style={{
