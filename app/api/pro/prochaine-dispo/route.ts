@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSlots, minToTime, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
-import { assistantesDe, creneauxDe } from '@/lib/equipe'
+import { prochaineDispo } from '@/lib/prochaine-dispo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA PROCHAINE DISPONIBILITÉ, DÈS L'OUVERTURE DE LA PAGE.
@@ -29,9 +28,6 @@ const supabaseAdmin = createClient(
 /** Au-delà, on ne dit plus rien : « dans quatre mois » n'aide personne. */
 const HORIZON_JOURS = 90
 
-/** Repli quand le catalogue ne dit rien d'utilisable. */
-const DUREE_PAR_DEFAUT = 30
-
 export async function POST(req: NextRequest) {
   try {
     const { pro_id } = await req.json() as { pro_id?: string }
@@ -39,104 +35,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'pro_invalide' }, { status: 400 })
     }
 
-    const [{ data: pro }, { data: catalogue }] = await Promise.all([
-      supabaseAdmin
-        .from('profiles')
-        .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme')
-        .eq('id', pro_id)
-        .maybeSingle(),
-      supabaseAdmin.from('prestations').select('data').eq('pro_id', pro_id).maybeSingle(),
-    ])
-    if (!pro) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
+    const r = await prochaineDispo(supabaseAdmin, pro_id, HORIZON_JOURS)
+    if (r === undefined) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
+    if (r === null) return NextResponse.json({ date: null, heure: null })
+    const { qui, ...reste } = r
+    return NextResponse.json(qui ? r : reste)
 
-    // ── LA PLUS COURTE DE SES PRESTATIONS ──
-    let duree = DUREE_PAR_DEFAUT
-    const data = (catalogue?.data ?? {}) as Record<string, unknown>
-    const durees: number[] = []
-    for (const liste of Object.values(data)) {
-      if (!Array.isArray(liste)) continue
-      for (const t of liste) {
-        const item = t as { duree?: unknown; active?: unknown }
-        if (item?.active === false) continue
-        const d = Number(item?.duree)
-        if (Number.isFinite(d) && d > 0) durees.push(d)
-      }
-    }
-    if (durees.length) duree = Math.min(...durees)
-
-    // ── LES JOURS À BALAYER ──
-    // On part d'aujourd'hui CHEZ LA PRO : à 23 h en Guadeloupe, le serveur est
-    // déjà demain, et on lui ferait sauter une journée entière.
-    const fuseau = (pro.timezone as string) || 'Europe/Paris'
-    const aujourdhui = new Date(
-      new Intl.DateTimeFormat('en-CA', { timeZone: fuseau }).format(new Date()) + 'T00:00:00Z',
-    )
-    const jours: string[] = []
-    for (let i = 0; i < HORIZON_JOURS; i++) {
-      jours.push(new Date(aujourdhui.getTime() + i * 86400000).toISOString().slice(0, 10))
-    }
-
-    // ── ÉQUIPE : la première libre, que ce soit la pro ou son assistante ────
-    // Même horizon, même durée ; on prend la plus tôt des deux. La pro seule
-    // reprend le chemin d'avant, sans requête de plus.
-    const assistantes = await assistantesDe(supabaseAdmin, pro_id)
-    if (assistantes.length > 0) {
-      const personnes: (string | null)[] = [null, ...assistantes.map(a => a.id)]
-      let meilleur: { date: string; heure: string; qui: string | null } | null = null
-      for (const qui of personnes) {
-        const creneaux = await creneauxDe(supabaseAdmin, pro_id, qui, duree, jours)
-        for (const jour of jours) {
-          const premier = (creneaux[jour] ?? []).find(s => s.disponible)
-          if (!premier) continue
-          if (!meilleur || jour < meilleur.date || (jour === meilleur.date && premier.heure < meilleur.heure)) meilleur = { date: jour, heure: premier.heure, qui }
-          break
-        }
-      }
-      return NextResponse.json(meilleur ? { ...meilleur, duree } : { date: null, heure: null })
-    }
-
-    const { data: rdvs } = await supabaseAdmin
-      .from('rendez_vous')
-      .select('date, duree')
-      .eq('pro_id', pro_id)
-      .is('praticienne_id', null)
-      .neq('statut', 'annule')
-      .gte('date', `${jours[0]}T00:00:00.000Z`)
-      .lte('date', `${jours[jours.length - 1]}T23:59:59.999Z`)
-
-    const parJour = new Map<string, { heure: string; duree: number }[]>()
-    for (const r of rdvs ?? []) {
-      const iso = r.date as string
-      const d = new Date(iso)
-      const jour = iso.slice(0, 10)
-      const liste = parJour.get(jour) ?? []
-      liste.push({ heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 })
-      parJour.set(jour, liste)
-    }
-
-    // On s'arrête au PREMIER créneau trouvé : inutile de calculer la suite.
-    for (const jour of jours) {
-      const slots = generateSlots(
-        jour,
-        duree,
-        (pro.horaires ?? {}) as never,
-        parJour.get(jour) ?? [],
-        Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
-        (pro.horaires_specifiques ?? {}) as never,
-        pro.planning_variable === true,
-        pro.timezone ?? undefined,
-        pro.creneaux_a_la_suite === true,
-        delaiEntreClientes(pro),
-        delaiDe(pro),
-      )
-      const premier = slots.find(s => s.disponible)
-      if (premier) {
-        return NextResponse.json({ date: jour, heure: premier.heure, duree })
-      }
-    }
-
-    // Rien dans les trois mois : on ne dit rien plutôt que d'annoncer un vide.
-    return NextResponse.json({ date: null, heure: null })
   } catch (e) {
     console.error('[api/pro/prochaine-dispo]', e)
     return NextResponse.json({ error: 'erreur_interne' }, { status: 500 })
