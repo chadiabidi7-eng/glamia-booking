@@ -3543,8 +3543,10 @@ export default function ReservationPage() {
           }
         `}</style>
 
-        {/* Pendant la vitrine, la bio parle à sa place. */}
-        {pro?.message_accueil && !(step === 1 && vitrineOuverte) && (
+        {/* 3.0 : la bio de la vitrine remplace le message d'accueil — il ne
+            revient plus aux étapes suivantes. Une pro sans bio voit son ancien
+            message repris comme bio (voir la vitrine). */}
+        {false && pro?.message_accueil && (
           <p style={{
             fontSize: 15, color: PINK, margin: '0 0 18px', lineHeight: 1.55, textAlign: 'center',
           }}>
@@ -3641,7 +3643,7 @@ export default function ReservationPage() {
             </>}
             prochaineDispo={prochaineDispo ? traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) }) : null}
             couverture={vitrine?.couverture ?? null}
-            bio={vitrine?.bio ?? null}
+            bio={vitrine?.bio ?? (pro?.message_accueil?.trim() || null)}
             categories={specialitesActives.map(sp => ({
               nom: sp.nom,
               libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
