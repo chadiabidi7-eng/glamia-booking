@@ -10,5 +10,5 @@ export default async function Autour({ searchParams }: { searchParams: Promise<{
   const la = Number(lat), lo = Number(lon)
   const [pros, langue] = await Promise.all([prosAutour(la, lo), langueDuVisiteur()])
   const centre = Number.isFinite(la) && Number.isFinite(lo) ? { lat: la, lon: lo } : null
-  return <Recherche langue={langue} titre={TEXTES[langue].autourTitre} pros={pros} centre={centre} />
+  return <Recherche langue={langue} titre={TEXTES[langue].autourTitre} chute={TEXTES[langue].autourChute} pros={pros} centre={centre} />
 }

@@ -19,10 +19,13 @@ import type { ProTrouvee } from '@/lib/recherche-pros'
 
 const Carte = dynamic(() => import('@/components/beaute/Carte'), { ssr: false })
 
-const ENCRE = '#2B1A24'
-const ENCRE_DOUCE = '#8A7682'
-const ROSE = '#C2779E'
-const FILET = '#EFE4EA'
+// La palette du Cockpit (onglet Design).
+const ENCRE = '#1C1C1E'
+const ENCRE_DOUCE = '#6B6B70'
+const ROSE = '#C77A96'
+const ROSE_PROFOND = '#A85F7C'
+const ROSE_PALE = '#FBEEF2'
+const FILET = '#EDE0E8'
 
 type Point = { lat: number; lon: number }
 
@@ -38,9 +41,10 @@ function distanceLisible(m: number, locale: string) {
 }
 
 
-export default function Recherche({ langue, titre, pros, centre }: {
+export default function Recherche({ langue, titre, chute, pros, centre }: {
   langue: Langue
   titre: string
+  chute: string
   pros: ProTrouvee[]
   centre: Point | null
 }) {
@@ -83,10 +87,10 @@ export default function Recherche({ langue, titre, pros, centre }: {
   }
 
   return (
-    <div className="beaute-page">
+    <div className="beaute-page da-glamia">
       <style>{`
-        .beaute-page { min-height: 100dvh; background: #FDF8F5; color: ${ENCRE}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .beaute-tete { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: rgba(253,248,245,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid ${FILET}; }
+        .beaute-page { min-height: 100dvh; }
+        .beaute-tete { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: rgba(250,244,237,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid ${FILET}; }
         .beaute-corps { display: grid; grid-template-columns: minmax(380px, 520px) 1fr; }
         .beaute-liste { padding: 24px 24px 120px; }
         .beaute-carte { position: sticky; top: 73px; height: calc(100dvh - 73px); border-left: 1px solid ${FILET}; }
@@ -107,16 +111,17 @@ export default function Recherche({ langue, titre, pros, centre }: {
       `}</style>
 
       <header className="beaute-tete">
-        <Link href="/beaute" style={{ textDecoration: 'none', color: ENCRE, fontWeight: 700, letterSpacing: '0.18em', fontSize: 15 }}>
-          GLAMIA
+        <Link href="/beaute" aria-label="Glamia" style={{ display: 'flex' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/glamia-logo.png" alt="Glamia" width={104} height={38} style={{ width: 104, height: 'auto' }} />
         </Link>
         <ChoixVille langue={langue} compact />
       </header>
 
       <div className="beaute-corps">
         <main className="beaute-liste">
-          <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 500, fontSize: 34, letterSpacing: '-0.02em', margin: '4px 0 2px' }}>{titre}</h1>
-          <p style={{ margin: 0, color: ENCRE_DOUCE, fontSize: 14 }}>{T.pros(visibles.length)}</p>
+          <p className="surtitre">{T.pros(visibles.length)}</p>
+          <h1 className="titre" style={{ fontSize: 40, margin: '10px 0 0' }}>{titre} <em>{chute}</em></h1>
 
           {presents.length > 1 && (
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '18px -4px 6px', padding: '0 4px 4px', scrollbarWidth: 'none' }}>
@@ -124,7 +129,7 @@ export default function Recherche({ langue, titre, pros, centre }: {
                 const on = metier === m
                 return (
                   <button key={m ?? 'tout'} onClick={() => setMetier(m)}
-                    style={{ flexShrink: 0, height: 36, padding: '0 16px', borderRadius: 18, cursor: 'pointer', fontSize: 14, fontWeight: 600, border: `1px solid ${on ? ENCRE : FILET}`, background: on ? ENCRE : '#fff', color: on ? '#fff' : ENCRE }}>
+                    style={{ flexShrink: 0, height: 36, padding: '0 16px', borderRadius: 18, cursor: 'pointer', fontSize: 14, fontWeight: 600, border: `1px solid ${on ? ROSE : FILET}`, background: on ? ROSE_PALE : '#fff', color: on ? ROSE_PROFOND : ENCRE }}>
                     {m ? T.metiers[m] : T.tout}
                   </button>
                 )
@@ -144,15 +149,15 @@ export default function Recherche({ langue, titre, pros, centre }: {
                   ref={el => { if (el) cartes.current.set(p.slug, el) }}
                   className={`beaute-pro${actif === p.slug ? ' actif' : ''}`}
                   onMouseEnter={() => setActif(p.slug)} onMouseLeave={() => setActif(a => (a === p.slug ? null : a))}>
-                  <div style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', display: 'grid', placeItems: 'center' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', flexShrink: 0, background: ROSE_PALE, display: 'grid', placeItems: 'center', boxShadow: `0 0 0 2px #fff, 0 0 0 3px ${FILET}` }}>
                     {p.photo
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={p.photo} alt="" width={64} height={64} style={{ width: 64, height: 64, objectFit: 'cover' }} loading="lazy" />
-                      : <span style={{ color: '#A85F7C', fontWeight: 700 }}>{p.nom.slice(0, 1).toUpperCase()}</span>}
+                      : <span style={{ color: ROSE_PROFOND, fontWeight: 700, fontFamily: 'var(--font-fraunces), serif', fontSize: 22 }}>{p.nom.slice(0, 1).toUpperCase()}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 16.5, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</span>
                       {p.note !== null && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, flexShrink: 0 }} title={T.avis(p.nbAvis)}>
                           <Star size={13} fill={ROSE} color={ROSE} strokeWidth={0} />
