@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Star, X } from 'lucide-react'
+import { ChevronDown, Star, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ const ROSE = '#C2779E'
 const ROSE_PROFOND = '#8E4E72'
 const FILET = '#e5e7eb'
 
-export type SoinVitrine = { cle: string; nom: string; photos: string[]; duree: string; prix: string }
+export type SoinVitrine = { cle: string; nom: string; description?: string | null; photos: string[]; duree: string; prix: string }
 /** `icone` : l'image ronde de la spécialité (photo du catalogue, ou la sienne), posée devant son nom. */
 export type CategorieVitrine = { nom: string; libelle: string; icone?: React.ReactNode; soins: SoinVitrine[] }
 
@@ -88,6 +88,7 @@ export default function Vitrine(props: {
   const BOUTON = props.couleurBouton || ROSE
   const [categorie, setCategorie] = useState(0)
   const [tousSoins, setTousSoins] = useState(false)
+  const [soinOuvert, setSoinOuvert] = useState<string | null>(null)
   const [toutesPhotos, setToutesPhotos] = useState(false)
   // LES AVIS DÉFILENT UN PAR UN (Chadi) : un toutes les 2 secondes, tout seuls ;
   // dès que la cliente glisse elle-même, le défilement s'arrête pour de bon.
@@ -190,19 +191,38 @@ export default function Vitrine(props: {
             </div>
           )}
           <div>
-            {soins.map((s, i) => (
-              <div key={s.cle} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i > 0 ? `1px solid #f3f4f6` : 'none' }}>
-                {s.photos.length > 0 ? (
-                  <button onClick={() => props.ouvrirPhotos(s.photos, 0)} aria-label={s.nom} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', padding: 0, border: 0, flexShrink: 0, cursor: 'pointer', background: '#F9EEF4' }}>
-                    <img src={s.photos[0]} alt="" loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', display: 'block' }} />
-                  </button>
-                ) : null}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{s.nom}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>{s.duree} · {s.prix}</p>
+            {soins.map((s, i) => {
+              // Une description ? Un chevron à droite, et la ligne s'ouvre pour
+              // la lire. Sans description, ni chevron ni clic.
+              const aDescription = !!s.description
+              const ouvert = aDescription && soinOuvert === s.cle
+              return (
+                <div key={s.cle} style={{ borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+                    {s.photos.length > 0 ? (
+                      <button onClick={() => props.ouvrirPhotos(s.photos, 0)} aria-label={s.nom} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', padding: 0, border: 0, flexShrink: 0, cursor: 'pointer', background: '#F9EEF4' }}>
+                        <img src={s.photos[0]} alt="" loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', display: 'block' }} />
+                      </button>
+                    ) : null}
+                    <div onClick={aDescription ? () => setSoinOuvert(ouvert ? null : s.cle) : undefined}
+                      role={aDescription ? 'button' : undefined} aria-expanded={aDescription ? ouvert : undefined}
+                      style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, cursor: aDescription ? 'pointer' : 'default' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{s.nom}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>{s.duree} · {s.prix}</p>
+                      </div>
+                      {aDescription && (
+                        <ChevronDown size={18} color={ENCRE_DOUCE} strokeWidth={2.2}
+                          style={{ flexShrink: 0, transition: 'transform .2s ease', transform: ouvert ? 'rotate(180deg)' : 'none' }} />
+                      )}
+                    </div>
+                  </div>
+                  {ouvert && (
+                    <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.5, color: ENCRE_DOUCE, textAlign: 'justify', whiteSpace: 'pre-line' }}>{s.description}</p>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
           {cat && !tousSoins && cat.soins.length > SOINS_VISIBLES && <Plus onClick={() => setTousSoins(true)}>{traduire('resa.voirTousLesSoins')}</Plus>}
         </Bloc>

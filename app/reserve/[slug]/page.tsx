@@ -3649,6 +3649,7 @@ export default function ReservationPage() {
               soins: sp.techniques.map(t => ({
                 cle: t.id ?? `${sp.nom}-${t.nom}`,
                 nom: t.nom,
+                description: typeof t.description === 'string' && t.description.trim() ? t.description.trim() : null,
                 photos: (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5),
                 duree: formatDuree(t.duree),
                 prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
