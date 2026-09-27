@@ -105,14 +105,17 @@ export default function Vitrine(props: {
       <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE }}>{props.nom}</h1>
-            {props.note !== null && (
-              <p style={{ margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600 }}>
-                <Star size={14} fill={ACCENT} color={ACCENT} strokeWidth={0} />
-                {props.note.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                <span style={{ color: ENCRE_DOUCE, fontWeight: 500 }}>({props.nbAvis})</span>
-              </p>
-            )}
+            {/* Le pseudo et la note sur la même ligne (Chadi) : pas de ligne en plus. */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE }}>{props.nom}</h1>
+              {props.note !== null && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <Star size={14} fill={ACCENT} color={ACCENT} strokeWidth={0} />
+                  {props.note.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  <span style={{ color: ENCRE_DOUCE, fontWeight: 500 }}>({props.nbAvis})</span>
+                </span>
+              )}
+            </div>
             {props.ville && <p style={{ margin: '3px 0 0', color: ENCRE_DOUCE, fontSize: 14 }}>{props.ville}</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>{props.reseaux}</div>
           </div>
