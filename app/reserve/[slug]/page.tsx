@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
-import { couleurValide, enRgba, fonce, pale } from '@/lib/teinte'
+import { couleurValide, enRgba, pale } from '@/lib/teinte'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
 import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
@@ -205,14 +205,21 @@ const PINK_LIGHT_DEFAUT = '#F9EEF4'
 const GLAMIA_PINK_DEFAUT = '#D4537E'
 let PINK = PINK_DEFAUT
 let PINK_LIGHT = PINK_LIGHT_DEFAUT
-// Plus sombre (textes sur fond pâle) et liseré, eux aussi dans sa couleur.
+// SA COULEUR, MAIS PAS PARTOUT (Chadi, 27 sept. 2026 : « on peut
+// personnaliser, mais pas à ce point-là »). Elle habille les ACCENTS — le
+// bouton principal, ce qui est choisi (case, jour, créneau), la progression,
+// les étoiles. Tout ce qui s'ÉCRIT reste noir et gris, les fonds pâles
+// deviennent un gris neutre : la page reste sobre, sa couleur y ponctue.
+// Sans couleur choisie, la page garde le rose Glamia d'origine partout.
+let PINK_TEXTE = PINK_DEFAUT
 let PINK_FONCE = '#8E4E72'
 let PINK_BORD = '#F2D7E6'
 function teinterPage(couleur: string | null) {
   PINK = couleur ?? PINK_DEFAUT
-  PINK_LIGHT = couleur ? pale(couleur) : PINK_LIGHT_DEFAUT
-  PINK_FONCE = couleur ? fonce(couleur) : '#8E4E72'
-  PINK_BORD = couleur ? pale(couleur, 0.8) : '#F2D7E6'
+  PINK_TEXTE = couleur ? '#1C1C1E' : PINK_DEFAUT
+  PINK_LIGHT = couleur ? '#F4F4F5' : PINK_LIGHT_DEFAUT
+  PINK_FONCE = couleur ? '#1C1C1E' : '#8E4E72'
+  PINK_BORD = couleur ? '#E5E7EB' : '#F2D7E6'
   GLAMIA_PINK = couleur ?? GLAMIA_PINK_DEFAUT
 }
 
@@ -443,8 +450,8 @@ function OffresSection({
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ background: PINK_LIGHT, borderRadius: 16, padding: 16, border: `1.5px solid ${PINK}` }}>
-        <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={16} color={PINK} /> {traduire('resa.offresEnCours')}
+        <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 15, color: PINK_TEXTE, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Sparkles size={16} color={PINK_TEXTE} /> {traduire('resa.offresEnCours')}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visible.map(o => {
@@ -503,7 +510,7 @@ function OffresSection({
                   {prixOrig > 0 && prixOrig !== o.prix_promo && (
                     <div style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'line-through' }}>{formatPrix(prixOrig, devise)}</div>
                   )}
-                  <div style={{ fontWeight: 700, fontSize: 15, color: PINK }}>{formatPrix(o.prix_promo, devise)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: PINK_TEXTE }}>{formatPrix(o.prix_promo, devise)}</div>
                 </div>
               </button>
             )
@@ -515,7 +522,7 @@ function OffresSection({
             style={{
               width: '100%', marginTop: 8, padding: '8px 0',
               background: 'transparent', border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 600, color: PINK,
+              fontSize: 13, fontWeight: 600, color: PINK_TEXTE,
             }}
           >
             Voir les {offres.length - 3} autres offres
@@ -527,7 +534,7 @@ function OffresSection({
             style={{
               width: '100%', marginTop: 8, padding: '8px 0',
               background: 'transparent', border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 600, color: PINK,
+              fontSize: 13, fontWeight: 600, color: PINK_TEXTE,
             }}
           >{traduire('resa.voirMoins')}</button>
         )}
@@ -3217,7 +3224,7 @@ export default function ReservationPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
         <div style={{ textAlign: 'center' }}>
           <Sparkles size={48} color={GLAMIA_PINK} style={{ marginBottom: 16 }} />
-          <p style={{ color: PINK, fontWeight: 600, fontSize: 16 }}>{traduire('commun.chargement')}</p>
+          <p style={{ color: PINK_TEXTE, fontWeight: 600, fontSize: 16 }}>{traduire('commun.chargement')}</p>
         </div>
       </div>
     )
@@ -3253,7 +3260,7 @@ export default function ReservationPage() {
           {pro?.photo_url ? (
             <img src={pro.photo_url} alt={nomAffiche} style={{ width: 72, height: 72, borderRadius: 36, objectFit: 'cover', border: `3px solid ${PINK}`, marginBottom: 16 }} />
           ) : (
-            <div style={{ width: 72, height: 72, borderRadius: 36, background: PINK_LIGHT, color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 28, margin: '0 auto 16px' }}>
+            <div style={{ width: 72, height: 72, borderRadius: 36, background: PINK_LIGHT, color: PINK_TEXTE, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 28, margin: '0 auto 16px' }}>
               {pro?.prenom?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
@@ -3263,7 +3270,7 @@ export default function ReservationPage() {
                 ils donnaient « ContactezButterflylashes.gpsur ses ». Une espace
                 posée en bout de traduction se perd au premier nettoyage. */}
             {traduire('resa.contactez')}{' '}
-            <strong style={{ color: PINK }}>{nomAffiche}</strong>{' '}
+            <strong style={{ color: PINK_TEXTE }}>{nomAffiche}</strong>{' '}
             {traduire('resa.surSesReseaux')}</p>
           {socials.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -3273,7 +3280,7 @@ export default function ReservationPage() {
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: PINK_LIGHT, color: PINK, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: PINK_LIGHT, color: PINK_TEXTE, borderRadius: 12, padding: '12px 16px', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
                 >
                   {/* LARGEUR FIXE, SINON LES LOGOS SE DÉCALENT. Chaque libellé
                       n'a pas la même longueur : centrer le couple logo+texte
@@ -3364,9 +3371,9 @@ export default function ReservationPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <BadgeOffre pack={offreAppliquee.type === 'pack'} />
-                  <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offreAppliquee.nom}</span>
+                  <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK_TEXTE, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offreAppliquee.nom}</span>
                 </span>
-                <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 13, color: offreAppliquee.type === 'pack' ? VIOLET_PACK : PINK_TEXTE, fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {formatPrix(offreAppliquee.prix_promo, pro?.devise)}
                 </span>
               </div>
@@ -3376,7 +3383,7 @@ export default function ReservationPage() {
             {recompenseFidelite && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('resa.fidelite')}</span>
-                <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
                   {recompenseFidelite.type === 'gratuit' ? traduire('resa.offert') : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                 </span>
               </div>
@@ -3392,8 +3399,8 @@ export default function ReservationPage() {
             )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PINK_TEXTE }}>{traduire('resa.total')}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: PINK_TEXTE }}>
                 {prixFinal !== prixTotal ? (
                   <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                 ) : (
@@ -3415,11 +3422,11 @@ export default function ReservationPage() {
               padding: '13px 14px', textAlign: 'left', marginBottom: 16,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: PINK }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: PINK_TEXTE }}>
                   {propayRegle.mode === 'empreinte' ? traduire('resa.empreinteBancaire')
                     : propayRegle.mode === 'total' ? traduire('resa.prestationReglee') : traduire('resa.acompteVerse')}
                 </span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: PINK, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: PINK_TEXTE, whiteSpace: 'nowrap' }}>
                   {fmtCentimes(propayRegle.montant + (propayRegle.mode === 'empreinte' ? 0 : propayRegle.frais), symPropay)}
                 </span>
               </div>
@@ -3448,8 +3455,8 @@ export default function ReservationPage() {
 
           {/* Statut d'envoi des photos d'inspiration */}
           {inspirationsStatut === 'envoyees' && (
-            <p style={{ fontSize: 13, color: PINK, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <CheckCircle size={15} color={PINK} />
+            <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <CheckCircle size={15} color={PINK_TEXTE} />
               {inspirations.length > 1
                 ? traduire('resa.photosTransmises', { count: inspirations.length })
                 : traduire('resa.photoTransmise')}
@@ -3469,7 +3476,7 @@ export default function ReservationPage() {
 
           {/* Logo Glamia + slogan */}
           <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: PINK, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
+            <p style={{ fontSize: 28, fontWeight: 800, color: PINK_TEXTE, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
             <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{traduire('resa.signatureGlamia')}</p>
           </div>
         </div>
@@ -3494,7 +3501,7 @@ export default function ReservationPage() {
                 style={{ width: 36, height: 36, borderRadius: 18, objectFit: 'cover', border: `2px solid ${PINK}`, flexShrink: 0 }}
               />
             ) : (
-              <div style={{ width: 36, height: 36, borderRadius: 18, background: PINK_LIGHT, color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 18, background: PINK_LIGHT, color: PINK_TEXTE, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
                 {pro?.prenom?.[0]?.toUpperCase()}
               </div>
             )}
@@ -3502,7 +3509,7 @@ export default function ReservationPage() {
               {pro?.pseudo ? (
                 <>
                   <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 14, margin: 0 }}>{pro.pseudo}</p>
-                  <p style={{ fontSize: 12, color: PINK, margin: '2px 0 0' }}>{pro.prenom}</p>
+                  <p style={{ fontSize: 12, color: PINK_TEXTE, margin: '2px 0 0' }}>{pro.prenom}</p>
                 </>
               ) : (
                 <>
@@ -3536,7 +3543,7 @@ export default function ReservationPage() {
               />
             ))}
           </div>
-          <p style={{ fontSize: 11, color: PINK, fontWeight: 600, margin: 0 }}>
+          <p style={{ fontSize: 11, color: PINK_TEXTE, fontWeight: 600, margin: 0 }}>
             {traduire('resa.etapeSur', { n: step, total: STEP_LABELS().length, nom: STEP_LABELS()[step - 1] })}
           </p>
           </>}
@@ -3797,7 +3804,7 @@ export default function ReservationPage() {
                       border: `1.5px solid ${PINK}`, display: 'flex', alignItems: 'center',
                       justifyContent: 'center', flexShrink: 0,
                     }}>
-                      <Gift size={19} color={PINK} />
+                      <Gift size={19} color={PINK_TEXTE} />
                     </div>
                     <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.5 }}>
                       {traduire('resa.reductionPersonnelle', {
@@ -3898,12 +3905,12 @@ export default function ReservationPage() {
                               style={{
                                 width: '100%', marginTop: 10, padding: '8px 0', borderRadius: 10,
                                 border: `1.5px solid ${PINK}`, background: modifRdvId === rdv.id ? PINK_LIGHT : '#fff',
-                                color: PINK, fontSize: 13, fontWeight: 600,
+                                color: PINK_TEXTE, fontSize: 13, fontWeight: 600,
                                 cursor: 'pointer', transition: 'all 0.15s',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                               }}
                             >
-                              <Sparkles size={14} color={PINK} />{traduire('resa.modifierPrestations')}</button>
+                              <Sparkles size={14} color={PINK_TEXTE} />{traduire('resa.modifierPrestations')}</button>
                           )}
 
                           {/* Ajouter / voir ses inspirations — seulement si la
@@ -3915,12 +3922,12 @@ export default function ReservationPage() {
                             style={{
                               width: '100%', marginTop: 10, padding: '8px 0', borderRadius: 10,
                               border: `1.5px solid ${PINK}`, background: inspiRdvId === rdv.id ? PINK_LIGHT : '#fff',
-                              color: PINK, fontSize: 13, fontWeight: 600,
+                              color: PINK_TEXTE, fontSize: 13, fontWeight: 600,
                               cursor: 'pointer', transition: 'all 0.15s',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                             }}
                           >
-                            <Camera size={14} color={PINK} />
+                            <Camera size={14} color={PINK_TEXTE} />
                             {(rdv.inspirations?.length ?? 0) >= 3
                               ? traduire('resa.mesInspirationsPleines')
                               : traduire('resa.ajouterInspirations')}
@@ -3984,7 +3991,7 @@ export default function ReservationPage() {
                                       justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
-                                      <Camera size={16} color={PINK} />
+                                      <Camera size={16} color={PINK_TEXTE} />
                                       <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{traduire('resa.prendrePhoto')}</span>
                                       <input type="file" accept="image/*" capture="environment" onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
@@ -3994,7 +4001,7 @@ export default function ReservationPage() {
                                       justifyContent: 'center', gap: 2, cursor: inspiCompression ? 'default' : 'pointer',
                                       flexShrink: 0, opacity: inspiCompression ? 0.5 : 1, boxSizing: 'border-box',
                                     }}>
-                                      <ImagePlus size={16} color={PINK} />
+                                      <ImagePlus size={16} color={PINK_TEXTE} />
                                       <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{inspiCompression ? traduire('resa.unInstant') : traduire('resa.importer')}</span>
                                       <input type="file" accept="image/*" multiple onChange={e => ajouterInspiFichiers(e, rdv)} disabled={inspiCompression} style={{ display: 'none' }} />
                                     </label>
@@ -4023,7 +4030,7 @@ export default function ReservationPage() {
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
                                 border: `1.5px solid ${PINK}`, background: '#fff',
-                                color: PINK, fontSize: 13, fontWeight: 600,
+                                color: PINK_TEXTE, fontSize: 13, fontWeight: 600,
                                 cursor: 'pointer', transition: 'all 0.15s',
                               }}
                             >{traduire('resa.reprogrammer')}</button>
@@ -4068,7 +4075,7 @@ export default function ReservationPage() {
                                         {/* LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE.
                                             Sa cliente lisait « Autre » là où la pro
                                             avait écrit « Réflexologie plantaire ». */}
-                                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK : '#1f2937' }}>
+                                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK_TEXTE : '#1f2937' }}>
                                           {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                                         </span>
                                         {nbSelec > 0 && (
@@ -4079,7 +4086,7 @@ export default function ReservationPage() {
                                             ✓ {nbSelec}
                                           </span>
                                         )}
-                                        <span style={{ fontSize: 16, color: nbSelec > 0 ? PINK : '#9ca3af', flexShrink: 0 }}>
+                                        <span style={{ fontSize: 16, color: nbSelec > 0 ? PINK_TEXTE : '#9ca3af', flexShrink: 0 }}>
                                           {ouvert ? '▾' : '›'}
                                         </span>
                                       </button>
@@ -4114,10 +4121,10 @@ export default function ReservationPage() {
                                               {selected && t.quantifiable && (
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '6px 12px 2px', background: PINK_LIGHT, borderRadius: 10, marginTop: 4 }}>
                                                   <button type="button" onClick={() => ajusterModifQuantite(t.nom, s.nom, -1)} disabled={quantite <= 1}
-                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
+                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK_TEXTE, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
                                                   <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#1f2937' }}>{quantite}</span>
                                                   <button type="button" onClick={() => ajusterModifQuantite(t.nom, s.nom, 1)} disabled={quantite >= 20}
-                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
+                                                    style={{ width: 26, height: 26, border: 'none', background: 'transparent', fontSize: 19, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK_TEXTE, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
                                                 </div>
                                               )}
                                               </div>
@@ -4236,7 +4243,7 @@ export default function ReservationPage() {
                                     <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{formatDateLong(reprogDate)}
                                   </p>
                                   {reprogLoadingSlots ? (
-                                    <p style={{ textAlign: 'center', color: PINK, fontSize: 14, fontWeight: 600 }}>{traduire('commun.chargement')}</p>
+                                    <p style={{ textAlign: 'center', color: PINK_TEXTE, fontSize: 14, fontWeight: 600 }}>{traduire('commun.chargement')}</p>
                                   ) : reprogSlots.filter(s => s.disponible).length === 0 ? (
                                     <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
                                       Aucun créneau de {formatDuree(rdv.duree)} disponible ce jour.
@@ -4298,7 +4305,6 @@ export default function ReservationPage() {
                   const n = prochainPalier ? prochainPalier.position - tampons : 0
                   return (
                     <CarteFidelite
-                    couleur={couleurPro}
                       nbRonds={fideliteConfig.nb_ronds}
                       paliers={fideliteConfig.paliers}
                       tampons={tampons}
@@ -4316,7 +4322,7 @@ export default function ReservationPage() {
                           </p>
                         )}
                         {fideliteFiche && fideliteFiche.cartes_completees > 0 && (
-                          <p style={{ fontSize: 10.5, fontWeight: 700, color: PINK, background: '#fff', borderRadius: 10, padding: '2px 8px', margin: '6px 0 0', display: 'inline-block' }}>
+                          <p style={{ fontSize: 10.5, fontWeight: 700, color: PINK_TEXTE, background: '#fff', borderRadius: 10, padding: '2px 8px', margin: '6px 0 0', display: 'inline-block' }}>
                             {fideliteFiche.cartes_completees} carte{fideliteFiche.cartes_completees > 1 ? 's' : ''} complétée{fideliteFiche.cartes_completees > 1 ? 's' : ''}
                           </p>
                         )}
@@ -4357,7 +4363,6 @@ export default function ReservationPage() {
                 {/* Carte de fidélité vierge pour nouvelle cliente — le visuel de l'app (3.0) */}
                 {fideliteConfig?.active && (
                   <CarteFidelite
-                    couleur={couleurPro}
                     nbRonds={fideliteConfig.nb_ronds}
                     paliers={fideliteConfig.paliers}
                     tampons={0}
@@ -4456,7 +4461,7 @@ export default function ReservationPage() {
                         }}
                       >
                         <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={24} />
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
+                        <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK_TEXTE : '#1f2937' }}>
                           {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                         </span>
                         {nbSelec > 0 && (
@@ -4467,7 +4472,7 @@ export default function ReservationPage() {
                             {nbSelec}
                           </span>
                         )}
-                        <span style={{ fontSize: 18, color: nbSelec > 0 ? PINK : '#9ca3af', flexShrink: 0 }}>
+                        <span style={{ fontSize: 18, color: nbSelec > 0 ? PINK_TEXTE : '#9ca3af', flexShrink: 0 }}>
                           {ouvert ? '▾' : '›'}
                         </span>
                       </button>
@@ -4517,7 +4522,7 @@ export default function ReservationPage() {
                                     />
                                   )}
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
+                                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK_TEXTE : '#1f2937' }}>
                                       {t.nom}
                                     </p>
                                     <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
@@ -4528,7 +4533,7 @@ export default function ReservationPage() {
                                           return (
                                             <>
                                               <span style={{ textDecoration: 'line-through', marginRight: 4 }}>{formatPrix(t.prix, pro?.devise)}</span>
-                                              <span style={{ color: PINK, fontWeight: 600 }}>{formatPrix(promoOffre.prix_promo, pro?.devise)}</span>
+                                              <span style={{ color: PINK_TEXTE, fontWeight: 600 }}>{formatPrix(promoOffre.prix_promo, pro?.devise)}</span>
                                               {' · '}{formatDuree(t.duree)}
                                             </>
                                           )
@@ -4563,10 +4568,10 @@ export default function ReservationPage() {
                                     </span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: PINK_LIGHT, borderRadius: 10, padding: '2px 6px' }}>
                                       <button type="button" onClick={() => ajusterQuantite(t.nom, s.nom, -1)} disabled={quantite <= 1}
-                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
+                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite <= 1 ? '#d6c2ce' : PINK_TEXTE, cursor: quantite <= 1 ? 'default' : 'pointer', lineHeight: 1 }}>−</button>
                                       <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 15, color: '#1f2937' }}>{quantite}</span>
                                       <button type="button" onClick={() => ajusterQuantite(t.nom, s.nom, 1)} disabled={quantite >= 20}
-                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
+                                        style={{ width: 28, height: 28, border: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: quantite >= 20 ? '#d6c2ce' : PINK_TEXTE, cursor: quantite >= 20 ? 'default' : 'pointer', lineHeight: 1 }}>+</button>
                                     </div>
                                   </div>
                                 )}
@@ -4676,7 +4681,7 @@ export default function ReservationPage() {
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
                 border: `1.5px solid ${PINK}`, textAlign: 'center',
               }}>
-                <p style={{ fontSize: 14, color: PINK, fontWeight: 600, margin: 0 }}>{traduire('resa.rechercheCreneau')}</p>
+                <p style={{ fontSize: 14, color: PINK_TEXTE, fontWeight: 600, margin: 0 }}>{traduire('resa.rechercheCreneau')}</p>
               </div>
             )}
             {aucunCreneauProche && !loadingPremierCreneau && (
@@ -4708,7 +4713,7 @@ export default function ReservationPage() {
                 background: PINK_LIGHT, borderRadius: 16, padding: 16, marginBottom: 20,
                 border: `1.5px solid ${PINK}`,
               }}>
-                <p style={{ fontSize: 13, color: PINK, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{traduire('resa.prochainCreneau')}</p>
+                <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{traduire('resa.prochainCreneau')}</p>
                 <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 4px', textTransform: 'capitalize' }}>
                   {formatDateLong(premierCreneau.date)}
                 </p>
@@ -4793,7 +4798,7 @@ export default function ReservationPage() {
                   cliquera jamais sur un jour rose. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 6, background: '#F3E4EC' }} />
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}{' '}<span style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{traduire('resa.complet')}{' '}<span style={{ color: PINK_TEXTE, fontWeight: 600 }}>{traduire('resa.cliquezPourEtrePrevenue')}</span>
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -4841,7 +4846,7 @@ export default function ReservationPage() {
 
             {loadingSlots ? (
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <p style={{ color: PINK, fontWeight: 600 }}>{traduire('resa.chargementCreneaux')}</p>
+                <p style={{ color: PINK_TEXTE, fontWeight: 600 }}>{traduire('resa.chargementCreneaux')}</p>
               </div>
             ) : slotsLibres.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}>
@@ -4899,12 +4904,12 @@ export default function ReservationPage() {
                     }}
                     style={{
                       display: 'block', margin: '0 auto 18px', padding: '13px 24px', borderRadius: 12,
-                      border: `1.5px solid ${PINK}`, background: '#fff', color: PINK,
+                      border: `1.5px solid ${PINK}`, background: '#fff', color: PINK_TEXTE,
                       fontWeight: 700, fontSize: 15, cursor: 'pointer',
                     }}>{traduire('resa.mePrevenir')}</button>
                 )}
 
-                <button onClick={() => setStep(3)} style={{ color: PINK, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>{traduire('resa.choisirAutreDate')}</button>
+                <button onClick={() => setStep(3)} style={{ color: PINK_TEXTE, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>{traduire('resa.choisirAutreDate')}</button>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -4957,9 +4962,9 @@ export default function ReservationPage() {
                   icon: <CreditCard size={20} color={GLAMIA_PINK} />,
                   label: traduire('resa.total'),
                   value: prixFinal !== prixTotal
-                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</span></>
+                    ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK_TEXTE, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</span></>
                     : offreAppliquee && prixTotalBrut !== prixTotal
-                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
+                      ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK_TEXTE, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
                       : formatPrix(prixTotal, pro?.devise)
                 }] : []),
               ].map((row, i) => (
@@ -4998,22 +5003,22 @@ export default function ReservationPage() {
                         <span style={{ background: offreAppliquee.type === 'prix_fixe' ? PINK : '#7B1FA2', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>
                           {offreAppliquee.type === 'prix_fixe' ? 'PROMO' : 'PACK'}
                         </span>
-                        <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>{offreAppliquee.nom}</span>
+                        <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>{offreAppliquee.nom}</span>
                       </div>
                     )}
                     {/* Fidélité appliquée */}
                     {recompenseFidelite && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('resa.fidelite')}</span>
-                        <span style={{ fontSize: 13, color: PINK, fontWeight: 600 }}>
+                        <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
                           {recompenseFidelite.type === 'gratuit' ? traduire('resa.offert') : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
                         </span>
                       </div>
                     )}
                     {/* Ligne total */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1.5px solid #e5e7eb`, marginTop: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK_TEXTE }}>{traduire('resa.total')}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: PINK_TEXTE }}>
                         {prixFinal !== prixTotal ? (
                           <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                         ) : offreAppliquee && prixTotalBrut !== prixTotal ? (
@@ -5080,7 +5085,7 @@ export default function ReservationPage() {
                     justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
                     flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
                   }}>
-                    <Camera size={20} color={PINK} />
+                    <Camera size={20} color={PINK_TEXTE} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
                       {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.prendrePhoto')}
                     </span>
@@ -5100,7 +5105,7 @@ export default function ReservationPage() {
                     justifyContent: 'center', gap: 4, cursor: compressionEnCours ? 'default' : 'pointer',
                     flexShrink: 0, opacity: compressionEnCours ? 0.5 : 1, boxSizing: 'border-box',
                   }}>
-                    <ImagePlus size={20} color={PINK} />
+                    <ImagePlus size={20} color={PINK_TEXTE} />
                     <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>
                       {compressionEnCours ? traduire('resa.unInstant') : traduire('resa.importer')}
                     </span>
@@ -5187,7 +5192,7 @@ export default function ReservationPage() {
                 borderRadius: 16, padding: '14px 14px 16px', marginBottom: 20,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CreditCard size={16} color={PINK} />
+                  <CreditCard size={16} color={PINK_TEXTE} />
                   <label style={{ ...S.label, marginBottom: 0, fontSize: 15, fontWeight: 800, color: '#3a2f36', flex: 1 }}>
                     {propay.mode === 'total' ? traduire('resa.blocPrestation')
                       : propay.mode === 'acompte' ? traduire('resa.blocAcompte')
@@ -5203,7 +5208,7 @@ export default function ReservationPage() {
                 </div>
                 {/* Montant centré sous le titre — jamais coupé */}
                 <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
-                  <span style={{ color: PINK, fontSize: 22, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                  <span style={{ color: PINK_TEXTE, fontSize: 22, fontWeight: 800, whiteSpace: 'nowrap' }}>
                     {fmtCentimes(propay.acompte ?? 0, symPropay)}
                   </span>
                 </div>
@@ -5232,7 +5237,7 @@ export default function ReservationPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6, background: 'none',
                         border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
-                        fontSize: 12, color: PINK, fontWeight: 600,
+                        fontSize: 12, color: PINK_TEXTE, fontWeight: 600,
                       }}>
                       <span style={{
                         width: 15, height: 15, borderRadius: 8, border: `1.2px solid ${PINK}`,
@@ -5263,7 +5268,7 @@ export default function ReservationPage() {
                   background: PINK_LIGHT, border: `1px solid ${PINK}44`, borderRadius: 12,
                   padding: '10px 12px', margin: '0 0 12px',
                 }}>
-                  <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <AlertCircle size={16} color={PINK_TEXTE} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
                     {propay.mode === 'empreinte'
                       ? <><strong style={{ color: '#1f2937' }}>{traduire('resa.condEmpreinteTitre', { delai: propay.delai_annulation ?? 24 })}</strong>{traduire('resa.condEmpreinteSuite', {
@@ -5375,7 +5380,7 @@ export default function ReservationPage() {
                   color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: '22px', textAlign: 'center',
                 }}>!</span>
                 <div>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: PINK }}>{refusCarte}</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: PINK_TEXTE }}>{refusCarte}</p>
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280', lineHeight: 1.55 }}>
                     Ton créneau est toujours réservé pour toi. Essaie une autre carte,
                     ou reviens dans un moment.
@@ -5415,7 +5420,7 @@ export default function ReservationPage() {
                 href="https://booking.glamia.pro/confidentialite"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: PINK, textDecoration: 'underline' }}
+                style={{ color: PINK_TEXTE, textDecoration: 'underline' }}
               >{traduire('resa.confidentialite')}</a>
             </p>
           </div>
@@ -5448,11 +5453,11 @@ export default function ReservationPage() {
               ))}
             </div>
             {questionsSansReponse.length > 0 && (
-              <p style={{ margin: '0 0 8px', fontSize: 12.5, color: PINK, fontWeight: 600, textAlign: 'center' }}>{traduire('resa.questionAuDessus')}</p>
+              <p style={{ margin: '0 0 8px', fontSize: 12.5, color: PINK_TEXTE, fontWeight: 600, textAlign: 'center' }}>{traduire('resa.questionAuDessus')}</p>
             )}
             {/* Total + Continuer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: PINK }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: PINK_TEXTE }}>
                 {prixFinal !== prixTotal ? (
                   <><span style={{ textDecoration: 'line-through', marginRight: 4, fontWeight: 400, color: '#9ca3af' }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</>
                 ) : prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}
@@ -5816,7 +5821,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       style={{
         background: 'none', border: 'none', cursor: 'pointer',
-        color: PINK, fontWeight: 600, fontSize: 14, padding: '0 0 16px', display: 'block',
+        color: PINK_TEXTE, fontWeight: 600, fontSize: 14, padding: '0 0 16px', display: 'block',
       }}
     >{traduire('commun.retour')}</button>
   )
