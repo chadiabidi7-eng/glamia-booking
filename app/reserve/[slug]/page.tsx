@@ -591,6 +591,7 @@ export default function ReservationPage() {
     // 3.0 — « Personnaliser ma page », et la position floutée pour la carte.
     bio?: string | null; couverture?: string | null; photos?: string[]
     ville?: string | null; position?: { lat: number; lon: number } | null
+    style?: { page: string | null; bouton: string | null; texte: string | null } | null
   }
   type QuestionFormulaire = {
     id: string; libelle: string; type: 'oui_non' | 'choix' | 'texte'
@@ -3655,6 +3656,9 @@ export default function ReservationPage() {
             conditions={conditions}
             ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
             onReserver={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
+            couleurPage={vitrine?.style?.page ?? null}
+            couleurBouton={vitrine?.style?.bouton ?? null}
+            texteBouton={vitrine?.style?.texte ?? null}
           />
         )}
 

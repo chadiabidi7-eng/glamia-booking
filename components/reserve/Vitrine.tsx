@@ -45,7 +45,7 @@ const AVIS_VISIBLES = 3
 function Bloc({ titre, chute, children }: { titre: string; chute?: string; children: ReactNode }) {
   return (
     <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
-      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: ROSE }}>{chute}</span></> : null}</h2>
+      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: 'var(--accent)' }}>{chute}</span></> : null}</h2>
       <div style={{ marginTop: 12 }}>{children}</div>
     </section>
   )
@@ -77,7 +77,13 @@ export default function Vitrine(props: {
   conditions: { libelle: string; oui: boolean }[]
   ouvrirPhotos: (photos: string[], index: number) => void
   onReserver: () => void
+  /** Ultra — « Personnaliser ma page » : la couleur de sa page, et celle et le texte du bouton. */
+  couleurPage?: string | null
+  couleurBouton?: string | null
+  texteBouton?: string | null
 }) {
+  const ACCENT = props.couleurPage || ROSE
+  const BOUTON = props.couleurBouton || ROSE
   const [categorie, setCategorie] = useState(0)
   const [tousSoins, setTousSoins] = useState(false)
   const [toutesPhotos, setToutesPhotos] = useState(false)
@@ -87,7 +93,7 @@ export default function Vitrine(props: {
   const soins = cat ? (tousSoins ? cat.soins : cat.soins.slice(0, SOINS_VISIBLES)) : []
 
   return (
-    <div className="vitrine">
+    <div className="vitrine" style={{ ['--accent' as string]: ACCENT }}>
       <style>{`
         .vitrine { color: ${ENCRE}; }
         .vitrine .vitrine-titre { font-size: 17px; font-weight: 700; line-height: 1.3; margin: 0; }
@@ -102,7 +108,7 @@ export default function Vitrine(props: {
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.25 }}>{props.nom}</h1>
             {props.note !== null && (
               <p style={{ margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600 }}>
-                <Star size={14} fill={ROSE} color={ROSE} strokeWidth={0} />
+                <Star size={14} fill={ACCENT} color={ACCENT} strokeWidth={0} />
                 {props.note.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                 <span style={{ color: ENCRE_DOUCE, fontWeight: 500 }}>({props.nbAvis})</span>
               </p>
@@ -110,10 +116,10 @@ export default function Vitrine(props: {
             {props.ville && <p style={{ margin: '3px 0 0', color: ENCRE_DOUCE, fontSize: 14 }}>{props.ville}</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>{props.reseaux}</div>
           </div>
-          <div style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: `2px solid ${ROSE}` }}>
+          <div style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: `2px solid ${ACCENT}` }}>
             {props.photoProfil
               ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ROSE }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
           </div>
         </div>
         {props.prochaineDispo && (
@@ -145,7 +151,7 @@ export default function Vitrine(props: {
                 const on = i === categorie
                 return (
                   <button key={c.nom} onClick={() => { setCategorie(i); setTousSoins(false) }}
-                    style={{ flexShrink: 0, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: on ? ROSE : ENCRE_DOUCE, borderBottom: `2px solid ${on ? ROSE : 'transparent'}` }}>
+                    style={{ flexShrink: 0, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: on ? ACCENT : ENCRE_DOUCE, borderBottom: `2px solid ${on ? ACCENT : 'transparent'}` }}>
                     {c.libelle}
                   </button>
                 )
@@ -223,8 +229,8 @@ export default function Vitrine(props: {
       {/* LE BOUTON, toujours à portée de pouce. */}
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, padding: '14px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, #f9f9f9 65%, rgba(249,249,249,0))' }}>
         <button onClick={props.onReserver}
-          style={{ display: 'block', width: '100%', maxWidth: 448, margin: '0 auto', padding: 16, border: 0, borderRadius: 16, background: ROSE, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          {traduire('resa.reserver')}
+          style={{ display: 'block', width: '100%', maxWidth: 448, margin: '0 auto', padding: 16, border: 0, borderRadius: 16, background: BOUTON, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          {props.texteBouton || traduire('resa.reserver')}
         </button>
       </div>
     </div>
