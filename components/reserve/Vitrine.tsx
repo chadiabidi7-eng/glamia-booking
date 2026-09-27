@@ -105,7 +105,7 @@ export default function Vitrine(props: {
       <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.25 }}>{props.nom}</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE }}>{props.nom}</h1>
             {props.note !== null && (
               <p style={{ margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600 }}>
                 <Star size={14} fill={ACCENT} color={ACCENT} strokeWidth={0} />
