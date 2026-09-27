@@ -93,7 +93,7 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
     <div className="beaute-page">
       <style>{`
         .beaute-corps { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(400px, 560px) 1fr; }
-        .beaute-liste { padding: 32px 28px 120px; }
+        .beaute-liste { padding: 32px 28px 120px; min-width: 0; }
         .beaute-carte { position: sticky; top: 73px; height: calc(100dvh - 73px); padding: 20px 20px 20px 0; }
         .beaute-carte-boite { height: 100%; border-radius: 24px; overflow: hidden; border: 1px solid ${FILET}; }
         .beaute-filtres { display: flex; gap: 8px; overflow-x: auto; margin: 22px -28px 4px; padding: 0 28px 6px; scrollbar-width: none; }
@@ -101,7 +101,7 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
         .beaute-filtre { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px; border-radius: 20px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; border: 1px solid ${FILET}; background: #fff; color: ${ENCRE}; transition: border-color .15s ease, background .15s ease; }
         .beaute-filtre.sans-icone { padding: 0 16px; }
         .beaute-filtre.on { border-color: ${ENCRE}; background: ${ENCRE}; color: #fff; }
-        .beaute-pro { display: flex; gap: 16px; align-items: center; padding: 16px; background: #fff; border: 1px solid ${FILET}; border-radius: 22px; text-decoration: none; color: inherit; box-shadow: 0 1px 2px rgba(43,26,36,0.04); transition: border-color .15s ease, box-shadow .2s ease, transform .15s ease; }
+        .beaute-pro { min-width: 0; display: flex; gap: 16px; align-items: flex-start; padding: 16px; background: #fff; border: 1px solid ${FILET}; border-radius: 22px; text-decoration: none; color: inherit; box-shadow: 0 1px 2px rgba(43,26,36,0.04); transition: border-color .15s ease, box-shadow .2s ease, transform .15s ease; }
         .beaute-pro:hover, .beaute-pro.actif { border-color: ${ROSE}; box-shadow: 0 10px 28px rgba(43,26,36,0.08); }
         .beaute-pro:active { transform: scale(0.99); }
         .beaute-bascule { display: none; }
@@ -142,7 +142,7 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
               <p style={{ margin: '6px 0 0', color: ENCRE_DOUCE, fontSize: 14 }}>{T.videTexte}</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, marginTop: 16 }}>
               {visibles.map(p => (
                 <a key={p.slug} href={`${base}/reserve/${p.slug}`}
                   ref={el => { if (el) cartes.current.set(p.slug, el) }}
@@ -166,19 +166,39 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
                       )}
                     </div>
                     {p.metiers.length > 0 && (
-                      <div style={{ fontSize: 13.5, color: ENCRE_DOUCE, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.metiers.map(m => T.metiers[m]).join(' · ')}
+                      // Ses spécialités, chacune avec sa petite image ronde ; ce qui
+                      // ne tient pas se coupe proprement au lieu de pousser la carte.
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 5, overflow: 'hidden', whiteSpace: 'nowrap', maskImage: 'linear-gradient(90deg, #000 85%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, #000 85%, transparent)' }}>
+                        {p.metiers.map(m => (
+                          <span key={m} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: ENCRE_DOUCE, flexShrink: 0 }}>
+                            <SpecialiteIcon specialite={TEXTES.fr.metiers[m]} size={18} />
+                            {T.metiers[m]}
+                          </span>
+                        ))}
                       </div>
+                    )}
+                    {p.accroche && (
+                      <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.45, color: ENCRE_DOUCE, textAlign: 'justify', hyphens: 'auto', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }}>
+                        {p.accroche}
+                      </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 10 }}>
                       {p.dispo ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 10px', borderRadius: 13, background: 'rgba(47,158,98,0.09)', color: VERT, fontWeight: 700 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 3, background: VERT }} />
-                          {T.dispo} {quand(p.dispo)}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 10px', borderRadius: 13, background: 'rgba(47,158,98,0.09)', color: VERT, fontWeight: 700, minWidth: 0, maxWidth: '75%' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 3, background: VERT, flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{T.dispo} {quand(p.dispo)}</span>
                         </span>
                       ) : <span style={{ color: ENCRE_DOUCE }}>{T.pasDeDispo}</span>}
                       {origine && <span style={{ marginLeft: 'auto', color: ENCRE_DOUCE, flexShrink: 0 }}>{distanceLisible(distanceM(origine, p), T.locale)}</span>}
                     </div>
+                    {p.photos.length > 0 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, marginTop: 10 }}>
+                        {p.photos.map(u => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={u} src={u} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, background: ROSE_PALE, display: 'block' }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </a>
               ))}

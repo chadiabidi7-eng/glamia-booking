@@ -82,11 +82,19 @@ export default function Carte({ pros, actif, onChoisir, centre }: {
     import('maplibre-gl').then(ml => {
       if (annule || !boite.current || carte.current) return
       lib.current = ml
-      const m = new ml.Map({
-        container: boite.current, style: STYLE,
-        center: centre ? [centre.lon, centre.lat] : [2.35, 46.6], zoom: centre ? 11 : 5,
-        attributionControl: { compact: true },
-      })
+      // Un appareil sans WebGL ne sait pas dessiner la carte : on s'arrête là,
+      // sans erreur. La liste des pros, elle, reste entière.
+      let m: CarteMaplibre
+      try {
+        m = new ml.Map({
+          container: boite.current, style: STYLE,
+          center: centre ? [centre.lon, centre.lat] : [2.35, 46.6], zoom: centre ? 11 : 5,
+          attributionControl: { compact: true },
+        })
+      } catch (e) {
+        console.warn('[carte] indisponible sur cet appareil :', (e as Error)?.message)
+        return
+      }
       m.addControl(new ml.NavigationControl({ showCompass: false }), 'bottom-right')
       carte.current = m
       m.on('load', poser)

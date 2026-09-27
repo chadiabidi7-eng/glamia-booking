@@ -68,6 +68,10 @@ export type ProTrouvee = {
   dispo: { date: string; heure: string } | null
   /** Au moins 3 photos de réalisation : elle passe en tête (un conseil, pas une règle). */
   avecPhotos: boolean
+  /** Sa phrase d'accroche (la bio de sa page), coupée à 160 caractères. */
+  accroche: string | null
+  /** Ses quatre premières photos de réalisation. */
+  photos: string[]
 }
 
 export type Ville = { nom: string; slug: string; pays: string; lat: number | null; lon: number | null }
@@ -116,8 +120,9 @@ type Profil = {
   abonnement_actif: boolean | null; pro_pay_actif: boolean | null; trial_ends_at: string | null
   avis_actifs: boolean | null; sur_glamia: boolean | null
   photos_travail: unknown
+  bio: string | null; message_accueil: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil'
 
 const ouverte = (p: Profil) => p.abonnement_actif === true || p.pro_pay_actif === true
   || (!!p.trial_ends_at && new Date(p.trial_ends_at) > new Date())
@@ -210,6 +215,8 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       metiers: metiersDe.get(p.id) ?? [],
       dispo: dispos.get(p.id) ?? null,
       avecPhotos: Array.isArray(p.photos_travail) && p.photos_travail.length >= 3,
+      accroche: ((p.bio ?? p.message_accueil ?? '').replace(/\s+/g, ' ').trim().slice(0, 160)) || null,
+      photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
     }
   })
     // Celles qui montrent leur travail d'abord (Chadi, 27 sept. 2026), puis la plus tôt disponible.

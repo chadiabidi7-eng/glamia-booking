@@ -25,10 +25,12 @@ export default function CarteCercle({ lat, lon, couleur = '#C77A96' }: { lat: nu
     let annule = false
     import('maplibre-gl').then(ml => {
       if (annule || !boite.current) return
-      carte = new ml.Map({
-        container: boite.current, style: 'https://tiles.openfreemap.org/styles/positron',
-        center: [lon, lat], zoom: 14.2, interactive: false, attributionControl: { compact: true },
-      })
+      try {
+        carte = new ml.Map({
+          container: boite.current, style: 'https://tiles.openfreemap.org/styles/positron',
+          center: [lon, lat], zoom: 14.2, interactive: false, attributionControl: { compact: true },
+        })
+      } catch { return }   // pas de WebGL : le cadre reste vide, sans erreur
       carte.on('load', () => {
         carte!.addSource('zone', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [cercle(lat, lon, RAYON_M)] } } })
         carte!.addLayer({ id: 'zone-fond', type: 'fill', source: 'zone', paint: { 'fill-color': couleur, 'fill-opacity': 0.22 } })
