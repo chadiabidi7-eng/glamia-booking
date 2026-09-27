@@ -44,12 +44,14 @@ function distanceLisible(m: number, locale: string) {
 }
 
 
-export default function Recherche({ langue, titre, chute, pros, centre }: {
+export default function Recherche({ langue, titre, chute, pros, centre, autourDuPoint = false }: {
   langue: Langue
   titre: string
   chute: string
   pros: ProTrouvee[]
   centre: Point | null
+  /** Recherche autour d'un point précis (sa position, une adresse) : les distances partent de lui, et le tri aussi. */
+  autourDuPoint?: boolean
 }) {
   const T = TEXTES[langue]
   const [metier, setMetier] = useState<Metier | null>(null)
@@ -68,13 +70,25 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
   useEffect(() => {
     try { const p = JSON.parse(sessionStorage.getItem(POSITION_CLE) ?? 'null'); if (p?.lat) setMoi(p) } catch { /* rien */ }
   }, [])
-  const origine = moi ?? centre
+  // Autour d'un point : c'est LUI qui compte (une adresse tapée ne doit pas
+  // être mesurée depuis une ancienne position). Sur une ville : sa position si
+  // elle s'est localisée, sinon le centre-ville.
+  const origine = autourDuPoint ? (centre ?? moi) : (moi ?? centre)
 
   const presents = useMemo(() => {
     const s = new Set<Metier>(); pros.forEach(p => p.metiers.forEach(m => s.add(m)))
     return (Object.keys(T.metiers) as Metier[]).filter(m => s.has(m))
   }, [pros, T.metiers])
-  const visibles = useMemo(() => (metier ? pros.filter(p => p.metiers.includes(metier)) : pros), [pros, metier])
+  const visibles = useMemo(() => {
+    const liste = metier ? pros.filter(p => p.metiers.includes(metier)) : pros
+    if (!autourDuPoint || !origine) return liste
+    // LES PLUS PERTINENTES D'ABORD, autour d'un point : la plus proche, avec un
+    // coup de pouce de 400 m pour celles qui montrent leur travail (3 photos)
+    // et de 300 m pour celles qui ont une place dans les trois jours.
+    const dans3j = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10)
+    const score = (p: ProTrouvee) => distanceM(origine, p) - (p.avecPhotos ? 400 : 0) - (p.dispo && p.dispo.date <= dans3j ? 300 : 0)
+    return [...liste].sort((a, b) => score(a) - score(b))
+  }, [pros, metier, autourDuPoint, origine])
 
   const choisirSurCarte = (slug: string) => {
     setActif(slug)
@@ -178,7 +192,10 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
                       </div>
                     )}
                     {p.accroche && (
-                      <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.45, color: ENCRE_DOUCE, textAlign: 'justify', hyphens: 'auto', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }}>
+                      // Son message, pas une légende : un gris plus foncé que ses spécialités,
+                      // aligné à gauche — justifié sur deux lignes coupées, les mots
+                      // s'écartaient et le « … » tombait au milieu (Chadi, 27 sept.).
+                      <p style={{ margin: '8px 0 0', fontSize: 13.5, lineHeight: 1.45, color: '#3D3339', textAlign: 'left', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'break-word' }}>
                         {p.accroche}
                       </p>
                     )}
