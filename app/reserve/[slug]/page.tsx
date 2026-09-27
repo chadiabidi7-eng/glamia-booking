@@ -1201,6 +1201,8 @@ export default function ReservationPage() {
   // Accordéon détails technique (une seule dépliée à la fois) + visionneuse photo plein écran
   // Visionneuse plein écran : toutes les photos de la technique + index affiché
   const [photoOverlay, setPhotoOverlay] = useState<{ photos: string[]; index: number } | null>(null)
+  // Le soin dont la cliente lit la description (un seul à la fois), à l'étape du choix.
+  const [descOuverte, setDescOuverte] = useState<string | null>(null)
 
   // ── Step 3 : Calendrier ──────────────────────
   const [date,     setDate]     = useState('')
@@ -4472,7 +4474,18 @@ export default function ReservationPage() {
                                   }}>
                                     {selected && <CheckCircle size={14} color="#fff" />}
                                   </div>
-                                  <div style={{ flex: 1 }}>
+                                  {/* LA PREMIÈRE PHOTO À GAUCHE, comme sur la vitrine : un appui
+                                      l'ouvre en grand avec les autres, sans choisir le soin. */}
+                                  {photosTech.length > 0 && (
+                                    <img
+                                      src={photosTech[0]}
+                                      alt={`${t.nom} — photo`}
+                                      loading="lazy"
+                                      onClick={e => { e.stopPropagation(); setPhotoOverlay({ photos: photosTech, index: 0 }) }}
+                                      style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
+                                    />
+                                  )}
+                                  <div style={{ flex: 1, minWidth: 0 }}>
                                     <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK : '#1f2937' }}>
                                       {t.nom}
                                     </p>
@@ -4492,28 +4505,25 @@ export default function ReservationPage() {
                                         return <>{t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit'))} · {formatDuree(t.duree)}</>
                                       })()}
                                     </p>
-                                    {/* LE TEXTE ET LES PHOTOS, SUR LA CARTE (3.0, Chadi) : plus de
-                                        bouton « En savoir plus ». Le texte se lit tel quel ; les
-                                        photos en miniatures, et un appui les ouvre en grand avec
-                                        le défilement. Toucher ailleurs sur la carte choisit le soin. */}
-                                    {descTech !== '' && (
+                                    {/* LA DESCRIPTION SE DÉPLIE (Chadi, 27 sept. 2026) : même geste que
+                                        sur la vitrine — un chevron à droite s'il y a un texte, rien
+                                        sinon. Le chevron ouvre le texte sans choisir le soin ; toucher
+                                        ailleurs sur la carte le choisit. */}
+                                    {descTech !== '' && descOuverte === t.id && (
                                       <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap', textAlign: 'justify', hyphens: 'auto' }}>{descTech}</p>
                                     )}
-                                    {photosTech.length > 0 && (
-                                      <span style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                                        {photosTech.map((url, pi) => (
-                                          <img
-                                            key={pi}
-                                            src={url}
-                                            alt={`${t.nom} — photo ${pi + 1}`}
-                                            loading="lazy"
-                                            onClick={e => { e.stopPropagation(); setPhotoOverlay({ photos: photosTech, index: pi }) }}
-                                            style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6', border: '1px solid #fff' }}
-                                          />
-                                        ))}
-                                      </span>
-                                    )}
                                   </div>
+                                  {descTech !== '' && (
+                                    <span
+                                      role="button"
+                                      aria-expanded={descOuverte === t.id}
+                                      aria-label={t.nom}
+                                      onClick={e => { e.stopPropagation(); setDescOuverte(o => (o === t.id ? null : t.id)) }}
+                                      style={{ alignSelf: 'center', display: 'inline-flex', padding: 6, margin: -6, flexShrink: 0, cursor: 'pointer' }}>
+                                      <ChevronDown size={18} color="#9ca3af" strokeWidth={2.2}
+                                        style={{ transition: 'transform .2s ease', transform: descOuverte === t.id ? 'rotate(180deg)' : 'none' }} />
+                                    </span>
+                                  )}
                                 </button>
                                 {selected && t.quantifiable && (
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px 2px 44px' }}>
