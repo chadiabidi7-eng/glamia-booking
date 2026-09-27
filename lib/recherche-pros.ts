@@ -66,6 +66,8 @@ export type ProTrouvee = {
   nbAvis: number
   metiers: Metier[]
   dispo: { date: string; heure: string } | null
+  /** Au moins 3 photos de réalisation : elle passe en tête (un conseil, pas une règle). */
+  avecPhotos: boolean
 }
 
 export type Ville = { nom: string; slug: string; pays: string; lat: number | null; lon: number | null }
@@ -113,8 +115,9 @@ type Profil = {
   adresse_lat: number | null; adresse_lon: number | null
   abonnement_actif: boolean | null; pro_pay_actif: boolean | null; trial_ends_at: string | null
   avis_actifs: boolean | null; sur_glamia: boolean | null
+  photos_travail: unknown
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail'
 
 const ouverte = (p: Profil) => p.abonnement_actif === true || p.pro_pay_actif === true
   || (!!p.trial_ends_at && new Date(p.trial_ends_at) > new Date())
@@ -206,8 +209,12 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       nbAvis: avisVisibles ? Number(n!.nombre) : 0,
       metiers: metiersDe.get(p.id) ?? [],
       dispo: dispos.get(p.id) ?? null,
+      avecPhotos: Array.isArray(p.photos_travail) && p.photos_travail.length >= 3,
     }
-  }).sort((a, b) => (a.dispo ? `${a.dispo.date}T${a.dispo.heure}` : 'z').localeCompare(b.dispo ? `${b.dispo.date}T${b.dispo.heure}` : 'z'))
+  })
+    // Celles qui montrent leur travail d'abord (Chadi, 27 sept. 2026), puis la plus tôt disponible.
+    .sort((a, b) => Number(b.avecPhotos) - Number(a.avecPhotos)
+      || (a.dispo ? `${a.dispo.date}T${a.dispo.heure}` : 'z').localeCompare(b.dispo ? `${b.dispo.date}T${b.dispo.heure}` : 'z'))
 }
 
 /** Les villes proposées pendant la frappe : d'abord celles où il y a des pros. */

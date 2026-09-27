@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profil } = await supabaseAdmin
     .from('profiles')
-    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif')
+    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif, abonnement_actif, trial_ends_at')
     .eq('id', proId)
     .maybeSingle()
 
@@ -114,13 +114,16 @@ export async function POST(req: NextRequest) {
   if (position) position = flouter(proId, position.lat, position.lon)
 
   return NextResponse.json({
-    // 3.0 : ce que la pro a mis dans « Personnaliser ma page ». Les couleurs
-    // et le texte du bouton sont Ultra : une pro qui arrête retrouve le rose.
-    style: profil.pro_pay_actif === true ? {
-      page: (profil.page_couleur as string) || null,
-      bouton: (profil.bouton_couleur as string) || null,
+    // 3.0 : ce que la pro a mis dans « Personnaliser ma page ». Le texte du
+    // bouton est à toutes ; la COULEUR demande Pro (ou Ultra, ou l'essai) —
+    // une pro qui arrête retrouve le rose (Chadi, 27 sept. 2026).
+    style: {
+      page: (profil.pro_pay_actif === true || profil.abonnement_actif === true
+        || (!!profil.trial_ends_at && new Date(profil.trial_ends_at as string) > new Date()))
+        ? ((profil.page_couleur as string) || null) : null,
+      bouton: null,
       texte: ((profil.bouton_texte as string) ?? '').trim() || null,
-    } : null,
+    },
     // 3.0 : ce que la pro a mis dans « Personnaliser ma page ».
     bio: ((profil.bio as string) ?? '').trim() || null,
     couverture: (profil.photo_couverture as string) || null,
