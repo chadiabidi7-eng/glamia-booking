@@ -3651,6 +3651,11 @@ export default function ReservationPage() {
             }))}
             photos={vitrine?.photos ?? []}
             avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
+            chargerAvis={pro?.id ? async depuis => {
+              const r = await fetch('/api/pro/avis-liste', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: pro.id, depuis }) })
+              const d = await r.json() as { avis: typeof avisMontrables; suite: boolean }
+              return { avis: (d.avis ?? []).map((x, i) => <div key={depuis + i}>{unAvis(x)}</div>), suite: !!d.suite }
+            } : undefined}
             position={vitrine?.position ?? null}
             phraseAdresse={attente}
             conditions={conditions}

@@ -2,8 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
-import { useState, type ReactNode } from 'react'
-import { Star } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Star, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +40,6 @@ export type CategorieVitrine = { nom: string; libelle: string; soins: SoinVitrin
 
 const SOINS_VISIBLES = 4
 const PHOTOS_VISIBLES = 6
-const AVIS_VISIBLES = 3
 
 function Bloc({ titre, chute, children }: { titre: string; chute?: string; children: ReactNode }) {
   return (
@@ -72,6 +71,8 @@ export default function Vitrine(props: {
   categories: CategorieVitrine[]
   photos: string[]
   avis: ReactNode[]
+  /** « Voir tout » : les avis, vingt à la fois (rendus par la page). */
+  chargerAvis?: (depuis: number) => Promise<{ avis: ReactNode[]; suite: boolean }>
   position: { lat: number; lon: number } | null
   phraseAdresse: string | null
   conditions: { libelle: string; oui: boolean }[]
@@ -87,7 +88,29 @@ export default function Vitrine(props: {
   const [categorie, setCategorie] = useState(0)
   const [tousSoins, setTousSoins] = useState(false)
   const [toutesPhotos, setToutesPhotos] = useState(false)
-  const [tousAvis, setTousAvis] = useState(false)
+  // LES AVIS DÉFILENT UN PAR UN (Chadi) : un toutes les 2 secondes, tout seuls ;
+  // dès que la cliente glisse elle-même, le défilement s'arrête pour de bon.
+  const [avisIndex, setAvisIndex] = useState(0)
+  const [auto, setAuto] = useState(true)
+  const depart = useRef<number | null>(null)
+  const nbAvisVitrine = props.avis.length
+  useEffect(() => {
+    if (!auto || nbAvisVitrine < 2) return
+    const t = setInterval(() => setAvisIndex(i => (i + 1) % nbAvisVitrine), 2000)
+    return () => clearInterval(t)
+  }, [auto, nbAvisVitrine])
+  const glisser = (sens: number) => { setAuto(false); setAvisIndex(i => (i + sens + nbAvisVitrine) % nbAvisVitrine) }
+
+  // « Voir tout » : la liste complète, dans une fenêtre, chargée vingt par vingt.
+  const [liste, setListe] = useState<{ avis: ReactNode[]; suite: boolean; charge: boolean } | null>(null)
+  const chargerSuite = async (depuis: number) => {
+    if (!props.chargerAvis) return
+    setListe(l => ({ avis: l?.avis ?? [], suite: l?.suite ?? false, charge: true }))
+    try {
+      const r = await props.chargerAvis(depuis)
+      setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
+    } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
+  }
   const cat = props.categories[categorie] ?? props.categories[0]
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
   const soins = cat ? (tousSoins ? cat.soins : cat.soins.slice(0, SOINS_VISIBLES)) : []
@@ -194,16 +217,48 @@ export default function Vitrine(props: {
         </Bloc>
       )}
 
-      {/* 5. LES AVIS */}
+      {/* 5. LES AVIS — un par un, qui défilent */}
       {props.avis.length > 0 && (
-        <Bloc titre={traduire('resa.avisDeSesClientes')}>
-          <div style={{ display: 'grid', gap: 16 }}>
-            {(tousAvis ? props.avis : props.avis.slice(0, AVIS_VISIBLES)).map((a, i) => (
-              <div key={i} style={{ paddingTop: i > 0 ? 16 : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>{a}</div>
-            ))}
+        <Bloc titre={traduire('resa.avisDeMesClientes')}>
+          <div style={{ overflow: 'hidden' }}
+            onTouchStart={e => { depart.current = e.touches[0].clientX }}
+            onTouchEnd={e => {
+              if (depart.current === null) return
+              const ecart = e.changedTouches[0].clientX - depart.current
+              depart.current = null
+              if (Math.abs(ecart) > 35) glisser(ecart < 0 ? 1 : -1)
+            }}>
+            <div style={{ display: 'flex', transform: `translateX(-${avisIndex * 100}%)`, transition: 'transform .45s cubic-bezier(.22,.61,.36,1)' }}>
+              {props.avis.map((a, i) => <div key={i} style={{ flex: '0 0 100%', minWidth: 0, boxSizing: 'border-box', paddingRight: 2 }}>{a}</div>)}
+            </div>
           </div>
-          {!tousAvis && props.avis.length > AVIS_VISIBLES && <Plus onClick={() => setTousAvis(true)}>{traduire('resa.voirTousLesAvis')}</Plus>}
+          {props.avis.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+              {props.avis.map((_, i) => (
+                <button key={i} aria-label={`${i + 1}`} onClick={() => { setAuto(false); setAvisIndex(i) }}
+                  style={{ width: i === avisIndex ? 16 : 6, height: 6, borderRadius: 3, border: 0, padding: 0, cursor: 'pointer', background: i === avisIndex ? 'var(--accent)' : '#e5e7eb', transition: 'width .3s, background .3s' }} />
+              ))}
+            </div>
+          )}
+          {props.chargerAvis && <Plus onClick={() => { setListe({ avis: [], suite: false, charge: true }); void chargerSuite(0) }}>{traduire('resa.voirTout')}</Plus>}
         </Bloc>
+      )}
+
+      {liste && (
+        <div onClick={() => setListe(null)} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()}
+            onScroll={e => { const el = e.currentTarget; if (liste.suite && !liste.charge && el.scrollTop + el.clientHeight > el.scrollHeight - 200) void chargerSuite(liste.avis.length) }}
+            style={{ width: '100%', maxWidth: 480, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '20px 20px 0 0', padding: '18px 16px calc(24px + env(safe-area-inset-bottom))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 className="vitrine-titre">{traduire('resa.avisDeMesClientes')}</h2>
+              <button onClick={() => setListe(null)} aria-label={traduire('resa.fermer')} style={{ width: 34, height: 34, borderRadius: 17, border: 0, background: '#f3f4f6', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: 16 }}>
+              {liste.avis.map((a, i) => <div key={i} style={{ paddingTop: i > 0 ? 16 : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>{a}</div>)}
+            </div>
+            {liste.charge && <p style={{ textAlign: 'center', color: ENCRE_DOUCE, fontSize: 13, margin: '16px 0 0' }}>…</p>}
+          </div>
+        </div>
       )}
 
       {/* 6. L'EMPLACEMENT */}
