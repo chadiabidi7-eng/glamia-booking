@@ -122,6 +122,9 @@ export default function Vitrine(props: {
         .vitrine .vitrine-titre { font-size: 17px; font-weight: 700; line-height: 1.3; margin: 0; }
         .vitrine-onglets { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; border-bottom: 1px solid #f3f4f6; }
         .vitrine-onglets::-webkit-scrollbar { display: none; }
+        @keyframes vitrineAvis { from { opacity: 0; transform: translateX(10px) } to { opacity: 1; transform: none } }
+        .vitrine-avis { animation: vitrineAvis .35s ease both }
+        @media (prefers-reduced-motion: reduce) { .vitrine-avis { animation: none } }
       `}</style>
 
       {/* 1. LE PROFIL */}
@@ -228,9 +231,10 @@ export default function Vitrine(props: {
               depart.current = null
               if (Math.abs(ecart) > 35) glisser(ecart < 0 ? 1 : -1)
             }}>
-            <div style={{ display: 'flex', transform: `translateX(-${avisIndex * 100}%)`, transition: 'transform .45s cubic-bezier(.22,.61,.36,1)' }}>
-              {props.avis.map((a, i) => <div key={i} style={{ flex: '0 0 100%', minWidth: 0, boxSizing: 'border-box', paddingRight: 2 }}>{a}</div>)}
-            </div>
+            {/* UN SEUL AVIS À LA FOIS, À SA PROPRE HAUTEUR — comme la page en
+                ligne. Une bande avec tous les avis côte à côte prenait la
+                hauteur du plus long et laissait un grand vide sous les courts. */}
+            <div key={avisIndex} className="vitrine-avis">{props.avis[avisIndex]}</div>
           </div>
           {props.avis.length > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
