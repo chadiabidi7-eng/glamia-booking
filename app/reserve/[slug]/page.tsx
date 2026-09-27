@@ -3645,6 +3645,7 @@ export default function ReservationPage() {
             categories={specialitesActives.map(sp => ({
               nom: sp.nom,
               libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
+              icone: <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={22} />,
               soins: sp.techniques.map(t => ({
                 cle: t.id ?? `${sp.nom}-${t.nom}`,
                 nom: t.nom,

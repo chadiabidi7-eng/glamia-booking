@@ -36,7 +36,8 @@ const ROSE_PROFOND = '#8E4E72'
 const FILET = '#e5e7eb'
 
 export type SoinVitrine = { cle: string; nom: string; photos: string[]; duree: string; prix: string }
-export type CategorieVitrine = { nom: string; libelle: string; soins: SoinVitrine[] }
+/** `icone` : l'image ronde de la spécialité (photo du catalogue, ou la sienne), posée devant son nom. */
+export type CategorieVitrine = { nom: string; libelle: string; icone?: React.ReactNode; soins: SoinVitrine[] }
 
 const SOINS_VISIBLES = 4
 const PHOTOS_VISIBLES = 6
@@ -180,7 +181,8 @@ export default function Vitrine(props: {
                 const on = i === categorie
                 return (
                   <button key={c.nom} onClick={() => { setCategorie(i); setTousSoins(false) }}
-                    style={{ flexShrink: 0, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: on ? ACCENT : ENCRE_DOUCE, borderBottom: `2px solid ${on ? ACCENT : 'transparent'}` }}>
+                    style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: on ? ACCENT : ENCRE_DOUCE, borderBottom: `2px solid ${on ? ACCENT : 'transparent'}` }}>
+                    {c.icone}
                     {c.libelle}
                   </button>
                 )
