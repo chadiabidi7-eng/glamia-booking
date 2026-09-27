@@ -23,3 +23,9 @@ function melanger(hex: string, vers: [number, number, number], part: number): st
 export const pale = (hex: string, part = 0.9) => melanger(hex, [255, 255, 255], part)
 /** Plus sombre : les textes et pastilles posés sur un fond pâle. */
 export const fonce = (hex: string, part = 0.28) => melanger(hex, [0, 0, 0], part)
+
+/** « #RRGGBB » → « rgba(r,g,b,a) », pour les halos et les ombres. */
+export function enRgba(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+}

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
-import { couleurValide, fonce, pale } from '@/lib/teinte'
+import { couleurValide, enRgba, fonce, pale } from '@/lib/teinte'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
 import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
@@ -3550,18 +3550,24 @@ export default function ReservationPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `24px 16px ${step === 2 ? '235px' : '95px'}` }}>
 
         {/* ── Bannière pro ── */}
-        <style>{`
+        {/* Le halo qui clignote à l'arrivée : rose fluo de Glamia, ou la couleur
+            de la pro quand elle en a choisi une (Ultra). */}
+        <style>{(() => {
+          const vif = couleurPro ?? '#FF4FA5'
+          const doux = couleurPro ? pale(couleurPro, 0.45) : '#FF8FC6'
+          const lueur = (a: number) => (couleurPro ? enRgba(couleurPro, a) : `rgba(255,79,165,${a})`)
+          return `
           @keyframes glamiaHalo {
             0%    { border-color: ${GLAMIA_PINK};
-                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
-            22%   { border-color: #FF4FA5;
-                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
-            41%   { border-color: #FF8FC6;
-                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.22), 0 3px 22px rgba(160,90,125,0.09) }
-            62%   { border-color: #FF4FA5;
-                    box-shadow: 0 0 16px 2px rgba(255,79,165,0.90), 0 3px 22px rgba(160,90,125,0.09) }
+                    box-shadow: 0 0 0 ${lueur(0)}, 0 3px 22px rgba(160,90,125,0.09) }
+            22%   { border-color: ${vif};
+                    box-shadow: 0 0 16px 2px ${lueur(0.9)}, 0 3px 22px rgba(160,90,125,0.09) }
+            41%   { border-color: ${doux};
+                    box-shadow: 0 0 16px 2px ${lueur(0.22)}, 0 3px 22px rgba(160,90,125,0.09) }
+            62%   { border-color: ${vif};
+                    box-shadow: 0 0 16px 2px ${lueur(0.9)}, 0 3px 22px rgba(160,90,125,0.09) }
             100%  { border-color: ${GLAMIA_PINK};
-                    box-shadow: 0 0 0 rgba(255,79,165,0), 0 3px 22px rgba(160,90,125,0.09) }
+                    box-shadow: 0 0 0 ${lueur(0)}, 0 3px 22px rgba(160,90,125,0.09) }
           }
           .glamia-cadre-actif {
             box-shadow: 0 3px 22px rgba(160,90,125,0.09);
@@ -3570,7 +3576,8 @@ export default function ReservationPage() {
           @media (prefers-reduced-motion: reduce) {
             .glamia-cadre-actif { animation: none }
           }
-        `}</style>
+        `
+        })()}</style>
 
         {/* 3.0 : la bio de la vitrine remplace le message d'accueil — il ne
             revient plus aux étapes suivantes. Une pro sans bio voit son ancien
