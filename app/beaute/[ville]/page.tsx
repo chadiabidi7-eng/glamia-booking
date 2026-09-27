@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import Recherche from '@/components/beaute/Recherche'
 import { langueDuVisiteur } from '@/lib/beaute-langue'
-import { TEXTES } from '@/lib/beaute-textes'
 import { prosDeLaVille, villeDepuisSlug } from '@/lib/recherche-pros'
 
 // glamia.pro/beaute/dijon — les pros d'une ville. Mise en cache cinq minutes :
@@ -14,7 +13,7 @@ export default async function PageVille({ params }: { params: Promise<{ ville: s
   if (!ville) notFound()
   const [pros, langue] = await Promise.all([prosDeLaVille(ville), langueDuVisiteur()])
   return (
-    <Recherche langue={langue} titre={TEXTES[langue].villeTitre} chute={ville.nom} pros={pros}
+    <Recherche langue={langue} titre="" chute={ville.nom} pros={pros}
       centre={ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon } : null} />
   )
 }

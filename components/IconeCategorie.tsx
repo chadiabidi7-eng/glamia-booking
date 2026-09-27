@@ -25,6 +25,9 @@ type Props = {
   icone?: string | null
   /** Les icônes de ses catégories à elle, par nom. */
   perso?: Record<string, string | null>
+  /** 3.0 : la photo ronde de « Autre », et celles de ses catégories, par nom. Elles passent avant l'icône. */
+  photo?: string | null
+  photos?: Record<string, string | null>
   size?: number
 }
 
@@ -58,8 +61,16 @@ function IconeLibre({ icone, initiale, size }: { icone: string | null; initiale:
   )
 }
 
-export default function IconeCategorie({ categorie, icone, perso, size = 28 }: Props) {
+export default function IconeCategorie({ categorie, icone, perso, photo, photos, size = 28 }: Props) {
   const initiale = (categorie ?? '').trim().charAt(0).toUpperCase() || '·'
+
+  // SA PHOTO D'ABORD (3.0, 27 sept. 2026) : une catégorie qu'elle a créée, ou
+  // « Autre », montre la photo qu'elle a choisie, en rond.
+  const saPhoto = categorie === CATEGORIE_AUTRE ? photo : photos?.[categorie]
+  if (typeof saPhoto === 'string' && /^https:\/\//.test(saPhoto)) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={saPhoto} alt="" width={size} height={size} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'inline-block' }} />
+  }
 
   if (categorie === CATEGORIE_AUTRE) {
     const choisie = typeof icone === 'string' && iconeValide(icone) ? icone : null

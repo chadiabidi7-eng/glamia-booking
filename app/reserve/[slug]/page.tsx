@@ -126,6 +126,7 @@ type ProInfo = {
   is_pro?: boolean
   categorie_autre_nom?: string | null
   categorie_autre_icone?: string | null
+  categorie_autre_photo?: string | null
   devise?: string
   /** Le pays de travail — il décide de la forme du numéro proposé en exemple. */
   pays?: string | null
@@ -539,6 +540,7 @@ export default function ReservationPage() {
   // Les catégories créées par la pro : leur icône, par nom. Une catégorie
   // absente d'ici et du catalogue est quand même dessinée — par son initiale.
   const [iconesPerso, setIconesPerso] = useState<Record<string, string | null>>({})
+  const [photosPerso, setPhotosPerso] = useState<Record<string, string | null>>({})
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
   const [submitting, setSubmitting] = useState(false)
   // ── LE REFUS DE CARTE NE PASSE PLUS PAR UNE BOÎTE DU NAVIGATEUR ───────────
@@ -1734,6 +1736,7 @@ export default function ReservationPage() {
         // le perd, et rien ne le signale. C'est ce qui est arrivé à ce nom.
         categorie_autre_nom: found.categorie_autre_nom ?? null,
         categorie_autre_icone: found.categorie_autre_icone ?? null,
+        categorie_autre_photo: (found as { categorie_autre_photo?: string | null }).categorie_autre_photo ?? null,
       })
       if (found.fidelite_config) setFideliteConfig(found.fidelite_config)
       // La pro demande-t-elle un acompte ou une empreinte ? On ne s'en sert que
@@ -1746,8 +1749,9 @@ export default function ReservationPage() {
       setEquipe(Array.isArray(d.equipe) ? (d.equipe as AssistantePage[]) : [])
       if (d.ordreCategories) setOrdreCategories(d.ordreCategories as string[])
       if (d.categoriesPerso && typeof d.categoriesPerso === 'object') {
-        const brut = d.categoriesPerso as Record<string, { icone?: unknown }>
+        const brut = d.categoriesPerso as Record<string, { icone?: unknown; photo?: unknown }>
         setIconesPerso(Object.fromEntries(Object.entries(brut).map(([nom, v]) => [nom, typeof v?.icone === 'string' ? v.icone : null])))
+        setPhotosPerso(Object.fromEntries(Object.entries(brut).map(([nom, v]) => [nom, typeof v?.photo === 'string' ? v.photo : null])))
       }
       setPageState('ready')
 
@@ -3302,7 +3306,7 @@ export default function ReservationPage() {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} perso={iconesPerso} size={16} />
+                    <IconeCategorie categorie={t.categorie} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={16} />
                     {/* Le badge suffit à dire que la prestation est comprise :
                         une phrase en plus sur chaque ligne alourdissait pour
                         redire ce que la couleur montre déjà. */}
@@ -4027,7 +4031,7 @@ export default function ReservationPage() {
                                           padding: '11px 12px', background: nbSelec > 0 ? PINK_LIGHT : '#fff',
                                           border: 'none', cursor: 'pointer', textAlign: 'left',
                                         }}>
-                                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} size={20} />
+                                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={20} />
                                         {/* LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE.
                                             Sa cliente lisait « Autre » là où la pro
                                             avait écrit « Réflexologie plantaire ». */}
@@ -4416,7 +4420,7 @@ export default function ReservationPage() {
                           border: 'none', cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} size={24} />
+                        <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={24} />
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK : '#1f2937' }}>
                           {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
                         </span>

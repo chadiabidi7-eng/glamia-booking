@@ -1,15 +1,17 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { List, Map as IconeCarte, Star } from 'lucide-react'
 import ChoixVille, { POSITION_CLE } from '@/components/beaute/ChoixVille'
+import Entete from '@/components/beaute/Entete'
+import SpecialiteIcon from '@/components/SpecialiteIcon'
 import { TEXTES, type Langue, type Metier } from '@/lib/beaute-textes'
 import type { ProTrouvee } from '@/lib/recherche-pros'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LES RÉSULTATS — la liste à gauche, la carte à droite (3.0, 27 sept. 2026).
+// LES RÉSULTATS — la liste à gauche, la carte à droite (3.0, 27 sept. 2026 ;
+// refaits le soir même : police du système, logo en grand, vraies spécialités).
 //
 // Ce que Chadi a demandé, et rien de plus : la photo de profil, le pseudo, la
 // prochaine disponibilité, la distance ; la note en haut à droite. Toucher une
@@ -19,13 +21,14 @@ import type { ProTrouvee } from '@/lib/recherche-pros'
 
 const Carte = dynamic(() => import('@/components/beaute/Carte'), { ssr: false })
 
-// La palette du Cockpit (onglet Design).
-const ENCRE = '#1C1C1E'
-const ENCRE_DOUCE = '#6B6B70'
-const ROSE = '#C77A96'
+// Les couleurs de l'app.
+const ENCRE = '#2B1A24'
+const ENCRE_DOUCE = '#7A6B73'
+const ROSE = '#C2779E'
 const ROSE_PROFOND = '#A85F7C'
-const ROSE_PALE = '#FBEEF2'
-const FILET = '#EDE0E8'
+const ROSE_PALE = '#FBF0F5'
+const FILET = '#F0E4EA'
+const VERT = '#2F9E62'
 
 type Point = { lat: number; lon: number }
 
@@ -87,96 +90,92 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
   }
 
   return (
-    <div className="beaute-page da-glamia">
+    <div className="beaute-page">
       <style>{`
-        .beaute-page { min-height: 100dvh; }
-        .beaute-tete { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: rgba(250,244,237,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid ${FILET}; }
-        .beaute-corps { display: grid; grid-template-columns: minmax(380px, 520px) 1fr; }
-        .beaute-liste { padding: 24px 24px 120px; }
-        .beaute-carte { position: sticky; top: 73px; height: calc(100dvh - 73px); border-left: 1px solid ${FILET}; }
-        .beaute-pro { display: flex; gap: 14px; align-items: center; padding: 14px; background: #fff; border: 1px solid ${FILET}; border-radius: 20px; text-decoration: none; color: inherit; transition: border-color .15s ease, transform .15s ease; }
-        .beaute-pro:hover, .beaute-pro.actif { border-color: ${ROSE}; }
+        .beaute-corps { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(400px, 560px) 1fr; }
+        .beaute-liste { padding: 32px 28px 120px; }
+        .beaute-carte { position: sticky; top: 73px; height: calc(100dvh - 73px); padding: 20px 20px 20px 0; }
+        .beaute-carte-boite { height: 100%; border-radius: 24px; overflow: hidden; border: 1px solid ${FILET}; }
+        .beaute-filtres { display: flex; gap: 8px; overflow-x: auto; margin: 22px -28px 4px; padding: 0 28px 6px; scrollbar-width: none; }
+        .beaute-filtres::-webkit-scrollbar { display: none; }
+        .beaute-filtre { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px; border-radius: 20px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; border: 1px solid ${FILET}; background: #fff; color: ${ENCRE}; transition: border-color .15s ease, background .15s ease; }
+        .beaute-filtre.sans-icone { padding: 0 16px; }
+        .beaute-filtre.on { border-color: ${ENCRE}; background: ${ENCRE}; color: #fff; }
+        .beaute-pro { display: flex; gap: 16px; align-items: center; padding: 16px; background: #fff; border: 1px solid ${FILET}; border-radius: 22px; text-decoration: none; color: inherit; box-shadow: 0 1px 2px rgba(43,26,36,0.04); transition: border-color .15s ease, box-shadow .2s ease, transform .15s ease; }
+        .beaute-pro:hover, .beaute-pro.actif { border-color: ${ROSE}; box-shadow: 0 10px 28px rgba(43,26,36,0.08); }
         .beaute-pro:active { transform: scale(0.99); }
         .beaute-bascule { display: none; }
         @media (max-width: 860px) {
-          .beaute-tete { padding: 12px 16px; }
           .beaute-corps { display: block; }
-          .beaute-liste { padding: 18px 16px 120px; }
-          .beaute-carte { position: fixed; inset: 69px 0 0 0; top: 69px; height: auto; border: 0; z-index: 10; }
+          .beaute-liste { padding: 22px 16px 120px; }
+          .beaute-filtres { margin: 18px -16px 4px; padding: 0 16px 6px; }
+          .beaute-carte { position: fixed; inset: 0; top: 0; height: auto; padding: 0; z-index: 35; }
+          .beaute-carte-boite { border-radius: 0; border: 0; }
           .beaute-carte.cachee { display: none; }
-          .beaute-bascule { display: flex; position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; }
-          .beaute-marque-long { display: none; }
+          .beaute-bascule { display: flex; position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 50; }
         }
         @media (min-width: 861px) { .beaute-carte.cachee { display: block; } }
       `}</style>
 
-      <header className="beaute-tete">
-        <Link href="/beaute" aria-label="Glamia" style={{ display: 'flex' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/glamia-logo.png" alt="Glamia" width={104} height={38} style={{ width: 104, height: 'auto' }} />
-        </Link>
-        <ChoixVille langue={langue} compact />
-      </header>
+      <Entete langue={langue}><ChoixVille langue={langue} compact /></Entete>
 
       <div className="beaute-corps">
         <main className="beaute-liste">
-          <p className="surtitre">{T.pros(visibles.length)}</p>
-          <h1 className="titre" style={{ fontSize: 40, margin: '10px 0 0' }}>{titre} <em>{chute}</em></h1>
+          {/* La ville seule, sur une ligne : la cliente sait ce qu'elle cherche. */}
+          <h1 className="gros-titre" style={{ fontSize: 'clamp(28px, 4vw, 38px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titre ? `${titre} ${chute}` : chute}</h1>
+          <p style={{ margin: '8px 0 0', fontSize: 15, color: ENCRE_DOUCE }}>{T.pros(visibles.length)}</p>
 
           {presents.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '18px -4px 6px', padding: '0 4px 4px', scrollbarWidth: 'none' }}>
-              {[null, ...presents].map(m => {
-                const on = metier === m
-                return (
-                  <button key={m ?? 'tout'} onClick={() => setMetier(m)}
-                    style={{ flexShrink: 0, height: 36, padding: '0 16px', borderRadius: 18, cursor: 'pointer', fontSize: 14, fontWeight: 600, border: `1px solid ${on ? ROSE : FILET}`, background: on ? ROSE_PALE : '#fff', color: on ? ROSE_PROFOND : ENCRE }}>
-                    {m ? T.metiers[m] : T.tout}
-                  </button>
-                )
-              })}
+            <div className="beaute-filtres">
+              {[null, ...presents].map(m => (
+                <button key={m ?? 'tout'} onClick={() => setMetier(m)} className={`beaute-filtre${metier === m ? ' on' : ''}${m ? '' : ' sans-icone'}`}>
+                  {m && <SpecialiteIcon specialite={TEXTES.fr.metiers[m]} size={28} />}
+                  {m ? T.metiers[m] : T.tout}
+                </button>
+              ))}
             </div>
           )}
 
           {visibles.length === 0 ? (
-            <div style={{ marginTop: 28, padding: '28px 22px', background: '#fff', border: `1px solid ${FILET}`, borderRadius: 20, textAlign: 'center' }}>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: 16 }}>{T.videTitre}</p>
+            <div style={{ marginTop: 28, padding: '32px 22px', background: 'var(--creme)', borderRadius: 22, textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 17 }}>{T.videTitre}</p>
               <p style={{ margin: '6px 0 0', color: ENCRE_DOUCE, fontSize: 14 }}>{T.videTexte}</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
               {visibles.map(p => (
                 <a key={p.slug} href={`${base}/reserve/${p.slug}`}
                   ref={el => { if (el) cartes.current.set(p.slug, el) }}
                   className={`beaute-pro${actif === p.slug ? ' actif' : ''}`}
                   onMouseEnter={() => setActif(p.slug)} onMouseLeave={() => setActif(a => (a === p.slug ? null : a))}>
-                  <div style={{ width: 64, height: 64, borderRadius: 32, overflow: 'hidden', flexShrink: 0, background: ROSE_PALE, display: 'grid', placeItems: 'center', boxShadow: `0 0 0 2px #fff, 0 0 0 3px ${FILET}` }}>
+                  <div style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', flexShrink: 0, background: ROSE_PALE, display: 'grid', placeItems: 'center' }}>
                     {p.photo
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={p.photo} alt="" width={64} height={64} style={{ width: 64, height: 64, objectFit: 'cover' }} loading="lazy" />
-                      : <span style={{ color: ROSE_PROFOND, fontWeight: 700, fontFamily: 'var(--font-fraunces), serif', fontSize: 22 }}>{p.nom.slice(0, 1).toUpperCase()}</span>}
+                      ? <img src={p.photo} alt="" width={76} height={76} style={{ width: 76, height: 76, objectFit: 'cover' }} loading="lazy" />
+                      : <span style={{ color: ROSE_PROFOND, fontWeight: 800, fontSize: 26 }}>{p.nom.slice(0, 1).toUpperCase()}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 16.5, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 17, letterSpacing: '-0.015em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</span>
                       {p.note !== null && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, flexShrink: 0 }} title={T.avis(p.nbAvis)}>
-                          <Star size={13} fill={ROSE} color={ROSE} strokeWidth={0} />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13.5, fontWeight: 700, flexShrink: 0 }} title={T.avis(p.nbAvis)}>
+                          <Star size={14} fill={ROSE} color={ROSE} strokeWidth={0} />
                           {p.note.toLocaleString(T.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                           <span style={{ color: ENCRE_DOUCE, fontWeight: 500 }}>({p.nbAvis})</span>
                         </span>
                       )}
                     </div>
                     {p.metiers.length > 0 && (
-                      <div style={{ fontSize: 13, color: ENCRE_DOUCE, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13.5, color: ENCRE_DOUCE, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.metiers.map(m => T.metiers[m]).join(' · ')}
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginTop: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 10 }}>
                       {p.dispo ? (
-                        <>
-                          <span style={{ width: 7, height: 7, borderRadius: 4, background: '#3DAA6B', flexShrink: 0 }} />
-                          <span style={{ fontWeight: 600 }}>{T.dispo} {quand(p.dispo)}</span>
-                        </>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 10px', borderRadius: 13, background: 'rgba(47,158,98,0.09)', color: VERT, fontWeight: 700 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 3, background: VERT }} />
+                          {T.dispo} {quand(p.dispo)}
+                        </span>
                       ) : <span style={{ color: ENCRE_DOUCE }}>{T.pasDeDispo}</span>}
                       {origine && <span style={{ marginLeft: 'auto', color: ENCRE_DOUCE, flexShrink: 0 }}>{distanceLisible(distanceM(origine, p), T.locale)}</span>}
                     </div>
@@ -188,12 +187,14 @@ export default function Recherche({ langue, titre, chute, pros, centre }: {
         </main>
 
         <aside className={`beaute-carte${vue === 'liste' ? ' cachee' : ''}`}>
-          <Carte pros={visibles} actif={actif} onChoisir={s => { choisirSurCarte(s); if (window.innerWidth <= 860) setVue('liste') }} centre={origine} />
+          <div className="beaute-carte-boite">
+            <Carte pros={visibles} actif={actif} onChoisir={s => { choisirSurCarte(s); if (window.innerWidth <= 860) setVue('liste') }} centre={origine} />
+          </div>
         </aside>
       </div>
 
       <button className="beaute-bascule" onClick={() => setVue(v => (v === 'liste' ? 'carte' : 'liste'))}
-        style={{ alignItems: 'center', gap: 8, height: 46, padding: '0 20px', borderRadius: 23, border: 0, background: ENCRE, color: '#fff', fontSize: 15, fontWeight: 600, boxShadow: '0 10px 24px rgba(43,26,36,0.25)', cursor: 'pointer' }}>
+        style={{ alignItems: 'center', gap: 8, height: 48, padding: '0 22px', borderRadius: 24, border: 0, background: ENCRE, color: '#fff', font: 'inherit', fontSize: 15, fontWeight: 700, boxShadow: '0 12px 28px rgba(43,26,36,0.28)', cursor: 'pointer' }}>
         {vue === 'liste' ? <><IconeCarte size={17} strokeWidth={2.2} /> {T.carte}</> : <><List size={17} strokeWidth={2.2} /> {T.liste}</>}
       </button>
     </div>

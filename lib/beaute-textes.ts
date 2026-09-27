@@ -2,15 +2,21 @@
 // ici on ne connaît pas encore de pro, donc pas encore sa langue à elle.
 // Fichier sans rien de serveur : les composants du navigateur l'importent.
 export type Langue = 'fr' | 'en' | 'es'
-export type Metier = 'ongles' | 'cils' | 'sourcils' | 'coiffure' | 'epilation' | 'maquillage' | 'soins'
+// Les spécialités du catalogue de l'app, sous leurs noms à elles (pas « Ongles » :
+// Manucure et Pédicure sont deux spécialités). « Autre » n'est pas un filtre.
+export type Metier = 'manucure' | 'pedicure' | 'cils' | 'sourcils' | 'coiffure' | 'epilation' | 'soinVisage'
+  | 'maquillage' | 'maquillageSemi' | 'massage' | 'soinDentaire' | 'bronzage'
 
 export const TEXTES = {
   fr: {
-    titre: 'Trouve ta pro',
-    titreChute: 'beauté.',
+    titre: 'Trouve ta pro beauté',
+    titreChute: '',
     surtitre: 'Réservation en ligne',
-    villeTitre: 'Tes pros à',
-    sousTitre: 'Les professionnelles Glamia près de chez toi. Réserve en ligne, en quelques secondes.',
+    villeTitre: 'Pros beauté à',
+    sousTitre: 'Et réserve en ligne, en quelques secondes.',
+    proQuestion: 'Tu es une pro ?',
+    proBandeau: 'Ton agenda et ta page de réservation, dans une app.',
+    proBouton: 'Découvrir Glamia',
     villePlaceholder: 'Ta ville',
     autour: 'Autour de moi',
     localisation: 'Localisation…',
@@ -30,14 +36,17 @@ export const TEXTES = {
     videTexte: 'Essaie une ville voisine, ou autour de toi.',
     avis: (n: number) => `${n} avis`,
     locale: 'fr-FR',
-    metiers: { ongles: 'Ongles', cils: 'Cils', sourcils: 'Sourcils', coiffure: 'Coiffure', epilation: 'Épilation', maquillage: 'Maquillage', soins: 'Soins' } as Record<Metier, string>,
+    metiers: { manucure: 'Manucure', pedicure: 'Pédicure', cils: 'Cils', sourcils: 'Sourcils', coiffure: 'Coiffure', epilation: 'Épilation', soinVisage: 'Soin visage', maquillage: 'Maquillage', maquillageSemi: 'Maquillage semi-permanent', massage: 'Massage', soinDentaire: 'Soin dentaire', bronzage: 'Bronzage' } as Record<Metier, string>,
   },
   en: {
-    titre: 'Find your',
-    titreChute: 'beauty pro.',
+    titre: 'Find your beauty pro',
+    titreChute: '',
     surtitre: 'Online booking',
-    villeTitre: 'Your pros in',
-    sousTitre: 'Glamia professionals near you. Book online in seconds.',
+    villeTitre: 'Beauty pros in',
+    sousTitre: 'And book online in seconds.',
+    proQuestion: 'Are you a pro?',
+    proBandeau: 'Your calendar and booking page, in one app.',
+    proBouton: 'Discover Glamia',
     villePlaceholder: 'Your city',
     autour: 'Near me',
     localisation: 'Locating…',
@@ -57,14 +66,17 @@ export const TEXTES = {
     videTexte: 'Try a nearby city, or near you.',
     avis: (n: number) => `${n} review${n > 1 ? 's' : ''}`,
     locale: 'en-GB',
-    metiers: { ongles: 'Nails', cils: 'Lashes', sourcils: 'Brows', coiffure: 'Hair', epilation: 'Waxing', maquillage: 'Make-up', soins: 'Treatments' } as Record<Metier, string>,
+    metiers: { manucure: 'Manicure', pedicure: 'Pedicure', cils: 'Lashes', sourcils: 'Brows', coiffure: 'Hair', epilation: 'Waxing', soinVisage: 'Facials', maquillage: 'Make-up', maquillageSemi: 'Semi-permanent make-up', massage: 'Massage', soinDentaire: 'Teeth', bronzage: 'Tanning' } as Record<Metier, string>,
   },
   es: {
-    titre: 'Encuentra tu',
-    titreChute: 'profesional.',
+    titre: 'Encuentra tu profesional de belleza',
+    titreChute: '',
     surtitre: 'Reserva online',
-    villeTitre: 'Tus profesionales en',
-    sousTitre: 'Las profesionales Glamia cerca de ti. Reserva online en segundos.',
+    villeTitre: 'Profesionales en',
+    sousTitre: 'Y reserva online en segundos.',
+    proQuestion: '¿Eres profesional?',
+    proBandeau: 'Tu agenda y tu página de reservas, en una app.',
+    proBouton: 'Descubrir Glamia',
     villePlaceholder: 'Tu ciudad',
     autour: 'Cerca de mí',
     localisation: 'Localizando…',
@@ -84,7 +96,7 @@ export const TEXTES = {
     videTexte: 'Prueba una ciudad cercana, o cerca de ti.',
     avis: (n: number) => `${n} reseña${n > 1 ? 's' : ''}`,
     locale: 'es-ES',
-    metiers: { ongles: 'Uñas', cils: 'Pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', maquillage: 'Maquillaje', soins: 'Tratamientos' } as Record<Metier, string>,
+    metiers: { manucure: 'Manicura', pedicure: 'Pedicura', cils: 'Pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', soinVisage: 'Tratamientos faciales', maquillage: 'Maquillaje', maquillageSemi: 'Micropigmentación', massage: 'Masaje', soinDentaire: 'Estética dental', bronzage: 'Bronceado' } as Record<Metier, string>,
   },
 } as const
 export type Textes = (typeof TEXTES)[Langue]

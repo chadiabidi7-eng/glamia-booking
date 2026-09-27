@@ -30,20 +30,31 @@ const HORIZON_DISPO = 30
 
 import type { Metier } from '@/lib/beaute-textes'
 export type { Metier }
-export const METIERS: Metier[] = ['ongles', 'cils', 'sourcils', 'coiffure', 'epilation', 'maquillage', 'soins']
+/** Dans l'ordre où les pros les pratiquent le plus. */
+export const METIERS: Metier[] = ['manucure', 'pedicure', 'cils', 'sourcils', 'coiffure', 'epilation', 'soinVisage', 'maquillage', 'maquillageSemi', 'massage', 'soinDentaire', 'bronzage']
 
-/** Les catégories du catalogue, dans les trois langues, ramenées à un métier. */
-function metierDe(categorie: string): Metier | null {
-  const c = categorie.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  if (/manucur|manicur|pedicur|ongle|nail|una/.test(c)) return 'ongles'
-  if (/cil|pestan|lash/.test(c)) return 'cils'
-  if (/sourcil|ceja|brow/.test(c)) return 'sourcils'
-  if (/coiff|cheveu|peluquer|hair|tresse|braid/.test(c)) return 'coiffure'
-  if (/epil|depil|wax|cire/.test(c)) return 'epilation'
-  if (/maquill|makeup|make-up|maquilla/.test(c)) return 'maquillage'
-  if (/soin|visage|massage|masaje|facial|spa/.test(c)) return 'soins'
-  return null
+const aplatir = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+/** Les noms des spécialités du catalogue, dans les trois langues de l'app. */
+const NOMS: Record<Metier, string[]> = {
+  manucure: ['Manucure', 'Manicure', 'Manicura'],
+  pedicure: ['Pédicure', 'Pedicure', 'Pedicura'],
+  cils: ['Cils', 'Lashes', 'Pestañas'],
+  sourcils: ['Sourcils', 'Brows', 'Cejas'],
+  coiffure: ['Coiffure', 'Hair', 'Peluquería'],
+  epilation: ['Épilation', 'Waxing', 'Depilación'],
+  soinVisage: ['Soin visage', 'Facials', 'Tratamientos faciales'],
+  maquillage: ['Maquillage', 'Make-up', 'Maquillaje'],
+  maquillageSemi: ['Maquillage semi-permanent', 'Semi-permanent make-up', 'Micropigmentación'],
+  massage: ['Massage', 'Masaje'],
+  soinDentaire: ['Soin dentaire', 'Teeth', 'Estética dental'],
+  bronzage: ['Bronzage', 'Tanning', 'Bronceado'],
 }
+const PAR_NOM = new Map<string, Metier>()
+for (const [m, noms] of Object.entries(NOMS) as [Metier, string[]][]) for (const n of noms) PAR_NOM.set(aplatir(n), m)
+
+/** Une catégorie de son catalogue → sa spécialité. Une catégorie qu'elle a nommée elle-même n'en a pas. */
+const metierDe = (categorie: string): Metier | null => PAR_NOM.get(aplatir(categorie)) ?? null
 
 export type ProTrouvee = {
   slug: string
