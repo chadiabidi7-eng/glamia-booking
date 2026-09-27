@@ -51,7 +51,11 @@ import { traduire } from '@/lib/i18n'
 // tant que moins de cinq comptes différents l'ont utilisée.
 const APP_STORE = (campagne: string) =>
   `https://apps.apple.com/app/apple-store/id6760552102?pt=128654461&ct=${campagne}&mt=8`
-const ROSE = '#C2779E'
+// GRIS ET NOIR (Chadi, 27 sept. 2026). La page porte maintenant la couleur de
+// la pro ; un pied rose Glamia jurait avec un vert ou un bleu. Le noir de
+// l'encre et un gris très clair vont avec toutes les couleurs, et le badge
+// App Store, noir lui aussi, s'y fond.
+const ENCRE = '#1C1C1E'
 
 type Variante = 'barre' | 'carte'
 
@@ -107,19 +111,15 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
         // et sale en vrai : le texte de la page se lisait au travers, et la
         // pilule avait l'air posée par erreur au milieu du contenu. Un beige
         // plein la pose franchement au-dessus.
-        // LE ROSE PÂLE DE LA MAISON, PAS LE BEIGE. Le beige tirait vers le
-        // papier et se confondait avec le fond crème de la page ; ce rose est
-        // assez présent pour détacher la pilule des cartes blanches, assez
-        // clair pour ne pas crier.
-        background: '#F9EEF4',
-        border: '1px solid rgba(194,119,158,0.42)',
-        // LE FILET ROSE : l'œil a besoin d'un point d'accroche coloré, et
-        // quatre pixels sur la tranche suffisent. Repeindre tout le fond en
-        // rose faisait de la pilule une réclame ; une arête colorée la fait
-        // seulement exister.
-        borderLeft: '4px solid #C2779E',
+        // UN GRIS TRÈS CLAIR, assez présent pour détacher la pilule des cartes
+        // blanches, neutre pour aller avec la couleur de n'importe quelle pro.
+        background: '#F4F4F5',
+        border: '1px solid rgba(28,28,30,0.10)',
+        // LE FILET NOIR : l'œil a besoin d'un point d'accroche, et quatre
+        // pixels sur la tranche suffisent.
+        borderLeft: `4px solid ${ENCRE}`,
         borderRadius: 14,
-        boxShadow: '0 6px 20px rgba(122,62,95,0.20)',
+        boxShadow: '0 6px 20px rgba(28,28,30,0.14)',
         padding: '7px 8px 7px 12px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
@@ -132,7 +132,7 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
               sans comprendre. Mis en second rang typographique, il précise
               sans voler la vedette au nom. */}
           <p style={{
-            margin: 0, fontSize: 12, fontWeight: 800, color: ROSE,
+            margin: 0, fontSize: 12, fontWeight: 800, color: ENCRE,
             letterSpacing: '0.13em', lineHeight: 1.15,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
@@ -149,7 +149,7 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
             <span style={{
               display: 'inline-block', verticalAlign: 'middle',
               fontSize: 9.5, fontWeight: 800, letterSpacing: '0.06em',
-              textTransform: 'uppercase', color: '#fff', background: ROSE,
+              textTransform: 'uppercase', color: '#fff', background: ENCRE,
               padding: '1.5px 6px', borderRadius: 6, lineHeight: 1.25,
               marginLeft: 3, position: 'relative', top: -1,
             }}>{traduire('resa.proPourLesPros')}</span>
@@ -160,7 +160,7 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
             // nom : on lisait « TON AGENDA… » avant « GLAMIA ». Minuscules,
             // poids normal, gris rosé — elle complète, elle ne concurrence pas.
             margin: '1px 0 0', fontSize: 9.5, fontWeight: 500,
-            color: '#A3899A', letterSpacing: 0, lineHeight: 1.25,
+            color: '#8A8A8E', letterSpacing: 0, lineHeight: 1.25,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{traduire('resa.proBaseline')}</p>
         </div>
@@ -174,15 +174,15 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
   // ── LA CARTE : là où personne n'est en train de réserver ──
   return (
     <div style={{
-      background: 'linear-gradient(160deg, #FFF1F7 0%, #FCE7F1 55%, #F7DCEC 100%)',
-      border: '1px solid #F4D3E4', borderRadius: 20,
+      background: 'linear-gradient(160deg, #FAFAFA 0%, #F2F2F3 100%)',
+      border: '1px solid #E6E6E8', borderRadius: 20,
       padding: '22px 18px 20px', textAlign: 'center', marginTop: 20,
-      boxShadow: '0 6px 18px rgba(194,119,158,0.10)',
+      boxShadow: '0 6px 18px rgba(28,28,30,0.06)',
     }}>
-      <p style={{ margin: '0 0 6px', fontSize: 16.5, fontWeight: 800, color: '#7A3E5F', lineHeight: 1.3 }}>
+      <p style={{ margin: '0 0 6px', fontSize: 16.5, fontWeight: 800, color: ENCRE, lineHeight: 1.3 }}>
         {traduire('resa.proAccroche')}
       </p>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9A6A82', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B6B70', lineHeight: 1.5 }}>
         {traduire('resa.proBaseline')}
       </p>
       {lien(<BadgeAppStore hauteur={46} />)}
