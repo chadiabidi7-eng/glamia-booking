@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
+import { couleurValide, fonce, pale } from '@/lib/teinte'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
 import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
@@ -194,8 +195,26 @@ function getStripePromise(compte: string) {
 const fmtCentimes = (c: number, sym = '€') =>
   `${(c / 100).toFixed(2).replace('.', ',').replace(',00', '')} ${sym}`
 
-const PINK = '#C2779E'
-const PINK_LIGHT = '#F9EEF4'
+// LES COULEURS DE LA PAGE. Rose Glamia par défaut ; la couleur choisie par une
+// pro Ultra les remplace dès que sa vitrine est chargée (voir teinterPage, en
+// tête de ReservationPage) — vitrine, étapes, confirmation, tout suit. Des
+// variables plutôt que des constantes : elles sont lues à chaque rendu, jusque
+// dans les petits composants de ce fichier et l'objet S des styles.
+const PINK_DEFAUT = '#C2779E'
+const PINK_LIGHT_DEFAUT = '#F9EEF4'
+const GLAMIA_PINK_DEFAUT = '#D4537E'
+let PINK = PINK_DEFAUT
+let PINK_LIGHT = PINK_LIGHT_DEFAUT
+// Plus sombre (textes sur fond pâle) et liseré, eux aussi dans sa couleur.
+let PINK_FONCE = '#8E4E72'
+let PINK_BORD = '#F2D7E6'
+function teinterPage(couleur: string | null) {
+  PINK = couleur ?? PINK_DEFAUT
+  PINK_LIGHT = couleur ? pale(couleur) : PINK_LIGHT_DEFAUT
+  PINK_FONCE = couleur ? fonce(couleur) : '#8E4E72'
+  PINK_BORD = couleur ? pale(couleur, 0.8) : '#F2D7E6'
+  GLAMIA_PINK = couleur ?? GLAMIA_PINK_DEFAUT
+}
 
 // Profondeur de la recherche du prochain créneau libre, en jours. À 30, une
 // pro complète jusqu'à début septembre ne renvoyait rien et la carte
@@ -212,7 +231,7 @@ const DEFAULT_HORAIRES: HorairesHebdo = {
   6: { actif: false, debut: '09:00', fin: '18:00' },
 }
 
-const GLAMIA_PINK = '#D4537E'
+let GLAMIA_PINK = GLAMIA_PINK_DEFAUT
 // ── LE BADGE DES OFFRES, IDENTIQUE À CELUI DE L'APP ──────────────────────────
 // Violet pour un pack, rose pour une promotion. La pro voit ces deux couleurs
 // dans son app depuis toujours ; en inventer d'autres ici obligerait sa cliente
@@ -600,6 +619,9 @@ export default function ReservationPage() {
     options?: string[]; obligatoire: boolean; bloque?: string[]; messageBlocage?: string
   }
   const [vitrine, setVitrine] = useState<Vitrine | null>(null)
+  // Sa couleur, avant tout rendu de ce qui suit (voir teinterPage).
+  const couleurPro = couleurValide(vitrine?.style?.page)
+  teinterPage(couleurPro)
   // La visionneuse : les photos d'un avis, et celle qu'on regarde.
   const [visionneuse, setVisionneuse] = useState<{ photos: string[]; index: number } | null>(null)
   // TOUT S'AFFICHE EN MÊME TEMPS. Le cadre du Bonjour arrivait le premier, la
@@ -726,7 +748,7 @@ export default function ReservationPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
         <span style={{
           width: 34, height: 34, borderRadius: 17, flexShrink: 0,
-          background: '#FBE9F2', color: '#8E4E72', display: 'grid', placeItems: 'center',
+          background: PINK_LIGHT, color: PINK_FONCE, display: 'grid', placeItems: 'center',
           fontSize: 12, fontWeight: 800,
         }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -769,7 +791,7 @@ export default function ReservationPage() {
 
       {a.reponse && (
         <div style={{
-          background: '#FFF6FA', borderLeft: `2px solid ${GLAMIA_PINK}`,
+          background: PINK_LIGHT, borderLeft: `2px solid ${GLAMIA_PINK}`,
           borderRadius: 9, padding: '8px 11px', marginTop: 11,
         }}>
           <p style={{ fontSize: 12.5, lineHeight: 1.45, color: '#4A444E', margin: 0 }}>{a.reponse}</p>
@@ -846,7 +868,7 @@ export default function ReservationPage() {
               style={{
                 flex: 1, border: 'none', borderRadius: 10, padding: '9px 0', cursor: 'pointer',
                 background: actif ? '#fff' : 'transparent',
-                color: actif ? '#8E4E72' : '#8A8A9A',
+                color: actif ? PINK_FONCE : '#8A8A9A',
                 fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
                 boxShadow: actif ? '0 1px 4px rgba(140,80,110,0.12)' : 'none',
                 transition: 'background .2s, color .2s',
@@ -936,12 +958,12 @@ export default function ReservationPage() {
   // ── LE RÈGLEMENT ── en haut, en toutes lettres, jamais plié.
   const blocReglement = aReglement && (
     <div style={{
-      background: '#FFF9FC', border: '1px solid #F2DDE9', borderRadius: 14,
+      background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 14,
       padding: '14px 16px', marginBottom: 26,
     }}>
       <p style={{
         fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
-        color: '#8E4E72', margin: '0 0 7px',
+        color: PINK_FONCE, margin: '0 0 7px',
       }}>{traduire('resa.reglement')}</p>
       <p style={{
         fontSize: 13.5, lineHeight: 1.6, color: '#4A444E',
@@ -1097,7 +1119,7 @@ export default function ReservationPage() {
                 rows={3}
                 style={{
                   width: '100%', boxSizing: 'border-box', border: '1px solid #F0DCE8',
-                  background: '#FFFAFC', borderRadius: 12, padding: 11, fontSize: 16,
+                  background: PINK_LIGHT, borderRadius: 12, padding: 11, fontSize: 16,
                   fontFamily: 'inherit', color: '#2D2D2D', resize: 'vertical',
                   outlineColor: GLAMIA_PINK,
                 }}
@@ -1116,8 +1138,8 @@ export default function ReservationPage() {
                       onClick={() => repondreFormulaire(q, r)}
                       style={{
                         border: `1px solid ${choisi ? GLAMIA_PINK : '#F0DCE8'}`,
-                        background: choisi ? GLAMIA_PINK : '#FFF6FA',
-                        color: choisi ? '#fff' : '#8E4E72',
+                        background: choisi ? GLAMIA_PINK : PINK_LIGHT,
+                        color: choisi ? '#fff' : PINK_FONCE,
                         borderRadius: 12, padding: '9px 16px', fontSize: 12.5,
                         fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                         transition: 'background .15s, color .15s, border-color .15s',
@@ -3670,7 +3692,7 @@ export default function ReservationPage() {
             ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
             onReserver={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
             couleurPage={vitrine?.style?.page ?? null}
-            couleurBouton={vitrine?.style?.bouton ?? null}
+            couleurBouton={vitrine?.style?.page ?? null}
             texteBouton={vitrine?.style?.texte ?? null}
           />
         )}
@@ -3790,7 +3812,7 @@ export default function ReservationPage() {
                         href={`/avis/${a.token}`}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
-                          background: '#FFF6FA', border: '1.5px solid #F2D7E6',
+                          background: PINK_LIGHT, border: `1.5px solid ${PINK_BORD}`,
                           borderRadius: 16, padding: 14, marginBottom: 10,
                         }}>
                         <span style={{
@@ -3799,7 +3821,7 @@ export default function ReservationPage() {
                           fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
                         }}>★</span>
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: '#8E4E72' }}>{traduire('resa.laisserAvis')}</span>
+                          <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: PINK_FONCE }}>{traduire('resa.laisserAvis')}</span>
                           <span style={{ display: 'block', fontSize: 12.5, color: '#A9819B', marginTop: 2 }}>
                             {a.prestations ? `${a.prestations} · ` : ''}
                             <span style={{ textTransform: 'capitalize' }}>{formatRdvDate(a.date)}</span>
@@ -4269,6 +4291,7 @@ export default function ReservationPage() {
                   const n = prochainPalier ? prochainPalier.position - tampons : 0
                   return (
                     <CarteFidelite
+                    couleur={couleurPro}
                       nbRonds={fideliteConfig.nb_ronds}
                       paliers={fideliteConfig.paliers}
                       tampons={tampons}
@@ -4327,6 +4350,7 @@ export default function ReservationPage() {
                 {/* Carte de fidélité vierge pour nouvelle cliente — le visuel de l'app (3.0) */}
                 {fideliteConfig?.active && (
                   <CarteFidelite
+                    couleur={couleurPro}
                     nbRonds={fideliteConfig.nb_ronds}
                     paliers={fideliteConfig.paliers}
                     tampons={0}
@@ -5212,7 +5236,7 @@ export default function ReservationPage() {
                     </button>
                     {fraisExpliques && (
                       <div style={{
-                        marginTop: 8, background: '#FDF3F8', border: `1px solid ${PINK}33`,
+                        marginTop: 8, background: PINK_LIGHT, border: `1px solid ${PINK}33`,
                         borderRadius: 12, padding: '11px 13px',
                       }}>
                         <p style={{ margin: '0 0 7px', fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>{traduire('resa.fraisCouvrent')}</p>
@@ -5229,7 +5253,7 @@ export default function ReservationPage() {
                 {/* Politique d'annulation mise en avant */}
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: 8,
-                  background: '#FDF3F8', border: `1px solid ${PINK}44`, borderRadius: 12,
+                  background: PINK_LIGHT, border: `1px solid ${PINK}44`, borderRadius: 12,
                   padding: '10px 12px', margin: '0 0 12px',
                 }}>
                   <AlertCircle size={16} color={PINK} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -5814,7 +5838,7 @@ function CalendarDay({
       : isComplet
         ? '#F3E4EC' // complet : rose grisé, distinct du jour off
         : hovered && !isDisabled
-          ? '#F9EEF4'
+          ? PINK_LIGHT
           : 'transparent'
 
   const color = isSelected
@@ -5875,17 +5899,19 @@ const S: Record<string, React.CSSProperties> = {
     outline: 'none', boxSizing: 'border-box', marginBottom: 12,
     background: '#fff', fontFamily: 'inherit',
   },
-  btn: {
-    width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-    background: PINK, color: '#fff', fontWeight: 700, fontSize: 16,
-    cursor: 'pointer', transition: 'opacity 0.15s', fontFamily: 'inherit',
+  get btn(): React.CSSProperties {
+    return {
+      width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+      background: PINK, color: '#fff', fontWeight: 700, fontSize: 16,
+      cursor: 'pointer', transition: 'opacity 0.15s', fontFamily: 'inherit',
+    }
   },
   card: {
     background: '#fff', borderRadius: 16, padding: 16,
     border: '1.5px solid #e5e7eb', boxSizing: 'border-box' as const,
   },
-  infoBox: {
-    background: '#F9EEF4', borderRadius: 16, padding: 16,
+  get infoBox(): React.CSSProperties {
+    return { background: PINK_LIGHT, borderRadius: 16, padding: 16 }
   },
   navBtn: {
     width: 36, height: 36, borderRadius: 18, border: '1px solid #e5e7eb',

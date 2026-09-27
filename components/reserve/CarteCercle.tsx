@@ -18,7 +18,7 @@ function cercle(lat: number, lon: number, rayon: number): [number, number][] {
   return pts
 }
 
-export default function CarteCercle({ lat, lon }: { lat: number; lon: number }) {
+export default function CarteCercle({ lat, lon, couleur = '#C77A96' }: { lat: number; lon: number; couleur?: string }) {
   const boite = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let carte: import('maplibre-gl').Map | null = null
@@ -31,11 +31,11 @@ export default function CarteCercle({ lat, lon }: { lat: number; lon: number }) 
       })
       carte.on('load', () => {
         carte!.addSource('zone', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [cercle(lat, lon, RAYON_M)] } } })
-        carte!.addLayer({ id: 'zone-fond', type: 'fill', source: 'zone', paint: { 'fill-color': '#C77A96', 'fill-opacity': 0.22 } })
-        carte!.addLayer({ id: 'zone-bord', type: 'line', source: 'zone', paint: { 'line-color': '#C77A96', 'line-width': 1.5 } })
+        carte!.addLayer({ id: 'zone-fond', type: 'fill', source: 'zone', paint: { 'fill-color': couleur, 'fill-opacity': 0.22 } })
+        carte!.addLayer({ id: 'zone-bord', type: 'line', source: 'zone', paint: { 'line-color': couleur, 'line-width': 1.5 } })
       })
     })
     return () => { annule = true; carte?.remove() }
-  }, [lat, lon])
+  }, [lat, lon, couleur])
   return <div ref={boite} style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', background: '#F2EEEC' }} />
 }

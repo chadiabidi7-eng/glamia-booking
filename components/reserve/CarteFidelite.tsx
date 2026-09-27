@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import { Gift, Heart } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
+import { fonce, pale } from '@/lib/teinte'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA CARTE DE FIDÉLITÉ, LA MÊME QUE DANS L'APP (3.0, 27 sept. 2026)
@@ -15,8 +16,8 @@ import { traduire } from '@/lib/i18n'
 // au-delà (7 = 4 + 3, 9 = 5 + 4…). La cliente voit la carte que sa pro voit.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ROSE = '#C2779E'
-const ROSE_FONCE = '#8E4E72'
+const ROSE_GLAMIA = '#C2779E'
+const ROSE_FONCE_GLAMIA = '#8E4E72'
 
 export type Palier = { position: number; type: string; valeur: number }
 
@@ -27,7 +28,9 @@ function rangees(nb: number): number[][] {
   return [positions.slice(0, haut), positions.slice(haut)]
 }
 
-export default function CarteFidelite({ nbRonds, paliers, tampons, libelle, droite, pied }: {
+export default function CarteFidelite({ nbRonds, paliers, tampons, libelle, droite, pied, couleur }: {
+  /** La couleur de la page de la pro (Ultra) ; rose Glamia sinon. */
+  couleur?: string | null
   nbRonds: number
   paliers: Palier[]
   tampons: number
@@ -36,13 +39,17 @@ export default function CarteFidelite({ nbRonds, paliers, tampons, libelle, droi
   pied?: ReactNode
 }) {
   const parPosition = new Map(paliers.map(p => [p.position, p]))
+  const ROSE = couleur ?? ROSE_GLAMIA
+  const ROSE_FONCE = couleur ? fonce(couleur) : ROSE_FONCE_GLAMIA
+  const FOND = couleur ? pale(couleur, 0.92) : '#FBEFF4'
+  const BORD = couleur ? pale(couleur, 0.8) : '#F3DCE7'
   const lignes = rangees(nbRonds)
   const plusLongue = Math.max(...lignes.map(l => l.length))
   // Les ronds prennent la place qu'il y a, plafonnés comme dans l'app.
   const taille = `min(56px, calc((100% - ${(plusLongue - 1) * 10}px) / ${plusLongue}))`
 
   return (
-    <div style={{ background: '#FBEFF4', borderRadius: 20, border: '1px solid #F3DCE7', padding: 16, marginBottom: 16 }}>
+    <div style={{ background: FOND, borderRadius: 20, border: `1px solid ${BORD}`, padding: 16, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14, minHeight: 26 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 26, height: 26, borderRadius: 13, background: '#fff', display: 'grid', placeItems: 'center' }}>
@@ -71,7 +78,7 @@ export default function CarteFidelite({ nbRonds, paliers, tampons, libelle, droi
                     }}>
                       <img src="/glamia-fleur.png" alt="" style={{ width: '58%', height: '58%', objectFit: 'contain', opacity: fait ? 1 : 0.22 }} />
                       {palier && (
-                        <span style={{ position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, background: ROSE_FONCE, border: '2px solid #FBEFF4', display: 'grid', placeItems: 'center' }}>
+                        <span style={{ position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, background: ROSE_FONCE, border: `2px solid ${FOND}`, display: 'grid', placeItems: 'center' }}>
                           <Gift size={11} color="#fff" strokeWidth={2.4} />
                         </span>
                       )}

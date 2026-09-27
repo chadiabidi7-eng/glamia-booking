@@ -85,7 +85,8 @@ export default function Vitrine(props: {
   texteBouton?: string | null
 }) {
   const ACCENT = props.couleurPage || ROSE
-  const BOUTON = props.couleurBouton || ROSE
+  // Une seule couleur, la sienne, partout — bouton compris (Chadi, 27 sept.).
+  const BOUTON = ACCENT
   const [categorie, setCategorie] = useState(0)
   const [tousSoins, setTousSoins] = useState(false)
   const [soinOuvert, setSoinOuvert] = useState<string | null>(null)
@@ -290,7 +291,7 @@ export default function Vitrine(props: {
       {/* 6. L'EMPLACEMENT */}
       {(props.position || props.ville) && (
         <Bloc titre={traduire('resa.emplacementTitre')}>
-          {props.position && <CarteCercle lat={props.position.lat} lon={props.position.lon} />}
+          {props.position && <CarteCercle lat={props.position.lat} lon={props.position.lon} couleur={props.couleurPage || undefined} />}
           {props.ville && <p style={{ margin: '10px 0 0', fontSize: 14, fontWeight: 600 }}>{props.ville}</p>}
           {props.phraseAdresse && <p style={{ margin: '3px 0 0', fontSize: 13, color: ENCRE_DOUCE, lineHeight: 1.5 }}>{props.phraseAdresse}</p>}
         </Bloc>
