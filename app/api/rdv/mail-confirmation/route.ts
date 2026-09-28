@@ -77,6 +77,22 @@ export async function POST(req: NextRequest) {
       if (elle?.prenom) nomPro = `${nomPro} · ${avecPrenom(pro.langue as string | null, elle.prenom)}`
     }
 
+    // LA RÉPONSE DE LA CLIENTE VA CHEZ LA PRO (28 sept. 2026). La fonction
+    // d'envoi pose l'adresse de la pro en « répondre à » — mais seulement si
+    // on lui donne un rendez-vous qui existe, pris à l'instant par CETTE
+    // cliente chez CETTE pro. Cette route est publique : sans ce contrôle,
+    // n'importe qui pourrait se faire écrire au nom d'une pro et récolter son
+    // adresse. Rien trouvé : le mail part quand même, sans « répondre à ».
+    const { data: rdvRecent } = await supabaseAdmin
+      .from('rendez_vous')
+      .select('id, clientes!inner(email)')
+      .eq('pro_id', proId)
+      .ilike('clientes.email', email)
+      .gt('created_at', new Date(Date.now() - 30 * 60_000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
     const rep = await fetch(FONCTION_ENVOI, {
       method: 'POST',
       headers: {
@@ -84,6 +100,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
+        rdv_id: (rdvRecent as { id?: string } | null)?.id ?? null,
         cliente_email: email,
         cliente_prenom: (body.cliente_prenom ?? '').trim(),
         pro_nom: nomPro,
