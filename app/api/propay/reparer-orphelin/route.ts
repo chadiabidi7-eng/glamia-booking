@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
               Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
             },
             body: JSON.stringify({
+              rdv_id: rdv.id,
               cliente_email: r.em,
               cliente_prenom: r.pr ?? '',
               pro_nom: pro?.pseudo || `${pro?.prenom ?? ''} ${pro?.nom ?? ''}`.trim(),

@@ -311,6 +311,9 @@ export async function POST(
               Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({
+              // Le rendez-vous : la fonction en tire l'adresse de la pro, à qui
+              // ira la réponse de la cliente (« répondre à »).
+              rdv_id: rdv.id,
               cliente_email: cliente.email,
               cliente_prenom: clientePrenom,
               pro_nom: proNom,
