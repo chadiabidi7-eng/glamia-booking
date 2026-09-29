@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { finaliserLienAcompte } from '@/lib/lien-acompte'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
 import { traduireDans } from '@/lib/i18n'
@@ -186,6 +187,15 @@ export async function POST(req: NextRequest) {
         // On note un candidat, une vérification repasse une minute plus tard
         // et classe sans bruit s'il a trouvé son rendez-vous entre-temps.
         await noterSiSansRendezVous(intent)
+
+        // Acompte demandé par la pro depuis la fiche RDV : même bascule que la
+        // page de paiement et l'app (lib/lien-acompte.ts).
+        if (intent.metadata?.glamia_type === 'acompte_lien') {
+          const { data: ligneAcompte } = await supabaseAdmin
+            .from('paiements').select('id').eq('stripe_payment_intent_id', intent.id).maybeSingle()
+          if (ligneAcompte) await finaliserLienAcompte(ligneAcompte.id as string)
+          break
+        }
 
         const { data: paiement } = await supabaseAdmin
           .from('paiements')

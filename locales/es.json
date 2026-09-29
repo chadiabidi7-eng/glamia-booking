@@ -315,7 +315,14 @@
     "regleEnSecurite": "Paga tu servicio de forma segura.",
     "enCours": "Pagando…",
     "payerMontant": "Pagar %{montant}",
-    "fraisCarteEtrangere": "Una tarjeta emitida en un país distinto al de tu profesional puede conllevar comisiones más altas."
+    "fraisCarteEtrangere": "Una tarjeta emitida en un país distinto al de tu profesional puede conllevar comisiones más altas.",
+    "securiseAvecPrenom": "Hola %{prenom}, asegura tu cita.",
+    "securise": "Asegura tu cita.",
+    "rienDebite": "Hoy no se cobra nada. Si no acudes o cancelas tarde, se podrán cobrar %{total}.",
+    "enregistrerCarte": "Guardar mi tarjeta",
+    "acompteRegle": "Señal pagada",
+    "empreinteEnregistree": "Tarjeta guardada",
+    "rdvSecurise": "Tu cita está asegurada. ¡Hasta pronto! 💅"
   },
   "avis": {
     "merci": "¡Gracias!",

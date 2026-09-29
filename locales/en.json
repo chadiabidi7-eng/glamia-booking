@@ -301,7 +301,14 @@
     "regleEnSecurite": "Pay for your appointment securely.",
     "enCours": "Paying…",
     "payerMontant": "Pay %{montant}",
-    "fraisCarteEtrangere": "A card issued in a country other than your professional's may incur higher fees."
+    "fraisCarteEtrangere": "A card issued in a country other than your professional's may incur higher fees.",
+    "securiseAvecPrenom": "Hi %{prenom}, secure your appointment.",
+    "securise": "Secure your appointment.",
+    "rienDebite": "Nothing is charged today. If you miss the appointment or cancel late, %{total} may be charged.",
+    "enregistrerCarte": "Save my card",
+    "acompteRegle": "Deposit paid",
+    "empreinteEnregistree": "Card saved",
+    "rdvSecurise": "Your appointment is secured. See you soon 💅"
   },
   "avis": {
     "merci": "Thank you!",

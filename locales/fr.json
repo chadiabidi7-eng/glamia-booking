@@ -301,7 +301,14 @@
     "regleEnSecurite": "Règle ta prestation en toute sécurité.",
     "enCours": "Paiement…",
     "payerMontant": "Payer %{montant}",
-    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés."
+    "fraisCarteEtrangere": "Une carte émise dans un autre pays que celui de ta praticienne peut entraîner des frais plus élevés.",
+    "securiseAvecPrenom": "Bonjour %{prenom}, sécurise ton rendez-vous.",
+    "securise": "Sécurise ton rendez-vous.",
+    "rienDebite": "Rien n'est débité aujourd'hui. En cas d'absence ou d'annulation tardive, %{total} pourront être prélevés.",
+    "enregistrerCarte": "Enregistrer ma carte",
+    "acompteRegle": "Acompte réglé",
+    "empreinteEnregistree": "Carte enregistrée",
+    "rdvSecurise": "Ton rendez-vous est sécurisé. À bientôt 💅"
   },
   "avis": {
     "merci": "Merci !",
