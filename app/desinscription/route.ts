@@ -37,12 +37,17 @@ function page(langue: Langue, contenu: string, statut = 200) {
 </body></html>`, { status: statut, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
 }
 
-// Deux sortes de mails de campagne, deux tables : « e » pour un désistement,
-// « f » pour un rappel de fidélité. Le refus vaut pour toutes les campagnes.
+// Trois sortes de mails de campagne, trois tables : « e » pour un désistement,
+// « f » pour un rappel de fidélité, « c » pour une campagne de la pro. Le refus
+// vaut pour toutes les campagnes.
 async function lireEnvoi(url: URL) {
   const e = url.searchParams.get('e')
   const f = url.searchParams.get('f')
-  const [table, id] = estId(e) ? ['desistement_envois', e] as const : estId(f) ? ['fidelite_envois', f] as const : [null, null]
+  const c = url.searchParams.get('c')
+  const [table, id] = estId(e) ? ['desistement_envois', e] as const
+    : estId(f) ? ['fidelite_envois', f] as const
+    : estId(c) ? ['campagne_envois', c] as const
+    : [null, null]
   if (!table || !id) return null
   const { data: envoi } = await supabaseAdmin.from(table).select('cliente_id, pro_id').eq('id', id).maybeSingle()
   if (!envoi) return null
