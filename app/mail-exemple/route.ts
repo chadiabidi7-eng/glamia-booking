@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server'
 // /mail-exemple?type=desistement|fidelite&pro=<slug> — ouvert depuis
 // « Campagne & Visibilité » dans l'app. Le mail est construit par la fonction
 // qui l'envoie (mode aperçu) : même code, donc même texte, mêmes couleurs.
-// On l'affiche comme une boîte de réception : expéditeur, objet, puis le mail.
+// Comme dans Gmail : l'objet, puis le mail. Rien d'autre.
 // Rien n'est écrit, rien ne part.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -33,16 +33,13 @@ export async function GET(req: NextRequest) {
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echapper(d.objet ?? '')}</title>
 <style>
-  html,body{margin:0;height:100%;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  html,body{margin:0;height:100%;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
   body{display:flex;flex-direction:column}
-  .entete{padding:14px 16px;border-bottom:1px solid #eee}
-  .de{font-size:13px;color:#8A7480}
-  .de b{color:#2B1A24;font-weight:600}
-  .objet{font-size:16px;font-weight:700;color:#2B1A24;margin-top:4px;line-height:1.3}
+  .objet{padding:18px 16px 14px;font-size:20px;font-weight:400;color:#1f1f1f;line-height:1.35}
   iframe{flex:1;width:100%;border:0}
 </style></head>
 <body>
-  <div class="entete"><div class="de"><b>${echapper(d.de ?? '')}</b></div><div class="objet">${echapper(d.objet ?? '')}</div></div>
+  <div class="objet">${echapper(d.objet ?? '')}</div>
   <iframe srcdoc="${echapper(d.html)}" sandbox></iframe>
 </body></html>`
   return new Response(page, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
