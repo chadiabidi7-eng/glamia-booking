@@ -1171,6 +1171,12 @@ export default function ReservationPage() {
   // Réduction personnelle de la cliente (cumulable avec la fidélité)
   // restants : null = illimitée, sinon nombre de RDV restants (0 = épuisée, non chargée)
   const [reductionCliente, setReductionCliente] = useState<{ type: string; valeur: number; restants: number | null } | null>(null)
+  // ── LE RÉCAPITULATIF DE FIN EST FIGÉ AU MOMENT DE LA CONFIRMATION (29 sept. 2026) ──
+  // Une réduction valable pour un seul rendez-vous est retirée de la fiche dès
+  // qu'elle sert : la page de fin recalculait alors le prix SANS elle et
+  // affichait 30 € pour un rendez-vous enregistré à 27 €. On garde ce qui a
+  // été réservé, tel quel.
+  const [recapFige, setRecapFige] = useState<{ final: number; total: number; reduction: { type: string; valeur: number; restants: number | null } | null } | null>(null)
   const [fideliteFiche, setFideliteFiche] = useState<{ tampons: number; cartes_completees: number; recompense_disponible: { type: string; valeur: number } | null } | null>(null)
 
   // ── Step 2 : Multi-select techniques ─────────
@@ -2939,6 +2945,7 @@ export default function ReservationPage() {
 
       // Réduction limitée : décompter une utilisation via la RPC sécurisée
       // (les RLS interdisent — à raison — l'update direct de clientes en anonyme)
+      setRecapFige({ final: prixFinal, total: prixTotal, reduction: reductionCliente })
       if (cId && reductionCliente && reductionCliente.restants != null) {
         try {
           const { error: reducError } = await supabase.rpc('consommer_reduction_cliente', { p_cliente_id: cId })
@@ -3253,7 +3260,7 @@ export default function ReservationPage() {
               { icon: <Calendar size={18} color={GLAMIA_PINK} />, label: formatDateLong(date) },
               { icon: <Clock size={18} color={GLAMIA_PINK} />, label: `${heure} · ${formatDuree(dureeChoisie)}` },
               ...(quiChoisi ? [{ icon: <User size={18} color={GLAMIA_PINK} />, label: traduire('resa.avecMaj', { prenom: prenomDe(quiChoisi) }) }] : []),
-              ...(prixFinal > 0 || prixTotal > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: prixFinal !== prixTotal ? formatPrix(prixFinal, pro?.devise) : formatPrix(prixTotal, pro?.devise) }] : []),
+              ...((recapFige?.final ?? prixFinal) > 0 || (recapFige?.total ?? prixTotal) > 0 ? [{ icon: <CreditCard size={18} color={GLAMIA_PINK} />, label: (recapFige?.final ?? prixFinal) !== (recapFige?.total ?? prixTotal) ? formatPrix((recapFige?.final ?? prixFinal), pro?.devise) : formatPrix((recapFige?.total ?? prixTotal), pro?.devise) }] : []),
             ].map((row, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ width: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</span>
@@ -3321,11 +3328,11 @@ export default function ReservationPage() {
               </div>
             )}
             {/* Réduction personnelle (badge cliente) — vert émeraude, distinct du rose fidélité */}
-            {reductionCliente && (
+            {(recapFige ? recapFige.reduction : reductionCliente) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ background: '#0E9E6E', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('resa.reduction')}</span>
                 <span style={{ fontSize: 13, color: '#0E9E6E', fontWeight: 600 }}>
-                  {reductionCliente.type === 'euros' ? `-${formatPrix(reductionCliente.valeur, pro?.devise)}` : `-${reductionCliente.valeur}%`}
+                  {(recapFige ? recapFige.reduction : reductionCliente)!.type === 'euros' ? `-${formatPrix((recapFige ? recapFige.reduction : reductionCliente)!.valeur, pro?.devise)}` : `-${(recapFige ? recapFige.reduction : reductionCliente)!.valeur}%`}
                 </span>
               </div>
             )}
@@ -3333,10 +3340,10 @@ export default function ReservationPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>{traduire('resa.total')}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK }}>
-                {prixFinal !== prixTotal ? (
-                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
+                {(recapFige?.final ?? prixFinal) !== (recapFige?.total ?? prixTotal) ? (
+                  <><span style={{ textDecoration: 'line-through', color: '#9ca3af', fontWeight: 400, marginRight: 4 }}>{formatPrix((recapFige?.total ?? prixTotal), pro?.devise)}</span>{(recapFige?.final ?? prixFinal) > 0 ? formatPrix((recapFige?.final ?? prixFinal), pro?.devise) : traduire('resa.offert')} · {formatDuree(dureeChoisie)}</>
                 ) : (
-                  <>{prixTotal > 0 ? formatPrix(prixTotal, pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
+                  <>{(recapFige?.total ?? prixTotal) > 0 ? formatPrix((recapFige?.total ?? prixTotal), pro?.devise) : '—'} · {formatDuree(dureeChoisie)}</>
                 )}
               </span>
             </div>
