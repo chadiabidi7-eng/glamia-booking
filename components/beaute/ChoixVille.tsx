@@ -110,7 +110,10 @@ export default function ChoixVille({ langue, compact = false }: { langue: Langue
     navigator.geolocation.getCurrentPosition(
       pos => allerAutour(pos.coords.latitude, pos.coords.longitude),
       () => setEtat('refus'),
-      { timeout: 10000, maximumAge: 600000, enableHighAccuracy: true },
+      // Une position approchée suffit pour « autour de moi » : elle arrive en une
+      // seconde par le wifi, là où le GPS traîne en intérieur jusqu'à expirer.
+      // (Sur une adresse en http, le navigateur refuse toujours : https exigé.)
+      { timeout: 15000, maximumAge: 600000, enableHighAccuracy: false },
     )
   }
 
