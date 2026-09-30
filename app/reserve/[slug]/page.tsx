@@ -1213,6 +1213,13 @@ export default function ReservationPage() {
   // dans le lien. On les repose pour qu'il ne reste que le téléphone à donner —
   // sans ça la cliente refait tout le parcours pour une place qui part vite.
   const repriseFaite = useRef(false)
+  // ── LE CRÉNEAU CLIQUÉ DANS UN MAIL (30 sept. 2026) ─────────────────────────
+  // « Vendredi 13:15 » dans un mail de campagne ou de désistement : le lien
+  // porte le jour et l'heure. Le choix de la prestation effaçait tout, et la
+  // cliente devait retrouver son créneau elle-même. On le garde ici, et, une
+  // fois la prestation choisie, on l'emmène sur ce jour, ce créneau déjà
+  // sélectionné : il ne lui reste qu'à continuer.
+  const creneauVoulu = useRef<{ jour: string; heure: string } | null>(null)
   const [repriseAttente, setRepriseAttente] = useState(false)
 
   const identiteRemplie = !!clientePrenom.trim() && !!clienteNom.trim()
@@ -1259,6 +1266,7 @@ export default function ReservationPage() {
     }
 
     if (retrouvees.length > 0) setTechniquesSelectionnees(retrouvees)
+    if (retrouvees.length === 0) creneauVoulu.current = { jour: jourUrl, heure: heureUrl }
     setDate(jourUrl)
     setHeure(heureUrl)
     setRepriseAttente(retrouvees.length > 0)
@@ -4826,6 +4834,16 @@ export default function ReservationPage() {
               Durée totale : {formatDuree(dureeTotal)}
             </p>
 
+            {/* Son créneau du mail, encore libre : il est déjà sélectionné dans
+                la grille, et ce bouton l'emmène à la suite. */}
+            {heure && slotsLibres.some(s => s.heure === heure) && (
+              <button
+                onClick={() => { const s = slotsLibres.find(x => x.heure === heure); setQuiChoisi(s?.qui ?? null); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
+                style={{ ...S.btn, marginTop: 0, marginBottom: 16 }}>
+                {traduire('resa.continuerAvec', { heure })}
+              </button>
+            )}
+
             {creneauPerdu && (
               <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '11px 13px', marginBottom: 16, textAlign: 'left' }}>
                 <AlertCircle size={17} color="#B42318" style={{ flexShrink: 0, marginTop: 1 }} />
@@ -5472,7 +5490,13 @@ export default function ReservationPage() {
                   comme avant. Et il y a toujours une réponse qui ne change
                   rien — répondre ne coûte qu'un appui. */}
               <button
-                onClick={() => { if (questionsSansReponse.length === 0) setStep(3) }}
+                onClick={() => {
+                  if (questionsSansReponse.length > 0) return
+                  const voulu = creneauVoulu.current
+                  if (voulu && !date && voulu.jour >= new Date().toISOString().slice(0, 10)) {
+                    setDate(voulu.jour); setHeure(voulu.heure); setStep(4)
+                  } else setStep(3)
+                }}
                 disabled={questionsSansReponse.length > 0}
                 title={questionsSansReponse.length > 0 ? traduire('resa.repondsQuestion') : undefined}
                 style={{

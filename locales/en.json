@@ -241,7 +241,8 @@
     "avec": "with %{prenom}",
     "avecQui": "With whom?",
     "peuImporte": "No preference",
-    "avecMaj": "With %{prenom}"
+    "avecMaj": "With %{prenom}",
+    "continuerAvec": "Continue with %{heure} →"
   },
   "commun": {
     "chargement": "Loading...",
