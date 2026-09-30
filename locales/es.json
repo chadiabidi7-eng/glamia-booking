@@ -254,7 +254,8 @@
     "avec": "con %{prenom}",
     "avecQui": "¿Con quién?",
     "peuImporte": "Me da igual",
-    "avecMaj": "Con %{prenom}"
+    "avecMaj": "Con %{prenom}",
+    "continuerAvec": "Continuar con %{heure} →"
   },
   "commun": {
     "chargement": "Cargando...",

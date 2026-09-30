@@ -4828,6 +4828,16 @@ export default function ReservationPage() {
               Durée totale : {formatDuree(dureeTotal)}
             </p>
 
+            {/* Son créneau du mail, encore libre : il est déjà sélectionné dans
+                la grille, et ce bouton l'emmène à la suite (30 sept. 2026). */}
+            {heure && slotsLibres.some(s => s.heure === heure) && (
+              <button
+                onClick={() => { const s = slotsLibres.find(x => x.heure === heure); setQuiChoisi(s?.qui ?? null); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
+                style={{ ...S.btn, marginTop: 0, marginBottom: 16 }}>
+                {traduire('resa.continuerAvec', { heure })}
+              </button>
+            )}
+
             {creneauPerdu && (
               <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '11px 13px', marginBottom: 16, textAlign: 'left' }}>
                 <AlertCircle size={17} color="#B42318" style={{ flexShrink: 0, marginTop: 1 }} />

@@ -254,7 +254,8 @@
     "avec": "avec %{prenom}",
     "avecQui": "Avec qui ?",
     "peuImporte": "Peu importe",
-    "avecMaj": "Avec %{prenom}"
+    "avecMaj": "Avec %{prenom}",
+    "continuerAvec": "Continuer avec %{heure} →"
   },
   "commun": {
     "chargement": "Chargement...",
