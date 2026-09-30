@@ -2905,6 +2905,8 @@ export default function ReservationPage() {
           notes: commentaire.trim(),
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
+          // La campagne qui l'a amenée ici, si elle vient d'un mail de campagne.
+          campagne_id: rechercheUrl.get('c') || null,
           // CE QU'ELLE A RÉPONDU PART AVEC LE RENDEZ-VOUS. Sans ça, la réponse
           // sert à ajouter la dépose puis disparaît — alors qu'« ongles posés
           // ailleurs » dit à la pro ce qu'elle doit préparer, et pourquoi ça

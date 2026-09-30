@@ -27,6 +27,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
+/** L'identifiant d'une campagne de la pro, ou null : on n'écrit jamais une marque qu'on n'a pas vérifiée. */
+async function campagneVerifiee(proId: string, brut: unknown): Promise<string | null> {
+  if (typeof brut !== 'string' || !/^[0-9a-f-]{36}$/i.test(brut)) return null
+  const { data } = await supabaseAdmin.from('campagnes').select('id').eq('id', brut).eq('pro_id', proId).maybeSingle()
+  return data?.id ?? null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -161,6 +168,10 @@ export async function POST(req: NextRequest) {
           : null,
         reduction_appliquee: remises ? remises.reduction : (body.reduction_appliquee ?? null),
         source: 'booking',
+        // SUIVI DES CAMPAGNES (30 sept. 2026) : le mail d'une campagne mène ici
+        // avec sa marque ; le rendez-vous la garde, et l'app compte « 3 rendez-vous
+        // pris » sur la campagne. Vérifiée : une vraie campagne de CETTE pro.
+        campagne_id: await campagneVerifiee(pro_id, (body as { campagne_id?: unknown }).campagne_id),
       })
       .select('id')
       .single()
