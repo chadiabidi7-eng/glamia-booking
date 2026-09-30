@@ -68,6 +68,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // VIVANTE = ABONNÉE, OU ESSAI EN COURS. Même règle que le guichet qui sert
     // la page, et `compte_test` sort d'office : les comptes de démonstration
     // n'ont rien à faire dans un moteur de recherche.
+    //
+    // ET RÉFÉRENCÉE = ULTRA + INTERRUPTEUR ALLUMÉ (30 sept. 2026). Le
+    // référencement Google est une fonction de l'abonnement Ultra, allumée
+    // par la pro dans Campagne & Visibilité. Une page qui n'y est pas porte
+    // aussi « noindex » (voir le layout de la réservation) : les deux
+    // disent la même chose.
     // `profiles` N'A PAS DE DATE DE DERNIÈRE MODIFICATION. J'avais demandé
     // `updated_at` par analogie avec les autres tables : la colonne n'existe
     // pas, la lecture échouait, et le fichier sortait vide sans rien casser
@@ -81,6 +87,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('slug, last_active_at, created_at, abonnement_actif, trial_ends_at')
       .not('slug', 'is', null)
       .neq('compte_test', true)
+      .eq('referencement_google', true)
+      .eq('pro_pay_actif', true)
       .or(`abonnement_actif.eq.true,trial_ends_at.gt.${maintenant}`)
       .limit(5000)
 

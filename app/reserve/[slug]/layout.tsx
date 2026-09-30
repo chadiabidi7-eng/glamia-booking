@@ -30,12 +30,17 @@ const supabaseServer = createClient(
 const profilDuSlug = cache(async (slug: string) => {
   const { data } = await supabaseServer
     .from('profiles')
-    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, prestations(data)')
+    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, prestations(data)')
     .eq('slug', slug)
     .order('created_at', { ascending: true })
     .limit(1)
   return data?.[0] ?? null
 })
+
+/** Ultra + interrupteur allumé : la page a le droit d'être dans Google. */
+function referencee(pro: { referencement_google?: unknown; pro_pay_actif?: unknown }): boolean {
+  return pro.referencement_google === true && pro.pro_pay_actif === true
+}
 
 /** Le nom que la cliente voit sur la page : le pseudo d'abord, le prénom sinon. */
 // LE MÊME QUE SUR LA PAGE, ET C'EST TOUT L'ENJEU. Le titre annonçait
@@ -182,6 +187,7 @@ export async function generateMetadata(
   const fallback: Metadata = {
     title: 'Glamia',
     description: traduireDans('fr', 'meta.siteDescription'),
+    robots: { index: false, follow: false },
   }
 
   try {
@@ -225,6 +231,14 @@ export async function generateMetadata(
     return {
       title,
       description,
+      // ── LE RÉFÉRENCEMENT GOOGLE EST UNE FONCTION ULTRA (30 sept. 2026) ──
+      // Une page n'entre dans Google que si la pro a Ultra ET a allumé le
+      // référencement dans Campagne & Visibilité. Les autres pages restent
+      // ouvertes à qui a le lien (bio Instagram, message), mais le moteur
+      // reçoit la consigne de ne pas les garder. Chadi : « aujourd'hui les
+      // pros ne savent pas qu'il y a un référencement, on ne retire rien à
+      // personne ». Le sitemap suit exactement la même règle.
+      robots: referencee(pro) ? { index: true, follow: true } : { index: false, follow: false },
       // L'ADRESSE OFFICIELLE DE LA PAGE. Sans elle, une même page atteinte par
       // deux chemins compte pour deux aux yeux du moteur, qui partage alors sa
       // confiance entre les deux au lieu de la donner à une seule.
