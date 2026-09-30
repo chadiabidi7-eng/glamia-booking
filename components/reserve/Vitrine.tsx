@@ -234,7 +234,7 @@ export default function Vitrine(props: {
         <Bloc titre={traduire('resa.photos')}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             {(toutesPhotos ? props.photos : props.photos.slice(0, PHOTOS_VISIBLES)).map((ph, i) => (
-              <button key={ph + i} onClick={() => props.ouvrirPhotos(props.photos, i)} style={{ aspectRatio: '1', padding: 0, border: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: '#F9EEF4' }}>
+              <button key={ph + i} onClick={() => props.ouvrirPhotos(props.photos, i)} style={{ aspectRatio: '4 / 5', padding: 0, border: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: '#F9EEF4' }}>
                 <img src={ph} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               </button>
             ))}
