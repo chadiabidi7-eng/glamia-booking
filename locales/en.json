@@ -739,6 +739,9 @@
     "apresH": "After %{heure}",
     "avantH": "Before %{heure}",
     "jours": "This day of the week",
-    "periode": "This period"
+    "periode": "This period",
+    "ceJourFerie": "A %{pct}% surcharge applies on this public holiday.",
+    "leJour": "A %{pct}% surcharge applies on %{jour}s.",
+    "cettePeriode": "A %{pct}% surcharge applies during this period."
   }
 }

@@ -1543,6 +1543,15 @@ export default function ReservationPage() {
   // et la réduction. Le serveur refait le même calcul à la réservation.
   const regleMajoration = regleDuCreneau(pro?.majorations, date, heure)
   const prixTotal = majorer(prixAvantMajoration, regleMajoration?.pourcentage ?? 0)
+  // La majoration qui couvre TOUTE la journée choisie (férié, jour, période) : dite une fois, en haut.
+  const regleDuJour = regleDuCreneau({ regles: (pro?.majorations?.regles ?? []).filter(r => r.type !== 'apres' && r.type !== 'avant') }, date, '12:00')
+  const majorationDuJour = regleDuJour?.pourcentage ?? 0
+  // La raison, dite avec le montant : « Ce jour férié », « Le dimanche », « Sur cette période ».
+  const phraseMajorationDuJour = !regleDuJour ? '' : regleDuJour.type === 'ferie'
+    ? traduire('majoration.ceJourFerie', { pct: majorationDuJour })
+    : regleDuJour.type === 'jours'
+      ? traduire('majoration.leJour', { pct: majorationDuJour, jour: new Date(`${date}T12:00:00Z`).toLocaleDateString(etiquette(), { weekday: 'long', timeZone: 'UTC' }) })
+      : traduire('majoration.cettePeriode', { pct: majorationDuJour })
   const libelleMajoration = (r: RegleResolue) =>
     r.type === 'apres' ? traduire('majoration.apresH', { heure: formatHeure(r.heure) })
       : r.type === 'avant' ? traduire('majoration.avantH', { heure: formatHeure(r.heure) })
@@ -1617,6 +1626,7 @@ export default function ReservationPage() {
           creneaux_bloques: Array.isArray(d.pro.creneaux_bloques) ? d.pro.creneaux_bloques : prev.creneaux_bloques,
           horaires_specifiques: (d.pro.horaires_specifiques && typeof d.pro.horaires_specifiques === 'object') ? d.pro.horaires_specifiques : prev.horaires_specifiques,
           planning_variable: d.pro.planning_variable === true,
+          majorations: d.pro.majorations ?? null,
         } : prev)
         // Force le recalcul des créneaux : un RDV a pu être pris entretemps.
         setRdvVersion(v => v + 1)
@@ -1771,6 +1781,8 @@ export default function ReservationPage() {
         horaires_specifiques:  (found.horaires_specifiques && typeof found.horaires_specifiques === 'object') ? found.horaires_specifiques : {},
         planning_variable:     found.planning_variable === true,
         formule:               found.formule ?? 'free',
+        // Les majorations (Ultra) : sans cette ligne, le serveur les envoie et la page les perd.
+        majorations:           found.majorations ?? null,
         instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
         snapchat:         found.snapchat ?? undefined,
@@ -4950,24 +4962,24 @@ export default function ReservationPage() {
             ) : (
               <>
               {/* LA MAJORATION SE DIT ICI, AU CHOIX DE L'HEURE (Chadi, 4 oct. 2026) :
-                  c'est là qu'elle peut encore prendre un autre créneau. Une ligne,
-                  seulement les jours concernés ; « +X % » sous chaque heure touchée.
+                  c'est là qu'elle peut encore prendre un autre créneau.
+                  · Une majoration de TOUTE LA JOURNÉE (férié, jour de la semaine,
+                    période) : une ligne grise au-dessus, rien sur les cases.
+                  · Une majoration de CERTAINES HEURES (après / avant) : « +X% »
+                    en gris, en exposant juste après l'heure, sans grandir la case.
                   Rien au récapitulatif : le total majoré suffit. */}
-              {(() => {
-                const touchees = (pro?.majorations?.regles ?? []).filter(r => slotsLibres.some(x => regleDuCreneau({ regles: [r] }, date, x.heure)))
-                if (!touchees.length) return null
-                return (
-                  <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, textAlign: 'center', margin: '0 0 12px' }}>
-                    {touchees.map(r => `${libelleMajoration(r)} : +${r.pourcentage} %`).join(' · ')}
-                  </p>
-                )
-              })()}
+              {majorationDuJour > 0 && (
+                <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500, textAlign: 'center', margin: '0 0 12px' }}>
+                  {phraseMajorationDuJour}
+                </p>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                 {slotsLibres.map(s => (
                   <button
                     key={s.heure}
                     onClick={() => { setCreneauPerdu(null); setHeure(s.heure); setQuiChoisi(s.qui ?? null); setStep(5); setTimeout(() => { step5Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100) }}
                     style={{
+                      position: 'relative',
                       padding: '12px 0',
                       borderRadius: 12,
                       border: `1.5px solid ${heure === s.heure ? PINK : '#e5e7eb'}`,
@@ -4979,9 +4991,12 @@ export default function ReservationPage() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {s.heure}
-                    {/* MAJORATION : le créneau coûte plus, la cliente le voit avant de choisir. */}
-                    {(() => { const m = pourcentageDuCreneau(pro?.majorations, date, s.heure); return m > 0 ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: heure === s.heure ? '#fff' : PINK_TEXTE, marginTop: 2 }}>+{m} %</span> : null })()}
+                    {/* MAJORATION : « +X% » collé en exposant à l'heure, sans la décentrer
+                        ni grandir la case — il flotte à sa droite. */}
+                    <span style={{ position: 'relative' }}>
+                      {s.heure}
+                      {(() => { const m = pourcentageDuCreneau(pro?.majorations, date, s.heure); return m > majorationDuJour ? <span style={{ position: 'absolute', left: '100%', top: -5, marginLeft: 2, fontSize: 9.5, fontWeight: 600, whiteSpace: 'nowrap', color: heure === s.heure ? 'rgba(255,255,255,0.85)' : '#9ca3af' }}>+{m}%</span> : null })()}
+                    </span>
                     {/* ÉQUIPE : ce créneau, seule l'assistante peut le tenir. */}
                     {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: heure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: prenomDe(s.qui) })}</span> : null}
                   </button>

@@ -736,6 +736,9 @@
     "apresH": "Después de las %{heure}",
     "avantH": "Antes de las %{heure}",
     "jours": "Este día de la semana",
-    "periode": "Este periodo"
+    "periode": "Este periodo",
+    "ceJourFerie": "Este festivo se aplica un recargo del %{pct} %.",
+    "leJour": "Los %{jour} se aplica un recargo del %{pct} %.",
+    "cettePeriode": "En este periodo se aplica un recargo del %{pct} %."
   }
 }
