@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { normaliserTelephone } from '@/lib/telephone'
+import { aPro, formuleDe } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -61,6 +62,11 @@ export async function POST(req: NextRequest) {
   const { pro_id, jour, duree_min, prenom, nom, telephone, email, prestations } = body
 
   if (!estId(pro_id)) return NextResponse.json({ error: 'pro_invalide' }, { status: 400 })
+  // La liste d'attente est une fonction Pro (4 oct. 2026).
+  {
+    const { data: f } = await supabaseAdmin.from('profiles').select('abonnement_actif, pro_pay_actif, trial_ends_at').eq('id', pro_id).maybeSingle()
+    if (!aPro(formuleDe(f))) return NextResponse.json({ error: 'non_disponible' }, { status: 403 })
+  }
   if (!estJour(jour)) return NextResponse.json({ error: 'jour_invalide' }, { status: 400 })
 
   const duree = Number(duree_min)

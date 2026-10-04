@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { adressePourEtape } from '@/lib/adresse-due'
 import { assistantesDe } from '@/lib/equipe'
+import { aPro, formuleDe } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — la page publique d'une pro : son profil, son catalogue.
@@ -96,6 +97,12 @@ export async function POST(req: NextRequest) {
 
     // Ces trois champs ne décident plus rien ici, et ne sortent toujours pas.
     const { abonnement_actif: _a, pro_pay_actif: _p, trial_ends_at: _t, ...profil } = pro as Record<string, unknown>
+    // La formule sort (pas les trois champs) : la page s'en sert pour la liste
+    // d'attente. Le planning libre est une fonction Pro : sans elle, la page
+    // retombe sur ses horaires habituels (4 oct. 2026).
+    const formule = formuleDe(pro as Record<string, unknown>)
+    profil.formule = formule
+    if (!aPro(formule)) profil.planning_variable = false
 
     // L'identifiant sort aussi : le pied de page « Rejoins Glamia » compte les
     // clics par pro, et une page fermée est justement celle qu'une consœur

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { aPro, formuleDe } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LE PRIX SE CALCULE ICI, PAS DANS LE NAVIGATEUR.
@@ -276,7 +277,11 @@ export async function remisesVerifiees(
       ?? (palierAtteint ? { type: palierAtteint.type, valeur: palierAtteint.valeur } : null)
     : null
 
+  // Les réductions personnelles sont une fonction Pro (4 oct. 2026).
+  const { data: f } = await supabaseAdmin.from('profiles').select('abonnement_actif, pro_pay_actif, trial_ends_at').eq('id', proId).maybeSingle()
+  const reductionsPro = aPro(formuleDe(f))
   const reduction: Remise = veutReduction
+    && reductionsPro
     && cliente?.reduction_type
     && cliente?.reduction_valeur
     && cliente.reduction_rdv_restants !== 0

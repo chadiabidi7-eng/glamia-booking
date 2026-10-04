@@ -119,6 +119,8 @@ type ProInfo = {
   creneaux_bloques: CreneauBloque[]
   horaires_specifiques: HorairesSpecifiques
   planning_variable: boolean
+  /** Free, Pro ou Ultra (3.0) : la liste d'attente n'est proposée qu'en Pro. */
+  formule?: 'free' | 'pro' | 'ultra'
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -1756,6 +1758,7 @@ export default function ReservationPage() {
         creneaux_bloques:      Array.isArray(found.creneaux_bloques) ? found.creneaux_bloques : [],
         horaires_specifiques:  (found.horaires_specifiques && typeof found.horaires_specifiques === 'object') ? found.horaires_specifiques : {},
         planning_variable:     found.planning_variable === true,
+        formule:               found.formule ?? 'free',
         instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
         snapchat:         found.snapchat ?? undefined,
@@ -4867,7 +4870,7 @@ export default function ReservationPage() {
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
                 <p style={{ color: PINK_TEXTE, fontWeight: 600 }}>{traduire('resa.chargementCreneaux')}</p>
               </div>
-            ) : slotsLibres.length === 0 ? (
+            ) : slotsLibres.length === 0 && pro?.formule !== 'free' ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}>
                 <Clock size={40} color="#9ca3af" style={{ marginBottom: 12 }} />
                 <p style={{ color: '#6b7280', marginBottom: 20 }}>{traduire('resa.aucunCreneauCeJour', { duree: formatDuree(dureeTotal) })}</p>

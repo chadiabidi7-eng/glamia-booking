@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { aPro, formuleDe } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA VITRINE D'UNE PRO — tout ce que sa page montre avant de réserver.
@@ -152,7 +153,8 @@ export async function POST(req: NextRequest) {
     // Éteint, on ne renvoie RIEN. Envoyer les questions en laissant le
     // navigateur décider de ne pas les poser, c'est publier le formulaire d'une
     // pro qui l'a justement fermé.
-    formulaire: profil.formulaire_actif === false
+    // Le formulaire de pré-réservation est une fonction Pro (4 oct. 2026).
+    formulaire: profil.formulaire_actif === false || !aPro(formuleDe(profil))
       ? { nouvelles: [], connues: [] }
       : (profil.formulaire ?? { nouvelles: [], connues: [] }),
     demander_inspirations: profil.demander_inspirations !== false,

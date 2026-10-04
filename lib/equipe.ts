@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateSlots, minToTime, delaiEntreClientes, delaiDe, type Slot } from '@/lib/creneaux'
+import { aPro, formuleDe, CHAMPS_FORMULE } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ÉQUIPE — une pro, une assistante, et une page de réservation qui fusionne
@@ -79,9 +80,11 @@ export async function assistanteValide(admin: SupabaseClient, piloteId: string, 
  * travaillent au même endroit.
  */
 export async function profilHorairesPour(admin: SupabaseClient, piloteId: string, praticienneId: string | null): Promise<ProfilHoraires | null> {
-  const { data: pro } = await admin.from('profiles').select(CHAMPS_HORAIRES).eq('id', piloteId).maybeSingle()
+  const { data: pro } = await admin.from('profiles').select(`${CHAMPS_HORAIRES}, ${CHAMPS_FORMULE}`).eq('id', piloteId).maybeSingle()
   if (!pro) return null
-  if (!praticienneId) return pro as ProfilHoraires
+  // Le planning libre est une fonction Pro (4 oct. 2026) : sans, horaires habituels.
+  if (!aPro(formuleDe(pro as never))) (pro as { planning_variable: boolean | null }).planning_variable = false
+  if (!praticienneId) return pro as unknown as ProfilHoraires
   const { data: elle } = await admin.from('profiles').select(CHAMPS_HORAIRES).eq('id', praticienneId).eq('pilote_id', piloteId).maybeSingle()
   if (!elle) return null
   // Le délai avant un rendez-vous est un choix de la pro pour sa page : il
