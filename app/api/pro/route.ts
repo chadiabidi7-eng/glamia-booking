@@ -85,25 +85,16 @@ export async function POST(req: NextRequest) {
 
     if (!pro) return NextResponse.json({ etat: 'introuvable' })
 
-    // La page ne s'ouvre que si l'abonnement est actif ou l'essai en cours.
-    // Ne jamais se fier à `is_pro` seul : il n'est synchronisé qu'au lancement
-    // de l'app, les expirées jamais revenues le gardent à true.
+    // ── LA PAGE EST OUVERTE À TOUTES (3.0, 4 octobre 2026) ──────────────────
+    // La 2.x fermait la page des pros sans abonnement ni essai en cours. En 3.0
+    // la réservation en ligne fait partie du gratuit, sans limite : la page de
+    // chaque pro reste ouverte, abonnée ou non (décision de Chadi).
     //
-    // GLAMIA PRO PAY OUVRE LA PAGE À LUI SEUL. C'est l'abonnement le plus cher —
-    // payer 19,99 € ne peut pas donner moins que payer 14,99 €. En théorie le
-    // webhook lève `abonnement_actif` en même temps que `pro_pay_actif`, donc
-    // cette deuxième condition ne sert jamais. Mais le jour où les deux
-    // divergent — resynchro ratée, événement perdu, correction à la main —
-    // c'est une abonnée payante dont la page de réservation se ferme, et elle
-    // perd des rendez-vous sans comprendre pourquoi. Constaté le 5 août 2026
-    // sur le compte de développement : pro_pay_actif à vrai, abonnement_actif
-    // à faux. Deux verrous valent mieux qu'un sur la porte qui fait vivre les
-    // pros.
-    const accesActif = pro.abonnement_actif === true
-      || pro.pro_pay_actif === true
-      || (pro.trial_ends_at && new Date(pro.trial_ends_at as string) > new Date())
+    // Cette branche du booking ne part en ligne qu'avec l'app 3.0 : tant que
+    // la 2.6.1 tourne, `main` continue de fermer les pages en pause.
+    const accesActif = true
 
-    // Ces trois champs servaient à décider ici : ils ne sortent pas.
+    // Ces trois champs ne décident plus rien ici, et ne sortent toujours pas.
     const { abonnement_actif: _a, pro_pay_actif: _p, trial_ends_at: _t, ...profil } = pro as Record<string, unknown>
 
     // L'identifiant sort aussi : le pied de page « Rejoins Glamia » compte les

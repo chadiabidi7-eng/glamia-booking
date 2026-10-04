@@ -124,8 +124,9 @@ type Profil = {
 }
 const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil'
 
-const ouverte = (p: Profil) => p.abonnement_actif === true || p.pro_pay_actif === true
-  || (!!p.trial_ends_at && new Date(p.trial_ends_at) > new Date())
+// 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
+// pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
+const ouverte = (_p: Profil) => true
 
 /** Les pros d'une ville, prêtes à afficher. */
 export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
