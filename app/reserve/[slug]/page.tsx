@@ -20,7 +20,7 @@ import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
@@ -4948,6 +4948,20 @@ export default function ReservationPage() {
                 <button onClick={() => setStep(3)} style={{ color: PINK_TEXTE, fontWeight: 600, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>{traduire('resa.choisirAutreDate')}</button>
               </div>
             ) : (
+              <>
+              {/* LA MAJORATION SE DIT ICI, AU CHOIX DE L'HEURE (Chadi, 4 oct. 2026) :
+                  c'est là qu'elle peut encore prendre un autre créneau. Une ligne,
+                  seulement les jours concernés ; « +X % » sous chaque heure touchée.
+                  Rien au récapitulatif : le total majoré suffit. */}
+              {(() => {
+                const touchees = (pro?.majorations?.regles ?? []).filter(r => slotsLibres.some(x => regleDuCreneau({ regles: [r] }, date, x.heure)))
+                if (!touchees.length) return null
+                return (
+                  <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, textAlign: 'center', margin: '0 0 12px' }}>
+                    {touchees.map(r => `${libelleMajoration(r)} : +${r.pourcentage} %`).join(' · ')}
+                  </p>
+                )
+              })()}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                 {slotsLibres.map(s => (
                   <button
@@ -4973,6 +4987,7 @@ export default function ReservationPage() {
                   </button>
                 ))}
               </div>
+              </>
             )}
           </div>
         )}
@@ -5004,12 +5019,6 @@ export default function ReservationPage() {
                     : offreAppliquee && prixTotalBrut !== prixAvantMajoration
                       ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK_TEXTE, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
                       : formatPrix(prixTotal, pro?.devise)
-                }] : []),
-                // La majoration, dite en clair : la cliente sait pourquoi ce créneau coûte plus.
-                ...(regleMajoration && prixTotal > 0 ? [{
-                  icon: <TrendingUp size={20} color={GLAMIA_PINK} />,
-                  label: traduire('majoration.titre'),
-                  value: `+${regleMajoration.pourcentage} % · ${libelleMajoration(regleMajoration)}`,
                 }] : []),
               ].map((row, i) => (
                 <div key={i}>
