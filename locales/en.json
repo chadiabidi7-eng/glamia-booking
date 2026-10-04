@@ -732,5 +732,13 @@
         ]
       }
     ]
+  },
+  "majoration": {
+    "titre": "Surcharge",
+    "ferie": "Public holiday",
+    "apresH": "After %{heure}",
+    "avantH": "Before %{heure}",
+    "jours": "This day of the week",
+    "periode": "This period"
   }
 }

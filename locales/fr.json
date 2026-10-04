@@ -726,5 +726,13 @@
         ]
       }
     ]
+  },
+  "majoration": {
+    "titre": "Majoration",
+    "ferie": "Jour férié",
+    "apresH": "Après %{heure}",
+    "avantH": "Avant %{heure}",
+    "jours": "Ce jour de la semaine",
+    "periode": "Cette période"
   }
 }

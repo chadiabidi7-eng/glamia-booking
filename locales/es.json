@@ -729,5 +729,13 @@
         ]
       }
     ]
+  },
+  "majoration": {
+    "titre": "Recargo",
+    "ferie": "Festivo",
+    "apresH": "Después de las %{heure}",
+    "avantH": "Antes de las %{heure}",
+    "jours": "Este día de la semana",
+    "periode": "Este periodo"
   }
 }

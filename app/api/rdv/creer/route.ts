@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { assistanteValide, dureeChezAssistante, profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { majorer } from '@/lib/majoration'
+import { majorationDuCreneau } from '@/lib/majoration-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
 import { adressePourEtape } from '@/lib/adresse-due'
 
@@ -134,8 +136,11 @@ export async function POST(req: NextRequest) {
 
     // Les remises demandées sont relues chez la pro : le navigateur peut en
     // vouloir une, il ne peut pas en fixer la valeur.
+    // La majoration du créneau (Ultra) : relue chez la pro, appliquée avant
+    // la fidélité et la réduction, comme dans l'app.
+    const majoration = reel ? await majorationDuCreneau(pro_id, date, heure) : null
     const remises = reel
-      ? await remisesVerifiees(pro_id, cliente_id, reel.prix, body.fidelite_appliquee, body.reduction_appliquee)
+      ? await remisesVerifiees(pro_id, cliente_id, majorer(reel.prix, majoration?.pourcentage ?? 0), body.fidelite_appliquee, body.reduction_appliquee)
       : null
 
     // ÉQUIPE : chez l'assistante, la durée est la sienne (le prix reste celui
@@ -167,6 +172,7 @@ export async function POST(req: NextRequest) {
           ? body.reponses_questions
           : null,
         reduction_appliquee: remises ? remises.reduction : (body.reduction_appliquee ?? null),
+        majoration_appliquee: majoration,
         source: 'booking',
         // SUIVI DES CAMPAGNES (30 sept. 2026) : le mail d'une campagne mène ici
         // avec sa marque ; le rendez-vous la garde, et l'app compte « 3 rendez-vous

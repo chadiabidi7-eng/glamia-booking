@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { majorer } from '@/lib/majoration'
 import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, pro_id, cliente_id, techniques, fidelite_appliquee, reduction_appliquee, cliente:clientes(telephone)')
+    .select('id, pro_id, cliente_id, techniques, fidelite_appliquee, reduction_appliquee, majoration_appliquee, cliente:clientes(telephone)')
     .eq('id', rdvId).maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
 
@@ -46,7 +47,10 @@ export async function POST(req: NextRequest) {
   const reel = await prixReelDuPanier(rdv.pro_id, rdv.techniques)
   const remises = reel
     ? await remisesVerifiees(
-        rdv.pro_id, rdv.cliente_id, reel.prix, rdv.fidelite_appliquee, rdv.reduction_appliquee)
+        rdv.pro_id, rdv.cliente_id,
+        // La majoration du créneau, telle qu'enregistrée à la réservation, reste due.
+        majorer(reel.prix, Number((rdv.majoration_appliquee as { pourcentage?: number } | null)?.pourcentage) || 0),
+        rdv.fidelite_appliquee, rdv.reduction_appliquee)
     : null
   const prixRepli = remises ? remises.prix : prix
 

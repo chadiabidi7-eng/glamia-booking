@@ -20,10 +20,11 @@ import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
   type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
 } from '@/lib/creneaux';
-import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
+import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
+import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
 import { normaliserTelephone } from '@/lib/telephone'
 
@@ -121,6 +122,8 @@ type ProInfo = {
   planning_variable: boolean
   /** Free, Pro ou Ultra (3.0) : la liste d'attente n'est proposée qu'en Pro. */
   formule?: 'free' | 'pro' | 'ultra'
+  /** Ultra : ses majorations, fériés déjà résolus en dates (null sinon). */
+  majorations?: MajorationsResolues
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -1526,7 +1529,7 @@ export default function ReservationPage() {
     !!offreAppliquee && Object.entries(catalogue).some(([cat, techs]) =>
       cat === t.categorie && techs.some(x => offreAppliquee.prestations_ids.includes(x.id) && x.nom === t.nom))
 
-  const prixTotal = offreAppliquee
+  const prixAvantMajoration = offreAppliquee
     ? offreAppliquee.prix_promo + techniquesSelectionnees.reduce((s, t) => {
         // Trouver si cette technique fait partie de l'offre
         const estDansOffre = Object.entries(catalogue).some(([cat, techs]) =>
@@ -1535,6 +1538,15 @@ export default function ReservationPage() {
         return s + (estDansOffre ? 0 : t.prix * (t.quantite ?? 1))
       }, 0)
     : prixTotalBrut
+  // LA MAJORATION DU CRÉNEAU (Ultra, 4 oct. 2026) : la plus forte des règles
+  // de la pro qui tombe sur ce jour et cette heure, appliquée avant la fidélité
+  // et la réduction. Le serveur refait le même calcul à la réservation.
+  const regleMajoration = regleDuCreneau(pro?.majorations, date, heure)
+  const prixTotal = majorer(prixAvantMajoration, regleMajoration?.pourcentage ?? 0)
+  const libelleMajoration = (r: RegleResolue) =>
+    r.type === 'apres' ? traduire('majoration.apresH', { heure: formatHeure(r.heure) })
+      : r.type === 'avant' ? traduire('majoration.avantH', { heure: formatHeure(r.heure) })
+        : traduire(`majoration.${r.type}`)
 
   // Récompense fidélité : existante OU proactive (palier atteint par ce RDV)
   const recompenseExistante = fideliteFiche?.recompense_disponible ?? null
@@ -2545,6 +2557,8 @@ export default function ReservationPage() {
       // relue dans la fiche de la cliente.
       body: JSON.stringify({
         pro_id: pro.id, total, total_plein: totalPlein, telephone,
+        // Le créneau : le serveur en tire la majoration, s'il y en a une.
+        date, heure,
         techniques: techniquesSelectionnees,
         // La promotion est RÉCLAMÉE, pas chiffrée : le serveur relit son tarif
         // chez la pro. Sans cette ligne il repart du catalogue et l'acompte se
@@ -4952,6 +4966,8 @@ export default function ReservationPage() {
                     }}
                   >
                     {s.heure}
+                    {/* MAJORATION : le créneau coûte plus, la cliente le voit avant de choisir. */}
+                    {(() => { const m = pourcentageDuCreneau(pro?.majorations, date, s.heure); return m > 0 ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: heure === s.heure ? '#fff' : PINK_TEXTE, marginTop: 2 }}>+{m} %</span> : null })()}
                     {/* ÉQUIPE : ce créneau, seule l'assistante peut le tenir. */}
                     {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: heure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: prenomDe(s.qui) })}</span> : null}
                   </button>
@@ -4985,9 +5001,15 @@ export default function ReservationPage() {
                   label: traduire('resa.total'),
                   value: prixFinal !== prixTotal
                     ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotal, pro?.devise)}</span><span style={{ color: PINK_TEXTE, fontWeight: 700 }}>{prixFinal > 0 ? formatPrix(prixFinal, pro?.devise) : traduire('resa.offert')}</span></>
-                    : offreAppliquee && prixTotalBrut !== prixTotal
+                    : offreAppliquee && prixTotalBrut !== prixAvantMajoration
                       ? <><span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: 4 }}>{formatPrix(prixTotalBrut, pro?.devise)}</span><span style={{ color: PINK_TEXTE, fontWeight: 700 }}>{formatPrix(prixTotal, pro?.devise)}</span></>
                       : formatPrix(prixTotal, pro?.devise)
+                }] : []),
+                // La majoration, dite en clair : la cliente sait pourquoi ce créneau coûte plus.
+                ...(regleMajoration && prixTotal > 0 ? [{
+                  icon: <TrendingUp size={20} color={GLAMIA_PINK} />,
+                  label: traduire('majoration.titre'),
+                  value: `+${regleMajoration.pourcentage} % · ${libelleMajoration(regleMajoration)}`,
                 }] : []),
               ].map((row, i) => (
                 <div key={i}>

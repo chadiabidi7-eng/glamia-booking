@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adressePourEtape } from '@/lib/adresse-due'
 import { assistantesDe } from '@/lib/equipe'
 import { aPro, formuleDe } from '@/lib/formule'
+import { resoudreMajorations } from '@/lib/majoration-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — la page publique d'une pro : son profil, son catalogue.
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     // 1. Par la colonne slug — indexée, instantanée quel que soit l'effectif.
     const { data: exact } = await supabaseAdmin
       .from('profiles')
-      .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
+      .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at, majorations`)
       .eq('slug', slug)
       .order('created_at', { ascending: true })
       .limit(1)
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       const cible = normaliser(slug)
       const { data: tous } = await supabaseAdmin
         .from('profiles')
-        .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at`)
+        .select(`${CHAMPS_PUBLICS}, abonnement_actif, pro_pay_actif, trial_ends_at, majorations`)
         .order('created_at', { ascending: true })
 
       const candidats = (tous ?? []).filter(p => {
@@ -103,6 +104,8 @@ export async function POST(req: NextRequest) {
     const formule = formuleDe(pro as Record<string, unknown>)
     profil.formule = formule
     if (!aPro(formule)) profil.planning_variable = false
+    // Les majorations (Ultra) : fériés résolus en dates, rien si elle n'est pas Ultra.
+    profil.majorations = resoudreMajorations(profil.majorations, profil.pays as string | null, formule === 'ultra')
 
     // L'identifiant sort aussi : le pied de page « Rejoins Glamia » compte les
     // clics par pro, et une page fermée est justement celle qu'une consœur

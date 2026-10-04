@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { majorer } from '@/lib/majoration'
+import { majorationDuCreneau } from '@/lib/majoration-serveur'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
@@ -226,6 +228,8 @@ export function calculerTotalCliente(
 
 export async function POST(req: NextRequest) {
   let body: {
+    date?: string
+    heure?: string
     pro_id?: unknown; total?: unknown; total_plein?: unknown; telephone?: unknown
     techniques?: unknown; offre_id?: unknown
     fidelite_appliquee?: unknown; reduction_appliquee?: unknown
@@ -317,18 +321,22 @@ export async function POST(req: NextRequest) {
   // sécurité. La création du rendez-vous, elle, refuse — c'est là que l'argent
   // s'engage vraiment.
   const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id)
-  let prixServeur: number | null = panier?.prix ?? null
+  // La majoration du créneau (Ultra), relue chez la pro : le même prix que
+  // celui que la création du rendez-vous enregistrera.
+  const majoration = panier ? await majorationDuCreneau(proId, String(body.date ?? ''), String(body.heure ?? '')) : null
+  const prixMajore = panier ? majorer(panier.prix, majoration?.pourcentage ?? 0) : null
+  let prixServeur: number | null = prixMajore
   if (panier) {
     const fiche = await ficheClienteParTelephone(proId, body.telephone)
     const remises = await remisesVerifiees(
-      proId, fiche, panier.prix, body.fidelite_appliquee, body.reduction_appliquee,
+      proId, fiche, prixMajore ?? panier.prix, body.fidelite_appliquee, body.reduction_appliquee,
     )
     prixServeur = remises.prix
   }
 
   const totalCentimes = Math.round((prixServeur ?? totalEuros) * 100)
   const totalPleinCentimes = panier
-    ? Math.round(panier.prix * 100)
+    ? Math.round((prixMajore ?? panier.prix) * 100)
     : Math.round(Math.max(totalEuros, Number(body.total_plein) || 0) * 100)
   const mode: 'empreinte' | 'acompte' | 'total' =
     regle.mode === 'acompte' ? 'acompte' : regle.mode === 'total' ? 'total' : 'empreinte'
