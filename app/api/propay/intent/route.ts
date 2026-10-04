@@ -257,7 +257,11 @@ export async function POST(req: NextRequest) {
   // interdire. Sans ce refus ici, l'acompte continuerait d'être demandé à ses
   // clientes après la fin de son abonnement.
   const config = (profil?.acompte_config ?? {}) as Config
-  if (!profil?.pro_pay_actif || !config.actif || !compte?.charges_enabled) {
+  // 3.0 (Chadi, 4 oct. 2026) : LA CAISSE EST À TOUTES. Sans Ultra, la cliente
+  // peut payer la TOTALITÉ en ligne ; l'acompte et l'empreinte restent Ultra
+  // (vérifié plus bas, une fois la règle de son public connue).
+  const ultra = profil?.pro_pay_actif === true
+  if (!config.actif || !compte?.charges_enabled) {
     return NextResponse.json({ actif: false })
   }
 
@@ -291,6 +295,11 @@ export async function POST(req: NextRequest) {
   }
 
   const regle: Reglage = nouvelle && config.nouvelles ? config.nouvelles : config
+  // Acompte ou empreinte sans Ultra : la règle est en pause, on ne demande
+  // rien — jamais la totalité à la place d'un acompte qu'elle n'a pas voulu.
+  if (!ultra && regle.mode !== 'total') {
+    return NextResponse.json({ actif: false })
+  }
 
   // ── L'ACOMPTE SE CALCULE SUR LE VRAI PRIX ────────────────────────────────
   // Il se calculait sur le total envoyé par le navigateur. Déclarer 20 pour un
