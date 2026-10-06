@@ -14,7 +14,7 @@ import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
-import Vitrine, { BoutonVoir, CLAMP_2, EnTeteVitrine, replie, useDeborde } from '@/components/reserve/Vitrine';
+import Vitrine, { EnTeteVitrine, TexteReplie } from '@/components/reserve/Vitrine';
 import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
@@ -972,18 +972,11 @@ export default function ReservationPage() {
   // « Voir plus » qui déplie sur place : on en voit toujours quelque chose,
   // et le cadre du numéro tient dans le premier écran. (Il était « jamais
   // plié » jusque-là, puis caché derrière un « + » dans l'aperçu.)
-  const [reglementRef, reglementLong] = useDeborde<HTMLParagraphElement>(vitrine?.reglement, reglementOuvert)
+  // Même carte que le message d'accueil : fond pâle, deux lignes, « Voir plus » dedans.
   const blocReglement = aReglement && (
-    <div style={{
-      background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 14,
-      padding: '10px 14px 12px', marginBottom: 0,
-    }}>
-      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 3px' }}>{traduire('resa.reglement')}</p>
-      <p ref={reglementRef} style={{
-        fontSize: 13.5, lineHeight: 1.4, color: '#4A444E', margin: 0, whiteSpace: reglementOuvert ? 'pre-line' : 'normal',
-        ...(reglementOuvert ? {} : CLAMP_2),
-      }}>{reglementOuvert ? (vitrine?.reglement ?? '').trim() : replie(vitrine?.reglement ?? '')}</p>
-      {reglementLong && <BoutonVoir ouvert={reglementOuvert} onClick={() => setReglementOuvert(v => !v)} />}
+    <div style={{ background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 16, padding: '12px 14px' }}>
+      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 4px' }}>{traduire('resa.reglement')}</p>
+      <TexteReplie texte={vitrine?.reglement ?? ''} ouvert={reglementOuvert} onBasculer={() => setReglementOuvert(v => !v)} styleTexte={{ fontSize: 14, color: '#4A444E' }} />
     </div>
   )
 

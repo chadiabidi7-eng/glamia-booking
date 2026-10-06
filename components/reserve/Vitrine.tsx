@@ -54,7 +54,7 @@ function Bloc({ titre, chute, children }: { titre: string; chute?: string; child
 /** « Voir plus / Voir moins » : une pilule grise avec son chevron, la même partout sur la page. */
 export function BoutonVoir({ ouvert, onClick, couleur }: { ouvert: boolean; onClick: () => void; couleur?: string }) {
   return (
-    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, border: 0, borderRadius: 999, padding: '6px 12px 6px 14px', background: '#f3f4f6', color: couleur || ENCRE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.2 }}>
+    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, borderRadius: 999, padding: '6px 12px 6px 14px', background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(31,41,55,0.10)', color: couleur || ENCRE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.2 }}>
       {traduire(ouvert ? 'resa.voirMoins' : 'resa.voirPlus')}
       {ouvert ? <ChevronUp size={14} strokeWidth={2.4} /> : <ChevronDown size={14} strokeWidth={2.4} />}
     </button>
@@ -64,6 +64,27 @@ export function BoutonVoir({ ouvert, onClick, couleur }: { ouvert: boolean; onCl
 /** Un texte replié sur deux lignes (les sauts de ligne effacés), déplié en entier avec ses sauts. */
 export const CLAMP_2 = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }
 export const replie = (t: string) => t.replace(/\s*\n+\s*/g, ' ').trim()
+/** Ses paragraphes : une ligne vide sépare, un simple retour à la ligne (souvent tapé par erreur) ne compte pas. */
+export const paragraphes = (t: string) => t.trim().split(/\n\s*\n+/).map(p => p.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)
+
+/** Un texte de la pro dans une carte : replié sur deux lignes, déplié en paragraphes serrés, « Voir plus » dedans. */
+export function TexteReplie({ texte, ouvert, onBasculer, avant, apres, style, styleTexte }: {
+  texte: string; ouvert: boolean; onBasculer: () => void; avant?: ReactNode; apres?: ReactNode; style?: React.CSSProperties; styleTexte?: React.CSSProperties
+}) {
+  const [ref, long] = useDeborde<HTMLParagraphElement>(texte, ouvert)
+  const base: React.CSSProperties = { margin: 0, fontSize: 15, lineHeight: 1.5, color: ENCRE, ...styleTexte }
+  const paras = ouvert ? paragraphes(texte) : [replie(texte)]
+  return (
+    <div style={style}>
+      {paras.map((p, i) => (
+        <p key={i} ref={i === 0 ? ref : undefined} style={{ ...base, ...(i > 0 ? { marginTop: 8 } : {}), ...(ouvert ? {} : CLAMP_2) }}>
+          {i === 0 ? avant : null}{p}{i === paras.length - 1 ? apres : null}
+        </p>
+      ))}
+      {long && <BoutonVoir ouvert={ouvert} onClick={onBasculer} />}
+    </div>
+  )
+}
 /** Le texte replié déborde-t-il vraiment de ses deux lignes ? Mesuré, pas deviné : sinon « Voir plus » sur un texte qui tient. */
 export function useDeborde<T extends HTMLElement>(texte: string | null | undefined, ouvert: boolean): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null)
@@ -96,6 +117,7 @@ function Plus({ onClick, children }: { onClick: () => void; children: ReactNode 
 // (Chadi). L'en-tête a donc un budget : la couverture en bandeau de 110 px, la
 // photo de la pro à cheval, nom + note + ville sur UNE ligne, et le message
 // d'accueil sur deux lignes au plus avec « Voir plus » qui déplie sur place.
+// (Couverture remontée à 160 px le 6 oct. au soir : 100 faisait trop court.)
 // Le règlement (deux lignes, « Voir plus ») et la prochaine dispo viennent
 // ensuite, puis le cadre. La suite de la vitrine vient sous le numéro.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,7 +135,6 @@ export function EnTeteVitrine(props: {
 }) {
   const ACCENT = props.couleurPage || ROSE
   const [bioEntiere, setBioEntiere] = useState(false)
-  const [bioRef, bioLongue] = useDeborde<HTMLParagraphElement>(props.bio, bioEntiere)
   // Les guillemets : grands, de sa couleur, COLLÉS au texte — l'ouvrant devant
   // le premier mot, le fermant après le dernier. Replié, le texte est coupé et
   // le fermant avec lui : une phrase coupée ne se ferme pas.
@@ -123,7 +144,7 @@ export function EnTeteVitrine(props: {
       {/* La couverture : un bandeau bas. Sans couverture, un voile de sa couleur. */}
       <button
         onClick={() => props.couverture && props.ouvrirPhotos([props.couverture], 0)}
-        style={{ display: 'block', width: '100%', height: props.couverture ? 100 : 56, padding: 0, border: 0, cursor: props.couverture ? 'pointer' : 'default',
+        style={{ display: 'block', width: '100%', height: props.couverture ? 160 : 56, padding: 0, border: 0, cursor: props.couverture ? 'pointer' : 'default',
           background: props.couverture ? '#f3f4f6' : `linear-gradient(135deg, ${ACCENT}33, ${ACCENT}11)` }}>
         {props.couverture && <img src={props.couverture} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
       </button>
@@ -148,13 +169,19 @@ export function EnTeteVitrine(props: {
           )}
           {props.ville && <span style={{ color: ENCRE_DOUCE, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 2, minWidth: 0 }}>· {props.ville}</span>}
         </div>
-        {/* LE MESSAGE D'ACCUEIL : ses mots, en encre, entre deux guillemets de sa couleur (Chadi, 6 oct. 2026). */}
+        {/* LE MESSAGE D'ACCUEIL (Chadi, 6 oct. 2026) : une carte au fond très pâle
+            de sa couleur, ses mots en encre entre deux guillemets de sa couleur,
+            paragraphes serrés (ses lignes vides ne font plus de trous). */}
         {props.bio && (
-          <p ref={bioRef} style={{ margin: '8px 0 0', fontSize: 15, lineHeight: 1.45, color: ENCRE, whiteSpace: bioEntiere ? 'pre-line' : 'normal', ...(bioEntiere ? {} : CLAMP_2) }}>
-            <span aria-hidden style={guillemet}>“</span>{bioEntiere ? props.bio.trim() : replie(props.bio)}<span aria-hidden style={guillemet}>”</span>
-          </p>
+          <TexteReplie
+            texte={props.bio}
+            ouvert={bioEntiere}
+            onBasculer={() => setBioEntiere(v => !v)}
+            avant={<span aria-hidden style={guillemet}>“</span>}
+            apres={<span aria-hidden style={guillemet}>”</span>}
+            style={{ marginTop: 10, padding: '12px 14px', borderRadius: 16, background: `${ACCENT}12`, border: `1px solid ${ACCENT}2E` }}
+          />
         )}
-        {props.bio && bioLongue && <BoutonVoir ouvert={bioEntiere} onClick={() => setBioEntiere(v => !v)} />}
       </div>
     </div>
   )
