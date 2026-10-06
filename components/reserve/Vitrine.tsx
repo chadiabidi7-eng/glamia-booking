@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,6 +51,36 @@ function Bloc({ titre, chute, children }: { titre: string; chute?: string; child
   )
 }
 
+/** « Voir plus / Voir moins » : une pilule grise avec son chevron, la même partout sur la page. */
+export function BoutonVoir({ ouvert, onClick, couleur }: { ouvert: boolean; onClick: () => void; couleur?: string }) {
+  return (
+    <button onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, border: 0, borderRadius: 999, padding: '6px 12px 6px 14px', background: '#f3f4f6', color: couleur || ENCRE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.2 }}>
+      {traduire(ouvert ? 'resa.voirMoins' : 'resa.voirPlus')}
+      {ouvert ? <ChevronUp size={14} strokeWidth={2.4} /> : <ChevronDown size={14} strokeWidth={2.4} />}
+    </button>
+  )
+}
+
+/** Un texte replié sur deux lignes (les sauts de ligne effacés), déplié en entier avec ses sauts. */
+export const CLAMP_2 = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }
+export const replie = (t: string) => t.replace(/\s*\n+\s*/g, ' ').trim()
+/** Le texte replié déborde-t-il vraiment de ses deux lignes ? Mesuré, pas deviné : sinon « Voir plus » sur un texte qui tient. */
+export function useDeborde<T extends HTMLElement>(texte: string | null | undefined, ouvert: boolean): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null)
+  const [deborde, setDeborde] = useState(false)
+  useEffect(() => {
+    if (ouvert) return
+    const el = ref.current
+    if (!el) return
+    const mesurer = () => setDeborde(el.scrollHeight > el.clientHeight + 1)
+    mesurer()
+    const ro = new ResizeObserver(mesurer)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [texte, ouvert])
+  return [ref, deborde || ouvert]
+}
+
 function Plus({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
     <button onClick={onClick} style={{ marginTop: 12, border: 0, borderRadius: 12, padding: '9px 14px', background: '#f3f4f6', color: ENCRE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -83,7 +113,11 @@ export function EnTeteVitrine(props: {
 }) {
   const ACCENT = props.couleurPage || ROSE
   const [bioEntiere, setBioEntiere] = useState(false)
-  const bioLongue = (props.bio ?? '').length > 110 || (props.bio ?? '').split('\n').length > 2
+  const [bioRef, bioLongue] = useDeborde<HTMLParagraphElement>(props.bio, bioEntiere)
+  // Les guillemets : grands, de sa couleur, COLLÉS au texte — l'ouvrant devant
+  // le premier mot, le fermant après le dernier. Replié, le texte est coupé et
+  // le fermant avec lui : une phrase coupée ne se ferme pas.
+  const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT, verticalAlign: '-0.32em', padding: '0 2px' }
   return (
     <div style={{ margin: '-16px -16px 8px' }}>
       {/* La couverture : un bandeau bas. Sans couverture, un voile de sa couleur. */}
@@ -114,23 +148,13 @@ export function EnTeteVitrine(props: {
           )}
           {props.ville && <span style={{ color: ENCRE_DOUCE, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 2, minWidth: 0 }}>· {props.ville}</span>}
         </div>
-        {/* LE MESSAGE D'ACCUEIL, entre deux grands guillemets de sa couleur
-            (Chadi, 6 oct. 2026) : ce sont ses mots, en encre, pas en gris. */}
+        {/* LE MESSAGE D'ACCUEIL : ses mots, en encre, entre deux guillemets de sa couleur (Chadi, 6 oct. 2026). */}
         {props.bio && (
-          <div onClick={() => bioLongue && setBioEntiere(v => !v)} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 6, cursor: bioLongue ? 'pointer' : 'default' }}>
-            <span aria-hidden style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 30, lineHeight: '22px', color: ACCENT, flex: 'none', marginTop: 2 }}>“</span>
-            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.4, color: ENCRE, whiteSpace: 'pre-line', minWidth: 0, flex: '0 1 auto', width: 'fit-content', maxWidth: 'calc(100% - 44px)',
-              ...(bioEntiere ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>
-              {props.bio}
-            </p>
-            <span aria-hidden style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 30, lineHeight: '22px', color: ACCENT, flex: 'none', alignSelf: 'flex-end', marginBottom: -6 }}>”</span>
-          </div>
+          <p ref={bioRef} style={{ margin: '8px 0 0', fontSize: 15, lineHeight: 1.45, color: ENCRE, whiteSpace: bioEntiere ? 'pre-line' : 'normal', ...(bioEntiere ? {} : CLAMP_2) }}>
+            <span aria-hidden style={guillemet}>“</span>{bioEntiere ? props.bio.trim() : replie(props.bio)}<span aria-hidden style={guillemet}>”</span>
+          </p>
         )}
-        {props.bio && bioLongue && (
-          <button onClick={() => setBioEntiere(v => !v)} style={{ padding: 0, marginTop: 1, border: 0, background: 'none', color: ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {traduire(bioEntiere ? 'resa.voirMoins' : 'resa.voirPlus')}
-          </button>
-        )}
+        {props.bio && bioLongue && <BoutonVoir ouvert={bioEntiere} onClick={() => setBioEntiere(v => !v)} />}
       </div>
     </div>
   )

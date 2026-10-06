@@ -14,7 +14,7 @@ import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
-import Vitrine, { EnTeteVitrine } from '@/components/reserve/Vitrine';
+import Vitrine, { BoutonVoir, CLAMP_2, EnTeteVitrine, replie, useDeborde } from '@/components/reserve/Vitrine';
 import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
@@ -972,22 +972,18 @@ export default function ReservationPage() {
   // « Voir plus » qui déplie sur place : on en voit toujours quelque chose,
   // et le cadre du numéro tient dans le premier écran. (Il était « jamais
   // plié » jusque-là, puis caché derrière un « + » dans l'aperçu.)
-  const reglementLong = (vitrine?.reglement ?? '').length > 120 || (vitrine?.reglement ?? '').split('\n').length > 2
+  const [reglementRef, reglementLong] = useDeborde<HTMLParagraphElement>(vitrine?.reglement, reglementOuvert)
   const blocReglement = aReglement && (
     <div style={{
       background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 14,
-      padding: '8px 14px', marginBottom: 10,
+      padding: '10px 14px 12px', marginBottom: 0,
     }}>
-      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 2px' }}>{traduire('resa.reglement')}</p>
-      <p onClick={() => reglementLong && setReglementOuvert(v => !v)} style={{
-        fontSize: 13.5, lineHeight: 1.4, color: '#4A444E', margin: 0, whiteSpace: 'pre-line', cursor: reglementLong ? 'pointer' : 'default',
-        ...(reglementOuvert ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }),
-      }}>{vitrine?.reglement}</p>
-      {reglementLong && (
-        <button onClick={() => setReglementOuvert(v => !v)} style={{ padding: 0, marginTop: 2, border: 0, background: 'none', color: PINK_FONCE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-          {traduire(reglementOuvert ? 'resa.voirMoins' : 'resa.voirPlus')}
-        </button>
-      )}
+      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 3px' }}>{traduire('resa.reglement')}</p>
+      <p ref={reglementRef} style={{
+        fontSize: 13.5, lineHeight: 1.4, color: '#4A444E', margin: 0, whiteSpace: reglementOuvert ? 'pre-line' : 'normal',
+        ...(reglementOuvert ? {} : CLAMP_2),
+      }}>{reglementOuvert ? (vitrine?.reglement ?? '').trim() : replie(vitrine?.reglement ?? '')}</p>
+      {reglementLong && <BoutonVoir ouvert={reglementOuvert} onClick={() => setReglementOuvert(v => !v)} />}
     </div>
   )
 
@@ -3793,7 +3789,6 @@ export default function ReservationPage() {
             {/* La prochaine dispo n'est plus répétée ici : la vitrine l'a déjà dite. */}
 
             {phoneStatus === 'idle' && elementEnTete}
-            {phoneStatus === 'idle' && blocReglement}
             {/* La prochaine dispo, juste au-dessus du cadre : la première question d'une cliente. */}
             {phoneStatus === 'idle' && prochaineDispo && (
               <p style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, color: '#4A424C' }}>
@@ -4458,7 +4453,9 @@ export default function ReservationPage() {
             )}
             </div>
 
-            {phoneStatus === 'idle' && <div style={{ marginTop: 28 }}>{elementVitrine}</div>}
+            {/* Le règlement SOUS le cadre (Chadi, 6 oct. 2026) : le numéro d'abord, les conditions juste après. */}
+            {phoneStatus === 'idle' && <div style={{ marginTop: 14 }}>{blocReglement}</div>}
+            {phoneStatus === 'idle' && <div style={{ marginTop: 20 }}>{elementVitrine}</div>}
           </div>
         )}
 
