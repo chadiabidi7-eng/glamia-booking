@@ -3504,7 +3504,8 @@ export default function ReservationPage() {
           {/* Logo Glamia + slogan */}
           <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
             <p style={{ fontSize: 28, fontWeight: 800, color: PINK_TEXTE, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{traduire('resa.signatureGlamia')}</p>
+            {/* LE slogan, comme en pied de mail : majuscules, petit, rose (mémoire slogan-glamia). */}
+            <p style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em', color: PINK_TEXTE, textTransform: 'uppercase', margin: 0 }}>{traduire('resa.signatureGlamia')}</p>
           </div>
         </div>
       </div>
