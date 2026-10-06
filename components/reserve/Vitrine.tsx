@@ -114,11 +114,17 @@ export function EnTeteVitrine(props: {
           )}
           {props.ville && <span style={{ color: ENCRE_DOUCE, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 2, minWidth: 0 }}>· {props.ville}</span>}
         </div>
+        {/* LE MESSAGE D'ACCUEIL, entre deux grands guillemets de sa couleur
+            (Chadi, 6 oct. 2026) : ce sont ses mots, en encre, pas en gris. */}
         {props.bio && (
-          <p onClick={() => bioLongue && setBioEntiere(v => !v)} style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.4, color: '#4b5563', whiteSpace: 'pre-line', cursor: bioLongue ? 'pointer' : 'default',
-            ...(bioEntiere ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>
-            {props.bio}
-          </p>
+          <div onClick={() => bioLongue && setBioEntiere(v => !v)} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginTop: 6, cursor: bioLongue ? 'pointer' : 'default' }}>
+            <span aria-hidden style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 30, lineHeight: '22px', color: ACCENT, flex: 'none', marginTop: 2 }}>“</span>
+            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.4, color: ENCRE, whiteSpace: 'pre-line', minWidth: 0, flex: '0 1 auto', width: 'fit-content', maxWidth: 'calc(100% - 44px)',
+              ...(bioEntiere ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>
+              {props.bio}
+            </p>
+            <span aria-hidden style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 30, lineHeight: '22px', color: ACCENT, flex: 'none', alignSelf: 'flex-end', marginBottom: -6 }}>”</span>
+          </div>
         )}
         {props.bio && bioLongue && (
           <button onClick={() => setBioEntiere(v => !v)} style={{ padding: 0, marginTop: 1, border: 0, background: 'none', color: ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
