@@ -59,6 +59,77 @@ function Plus({ onClick, children }: { onClick: () => void; children: ReactNode 
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// L'EN-TÊTE COMPACT (6 oct. 2026 : le numéro d'abord)
+//
+// LE CADRE DU NUMÉRO DOIT TENIR ENTIER DANS LE PREMIER ÉCRAN D'UN TÉLÉPHONE
+// (Chadi). L'en-tête a donc un budget : la couverture en bandeau de 110 px, la
+// photo de la pro à cheval, nom + note + ville sur UNE ligne, et le message
+// d'accueil sur deux lignes au plus avec « Voir plus » qui déplie sur place.
+// Le règlement (deux lignes, « Voir plus ») et la prochaine dispo viennent
+// ensuite, puis le cadre. La suite de la vitrine vient sous le numéro.
+// ─────────────────────────────────────────────────────────────────────────────
+export function EnTeteVitrine(props: {
+  nom: string
+  photoProfil: string | null
+  note: number | null
+  nbAvis: number
+  ville: string | null
+  reseaux: ReactNode
+  couverture: string | null
+  bio: string | null
+  ouvrirPhotos: (photos: string[], index: number) => void
+  couleurPage?: string | null
+}) {
+  const ACCENT = props.couleurPage || ROSE
+  const [bioEntiere, setBioEntiere] = useState(false)
+  const bioLongue = (props.bio ?? '').length > 110 || (props.bio ?? '').split('\n').length > 2
+  return (
+    <div style={{ margin: '-16px -16px 8px' }}>
+      {/* La couverture : un bandeau bas. Sans couverture, un voile de sa couleur. */}
+      <button
+        onClick={() => props.couverture && props.ouvrirPhotos([props.couverture], 0)}
+        style={{ display: 'block', width: '100%', height: props.couverture ? 100 : 56, padding: 0, border: 0, cursor: props.couverture ? 'pointer' : 'default',
+          background: props.couverture ? '#f3f4f6' : `linear-gradient(135deg, ${ACCENT}33, ${ACCENT}11)` }}>
+        {props.couverture && <img src={props.couverture} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+      </button>
+      <div style={{ padding: '0 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: -28 }}>
+          <div style={{ width: 60, height: 60, borderRadius: 30, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: '3px solid #fff', boxShadow: `0 0 0 2px ${ACCENT}` }}>
+            {props.photoProfil
+              ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', paddingBottom: 2 }}>{props.reseaux}</div>
+        </div>
+        {/* Nom, note, ville : une seule ligne. */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6, minWidth: 0 }}>
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{props.nom}</h1>
+          {props.note !== null && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', flex: 'none' }}>
+              <Star size={13} fill={ACCENT} color={ACCENT} strokeWidth={0} />
+              {props.note.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              <span style={{ color: ENCRE_DOUCE, fontWeight: 500 }}>({props.nbAvis})</span>
+            </span>
+          )}
+          {props.ville && <span style={{ color: ENCRE_DOUCE, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 2, minWidth: 0 }}>· {props.ville}</span>}
+        </div>
+        {props.bio && (
+          <p onClick={() => bioLongue && setBioEntiere(v => !v)} style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.4, color: '#4b5563', whiteSpace: 'pre-line', cursor: bioLongue ? 'pointer' : 'default',
+            ...(bioEntiere ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>
+            {props.bio}
+          </p>
+        )}
+        {props.bio && bioLongue && (
+          <button onClick={() => setBioEntiere(v => !v)} style={{ padding: 0, marginTop: 1, border: 0, background: 'none', color: ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {traduire(bioEntiere ? 'resa.voirMoins' : 'resa.voirPlus')}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Vitrine(props: {
   nom: string
   photoProfil: string | null
@@ -83,8 +154,21 @@ export default function Vitrine(props: {
   couleurPage?: string | null
   couleurBouton?: string | null
   texteBouton?: string | null
+  /** L'en-tête (profil, couverture, bio) est déjà affiché au-dessus du numéro. */
+  sansEntete?: boolean
+  /** Le bouton fixe n'apparaît qu'après ce défilement, en pixels (le numéro est alors hors de vue). */
+  boutonApresDefilement?: number
 }) {
   const ACCENT = props.couleurPage || ROSE
+  const [boutonVisible, setBoutonVisible] = useState(props.boutonApresDefilement == null)
+  useEffect(() => {
+    const seuil = props.boutonApresDefilement
+    if (seuil == null) return
+    const voir = () => setBoutonVisible(window.scrollY > seuil)
+    voir()
+    window.addEventListener('scroll', voir, { passive: true })
+    return () => window.removeEventListener('scroll', voir)
+  }, [props.boutonApresDefilement])
   // Une seule couleur, la sienne, partout — bouton compris (Chadi, 27 sept.).
   const BOUTON = ACCENT
   const [categorie, setCategorie] = useState(0)
@@ -131,7 +215,7 @@ export default function Vitrine(props: {
       `}</style>
 
       {/* 1. LE PROFIL */}
-      <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+      {!props.sansEntete && <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Le pseudo et la note sur la même ligne (Chadi) : pas de ligne en plus. */}
@@ -165,10 +249,18 @@ export default function Vitrine(props: {
             <img src={props.couverture} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           </button>
         )}
-      </section>
+      </section>}
+
+      {/* La prochaine dispo, seule, quand l'en-tête est ailleurs. */}
+      {props.sansEntete && props.prochaineDispo && (
+        <p style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, color: '#4A424C' }}>
+          <span style={{ width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none' }} />
+          <span>{props.prochaineDispo}</span>
+        </p>
+      )}
 
       {/* 2. LA BIO */}
-      {props.bio && (
+      {props.bio && !props.sansEntete && (
         <Bloc titre={traduire('resa.bioDe')} chute={props.nom}>
           <p style={{ margin: 0, whiteSpace: 'pre-line', fontSize: 14, lineHeight: 1.55, color: '#4b5563' }}>{props.bio}</p>
         </Bloc>
@@ -311,13 +403,13 @@ export default function Vitrine(props: {
         </Bloc>
       )}
 
-      {/* LE BOUTON, toujours à portée de pouce. */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, padding: '14px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, #f9f9f9 65%, rgba(249,249,249,0))' }}>
+      {/* LE BOUTON, toujours à portée de pouce — sauf quand le numéro est déjà à l'écran. */}
+      {boutonVisible && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, padding: '14px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, #f9f9f9 65%, rgba(249,249,249,0))' }}>
         <button onClick={props.onReserver}
           style={{ display: 'block', width: '100%', maxWidth: 448, margin: '0 auto', padding: 16, border: 0, borderRadius: 16, background: BOUTON, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           {props.texteBouton || traduire('resa.reserver')}
         </button>
-      </div>
+      </div>}
     </div>
   )
 }

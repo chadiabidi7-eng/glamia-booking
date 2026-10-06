@@ -14,7 +14,7 @@ import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
-import Vitrine from '@/components/reserve/Vitrine';
+import Vitrine, { EnTeteVitrine } from '@/components/reserve/Vitrine';
 import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
@@ -589,7 +589,8 @@ export default function ReservationPage() {
   // emplacement, et un bouton « Réserver ». C'est là seulement qu'on demande
   // le numéro. Un lien qui amène à un créneau précis (liste d'attente,
   // désistement) va droit au but, sans vitrine.
-  const [vitrineOuverte, setVitrineOuverte] = useState(true)
+  const [vitrineOuverte, setVitrineOuverte] = useState(false)
+  const [reglementOuvert, setReglementOuvert] = useState(false)
 
   // Changement d'étape → remonter en haut (l'étape 5 gère son propre scroll vers le récap)
   useEffect(() => {
@@ -967,20 +968,26 @@ export default function ReservationPage() {
     </div>
   )
 
-  // ── LE RÈGLEMENT ── en haut, en toutes lettres, jamais plié.
+  // ── LE RÈGLEMENT ── (6 oct. 2026) deux lignes en toutes lettres, puis
+  // « Voir plus » qui déplie sur place : on en voit toujours quelque chose,
+  // et le cadre du numéro tient dans le premier écran. (Il était « jamais
+  // plié » jusque-là, puis caché derrière un « + » dans l'aperçu.)
+  const reglementLong = (vitrine?.reglement ?? '').length > 120 || (vitrine?.reglement ?? '').split('\n').length > 2
   const blocReglement = aReglement && (
     <div style={{
       background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 14,
-      padding: '14px 16px', marginBottom: 26,
+      padding: '8px 14px', marginBottom: 10,
     }}>
-      <p style={{
-        fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
-        color: PINK_FONCE, margin: '0 0 7px',
-      }}>{traduire('resa.reglement')}</p>
-      <p style={{
-        fontSize: 13.5, lineHeight: 1.6, color: '#4A444E',
-        textAlign: 'justify', margin: 0, whiteSpace: 'pre-line',
+      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 2px' }}>{traduire('resa.reglement')}</p>
+      <p onClick={() => reglementLong && setReglementOuvert(v => !v)} style={{
+        fontSize: 13.5, lineHeight: 1.4, color: '#4A444E', margin: 0, whiteSpace: 'pre-line', cursor: reglementLong ? 'pointer' : 'default',
+        ...(reglementOuvert ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }),
       }}>{vitrine?.reglement}</p>
+      {reglementLong && (
+        <button onClick={() => setReglementOuvert(v => !v)} style={{ padding: 0, marginTop: 2, border: 0, background: 'none', color: PINK_FONCE, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          {traduire(reglementOuvert ? 'resa.voirMoins' : 'resa.voirPlus')}
+        </button>
+      )}
     </div>
   )
 
@@ -3525,11 +3532,83 @@ export default function ReservationPage() {
   // ─────────────────────────────────────────────
   // Main booking UI
   // ─────────────────────────────────────────────
+
+  // ── OPTION 3 (aperçu du 6 oct. 2026, rien de poussé) : LE NUMÉRO D'ABORD,
+  // LA VITRINE DESSOUS. Le lien de la pro garde son comportement d'aujourd'hui
+  // — le champ du numéro en haut de la page — et sa vitrine s'affiche juste en
+  // dessous pour qui veut la parcourir. « Réserver », en bas de la vitrine,
+  // remonte au champ du numéro.
+  const elementEnTete = (
+    <EnTeteVitrine
+      nom={(pro?.pseudo || pro?.prenom || '').trim()}
+      photoProfil={pro?.photo_url || null}
+      note={vitrine?.avis_actifs && vitrine?.note ? Number(vitrine.note) : null}
+      nbAvis={vitrine?.nb_avis ?? 0}
+      ville={vitrine?.ville ?? vitrine?.adresse?.ville ?? null}
+      reseaux={<>
+        {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={22} />}
+        {pro?.tiktok && <SocialLink reseau="tiktok" pseudo={pro.tiktok} size={22} />}
+        {pro?.snapchat && <SocialLink reseau="snapchat" pseudo={pro.snapchat} size={22} />}
+      </>}
+      couverture={vitrine?.couverture ?? null}
+      bio={vitrine?.bio ?? (pro?.message_accueil?.trim() || null)}
+      ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
+      couleurPage={vitrine?.style?.page ?? null}
+    />
+  )
+  const elementVitrine = (
+            <Vitrine
+              sansEntete
+              boutonApresDefilement={520}
+              nom={(pro?.pseudo || pro?.prenom || '').trim()}
+              photoProfil={pro?.photo_url || null}
+              note={vitrine?.avis_actifs && vitrine?.note ? Number(vitrine.note) : null}
+              nbAvis={vitrine?.nb_avis ?? 0}
+              ville={vitrine?.ville ?? vitrine?.adresse?.ville ?? null}
+              reseaux={<>
+                {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={22} />}
+                {pro?.tiktok && <SocialLink reseau="tiktok" pseudo={pro.tiktok} size={22} />}
+                {pro?.snapchat && <SocialLink reseau="snapchat" pseudo={pro.snapchat} size={22} />}
+              </>}
+              prochaineDispo={null}
+              couverture={vitrine?.couverture ?? null}
+              bio={vitrine?.bio ?? (pro?.message_accueil?.trim() || null)}
+              categories={specialitesActives.map(sp => ({
+                nom: sp.nom,
+                libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
+                icone: <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={22} />,
+                soins: sp.techniques.map(t => ({
+                  cle: t.id ?? `${sp.nom}-${t.nom}`,
+                  nom: t.nom,
+                  description: typeof t.description === 'string' && t.description.trim() ? t.description.trim() : null,
+                  photos: (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5),
+                  duree: formatDuree(t.duree),
+                  prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
+                })),
+              }))}
+              photos={vitrine?.photos ?? []}
+              avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
+              chargerAvis={pro?.id ? async depuis => {
+                const r = await fetch('/api/pro/avis-liste', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: pro.id, depuis }) })
+                const d = await r.json() as { avis: typeof avisMontrables; suite: boolean }
+                return { avis: (d.avis ?? []).map((x, i) => <div key={depuis + i}>{unAvis(x)}</div>), suite: !!d.suite }
+              } : undefined}
+              position={vitrine?.position ?? null}
+              phraseAdresse={attente}
+              conditions={conditions}
+              ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
+              onReserver={() => { const champ = document.getElementById('champ-telephone'); champ?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => champ?.focus(), 450) }}
+              couleurPage={vitrine?.style?.page ?? null}
+              couleurBouton={vitrine?.style?.page ?? null}
+              texteBouton={vitrine?.style?.texte ?? null}
+            />
+  )
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9f9f9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* ── Header ── (pas pendant la vitrine : son profil est le premier bloc) */}
-      <div style={{ display: step === 1 && vitrineOuverte ? 'none' : undefined, position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
+      <div style={{ display: step === 1 && (vitrineOuverte || phoneStatus === 'idle') ? 'none' : undefined, position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
             {pro?.photo_url ? (
@@ -3703,55 +3782,9 @@ export default function ReservationPage() {
           </div>
         )}
 
-        {step === 1 && vitrinePrete && vitrineOuverte && (
-          <Vitrine
-            nom={(pro?.pseudo || pro?.prenom || '').trim()}
-            photoProfil={pro?.photo_url || null}
-            note={vitrine?.avis_actifs && vitrine?.note ? Number(vitrine.note) : null}
-            nbAvis={vitrine?.nb_avis ?? 0}
-            ville={vitrine?.ville ?? vitrine?.adresse?.ville ?? null}
-            reseaux={<>
-              {pro?.instagram && <SocialLink reseau="instagram" pseudo={pro.instagram} size={22} />}
-              {pro?.tiktok && <SocialLink reseau="tiktok" pseudo={pro.tiktok} size={22} />}
-              {pro?.snapchat && <SocialLink reseau="snapchat" pseudo={pro.snapchat} size={22} />}
-            </>}
-            prochaineDispo={prochaineDispo ? traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) }) : null}
-            couverture={vitrine?.couverture ?? null}
-            bio={vitrine?.bio ?? (pro?.message_accueil?.trim() || null)}
-            categories={specialitesActives.map(sp => ({
-              nom: sp.nom,
-              libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
-              icone: <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={22} />,
-              soins: sp.techniques.map(t => ({
-                cle: t.id ?? `${sp.nom}-${t.nom}`,
-                nom: t.nom,
-                description: typeof t.description === 'string' && t.description.trim() ? t.description.trim() : null,
-                photos: (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5),
-                duree: formatDuree(t.duree),
-                prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
-              })),
-            }))}
-            photos={vitrine?.photos ?? []}
-            avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
-            chargerAvis={pro?.id ? async depuis => {
-              const r = await fetch('/api/pro/avis-liste', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: pro.id, depuis }) })
-              const d = await r.json() as { avis: typeof avisMontrables; suite: boolean }
-              return { avis: (d.avis ?? []).map((x, i) => <div key={depuis + i}>{unAvis(x)}</div>), suite: !!d.suite }
-            } : undefined}
-            position={vitrine?.position ?? null}
-            phraseAdresse={attente}
-            conditions={conditions}
-            ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
-            onReserver={() => { setVitrineOuverte(false); window.scrollTo({ top: 0 }) }}
-            couleurPage={vitrine?.style?.page ?? null}
-            couleurBouton={vitrine?.style?.page ?? null}
-            texteBouton={vitrine?.style?.texte ?? null}
-          />
-        )}
 
         {step === 1 && vitrinePrete && !vitrineOuverte && (
           <div>
-            {phoneStatus === 'idle' && <BackBtn onClick={() => { setVitrineOuverte(true); window.scrollTo({ top: 0 }) }} />}
             {/* ── QUAND EST-CE QU'ELLE PEUT VENIR ─────────────────────────────
                 La première question d'une cliente, et la seule qui décide de
                 tout. Le point vert dit « c'est ouvert » avant même qu'on ait lu
@@ -3759,22 +3792,32 @@ export default function ReservationPage() {
                 une ligne vide inquiéterait plus qu'elle n'informerait. */}
             {/* La prochaine dispo n'est plus répétée ici : la vitrine l'a déjà dite. */}
 
+            {phoneStatus === 'idle' && elementEnTete}
             {phoneStatus === 'idle' && blocReglement}
+            {/* La prochaine dispo, juste au-dessus du cadre : la première question d'une cliente. */}
+            {phoneStatus === 'idle' && prochaineDispo && (
+              <p style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, color: '#4A424C' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none' }} />
+                <span>{traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) })}</span>
+              </p>
+            )}
 
             <div className="glamia-cadre-actif" style={{
               background: '#fff', border: `2px solid ${GLAMIA_PINK}`,
-              borderRadius: 20, padding: '20px 18px 18px',
+              borderRadius: 20, padding: phoneStatus === 'idle' ? '16px 18px 16px' : '20px 18px 18px',
             }}>
-            <h2 style={{ ...S.h2, marginBottom: 4 }}>{traduire('resa.bonjour')}</h2>
-            <p style={S.sub}>{traduire('resa.entrezNumero')}</p>
+            {/* Sur le premier écran, le cadre doit tenir entier sous l'en-tête : moins d'air, même contenu. */}
+            <h2 style={{ ...S.h2, marginBottom: 2, ...(phoneStatus === 'idle' ? { fontSize: 21 } : {}) }}>{traduire('resa.bonjour')}</h2>
+            <p style={{ ...S.sub, ...(phoneStatus === 'idle' ? { marginBottom: 14 } : {}) }}>{traduire('resa.entrezNumero')}</p>
 
             <label style={S.label}>{traduire('resa.telephone')}</label>
             <input
+              id="champ-telephone"
               type="tel"
               value={telephone}
               onChange={e => { setTelephone(e.target.value); setPhoneStatus('idle') }}
               placeholder={exempleTelephone(pro?.pays)}
-              style={S.input}
+              style={{ ...S.input, ...(phoneStatus === 'idle' ? { marginBottom: 10 } : {}) }}
               onKeyDown={e => e.key === 'Enter' && handleCheckPhone()}
             />
 
@@ -4415,6 +4458,7 @@ export default function ReservationPage() {
             )}
             </div>
 
+            {phoneStatus === 'idle' && <div style={{ marginTop: 28 }}>{elementVitrine}</div>}
           </div>
         )}
 
@@ -5634,7 +5678,7 @@ export default function ReservationPage() {
           Sauf à l'étape 2, où le récapitulatif des prestations occupe déjà le
           bas de l'écran : deux barres superposées cacheraient le total et le
           bouton Continuer. */}
-      {!(step === 2 && techniquesSelectionnees.length > 0) && (
+      {!(step === 2 && techniquesSelectionnees.length > 0) && !(step === 1 && phoneStatus === 'idle') && (
         <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
       )}
     </div>
