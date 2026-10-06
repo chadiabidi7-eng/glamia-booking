@@ -256,7 +256,8 @@
     "avecQui": "Avec qui ?",
     "peuImporte": "Peu importe",
     "avecMaj": "Avec %{prenom}",
-    "continuerAvec": "Continuer avec %{heure} →"
+    "continuerAvec": "Continuer avec %{heure} →",
+    "proBadgeApp": "Télécharger l'app"
   },
   "commun": {
     "chargement": "Chargement...",

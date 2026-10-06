@@ -205,6 +205,8 @@ export default function Vitrine(props: {
   position: { lat: number; lon: number } | null
   phraseAdresse: string | null
   conditions: { libelle: string; oui: boolean }[]
+  /** Son règlement, en toutes lettres : un bloc comme les autres, juste au-dessus des conditions (Chadi, 6 oct. 2026). */
+  reglement?: string | null
   ouvrirPhotos: (photos: string[], index: number) => void
   onReserver: () => void
   /** Ultra — « Personnaliser ma page » : la couleur de sa page, et celle et le texte du bouton. */
@@ -218,6 +220,7 @@ export default function Vitrine(props: {
 }) {
   const ACCENT = props.couleurPage || ROSE
   const [boutonVisible, setBoutonVisible] = useState(props.boutonApresDefilement == null)
+  const [reglementOuvert, setReglementOuvert] = useState(false)
   useEffect(() => {
     const seuil = props.boutonApresDefilement
     if (seuil == null) return
@@ -443,6 +446,14 @@ export default function Vitrine(props: {
           {props.position && <CarteCercle lat={props.position.lat} lon={props.position.lon} couleur={props.couleurPage || undefined} />}
           {props.ville && <p style={{ margin: '10px 0 0', fontSize: 14, fontWeight: 600 }}>{props.ville}</p>}
           {props.phraseAdresse && <p style={{ margin: '3px 0 0', fontSize: 13, color: ENCRE_DOUCE, lineHeight: 1.5 }}>{props.phraseAdresse}</p>}
+        </Bloc>
+      )}
+
+      {/* 6 bis. LE RÈGLEMENT, dans la même forme que les conditions : replié
+          sur deux lignes, « Voir plus » dedans. */}
+      {props.reglement && (
+        <Bloc titre={traduire('resa.reglement')}>
+          <TexteReplie texte={props.reglement} ouvert={reglementOuvert} onBasculer={() => setReglementOuvert(v => !v)} styleTexte={{ fontSize: 14, color: '#374151' }} />
         </Bloc>
       )}
 

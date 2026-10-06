@@ -51,6 +51,11 @@ import { traduire } from '@/lib/i18n'
 // tant que moins de cinq comptes différents l'ont utilisée.
 const APP_STORE = (campagne: string) =>
   `https://apps.apple.com/app/apple-store/id6760552102?pt=128654461&ct=${campagne}&mt=8`
+// DEPUIS LE 6 OCTOBRE 2026, LE BOUTON MÈNE AU SITE, PAS À L'APP STORE : l'app
+// est aussi sur Google Play, et c'est glamia.pro qui propose les deux. La
+// campagne voyage en utm, et notre compteur (/api/clic-app) reste.
+const SITE = (campagne: string) => `https://glamia.pro/?utm_source=booking&utm_medium=pied&utm_campaign=${campagne}`
+void APP_STORE
 // GRIS ET NOIR (Chadi, 27 sept. 2026). La page porte maintenant la couleur de
 // la pro ; un pied rose Glamia jurait avec un vert ou un bleu. Le noir de
 // l'encre et un gris très clair vont avec toutes les couleurs, et le badge
@@ -66,22 +71,20 @@ type Props = {
   variante: Variante
 }
 
-/** Le badge noir d'Apple, dessiné : pomme + « Télécharger dans l'App Store ». */
+/** Le bouton noir « Télécharger l'app » : iPhone et Android, le site fait le tri. */
 function BadgeAppStore({ hauteur = 44 }: { hauteur?: number }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      background: '#000', color: '#fff', borderRadius: hauteur * 0.22,
-      padding: `0 ${hauteur * 0.28}px`, height: hauteur,
+      display: 'inline-flex', alignItems: 'center', gap: 7,
+      background: '#000', color: '#fff', borderRadius: hauteur * 0.5,
+      padding: `0 ${hauteur * 0.4}px`, height: hauteur,
       textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
+      fontSize: hauteur * 0.4, fontWeight: 700, letterSpacing: '-0.01em',
     }}>
-      <svg width={hauteur * 0.5} height={hauteur * 0.5} viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
-        <path d="M17.05 12.04c-.03-2.8 2.29-4.15 2.39-4.21-1.3-1.9-3.33-2.16-4.05-2.19-1.72-.17-3.36 1.01-4.24 1.01-.87 0-2.22-.99-3.65-.96-1.88.03-3.61 1.09-4.58 2.77-1.95 3.39-.5 8.41 1.4 11.16.93 1.35 2.04 2.86 3.5 2.81 1.4-.06 1.93-.91 3.63-.91 1.69 0 2.17.91 3.65.88 1.51-.03 2.46-1.37 3.38-2.73 1.07-1.57 1.51-3.09 1.53-3.17-.03-.01-2.94-1.13-2.97-4.46zM14.28 3.9c.77-.94 1.29-2.24 1.15-3.54-1.11.05-2.46.74-3.26 1.67-.71.83-1.34 2.16-1.17 3.43 1.24.1 2.5-.63 3.28-1.56z" />
+      <svg width={hauteur * 0.42} height={hauteur * 0.42} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" />
       </svg>
-      <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05, textAlign: 'left' }}>
-        <span style={{ fontSize: hauteur * 0.19, opacity: 0.9 }}>{traduire('resa.proBadgeLigne1')}</span>
-        <span style={{ fontSize: hauteur * 0.33, fontWeight: 600, letterSpacing: '-0.01em' }}>App Store</span>
-      </span>
+      {traduire('resa.proBadgeApp')}
     </span>
   )
 }
@@ -95,7 +98,7 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
   }
 
   const lien = (enfants: React.ReactNode, style?: React.CSSProperties) => (
-    <a href={APP_STORE(variante === 'carte' ? 'page-fermee' : 'bandeau-resa')}
+    <a href={SITE(variante === 'carte' ? 'page-fermee' : 'bandeau-resa')}
        target="_blank" rel="noopener noreferrer" onClick={compter}
        style={{ textDecoration: 'none', display: 'inline-flex', ...style }}>{enfants}</a>
   )

@@ -590,7 +590,6 @@ export default function ReservationPage() {
   // le numéro. Un lien qui amène à un créneau précis (liste d'attente,
   // désistement) va droit au but, sans vitrine.
   const [vitrineOuverte, setVitrineOuverte] = useState(false)
-  const [reglementOuvert, setReglementOuvert] = useState(false)
 
   // Changement d'étape → remonter en haut (l'étape 5 gère son propre scroll vers le récap)
   useEffect(() => {
@@ -972,13 +971,7 @@ export default function ReservationPage() {
   // « Voir plus » qui déplie sur place : on en voit toujours quelque chose,
   // et le cadre du numéro tient dans le premier écran. (Il était « jamais
   // plié » jusque-là, puis caché derrière un « + » dans l'aperçu.)
-  // Même carte que le message d'accueil : fond pâle, deux lignes, « Voir plus » dedans.
-  const blocReglement = aReglement && (
-    <div style={{ background: PINK_LIGHT, border: `1px solid ${PINK_BORD}`, borderRadius: 16, padding: '12px 14px' }}>
-      <p style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: PINK_FONCE, margin: '0 0 4px' }}>{traduire('resa.reglement')}</p>
-      <TexteReplie texte={vitrine?.reglement ?? ''} ouvert={reglementOuvert} onBasculer={() => setReglementOuvert(v => !v)} styleTexte={{ fontSize: 14, color: '#4A444E' }} />
-    </div>
-  )
+  // Le règlement vit dans la vitrine, au-dessus des conditions (Chadi, 6 oct. 2026 au soir).
 
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -3585,6 +3578,7 @@ export default function ReservationPage() {
               position={vitrine?.position ?? null}
               phraseAdresse={attente}
               conditions={conditions}
+              reglement={aReglement ? vitrine?.reglement ?? null : null}
               ouvrirPhotos={(photos, index) => setVisionneuse({ photos, index })}
               onReserver={() => { const champ = document.getElementById('champ-telephone'); champ?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => champ?.focus(), 450) }}
               couleurPage={vitrine?.style?.page ?? null}
@@ -4446,9 +4440,10 @@ export default function ReservationPage() {
             )}
             </div>
 
-            {/* Le règlement SOUS le cadre (Chadi, 6 oct. 2026) : le numéro d'abord, les conditions juste après. */}
-            {phoneStatus === 'idle' && <div style={{ marginTop: 14 }}>{blocReglement}</div>}
             {phoneStatus === 'idle' && <div style={{ marginTop: 20 }}>{elementVitrine}</div>}
+            {/* « Glamia pour les pros », en carte au bout de la vitrine : la pilule
+                flottante chevauchait le cadre du numéro (Chadi, 6 oct. 2026). */}
+            {phoneStatus === 'idle' && <div style={{ marginBottom: 90 }}><PiedProGlamia proId={pro?.id || undefined} slug={typeof slug === 'string' ? slug : undefined} variante="carte" /></div>}
           </div>
         )}
 
