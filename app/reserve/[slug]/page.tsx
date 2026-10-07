@@ -3501,11 +3501,11 @@ export default function ReservationPage() {
 
           <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 32 }}>{traduire('resa.aBientot')}</p>
 
-          {/* Logo Glamia + slogan */}
-          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 24 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: PINK_TEXTE, letterSpacing: '-0.02em', margin: '0 0 4px' }}>Glamia</p>
-            {/* LE slogan, comme en pied de mail : majuscules, petit, rose (mémoire slogan-glamia). */}
-            <p style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em', color: PINK_TEXTE, textTransform: 'uppercase', margin: 0 }}>{traduire('resa.signatureGlamia')}</p>
+          {/* LE slogan, exactement comme en pied de mail (confirmation, rappel, annulation,
+              campagne) : une seule ligne, 9,5 px, gras 600, interlettrage 0.08em, rose Glamia
+              fixe (#C2779E, jamais la couleur de la pro), en majuscules, même police que les mails. */}
+          <div style={{ borderTop: '1px solid #f0ebe6', padding: '16px 0 4px' }}>
+            <p style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em', color: '#C2779E', textTransform: 'uppercase', margin: 0, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{traduire('resa.signatureGlamia')}</p>
           </div>
         </div>
       </div>
