@@ -352,8 +352,11 @@ export async function POST(
     updateData.rappel_confirme_at = new Date().toISOString()
   }
   if (action === 'annuler') {
-    // Annulation par la cliente → notification in-app pour la pro
+    // Annulation par la cliente → notification in-app pour la pro, et la
+    // fiche dit « Annulé par la cliente » (sans ça, la base retombe sur
+    // « pro » et la pro lit « Annulé par toi » — vu le 7 oct. 2026).
     updateData.notif_annulation_vue = false
+    updateData.annule_par = 'cliente'
   }
 
   const { error: updateErr } = await supabaseAdmin
