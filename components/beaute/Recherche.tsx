@@ -87,7 +87,11 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
     // et de 300 m pour celles qui ont une place dans les trois jours.
     const dans3j = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10)
     const score = (p: ProTrouvee) => distanceM(origine, p) - (p.avecPhotos ? 400 : 0) - (p.dispo && p.dispo.date <= dans3j ? 300 : 0)
-    return [...liste].sort((a, b) => score(a) - score(b))
+    // La mise en avant tient aussi autour d'un point : les Ultra d'abord (dans
+    // leur ordre du jour), puis les autres par distance.
+    return [...liste].sort((a, b) => Number(b.enAvant) - Number(a.enAvant)
+      || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
+      || score(a) - score(b))
   }, [pros, metier, autourDuPoint, origine])
 
   const choisirSurCarte = (slug: string) => {

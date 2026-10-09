@@ -57,6 +57,10 @@ for (const [m, noms] of Object.entries(NOMS) as [Metier, string[]][]) for (const
 const metierDe = (categorie: string): Metier | null => PAR_NOM.get(aplatir(categorie)) ?? null
 
 export type ProTrouvee = {
+  /** Ultra : mise en avant — en tête de la liste, les Ultra tournant entre elles chaque jour (Chadi, 9 oct. 2026). */
+  enAvant: boolean
+  /** Le rang du jour parmi les mises en avant (stable 24 h, différent chaque jour). */
+  rangDuJour: number
   slug: string
   nom: string
   photo: string | null
@@ -218,11 +222,27 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       avecPhotos: Array.isArray(p.photos_travail) && p.photos_travail.length >= 3,
       accroche: ((p.bio ?? p.message_accueil ?? '').replace(/\s+/g, ' ').trim().slice(0, 160)) || null,
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
+      enAvant: p.pro_pay_actif === true,
+      rangDuJour: rangDuJour(p.id),
     }
   })
-    // Celles qui montrent leur travail d'abord (Chadi, 27 sept. 2026), puis la plus tôt disponible.
-    .sort((a, b) => Number(b.avecPhotos) - Number(a.avecPhotos)
+    // LA MISE EN AVANT (Chadi, 9 oct. 2026) : les Ultra d'abord — c'est la
+    // promesse de l'abonnement, « parmi les premières dans ta ville ». Entre
+    // elles, l'ordre change chaque jour pour que chacune ait sa place en tête.
+    // Puis, comme avant : celles qui montrent leur travail (27 sept. 2026),
+    // puis la plus tôt disponible.
+    .sort((a, b) => Number(b.enAvant) - Number(a.enAvant)
+      || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
+      || Number(b.avecPhotos) - Number(a.avecPhotos)
       || (a.dispo ? `${a.dispo.date}T${a.dispo.heure}` : 'z').localeCompare(b.dispo ? `${b.dispo.date}T${b.dispo.heure}` : 'z'))
+}
+
+/** Un rang stable sur la journée, différent d'un jour à l'autre : l'identifiant et la date, hachés. */
+function rangDuJour(id: string): number {
+  const cle = `${id}:${new Date().toISOString().slice(0, 10)}`
+  let h = 0
+  for (let i = 0; i < cle.length; i++) h = (h * 31 + cle.charCodeAt(i)) >>> 0
+  return h % 100000
 }
 
 /** Les villes proposées pendant la frappe : d'abord celles où il y a des pros. */
