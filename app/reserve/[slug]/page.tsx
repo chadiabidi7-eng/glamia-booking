@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
+import { couleurInitiale } from '@/lib/couleur-initiale'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
@@ -632,7 +633,8 @@ export default function ReservationPage() {
   }
   const [vitrine, setVitrine] = useState<Vitrine | null>(null)
   // Sa couleur, avant tout rendu de ce qui suit (voir teinterPage).
-  const couleurPro = couleurValide(vitrine?.style?.page)
+  // Tant que la vitrine n'est pas arrivée, la couleur posée par le serveur (voir lib/couleur-initiale.ts).
+  const couleurPro = vitrine ? couleurValide(vitrine.style?.page) : couleurInitiale()
   teinterPage(couleurPro)
   // La visionneuse : les photos d'un avis, et celle qu'on regarde.
   const [visionneuse, setVisionneuse] = useState<{ photos: string[]; index: number } | null>(null)
@@ -4369,6 +4371,7 @@ export default function ReservationPage() {
                   const n = prochainPalier ? prochainPalier.position - tampons : 0
                   return (
                     <CarteFidelite
+                      couleur={couleurPro}
                       nbRonds={fideliteConfig.nb_ronds}
                       paliers={fideliteConfig.paliers}
                       tampons={tampons}
@@ -4427,6 +4430,7 @@ export default function ReservationPage() {
                 {/* Carte de fidélité vierge pour nouvelle cliente — le visuel de l'app (3.0) */}
                 {fideliteConfig?.active && (
                   <CarteFidelite
+                    couleur={couleurPro}
                     nbRonds={fideliteConfig.nb_ronds}
                     paliers={fideliteConfig.paliers}
                     tampons={0}
@@ -5295,8 +5299,9 @@ export default function ReservationPage() {
                       : propay.mode === 'acompte' ? traduire('resa.blocAcompte')
                       : traduire('resa.blocEmpreinte')}
                   </label>
+                  {/* La pastille GLAMIA PAY reste rose : c'est notre marque, pas la couleur de la pro (Chadi, 9 oct. 2026). */}
                   <span style={{
-                    background: PINK, color: '#fff', borderRadius: 8,
+                    background: PINK_DEFAUT, color: '#fff', borderRadius: 8,
                     padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
                     whiteSpace: 'nowrap', flexShrink: 0,
                   }}>

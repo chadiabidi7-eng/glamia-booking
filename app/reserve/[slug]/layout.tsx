@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { traduireDans } from '@/lib/i18n'
 import LangueDeLaPro from './LangueDeLaPro'
+import { couleurValide } from '@/lib/teinte'
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -30,7 +31,7 @@ const supabaseServer = createClient(
 const profilDuSlug = cache(async (slug: string) => {
   const { data } = await supabaseServer
     .from('profiles')
-    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, prestations(data)')
+    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, abonnement_actif, trial_ends_at, page_couleur, prestations(data)')
     .eq('slug', slug)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -284,11 +285,20 @@ export default async function ReserveLayout({
   // connaît déjà la pro — il vient de lire son profil pour le titre.
   const { slug } = await params
   let langue: string | null = null
+  // LA COULEUR AUSSI (Chadi, 9 oct. 2026) : l'écran d'attente est dans sa
+  // couleur dès le premier rendu. Même règle que l'API de la vitrine : la
+  // couleur demande un abonnement actif (Pro ou Ultra) ou un essai en cours.
+  let couleur: string | null = null
   try {
-    langue = ((await profilDuSlug(slug))?.langue as string | null) ?? null
+    const profil = await profilDuSlug(slug)
+    langue = (profil?.langue as string | null) ?? null
+    const p = profil as { pro_pay_actif?: unknown; abonnement_actif?: unknown; trial_ends_at?: unknown; page_couleur?: unknown } | null
+    const abonnee = p?.pro_pay_actif === true || p?.abonnement_actif === true
+      || (typeof p?.trial_ends_at === 'string' && new Date(p.trial_ends_at) > new Date())
+    couleur = abonnee ? couleurValide(p?.page_couleur) : null
   } catch {
     // Une base qui ne répond pas ne doit pas empêcher la page de s'ouvrir :
-    // on repart sur le français, comme avant.
+    // on repart sur le français et le rose, comme avant.
   }
-  return <LangueDeLaPro langue={langue}>{children}</LangueDeLaPro>
+  return <LangueDeLaPro langue={langue} couleur={couleur}>{children}</LangueDeLaPro>
 }

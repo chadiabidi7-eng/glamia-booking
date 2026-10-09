@@ -1,6 +1,7 @@
 'use client'
 
 import { poserLangue } from '@/lib/i18n'
+import { poserCouleurInitiale } from '@/lib/couleur-initiale'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA LANGUE EST POSÉE AVANT QUE LE PREMIER MOT S'AFFICHE.
@@ -23,11 +24,15 @@ import { poserLangue } from '@/lib/i18n'
 
 export default function LangueDeLaPro({
   langue,
+  couleur = null,
   children,
 }: {
   langue: string | null
+  /** La couleur de la page de la pro (Pro ou Ultra), posée avant le premier rendu : l'écran d'attente la prend. */
+  couleur?: string | null
   children: React.ReactNode
 }) {
   poserLangue(langue)
+  poserCouleurInitiale(couleur)
   return <>{children}</>
 }

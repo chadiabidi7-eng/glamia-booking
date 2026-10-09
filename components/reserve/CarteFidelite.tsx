@@ -39,10 +39,14 @@ export default function CarteFidelite({ nbRonds, paliers, tampons, libelle, droi
   pied?: ReactNode
 }) {
   const parPosition = new Map(paliers.map(p => [p.position, p]))
+  // LA CARTE SUIT LA COULEUR DE LA PRO, EN PLUS PÂLE (Chadi, 9 oct. 2026) : le
+  // fond est sa couleur presque blanche, le liseré un peu plus présent, les
+  // ronds faits et le cœur dans sa couleur, les pastilles de palier dans sa
+  // couleur foncée pour rester lisibles. Sans couleur (gratuite) : le rose Glamia.
   const ROSE = couleur ?? ROSE_GLAMIA
   const ROSE_FONCE = couleur ? fonce(couleur) : ROSE_FONCE_GLAMIA
-  const FOND = couleur ? pale(couleur, 0.92) : '#FBEFF4'
-  const BORD = couleur ? pale(couleur, 0.8) : '#F3DCE7'
+  const FOND = couleur ? pale(couleur, 0.94) : '#FBEFF4'
+  const BORD = couleur ? pale(couleur, 0.84) : '#F3DCE7'
   const lignes = rangees(nbRonds)
   const plusLongue = Math.max(...lignes.map(l => l.length))
   // Les ronds prennent la place qu'il y a, plafonnés comme dans l'app.
