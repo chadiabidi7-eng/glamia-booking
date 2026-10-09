@@ -4785,10 +4785,10 @@ export default function ReservationPage() {
                 border: `1.5px solid ${PINK}`,
               }}>
                 <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{traduire('resa.prochainCreneau')}</p>
-                <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 4px', textTransform: 'capitalize' }}>
-                  {formatDateLong(premierCreneau.date)}
-                </p>
+                {/* La date et l'heure sur une seule ligne, séparées d'un tiret (Chadi, 9 oct. 2026). */}
                 <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 14px' }}>
+                  <span style={{ textTransform: 'capitalize' }}>{formatDateLong(premierCreneau.date)}</span>
+                  {' — '}
                   {premierCreneau.heure}
                 </p>
                 <button
