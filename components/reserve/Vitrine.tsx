@@ -140,7 +140,8 @@ export function EnTeteVitrine(props: {
   // le fermant avec lui : une phrase coupée ne se ferme pas.
   const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT, verticalAlign: '-0.32em', padding: '0 2px' }
   return (
-    <div style={{ margin: '-16px -16px 8px' }}>
+    {/* Un peu d'air sous l'en-tête, avant le cadre de réservation (Chadi, 9 oct. 2026). */}
+    <div style={{ margin: '-16px -16px 18px' }}>
       {/* La couverture : un bandeau bas. Sans couverture, un voile de sa couleur. */}
       <button
         onClick={() => props.couverture && props.ouvrirPhotos([props.couverture], 0)}

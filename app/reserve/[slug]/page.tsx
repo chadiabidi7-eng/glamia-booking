@@ -3779,7 +3779,7 @@ export default function ReservationPage() {
             {phoneStatus === 'idle' && elementEnTete}
             {/* La prochaine dispo, juste au-dessus du cadre : la première question d'une cliente. */}
             {phoneStatus === 'idle' && prochaineDispo && (
-              <p style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, color: '#4A424C' }}>
+              <p style={{ margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, color: '#4A424C' }}>
                 <span style={{ width: 9, height: 9, borderRadius: 5, background: '#4CAF6D', flex: 'none' }} />
                 <span>{traduire('resa.prochaineDispo', { date: formatDateCourte(prochaineDispo.date), heure: formatHeure(prochaineDispo.heure) })}</span>
               </p>
@@ -5660,13 +5660,9 @@ export default function ReservationPage() {
           </div>
         </div>
       )}
-      {/* ── VARIANTE « BARRE » : collée en bas, impossible à manquer.
-          Sauf à l'étape 2, où le récapitulatif des prestations occupe déjà le
-          bas de l'écran : deux barres superposées cacheraient le total et le
-          bouton Continuer. */}
-      {!(step === 2 && techniquesSelectionnees.length > 0) && !(step === 1 && phoneStatus === 'idle') && (
-        <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
-      )}
+      {/* ── PLUS DE BARRE « GLAMIA POUR LES PROS » PENDANT LA RÉSERVATION (Chadi,
+          9 oct. 2026) : dès qu'on a passé la vitrine, c'est une cliente qui
+          réserve, pas une pro. La carte au bout de la vitrine suffit. */}
     </div>
   )
 }
