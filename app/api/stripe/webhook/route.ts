@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
         // État précédent, pour détecter une SUSPENSION (true → false)
         const { data: avant } = await supabaseAdmin
           .from('stripe_comptes')
-          .select('pro_id, charges_enabled')
+          .select('pro_id, charges_enabled, prete_prevenue_le, piece_demandee_le')
           .eq('account_id', compte.id)
           .maybeSingle()
         await supabaseAdmin
@@ -163,6 +163,29 @@ export async function POST(req: NextRequest) {
             'notif.compteBloqueTitre',
             'notif.compteBloque',
           )
+        }
+        // ── LA CAISSE EST PRÊTE (Chadi, 9 oct. 2026) ──────────────────────
+        // Avec la caisse en deux temps, la pro valide son identité puis attend
+        // que Stripe la vérifie, sans rien voir venir. Dès que Stripe autorise
+        // les encaissements pour la première fois, on le lui dit : ses clientes
+        // peuvent payer en ligne. Une seule fois.
+        if (nowEnabled && avant?.charges_enabled !== true && avant?.pro_id && !avant.prete_prevenue_le) {
+          await supabaseAdmin.from('stripe_comptes')
+            .update({ prete_prevenue_le: new Date().toISOString() })
+            .eq('account_id', compte.id)
+          await pousserNotifPro(avant.pro_id, 'notif.caissePreteTitre', 'notif.caissePrete')
+        }
+        // ── STRIPE RÉCLAME UNE PIÈCE D'IDENTITÉ ───────────────────────────
+        // La vérification automatique n'a pas suffi : sans pièce, pas
+        // d'encaissement. On la prévient une fois, la notification ouvre le
+        // formulaire.
+        const reclame = [...(compte.requirements?.currently_due ?? []), ...(compte.requirements?.past_due ?? [])]
+        const pieceReclamee = reclame.some(c => c.includes('verification.document'))
+        if (pieceReclamee && !nowEnabled && avant?.pro_id && !avant.piece_demandee_le) {
+          await supabaseAdmin.from('stripe_comptes')
+            .update({ piece_demandee_le: new Date().toISOString() })
+            .eq('account_id', compte.id)
+          await pousserNotifPro(avant.pro_id, 'notif.pieceRequiseTitre', 'notif.pieceRequise')
         }
         break
       }
