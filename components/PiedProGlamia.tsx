@@ -179,16 +179,17 @@ export default function PiedProGlamia({ proId, slug, variante }: Props) {
     <div style={{
       background: 'linear-gradient(160deg, #FAFAFA 0%, #F2F2F3 100%)',
       border: '1px solid #E6E6E8', borderRadius: 20,
-      padding: '22px 18px 20px', textAlign: 'center', marginTop: 20,
+      padding: '18px 16px 16px', textAlign: 'center', marginTop: 20,
       boxShadow: '0 6px 18px rgba(28,28,30,0.06)',
     }}>
-      <p style={{ margin: '0 0 6px', fontSize: 16.5, fontWeight: 800, color: ENCRE, lineHeight: 1.3 }}>
+      {/* Plus discret (Chadi, 9 oct. 2026) : police réduite, bouton plus petit. */}
+      <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 800, color: ENCRE, lineHeight: 1.3 }}>
         {traduire('resa.proAccroche')}
       </p>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B6B70', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6B6B70', lineHeight: 1.5 }}>
         {traduire('resa.proBaseline')}
       </p>
-      {lien(<BadgeAppStore hauteur={46} />)}
+      {lien(<BadgeAppStore hauteur={34} />)}
     </div>
   )
 }
