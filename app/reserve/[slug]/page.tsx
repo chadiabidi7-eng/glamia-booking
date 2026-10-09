@@ -4442,9 +4442,8 @@ export default function ReservationPage() {
             </div>
 
             {phoneStatus === 'idle' && <div style={{ marginTop: 20 }}>{elementVitrine}</div>}
-            {/* « Glamia pour les pros », en carte au bout de la vitrine : la pilule
-                flottante chevauchait le cadre du numéro (Chadi, 6 oct. 2026). */}
-            {phoneStatus === 'idle' && <div style={{ marginBottom: 90 }}><PiedProGlamia proId={pro?.id || undefined} slug={typeof slug === 'string' ? slug : undefined} variante="carte" /></div>}
+            {/* De l'espace sous la vitrine : la bannière « Glamia pour les pros », fixée en bas, ne cache pas la fin (Chadi, 9 oct. 2026). */}
+            {phoneStatus === 'idle' && <div style={{ height: 90 }} />}
           </div>
         )}
 
@@ -5660,9 +5659,13 @@ export default function ReservationPage() {
           </div>
         </div>
       )}
-      {/* ── PLUS DE BARRE « GLAMIA POUR LES PROS » PENDANT LA RÉSERVATION (Chadi,
-          9 oct. 2026) : dès qu'on a passé la vitrine, c'est une cliente qui
-          réserve, pas une pro. La carte au bout de la vitrine suffit. */}
+      {/* ── LA BANNIÈRE « GLAMIA POUR LES PROS » : SUR LA VITRINE SEULEMENT (Chadi,
+          9 oct. 2026). La même qu'en 2.6.1, neutre, vers glamia.pro, fixée en
+          bas : on la voit à l'ouverture. Dès que la réservation commence, c'est
+          une cliente qui réserve, pas une pro : elle disparaît. */}
+      {step === 1 && phoneStatus === 'idle' && (
+        <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
+      )}
     </div>
   )
 }
