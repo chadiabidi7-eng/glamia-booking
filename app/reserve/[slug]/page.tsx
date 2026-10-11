@@ -1262,7 +1262,9 @@ export default function ReservationPage() {
   // prestation — c'est la cliente qui choisit ses soins. Choisir un soin efface
   // le jour (la durée change) ; on le garde donc ici, à part, et on l'y ramène
   // une fois ses soins choisis. Une seule fois : ensuite, parcours normal.
-  const creneauVise = useRef<{ jour: string; heure: string } | null>(null)
+  const creneauVise = useRef<{ jour: string; heure: string; duree: number | null } | null>(null)
+  // Venue d'un mail de désistement, mais ses soins dépassent le créneau libéré : on le lui dit.
+  const [creneauCourt, setCreneauCourt] = useState<{ duree: number; choisie: number } | null>(null)
   const [repriseAttente, setRepriseAttente] = useState(false)
 
   const identiteRemplie = !!clientePrenom.trim() && !!clienteNom.trim()
@@ -1310,7 +1312,7 @@ export default function ReservationPage() {
 
     setVitrineOuverte(false)
     if (retrouvees.length > 0) setTechniquesSelectionnees(retrouvees)
-    else if (/^\d{4}-\d{2}-\d{2}$/.test(jourUrl) && /^\d{2}:\d{2}$/.test(heureUrl)) creneauVise.current = { jour: jourUrl, heure: heureUrl }
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(jourUrl) && /^\d{2}:\d{2}$/.test(heureUrl)) creneauVise.current = { jour: jourUrl, heure: heureUrl, duree: Number(rechercheUrl.get('duree')) > 0 ? Number(rechercheUrl.get('duree')) : null }
     setDate(jourUrl)
     setHeure(heureUrl)
     setRepriseAttente(retrouvees.length > 0)
@@ -2517,6 +2519,8 @@ export default function ReservationPage() {
       if (vise && vise.jour === date) {
         creneauVise.current = null
         if (frais.some(c => c.heure === vise.heure && c.disponible)) { setHeure(vise.heure); return }
+        // Le créneau annoncé ne tient pas ses soins : elle le sait, et choisit un autre horaire.
+        if (vise.duree && dureeTotal > vise.duree) setCreneauCourt({ duree: vise.duree, choisie: dureeTotal })
       }
 
       // SON CRÉNEAU VIENT-IL DE PARTIR ? Elle a choisi 14 h 30, une autre
@@ -4902,6 +4906,14 @@ export default function ReservationPage() {
               </button>
             )}
 
+            {creneauCourt && (
+              <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#FBEAF0', border: '1px solid #F1DCE7', borderRadius: 12, padding: '11px 13px', marginBottom: 16, textAlign: 'left' }}>
+                <AlertCircle size={17} color="#8E4E72" style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ margin: 0, color: '#8E4E72', fontSize: 13.5, lineHeight: 1.45 }}>
+                  {traduire('resa.creneauLibereCourt', { duree: formatDuree(creneauCourt.duree), choisie: formatDuree(creneauCourt.choisie) })}
+                </p>
+              </div>
+            )}
             {creneauPerdu && (
               <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '11px 13px', marginBottom: 16, textAlign: 'left' }}>
                 <AlertCircle size={17} color="#B42318" style={{ flexShrink: 0, marginTop: 1 }} />

@@ -257,7 +257,8 @@
     "peuImporte": "No preference",
     "avecMaj": "With %{prenom}",
     "continuerAvec": "Continue with %{heure} →",
-    "proBadgeApp": "Get the app"
+    "proBadgeApp": "Get the app",
+    "creneauLibereCourt": "The freed slot was only %{duree} long: your treatments take %{choisie}. Please pick another time."
   },
   "commun": {
     "chargement": "Loading...",

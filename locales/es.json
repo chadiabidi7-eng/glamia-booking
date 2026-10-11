@@ -257,7 +257,8 @@
     "peuImporte": "Me da igual",
     "avecMaj": "Con %{prenom}",
     "continuerAvec": "Continuar con %{heure} →",
-    "proBadgeApp": "Descargar la app"
+    "proBadgeApp": "Descargar la app",
+    "creneauLibereCourt": "El hueco liberado era de solo %{duree}: tus servicios duran %{choisie}. Elige otra hora."
   },
   "commun": {
     "chargement": "Cargando...",

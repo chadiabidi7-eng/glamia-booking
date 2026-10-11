@@ -257,7 +257,8 @@
     "peuImporte": "Peu importe",
     "avecMaj": "Avec %{prenom}",
     "continuerAvec": "Continuer avec %{heure} →",
-    "proBadgeApp": "Télécharger l'app"
+    "proBadgeApp": "Télécharger l'app",
+    "creneauLibereCourt": "Le créneau libéré ne durait que %{duree} : vos soins durent %{choisie}. Choisissez un autre horaire."
   },
   "commun": {
     "chargement": "Chargement...",
