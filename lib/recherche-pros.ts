@@ -78,6 +78,8 @@ export type ProTrouvee = {
   photos: string[]
   /** Page d'une ville : elle n'est pas dans la ville mais à moins de 10 km de son centre (« Tout près »). */
   prochaine?: boolean
+  /** Elle a choisi la ville à montrer : on ne la range que dans celle-là. */
+  villeChoisie?: boolean
   /** La ville qu'elle a écrite (« Lyon 3e ») : sert à la ranger dans sa ville. */
   villeLien?: string
 }
@@ -180,8 +182,11 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
   ])
   // La ville qu'elle montre : celle qu'elle a choisie, sinon celle de son adresse.
   const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville) && formesDeVille((p.ville_affichee || p.ville)!).includes(ville.slug)
-  const dansLaVille = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
+  const tous = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
     undefined, ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon, pays: ville.pays } : undefined)
+  // Une user qui a choisi la ville à montrer n'apparaît que dans celle-là — même si son
+  // adresse, ou la ville déduite de son ancienne adresse, est ailleurs (12 oct. 2026).
+  const dansLaVille = tous.filter(p => !p.villeChoisie || formesDeVille(p.villeLien ?? '').includes(ville.slug))
   if (ville.lat === null || ville.lon === null) return dansLaVille
 
   // 2. TOUT PRÈS (Chadi, 12 oct. 2026) : une cliente du Plessis-Robinson réserve
@@ -328,6 +333,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
       villeLien: p.ville_affichee || p.ville || undefined,
+      villeChoisie: !!(p.ville_affichee ?? '').trim(),
     }
   })
     // LA MISE EN AVANT (Chadi, 9 oct. 2026) : les Ultra d'abord — c'est la
