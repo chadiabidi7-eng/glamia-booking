@@ -122,7 +122,7 @@ export async function villeDepuisSlug(brut: string): Promise<Ville | null> {
 }
 
 /** Le centre de la ville, pour mesurer les distances tant que la cliente ne s'est pas localisée. */
-async function centreDe(nom: string, pays: string): Promise<{ lat: number; lon: number } | null> {
+export async function centreDe(nom: string, pays: string): Promise<{ lat: number; lon: number } | null> {
   try {
     const url = pays === 'FR'
       ? `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(nom)}&type=municipality&limit=1`
@@ -159,8 +159,9 @@ type Profil = {
   bio: string | null; message_accueil: string | null
   ville: string | null
   pays: string | null
+  ville_affichee: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee'
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -173,10 +174,12 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     // Le début du nom, chaque lettre accentuée ou séparateur valant n'importe
     // quel caractère : « Saint Etienne », « Lyon 3e », « Ixelles — Bruxelles »
     // remontent, puis on ne garde que la même ville (12 oct. 2026).
-    admin.from('profiles').select(CHAMPS).ilike('ville', `${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
+    // La ville écrite par l'user, ou la ville qu'elle a choisi d'afficher (12 oct. 2026).
+    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
     admin.from('pros_localisees').select('pro_id, lat, lon').eq('ville_recherche', ville.slug).limit(MAX_PROS * 2),
   ])
-  const memeNom = (p: Profil) => !!p.ville && formesDeVille(p.ville).includes(ville.slug)
+  // La ville qu'elle montre : celle qu'elle a choisie, sinon celle de son adresse.
+  const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville) && formesDeVille((p.ville_affichee || p.ville)!).includes(ville.slug)
   const dansLaVille = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
     undefined, ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon, pays: ville.pays } : undefined)
   if (ville.lat === null || ville.lon === null) return dansLaVille
@@ -257,6 +260,14 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
   // Elle a donné sa ville mais pas de position : sur la page de SA ville, on la
   // pose au centre (flouté comme les autres) plutôt que de la cacher (12 oct. 2026).
   if (centreVille) for (const p of directes) if (!position.has(p.id) && (p.pays ?? 'FR').toUpperCase() === centreVille.pays.toUpperCase()) position.set(p.id, centreVille)
+  // ELLE A CHOISI UNE AUTRE VILLE À MONTRER (son village → la ville voisine, 12 oct. 2026) :
+  // son point se pose au centre de cette ville, jamais près de son adresse exacte.
+  for (const p of profils.values()) {
+    const choisie = (p.ville_affichee ?? '').trim()
+    if (!choisie || choisie.toLowerCase() === (p.ville ?? '').trim().toLowerCase()) continue
+    const c = await centreDe(choisie, (p.pays ?? 'FR').toUpperCase())
+    if (c) position.set(p.id, c)
+  }
   // Même nom, autre ville (Saint-Denis de La Réunion sur la page de Saint-Denis
   // en Seine-Saint-Denis) : à plus de 40 km du centre, ce n'est pas elle.
   if (centreVille) for (const [id, pos] of position) if (kmEntre(centreVille, pos) > 40) position.delete(id)
@@ -316,7 +327,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
-      villeLien: p.ville ?? undefined,
+      villeLien: p.ville_affichee || p.ville || undefined,
     }
   })
     // LA MISE EN AVANT (Chadi, 9 oct. 2026) : les Ultra d'abord — c'est la

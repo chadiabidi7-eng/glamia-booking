@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { aPro, formuleDe } from '@/lib/formule'
+import { centreDe } from '@/lib/recherche-pros'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA VITRINE D'UNE PRO — tout ce que sa page montre avant de réserver.
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profil } = await supabaseAdmin
     .from('profiles')
-    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif, abonnement_actif, trial_ends_at')
+    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, ville_affichee, pays, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif, abonnement_actif, trial_ends_at')
     .eq('id', proId)
     .maybeSingle()
 
@@ -107,7 +108,15 @@ export async function POST(req: NextRequest) {
   let position: { lat: number; lon: number } | null =
     typeof profil.adresse_lat === 'number' && typeof profil.adresse_lon === 'number'
       ? { lat: profil.adresse_lat as number, lon: profil.adresse_lon as number } : null
-  let villeConnue = ((profil.ville as string) || '').trim() || null
+  // LA VILLE MONTRÉE (12 oct. 2026) : celle qu'elle a choisie d'afficher, sinon celle de son
+  // adresse, sinon ses propres mots (« Fribourg, commune du Gibloux »), et seulement en dernier
+  // la ville déduite de son ancienne adresse — qui peut être son village, voire une erreur.
+  const choisie = ((profil.ville_affichee as string) || '').trim() || null
+  let villeConnue = choisie || ((profil.ville as string) || '').trim() || ((profil.adresse_publique as string) || '').trim() || null
+  if (choisie && choisie.toLowerCase() !== ((profil.ville as string) || '').trim().toLowerCase()) {
+    // Son point se pose au centre de la ville choisie, jamais près de son adresse exacte.
+    position = await centreDe(choisie, ((profil.pays as string) || 'FR').toUpperCase())
+  }
   if (!position || !villeConnue) {
     const { data: loc } = await supabaseAdmin.from('pros_localisees').select('lat, lon, ville').eq('pro_id', proId).maybeSingle()
     if (loc) { position ??= { lat: loc.lat as number, lon: loc.lon as number }; villeConnue ??= loc.ville as string }
