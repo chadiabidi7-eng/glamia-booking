@@ -4,6 +4,8 @@ import { stripe } from '@/lib/stripe-serveur'
 import { libererEmpreintesRdv } from '../../stripe/webhook/route'
 import { traduireDans } from '@/lib/i18n'
 import { symboleDevise } from '@/lib/devise'
+import { calculerTotalCliente } from '../intent/route'
+import { estLienAcompte, finaliserLienAcompte } from '@/lib/lien-acompte'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (lien d'encaissement de la fiche RDV).
@@ -29,17 +31,19 @@ type Paiement = {
   pro_id: string
   rdv_id: string | null
   type: string
+  mode: string | null
   montant: number
   frais_reservation: number | null
   statut: string
   stripe_payment_intent_id: string | null
+  stripe_setup_intent_id: string | null
   rdv: { technique: string | null; cliente: { prenom: string | null; nom: string | null; email: string | null } | null } | null
 }
 
 async function chargerContexte(token: string) {
   const { data: paiement } = await supabaseAdmin
     .from('paiements')
-    .select('id, pro_id, rdv_id, type, montant, frais_reservation, statut, stripe_payment_intent_id, rdv:rendez_vous(technique, cliente:clientes(prenom, nom, email))')
+    .select('id, pro_id, rdv_id, type, mode, montant, frais_reservation, statut, stripe_payment_intent_id, stripe_setup_intent_id, rdv:rendez_vous(technique, cliente:clientes(prenom, nom, email))')
     .eq('id', token)
     .maybeSingle()
   if (!paiement) return null
@@ -47,7 +51,7 @@ async function chargerContexte(token: string) {
 
   const { data: compte } = await supabaseAdmin
     .from('stripe_comptes')
-    .select('account_id')
+    .select('account_id, pays')
     .eq('pro_id', p.pro_id)
     .maybeSingle()
   if (!compte?.account_id) return null
@@ -64,6 +68,7 @@ async function chargerContexte(token: string) {
   return {
     p,
     account: compte.account_id,
+    pays: (compte as { pays?: string | null }).pays ?? null,
     langue: (pro as { langue?: string | null } | null)?.langue ?? null,
     devise: (pro as { devise?: string | null } | null)?.devise ?? 'EUR',
   }
@@ -114,6 +119,10 @@ async function notifierPro(
   }
 }
 
+// Acompte ou empreinte demandés par la pro : voir lib/lien-acompte.ts.
+/** Déjà réglé : la page dit « acompte réglé » ou « carte enregistrée ». */
+const REGLES: Record<string, string> = { acompte_paye: 'acompte', empreinte_posee: 'empreinte' }
+
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token') ?? ''
   if (!UUID.test(token)) return NextResponse.json({ error: 'token_invalide' }, { status: 400 })
@@ -121,7 +130,38 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
-    const { p, account, langue, devise } = ctx
+    const { p, account, langue, devise, pays } = ctx
+
+    // ── Acompte ou empreinte demandés par la pro ──
+    if (REGLES[p.statut]) return NextResponse.json({ statut: 'regle', type: REGLES[p.statut], langue, devise })
+    if (estLienAcompte(p.mode) && p.statut === 'en_attente') {
+      // Réglé entre-temps, ou mort (heure du rendez-vous passée) ?
+      const statut = await finaliserLienAcompte(p.id)
+      if (statut && REGLES[statut]) return NextResponse.json({ statut: 'regle', type: REGLES[statut], langue, devise })
+      if (statut !== 'en_attente') return NextResponse.json({ statut: 'expire', langue, devise })
+      const empreinte = p.mode === 'lien_empreinte'
+      const intent = empreinte
+        ? await stripe().setupIntents.retrieve(p.stripe_setup_intent_id ?? '', {}, { stripeAccount: account })
+        : await stripe().paymentIntents.retrieve(p.stripe_payment_intent_id ?? '', {}, { stripeAccount: account })
+      return NextResponse.json({
+        statut: 'a_payer',
+        mode: empreinte ? 'empreinte' : 'acompte',
+        langue,
+        devise,
+        stripe_account: account,
+        client_secret: intent.client_secret,
+        type: 'acompte',
+        prestation: p.rdv?.technique ?? null,
+        cliente_prenom: p.rdv?.cliente?.prenom ?? null,
+        cliente_nom: [p.rdv?.cliente?.prenom, p.rdv?.cliente?.nom].filter(Boolean).join(' ') || null,
+        cliente_email: p.rdv?.cliente?.email ?? null,
+        restant: p.montant,
+        frais: empreinte ? 0 : (p.frais_reservation ?? 0),
+        total: empreinte ? 0 : p.montant + (p.frais_reservation ?? 0),
+        // Ce qui pourrait être prélevé en cas d'absence : empreinte + frais.
+        prelevable: empreinte ? calculerTotalCliente(p.montant, pays).totalCliente : undefined,
+      })
+    }
 
     if (p.statut === 'paye') return NextResponse.json({ statut: 'paye', langue, devise })
     if (p.statut !== 'en_attente' || !p.stripe_payment_intent_id) {
@@ -165,6 +205,11 @@ export async function POST(req: NextRequest) {
     const ctx = await chargerContexte(token)
     if (!ctx) return NextResponse.json({ error: 'introuvable' }, { status: 404 })
     const { p, account, devise } = ctx
+    if (REGLES[p.statut]) return NextResponse.json({ statut: 'regle' })
+    if (estLienAcompte(p.mode)) {
+      const statut = await finaliserLienAcompte(p.id)
+      return NextResponse.json({ statut: statut && REGLES[statut] ? 'regle' : (statut ?? 'en_attente') })
+    }
     if (p.statut === 'paye') return NextResponse.json({ statut: 'paye' })
     if (!p.stripe_payment_intent_id) return NextResponse.json({ statut: p.statut })
 

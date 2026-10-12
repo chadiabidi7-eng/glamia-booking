@@ -29,6 +29,7 @@ type RdvInfo = {
   pro_id: string
   horaires: Record<number, { actif?: boolean; active?: boolean; debut: string; fin: string }> | null
   horaires_specifiques: HorairesSpecifiques | null
+  jours_differents?: HorairesSpecifiques | null
   creneaux_bloques: CreneauBloque[]
   planning_variable: boolean
   duree: number
@@ -623,7 +624,7 @@ import { traduire } from '@/lib/i18n';
                     const today0Date = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate())
                     const isPast = dayDate < today0Date
                     const isOff =
-                      !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable)
+                      !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable, rdv.jours_differents)
                       || isDayBlocked(dateStr, rdv.creneaux_bloques ?? [])
                     const isDisabled = isPast || isOff
                     const isSelected = decDate === dateStr

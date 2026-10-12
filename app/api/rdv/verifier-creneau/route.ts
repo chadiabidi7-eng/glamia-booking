@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro, error: errPro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       bloques: Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
       horairesSpec: (pro.horaires_specifiques ?? {}) as never,
       planningVar: pro.planning_variable === true,
+      joursDifferents: ((pro as any).jours_differents ?? {}) as never,
       aLaSuite: (pro as any).creneaux_a_la_suite === true,
       preparation: delaiEntreClientes(pro as any),
       // Le serveur tourne en temps universel : sans ça, le délai minimum se

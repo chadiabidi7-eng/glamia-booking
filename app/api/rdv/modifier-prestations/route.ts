@@ -122,7 +122,7 @@ async function creneauIndisponible(
 
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
+    .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone')
     .eq('id', proId)
     .maybeSingle()
   // Profil illisible : on ne bloque pas une cliente sur une panne de lecture.
@@ -142,6 +142,7 @@ async function creneauIndisponible(
     date: jour,
     heure,
     duree,
+    joursDifferents: (((pro as any) as { jours_differents?: unknown }).jours_differents ?? {}) as never,
     horaires: ((pro as any).horaires ?? {}) as never,
     rdvExistants: (autres ?? []).map(r => {
       const d = new Date(r.date)

@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, adresse, adresse_moment')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, adresse, adresse_moment')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
 
     const verdict = creneauReservable({
       date, heure, duree,
+      joursDifferents: ((heures as { jours_differents?: unknown }).jours_differents ?? {}) as never,
       horaires: (heures.horaires ?? {}) as never,
       rdvExistants,
       bloques: Array.isArray(heures.creneaux_bloques) ? heures.creneaux_bloques : [],

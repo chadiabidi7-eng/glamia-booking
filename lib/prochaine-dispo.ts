@@ -20,7 +20,7 @@ export async function prochaineDispo(admin: SupabaseClient, pro_id: string, hori
     const [{ data: pro }, { data: catalogue }] = await Promise.all([
       admin
         .from('profiles')
-        .select('horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, abonnement_actif, pro_pay_actif, trial_ends_at')
+        .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, abonnement_actif, pro_pay_actif, trial_ends_at')
         .eq('id', pro_id)
         .maybeSingle(),
       admin.from('prestations').select('data').eq('pro_id', pro_id).maybeSingle(),
@@ -107,6 +107,7 @@ export async function prochaineDispo(admin: SupabaseClient, pro_id: string, hori
         pro.creneaux_a_la_suite === true,
         delaiEntreClientes(pro),
         delaiDe(pro),
+        ((pro as { jours_differents?: unknown }).jours_differents ?? {}) as never,
       )
       const premier = slots.find(s => s.disponible)
       if (premier) {

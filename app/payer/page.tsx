@@ -29,6 +29,9 @@ function getStripePromise(compte: string) {
 
 type Details = {
   statut: string
+  /** Acompte ou empreinte demandés par la pro depuis la fiche RDV. */
+  mode?: 'acompte' | 'empreinte'
+  prelevable?: number
   langue?: string | null
   devise?: string | null
   stripe_account?: string
@@ -108,6 +111,28 @@ function Payer() {
   }
   if (!d) return <Cadre><p style={{ color: '#9ca3af', marginTop: 60 }}>{traduire('commun.chargement')}</p></Cadre>
 
+  // ── Acompte réglé, ou carte enregistrée : rien d'autre à faire ──
+  if (d.statut === 'regle') {
+    return (
+      <Cadre>
+        <div style={pastille}><span style={{ color: '#fff', fontSize: 30, fontWeight: 700 }}>✓</span></div>
+        <h1 style={{ fontSize: 22, color: '#1f2937', margin: 0, fontFamily: "'Playfair Display', serif" }}>
+          {d.type === 'empreinte' ? traduire('payer.empreinteEnregistree') : traduire('payer.acompteRegle')}
+        </h1>
+        <p style={{ fontSize: 14, color: '#6b7280', margin: '6px 0 18px' }}>{traduire('payer.rdvSecurise')}</p>
+      </Cadre>
+    )
+  }
+  if (d.statut === 'expire') {
+    return (
+      <Cadre>
+        <p style={{ fontSize: 36, margin: '40px 0 8px' }}>🌸</p>
+        <h1 style={{ fontSize: 20, color: '#1f2937', fontFamily: "'Playfair Display', serif" }}>{traduire('payer.lienIndisponible')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>{traduire('merci.lienExpire')}</p>
+      </Cadre>
+    )
+  }
+
   if (d.statut === 'paye') {
     return (
       <Cadre>
@@ -135,13 +160,28 @@ function Payer() {
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div style={{ fontSize: 24, fontWeight: 700, color: PINK, letterSpacing: 0.5, fontFamily: "'Playfair Display', serif" }}>Glamia</div>
           <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>
-            {d.cliente_prenom
-              ? traduire('payer.regleEnSecuriteAvecPrenom', { prenom: d.cliente_prenom })
-              : traduire('payer.regleEnSecurite')}
+            {d.mode
+              ? (d.cliente_prenom
+                ? traduire('payer.securiseAvecPrenom', { prenom: d.cliente_prenom })
+                : traduire('payer.securise'))
+              : d.cliente_prenom
+                ? traduire('payer.regleEnSecuriteAvecPrenom', { prenom: d.cliente_prenom })
+                : traduire('payer.regleEnSecurite')}
           </p>
         </div>
 
         {/* Détail toujours visible */}
+        {d.mode === 'empreinte' ? (
+          <div style={carteDetail}>
+            <Ligne
+              label={`${traduire('resa.empreinteBancaire')}${d.prestation ? ` — ${d.prestation}` : ''}`}
+              val={fmt(d.restant ?? 0, d.devise)}
+            />
+            <p style={{ fontSize: 12.5, color: '#6b7280', margin: '6px 0 0', lineHeight: 1.45 }}>
+              {traduire('payer.rienDebite', { total: fmt(d.prelevable ?? d.restant ?? 0, d.devise) })}
+            </p>
+          </div>
+        ) : (
         <div style={carteDetail}>
           <Ligne
             label={`${d.type === 'acompte' ? traduire('resa.ligneAcompte')
@@ -155,13 +195,14 @@ function Payer() {
             <span style={{ fontSize: 16, fontWeight: 700, color: PINK }}>{fmt(d.total ?? 0, d.devise)}</span>
           </div>
         </div>
+        )}
 
         {/* Carte */}
         <Elements
           stripe={getStripePromise(d.stripe_account)}
           options={{ clientSecret: d.client_secret, locale: langueActuelle(), appearance, fonts }}
         >
-          <Formulaire token={token} total={d.total ?? 0} devise={d.devise} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
+          <Formulaire token={token} mode={d.mode} total={d.total ?? 0} devise={d.devise} nom={d.cliente_nom ?? ''} email={d.cliente_email ?? ''} />
         </Elements>
 
         <p style={{ fontSize: 11, color: '#9a8f95', textAlign: 'center', marginTop: 12, lineHeight: 1.4 }}>
@@ -186,7 +227,7 @@ function Ligne({ label, val }: { label: string; val: string }) {
   )
 }
 
-function Formulaire({ token, total, devise, nom, email }: { token: string; total: number; devise?: string | null; nom: string; email: string }) {
+function Formulaire({ token, mode, total, devise, nom, email }: { token: string; mode?: 'acompte' | 'empreinte'; total: number; devise?: string | null; nom: string; email: string }) {
   const stripe = useStripe()
   const elements = useElements()
   const [enCours, setEnCours] = useState(false)
@@ -200,11 +241,11 @@ function Formulaire({ token, total, devise, nom, email }: { token: string; total
     if (!stripe || !elements || enCours) return
     setEnCours(true)
     setMsg(null)
-    const { error } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-      ...(retirerLink ? { confirmParams: { payment_method_data: { billing_details: { name: nom || undefined, email } } } } : {}),
-    })
+    const confirmParams = retirerLink ? { confirmParams: { payment_method_data: { billing_details: { name: nom || undefined, email } } } } : {}
+    // L'empreinte enregistre la carte sans la débiter.
+    const { error } = mode === 'empreinte'
+      ? await stripe.confirmSetup({ elements, redirect: 'if_required', ...confirmParams })
+      : await stripe.confirmPayment({ elements, redirect: 'if_required', ...confirmParams })
     if (error) {
       setMsg(error.message ?? traduire('payer.echec'))
       setEnCours(false)
@@ -218,6 +259,8 @@ function Formulaire({ token, total, devise, nom, email }: { token: string; total
         body: JSON.stringify({ token }),
       })
     } catch { /* le webhook / la vérif pro prendront le relais */ }
+    // Acompte ou empreinte : la page elle-même dit que c'est fait.
+    if (mode) { window.location.reload(); return }
     window.location.href = `/paiement/merci?token=${encodeURIComponent(token)}`
   }
 
@@ -236,7 +279,9 @@ function Formulaire({ token, total, devise, nom, email }: { token: string; total
         padding: '15px', borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: enCours ? 'default' : 'pointer',
         opacity: enCours ? 0.6 : 1, fontFamily: "'Poppins', sans-serif",
       }}>
-        {enCours ? traduire('payer.enCours') : traduire('payer.payerMontant', { montant: fmt(total, devise) })}
+        {enCours ? traduire('payer.enCours')
+          : mode === 'empreinte' ? traduire('payer.enregistrerCarte')
+          : traduire('payer.payerMontant', { montant: fmt(total, devise) })}
       </button>
       {msg && <p style={{ color: '#c0392b', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{msg}</p>}
     </>

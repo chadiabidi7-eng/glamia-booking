@@ -77,7 +77,7 @@ async function lire(url: URL) {
   const { data: envoi } = await supabaseAdmin.from('desistement_envois').select('id, cliente_id, pro_id, rdv_id, place_id, genre, pris_le').eq('id', e).maybeSingle()
   if (!envoi || envoi.genre !== 'avancer' || !envoi.rdv_id) return null
   const { data: pro } = await supabaseAdmin.from('profiles')
-    .select('pseudo, prenom, langue, pays, timezone, push_token, horaires, horaires_specifiques, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, delai_resa_min, resa_jour_meme')
+    .select('pseudo, prenom, langue, pays, timezone, push_token, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, delai_resa_min, resa_jour_meme')
     .eq('id', envoi.pro_id).maybeSingle()
   const { data: place } = await supabaseAdmin.from('desistement_places').select('jour, debut_min').eq('id', envoi.place_id).maybeSingle()
   const { data: rdv } = await supabaseAdmin.from('rendez_vous').select('id, date, duree, statut, nb_decalages, cliente_id').eq('id', envoi.rdv_id).maybeSingle()
@@ -95,6 +95,7 @@ async function encoreLibre(lu: NonNullable<Awaited<ReturnType<typeof lire>>>): P
   const pro = lu.pro as Record<string, unknown>
   const verdict = creneauReservable({
     date: lu.place.jour, heure: minToTime(lu.place.debut_min), duree: (lu.rdv.duree as number) ?? 60,
+    joursDifferents: ((pro as { jours_differents?: unknown }).jours_differents ?? {}) as never,
     horaires: (pro.horaires ?? {}) as never,
     rdvExistants: (rdvs ?? []).filter(r => r.id !== lu.rdv.id).map(r => { const d = new Date(r.date as string); return { heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 } }),
     bloques: Array.isArray(pro.creneaux_bloques) ? (pro.creneaux_bloques as never) : [],

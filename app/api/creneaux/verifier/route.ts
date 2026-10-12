@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       bloques: Array.isArray(pro.creneaux_bloques) ? pro.creneaux_bloques : [],
       horairesSpec: (pro.horaires_specifiques ?? {}) as never,
       planningVar: pro.planning_variable === true,
+      joursDifferents: ((pro as { jours_differents?: unknown }).jours_differents ?? {}) as never,
       aLaSuite: (pro as { creneaux_a_la_suite?: boolean }).creneaux_a_la_suite === true,
       preparation: delaiEntreClientes(pro as never),
       delai: delaiDe(pro as never),
