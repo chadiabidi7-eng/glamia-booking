@@ -72,3 +72,38 @@ export function instantReel(heureAffichee: string, fuseau?: string | null): Date
 export function delaiAvant(heureAffichee: string, fuseau?: string | null): number {
   return instantReel(heureAffichee, fuseau).getTime() - Date.now()
 }
+
+/**
+ * La date du jour CHEZ LA PRO, au format « 2026-10-12 ».
+ *
+ * La date du serveur est celle de Greenwich : entre minuit et 2 h à Paris, elle
+ * dit encore « hier » ; le soir aux Antilles, elle dit déjà « demain ». Une offre
+ * jugée finie ou pas commencée, une inscription refusée « jour passé » : tout
+ * ce qui parle d'« aujourd'hui » passe par ici (12 oct. 2026).
+ */
+export function jourChezLaPro(fuseau?: string | null, instant: Date = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: fuseau || FUSEAU_DEFAUT, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(instant)
+  } catch {
+    return instant.toISOString().slice(0, 10)
+  }
+}
+
+/**
+ * L'instant présent écrit comme une heure de rendez-vous (« l'heure de la pro
+ * posée sur Greenwich »), pour comparer directement à la colonne des dates :
+ * « à venir » = date ≥ maintenantCommeRdv(fuseau) (12 oct. 2026).
+ */
+export function maintenantCommeRdv(fuseau?: string | null, instant: Date = new Date()): string {
+  try {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone: fuseau || FUSEAU_DEFAUT, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(instant).map(x => [x.type, x.value]))
+    return `${p.year}-${p.month}-${p.day}T${String(+p.hour % 24).padStart(2, '0')}:${p.minute}:${p.second}.000Z`
+  } catch {
+    return instant.toISOString()
+  }
+}

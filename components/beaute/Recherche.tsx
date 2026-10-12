@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { List, Map as IconeCarte, Star } from 'lucide-react'
 import ChoixVille, { POSITION_CLE } from '@/components/beaute/ChoixVille'
 import Entete from '@/components/beaute/Entete'
@@ -141,7 +141,7 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
         <main className="beaute-liste">
           {/* La ville seule, sur une ligne : la cliente sait ce qu'elle cherche. */}
           <h1 className="gros-titre" style={{ fontSize: 'clamp(28px, 4vw, 38px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titre ? `${titre} ${chute}` : chute}</h1>
-          <p style={{ margin: '8px 0 0', fontSize: 15, color: ENCRE_DOUCE }}>{T.pros(visibles.length)}</p>
+          <p style={{ margin: '8px 0 0', fontSize: 15, color: ENCRE_DOUCE }}>{T.resume(visibles.filter(p => !p.prochaine).length, visibles.filter(p => p.prochaine).length)}</p>
 
           {presents.length > 1 && (
             <div className="beaute-filtres">
@@ -161,8 +161,13 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, marginTop: 16 }}>
-              {visibles.map(p => (
-                <a key={p.slug} href={`${base}/reserve/${p.slug}`}
+              {visibles.map((p, i) => (
+                <Fragment key={p.slug}>
+                {/* « Tout près » : sous les pros de la ville, celles à moins de 10 km (12 oct. 2026). */}
+                {p.prochaine && !visibles[i - 1]?.prochaine && (
+                  <h2 style={{ margin: i === 0 ? '4px 0 0' : '18px 0 0', fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em' }}>{T.toutPres}</h2>
+                )}
+                <a href={`${base}/reserve/${p.slug}`}
                   ref={el => { if (el) cartes.current.set(p.slug, el) }}
                   className={`beaute-pro${actif === p.slug ? ' actif' : ''}`}
                   onMouseEnter={() => setActif(p.slug)} onMouseLeave={() => setActif(a => (a === p.slug ? null : a))}>
@@ -222,6 +227,7 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
                     )}
                   </div>
                 </a>
+                </Fragment>
               ))}
             </div>
           )}

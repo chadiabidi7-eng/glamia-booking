@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { instantReel } from '@/lib/heure-pro'
+import { instantReel, maintenantCommeRdv } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 import { avisFenetreMs } from '@/lib/reglages'
 import { normaliserTelephone } from '@/lib/telephone'
@@ -118,12 +118,16 @@ export async function POST(req: NextRequest) {
       return avisAProposer
     })()
 
+    // « À venir » à l'heure de la pro (12 oct. 2026) : aux Antilles, le rendez-vous
+    // disparaissait 4 h avant l'heure et la cliente ne pouvait plus l'annuler.
+    const { data: fuseauPro } = await supabaseAdmin
+      .from('profiles').select('timezone').eq('id', pro_id).maybeSingle()
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
       .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le')
       .eq('cliente_id', cliente_id)
       .eq('pro_id', pro_id)
-      .gte('date', new Date().toISOString())
+      .gte('date', maintenantCommeRdv(fuseauPro?.timezone as string | null))
       .neq('statut', 'annule')
       .order('date', { ascending: true })
 

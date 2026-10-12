@@ -4,6 +4,7 @@ import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { normaliserTelephone } from '@/lib/telephone'
 import { aPro, formuleDe } from '@/lib/formule'
+import { jourChezLaPro } from '@/lib/heure-pro'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -63,9 +64,11 @@ export async function POST(req: NextRequest) {
 
   if (!estId(pro_id)) return NextResponse.json({ error: 'pro_invalide' }, { status: 400 })
   // La liste d'attente est une fonction Pro (4 oct. 2026).
+  let fuseau: string | null = null
   {
-    const { data: f } = await supabaseAdmin.from('profiles').select('abonnement_actif, pro_pay_actif, trial_ends_at').eq('id', pro_id).maybeSingle()
+    const { data: f } = await supabaseAdmin.from('profiles').select('abonnement_actif, pro_pay_actif, trial_ends_at, timezone').eq('id', pro_id).maybeSingle()
     if (!aPro(formuleDe(f))) return NextResponse.json({ error: 'non_disponible' }, { status: 403 })
+    fuseau = (f?.timezone as string | null) ?? null
   }
   if (!estJour(jour)) return NextResponse.json({ error: 'jour_invalide' }, { status: 400 })
 
@@ -75,7 +78,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Le jour ne peut pas être dans le passé : on n'attend pas une place hier.
-  const aujourdhui = new Date().toISOString().slice(0, 10)
+  // « Aujourd'hui » chez la pro (12 oct. 2026) : le soir aux Antilles, la date de
+  // Greenwich disait déjà demain et refusait une inscription pour le jour même.
+  const aujourdhui = jourChezLaPro(fuseau)
   if (jour < aujourdhui) return NextResponse.json({ error: 'jour_passe' }, { status: 400 })
 
   const prenomNet = typeof prenom === 'string' ? prenom.trim().slice(0, 80) : ''

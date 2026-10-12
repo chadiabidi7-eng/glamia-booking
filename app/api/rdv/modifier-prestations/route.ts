@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
 import { normaliserTelephone } from '@/lib/telephone'
+import { delaiAvant } from '@/lib/heure-pro'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -22,8 +23,11 @@ const supabaseAdmin = createClient(
 const SEUIL_TARDIVE_MS = 24 * 3600_000
 const MAX_DECALAGES = 3
 
-async function decalageBloque(rdvId: string, dateRdv: string): Promise<boolean> {
-  if (new Date(dateRdv).getTime() - Date.now() >= SEUIL_TARDIVE_MS) return false
+async function decalageBloque(rdvId: string, dateRdv: string, proId: string): Promise<boolean> {
+  // À l'heure de la pro (12 oct. 2026) : lue en heure de Greenwich, la limite
+  // tombait 2 h trop tard en France l'été, 4 h trop tôt aux Antilles.
+  const { data: pro } = await supabaseAdmin.from('profiles').select('timezone').eq('id', proId).maybeSingle()
+  if (delaiAvant(dateRdv, pro?.timezone as string | null) >= SEUIL_TARDIVE_MS) return false
   const { data } = await supabaseAdmin
     .from('paiements').select('id').eq('rdv_id', rdvId)
     .in('statut', ['empreinte_posee', 'acompte_paye', 'paye']).limit(1)
@@ -74,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   // Modif AVEC changement de date → mêmes gardes que le décalage
   if (newDate) {
-    if (await decalageBloque(rdv.id, rdv.date as string)) {
+    if (await decalageBloque(rdv.id, rdv.date as string, rdv.pro_id as string)) {
       return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
     }
     if (((rdv as { nb_decalages?: number }).nb_decalages ?? 0) >= MAX_DECALAGES) {

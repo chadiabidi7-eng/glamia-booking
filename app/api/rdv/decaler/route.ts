@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
+import { delaiAvant } from '@/lib/heure-pro'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — décalage d'un RDV par la CLIENTE depuis la page de résa.
@@ -20,8 +21,11 @@ const MAX_DECALAGES = 3
 
 // Décalage fermé à < 24 h du RDV quand un paiement Glamia Pay est engagé
 // (sinon décaler puis annuler > 24 h contournerait la règle tardive).
-async function decalageBloque(rdvId: string, dateRdv: string): Promise<boolean> {
-  if (new Date(dateRdv).getTime() - Date.now() >= SEUIL_TARDIVE_MS) return false
+async function decalageBloque(rdvId: string, dateRdv: string, proId: string): Promise<boolean> {
+  // À l'heure de la pro (12 oct. 2026) : lue en heure de Greenwich, la limite
+  // tombait 2 h trop tard en France l'été, 4 h trop tôt aux Antilles.
+  const { data: pro } = await supabaseAdmin.from('profiles').select('timezone').eq('id', proId).maybeSingle()
+  if (delaiAvant(dateRdv, pro?.timezone as string | null) >= SEUIL_TARDIVE_MS) return false
   const { data } = await supabaseAdmin
     .from('paiements').select('id').eq('rdv_id', rdvId)
     .in('statut', ['empreinte_posee', 'acompte_paye', 'paye']).limit(1)
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, nb_decalages, cliente:clientes(telephone)')
+    .select('id, date, statut, nb_decalages, pro_id, cliente:clientes(telephone)')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
   if (rdv.statut === 'annule') {
     return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
   }
-  if (await decalageBloque(rdv.id, rdv.date as string)) {
+  if (await decalageBloque(rdv.id, rdv.date as string, rdv.pro_id as string)) {
     return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
   }
   if (((rdv as { nb_decalages?: number }).nb_decalages ?? 0) >= MAX_DECALAGES) {

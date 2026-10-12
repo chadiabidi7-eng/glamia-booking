@@ -28,6 +28,7 @@ import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
 import { normaliserTelephone } from '@/lib/telephone'
+import { delaiAvant, jourChezLaPro } from '@/lib/heure-pro'
 
 // ─────────────────────────────────────────────
 // Types
@@ -138,6 +139,8 @@ type ProInfo = {
   devise?: string
   /** Le pays de travail — il décide de la forme du numéro proposé en exemple. */
   pays?: string | null
+  /** Son fuseau : les délais (annulation tardive, rappel) se comptent à SON heure (12 oct. 2026). */
+  timezone?: string | null
 }
 
 type RdvAVenir = {
@@ -1790,6 +1793,7 @@ export default function ReservationPage() {
         // la première fois — exactement le piège que décrit le commentaire
         // juste en dessous.
         pays:             found.pays ?? null,
+        timezone:         found.timezone ?? null,
         // LE NOM QUE LA PRO A DONNÉ À SA CATÉGORIE « AUTRE ». Cette page ne
         // recopie pas le profil reçu : elle le REBÂTIT champ par champ. Tout
         // champ oublié ici est jeté en silence — le serveur l'envoie, la page
@@ -2057,7 +2061,9 @@ export default function ReservationPage() {
   function confirmerAnnulation(rdv: RdvAVenir) {
     const dateLabel  = formatRdvDate(rdv.date)
     const heureLabel = formatRdvHeure(rdv.date)
-    const heuresAvant = (new Date(rdv.date).getTime() - Date.now()) / 3_600_000
+    // À l'heure de la pro : sans son fuseau, l'été en France, il manquait 2 h et
+    // l'avertissement « annulation tardive » ne s'affichait pas (12 oct. 2026).
+    const heuresAvant = delaiAvant(rdv.date, pro?.timezone) / 3_600_000
     // ── LA MÊME GRÂCE QUE LE SERVEUR APPLIQUE VRAIMENT ────────────────────
     // Si la pro a rapproché le rendez-vous, la cliente n'est pas pénalisée :
     // ce n'est pas elle qui a bougé. Le serveur le savait déjà et remboursait
@@ -3146,8 +3152,8 @@ export default function ReservationPage() {
       // Envoi automatique rappel-confirmation si RDV < 24h
       // Sauf si le RDV est pris pour le jour même (même règle que le mobile)
       if (nouveau?.id) {
-        const heuresAvant = (new Date(`${date}T${heure}:00.000Z`).getTime() - Date.now()) / (60 * 60 * 1000)
-        const estAujourdhui = date === new Date().toISOString().slice(0, 10)
+        const heuresAvant = delaiAvant(`${date}T${heure}:00.000Z`, pro?.timezone) / (60 * 60 * 1000)
+        const estAujourdhui = date === jourChezLaPro(pro?.timezone)
         if (heuresAvant > 0 && heuresAvant <= 24 && !estAujourdhui) {
           try {
             await fetch(

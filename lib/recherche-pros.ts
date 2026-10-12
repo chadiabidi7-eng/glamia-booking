@@ -76,6 +76,8 @@ export type ProTrouvee = {
   accroche: string | null
   /** Ses quatre premières photos de réalisation. */
   photos: string[]
+  /** Page d'une ville : elle n'est pas dans la ville mais à moins de 10 km de son centre (« Tout près »). */
+  prochaine?: boolean
 }
 
 export type Ville = { nom: string; slug: string; pays: string; lat: number | null; lon: number | null }
@@ -88,16 +90,27 @@ const motifVille = (slug: string) => slug.replace(/[%_]/g, '').replace(/-/g, '_'
 
 /** « dijon » → la ville la plus peuplée de ce nom, et son centre. */
 export async function villeDepuisSlug(brut: string): Promise<Ville | null> {
-  let slug = brut
-  try { slug = versRecherche(decodeURIComponent(brut)) } catch { /* lien abîmé */ }
-  if (!/^[a-z0-9-]{2,80}$/.test(slug)) return null
-  // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
-  // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
-  const { data } = await admin.from('villes').select('nom, pays').like('nom_recherche', motifVille(slug))
-    .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
-  if (!data) return null
-  const centre = await centreDe(data.nom as string, data.pays as string)
-  return { nom: data.nom as string, slug, pays: data.pays as string, lat: centre?.lat ?? null, lon: centre?.lon ?? null }
+  let texte = brut
+  try { texte = decodeURIComponent(brut) } catch { /* lien abîmé */ }
+  // Le lien vient parfois de la ville tapée par la pro (« Ixelles — Bruxelles »,
+  // « Lyon 3e », « Saint-Étienne (42) ») : on essaie la ville entière, puis ce
+  // qui précède le premier séparateur, puis sans le numéro final (12 oct. 2026).
+  const propre = (t: string) => versRecherche(t).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+  const essais = [...new Set([
+    propre(texte),
+    propre(texte.split(/[—–(,/]| - /)[0] ?? ''),
+    propre(texte).replace(/(-\d+[a-z]{0,3})+$/, ''),
+  ])].filter(t => /^[a-z0-9-]{2,80}$/.test(t))
+  for (const slug of essais) {
+    // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
+    // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
+    const { data } = await admin.from('villes').select('nom, pays').like('nom_recherche', motifVille(slug))
+      .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+    if (!data) continue
+    const centre = await centreDe(data.nom as string, data.pays as string)
+    return { nom: data.nom as string, slug, pays: data.pays as string, lat: centre?.lat ?? null, lon: centre?.lon ?? null }
+  }
+  return null
 }
 
 /** Le centre de la ville, pour mesurer les distances tant que la cliente ne s'est pas localisée. */
@@ -139,20 +152,54 @@ const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, ad
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
 const ouverte = (_p: Profil) => true
 
-/** Les pros d'une ville, prêtes à afficher. */
+/** Les pros d'une ville, prêtes à afficher — puis celles « tout près ». */
 export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
   // 1. Celles qui ont donné leur ville dans la 3.0 (leur fiche fait foi).
   const [{ data: directes }, { data: deduites }] = await Promise.all([
     admin.from('profiles').select(CHAMPS).ilike('ville', ville.nom).not('slug', 'is', null).limit(MAX_PROS * 2),
     admin.from('pros_localisees').select('pro_id, lat, lon').eq('ville_recherche', ville.slug).limit(MAX_PROS * 2),
   ])
-  return assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[])
+  const dansLaVille = await assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[])
+  if (ville.lat === null || ville.lon === null) return dansLaVille
+
+  // 2. TOUT PRÈS (Chadi, 12 oct. 2026) : une cliente du Plessis-Robinson réserve
+  // volontiers à Clamart. Sous les pros de la ville, celles à moins de 10 km du
+  // centre, de la plus proche à la plus loin. Une pro qui a mal écrit sa ville
+  // (« Saint Etienne », « Lyon 3e ») réapparaît ici, par sa position.
+  const deja = new Set(dansLaVille.map(p => p.slug))
+  const centre = { lat: ville.lat, lon: ville.lon }
+  const place = Math.max(0, MAX_PROS - dansLaVille.length)
+  if (!place) return dansLaVille
+  const autour = await prosDansLeRayon(ville.lat, ville.lon, RAYON_TOUT_PRES_KM,
+    { exclure: deja, centre, km: RAYON_TOUT_PRES_KM, limite: place })
+  const proches = autour
+    .map(p => ({ ...p, prochaine: true }))
+    // La mise en avant tient aussi ici : les Ultra d'abord, puis la plus proche.
+    .sort((a, b) => Number(b.enAvant) - Number(a.enAvant)
+      || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
+      || kmEntre(centre, a) - kmEntre(centre, b))
+    .slice(0, place)
+  return [...dansLaVille, ...proches]
+}
+
+const RAYON_TOUT_PRES_KM = 10
+
+/** Distance à vol d'oiseau, en km (positions déjà floutées de 150 à 400 m : à quelques centaines de mètres près). */
+function kmEntre(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const r = Math.PI / 180
+  const x = (b.lon - a.lon) * r * Math.cos(((a.lat + b.lat) / 2) * r)
+  const y = (b.lat - a.lat) * r
+  return Math.sqrt(x * x + y * y) * 6371
 }
 
 /** « Autour de moi » : les pros à moins de 15 km, où qu'elles soient. */
 export async function prosAutour(lat: number, lon: number): Promise<ProTrouvee[]> {
+  return prosDansLeRayon(lat, lon, 15)
+}
+
+async function prosDansLeRayon(lat: number, lon: number, km: number, choix?: Choix): Promise<ProTrouvee[]> {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return []
-  const dLat = 15 / 111.32, dLon = 15 / (111.32 * Math.cos(lat * Math.PI / 180))
+  const dLat = km / 111.32, dLon = km / (111.32 * Math.cos(lat * Math.PI / 180))
   const [{ data: directes }, { data: deduites }] = await Promise.all([
     admin.from('profiles').select(CHAMPS)
       .gte('adresse_lat', lat - dLat).lte('adresse_lat', lat + dLat)
@@ -162,10 +209,13 @@ export async function prosAutour(lat: number, lon: number): Promise<ProTrouvee[]
       .gte('lat', lat - dLat).lte('lat', lat + dLat).gte('lon', lon - dLon).lte('lon', lon + dLon)
       .limit(MAX_PROS * 2),
   ])
-  return assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[])
+  return assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[], choix)
 }
 
-async function assembler(directes: Profil[], deduites: { pro_id: string; lat: number; lon: number }[]): Promise<ProTrouvee[]> {
+/** Pour « Tout près » : écarter celles déjà montrées, garder les plus proches du centre, AVANT de calculer leurs dispos. */
+type Choix = { exclure: Set<string>; centre: { lat: number; lon: number }; km: number; limite: number }
+
+async function assembler(directes: Profil[], deduites: { pro_id: string; lat: number; lon: number }[], choix?: Choix): Promise<ProTrouvee[]> {
   const position = new Map<string, { lat: number; lon: number }>()
   const profils = new Map<string, Profil>()
   for (const p of directes) {
@@ -180,9 +230,14 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
     for (const d of manquants) if (!position.has(d.pro_id as string)) position.set(d.pro_id as string, { lat: d.lat as number, lon: d.lon as number })
   }
 
-  const retenues = [...profils.values()]
+  let retenues = [...profils.values()]
     .filter(p => p.sur_glamia !== false && ouverte(p) && position.has(p.id) && p.slug)
-    .slice(0, MAX_PROS)
+  if (choix) {
+    const km = (p: Profil) => kmEntre(choix.centre, position.get(p.id)!)
+    retenues = retenues.filter(p => !choix.exclure.has(p.slug!) && km(p) <= choix.km)
+      .sort((a, b) => Number(b.pro_pay_actif === true) - Number(a.pro_pay_actif === true) || km(a) - km(b))
+      .slice(0, choix.limite)
+  } else retenues = retenues.slice(0, MAX_PROS)
   if (!retenues.length) return []
   const ids = retenues.map(p => p.id)
 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { normaliserTelephone } from '@/lib/telephone'
+import { delaiAvant } from '@/lib/heure-pro'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -95,7 +96,8 @@ export async function POST(req: NextRequest) {
   if (rdv.statut === 'annule') {
     return NextResponse.json({ error: 'rdv_annule' }, { status: 403 })
   }
-  if (new Date(rdv.date) <= new Date()) {
+  const { data: fuseauPro } = await supabaseAdmin.from('profiles').select('timezone').eq('id', rdv.pro_id).maybeSingle()
+  if (delaiAvant(rdv.date as string, fuseauPro?.timezone as string | null) <= 0) {
     return NextResponse.json({ error: 'rdv_passe' }, { status: 403 })
   }
   if (parRdvId && (!rdv.created_at || Date.now() - new Date(rdv.created_at).getTime() > DELAI_MAX_MS)) {
