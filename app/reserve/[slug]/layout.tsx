@@ -31,16 +31,16 @@ const supabaseServer = createClient(
 const profilDuSlug = cache(async (slug: string) => {
   const { data } = await supabaseServer
     .from('profiles')
-    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, abonnement_actif, trial_ends_at, page_couleur, prestations(data)')
+    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, compte_test, abonnement_actif, trial_ends_at, page_couleur, prestations(data)')
     .eq('slug', slug)
     .order('created_at', { ascending: true })
     .limit(1)
   return data?.[0] ?? null
 })
 
-/** Ultra + interrupteur allumé : la page a le droit d'être dans Google. */
-function referencee(pro: { referencement_google?: unknown; pro_pay_actif?: unknown }): boolean {
-  return pro.referencement_google === true && pro.pro_pay_actif === true
+/** Ultra + interrupteur allumé, et jamais un compte de démonstration : la page a le droit d'être dans Google. */
+function referencee(pro: { referencement_google?: unknown; pro_pay_actif?: unknown; compte_test?: unknown }): boolean {
+  return pro.referencement_google === true && pro.pro_pay_actif === true && pro.compte_test !== true
 }
 
 /** Le nom que la cliente voit sur la page : le pseudo d'abord, le prénom sinon. */

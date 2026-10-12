@@ -78,7 +78,7 @@ export type ProTrouvee = {
   photos: string[]
   /** Page d'une ville : elle n'est pas dans la ville mais à moins de 10 km de son centre (« Tout près »). */
   prochaine?: boolean
-  /** La ville qu'elle a écrite, mise à la forme des liens (« lyon-3e ») : sert à la ranger dans sa ville. */
+  /** La ville qu'elle a écrite (« Lyon 3e ») : sert à la ranger dans sa ville. */
   villeLien?: string
 }
 
@@ -86,6 +86,17 @@ export type Ville = { nom: string; slug: string; pays: string; lat: number | nul
 
 export const versRecherche = (v: string) =>
   v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')
+
+/** La ville écrite par la pro, sous les formes d'un lien : entière, avant un séparateur, sans numéro final. */
+export function formesDeVille(texte: string): string[] {
+  const propre = (t: string) => versRecherche(t).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+  const st = (t: string) => t.replace(/^st-/, 'saint-').replace(/^ste-/, 'sainte-')
+  return [...new Set([
+    propre(texte),
+    propre(texte.split(/[—–(,/]| - /)[0] ?? ''),
+    propre(texte).replace(/(-\d+[a-z]{0,3})+$/, ''),
+  ].map(st))].filter(t => /^[a-z0-9-]{2,80}$/.test(t))
+}
 
 /** « le-plessis-robinson » → le motif qui retrouve « le plessis-robinson » dans la liste. */
 const motifVille = (slug: string) => slug.replace(/[%_]/g, '').replace(/-/g, '_')
@@ -97,12 +108,7 @@ export async function villeDepuisSlug(brut: string): Promise<Ville | null> {
   // Le lien vient parfois de la ville tapée par la pro (« Ixelles — Bruxelles »,
   // « Lyon 3e », « Saint-Étienne (42) ») : on essaie la ville entière, puis ce
   // qui précède le premier séparateur, puis sans le numéro final (12 oct. 2026).
-  const propre = (t: string) => versRecherche(t).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  const essais = [...new Set([
-    propre(texte),
-    propre(texte.split(/[—–(,/]| - /)[0] ?? ''),
-    propre(texte).replace(/(-\d+[a-z]{0,3})+$/, ''),
-  ])].filter(t => /^[a-z0-9-]{2,80}$/.test(t))
+  const essais = formesDeVille(texte)
   for (const slug of essais) {
     // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
     // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
@@ -152,8 +158,9 @@ type Profil = {
   photos_travail: unknown
   bio: string | null; message_accueil: string | null
   ville: string | null
+  pays: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays'
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -163,10 +170,15 @@ const ouverte = (_p: Profil) => true
 export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
   // 1. Celles qui ont donné leur ville dans la 3.0 (leur fiche fait foi).
   const [{ data: directes }, { data: deduites }] = await Promise.all([
-    admin.from('profiles').select(CHAMPS).ilike('ville', ville.nom).not('slug', 'is', null).limit(MAX_PROS * 2),
+    // Le début du nom, chaque lettre accentuée ou séparateur valant n'importe
+    // quel caractère : « Saint Etienne », « Lyon 3e », « Ixelles — Bruxelles »
+    // remontent, puis on ne garde que la même ville (12 oct. 2026).
+    admin.from('profiles').select(CHAMPS).ilike('ville', `${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
     admin.from('pros_localisees').select('pro_id, lat, lon').eq('ville_recherche', ville.slug).limit(MAX_PROS * 2),
   ])
-  const dansLaVille = await assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[])
+  const memeNom = (p: Profil) => !!p.ville && formesDeVille(p.ville).includes(ville.slug)
+  const dansLaVille = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
+    undefined, ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon, pays: ville.pays } : undefined)
   if (ville.lat === null || ville.lon === null) return dansLaVille
 
   // 2. TOUT PRÈS (Chadi, 12 oct. 2026) : une cliente du Plessis-Robinson réserve
@@ -181,9 +193,7 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     { exclure: deja, centre, km: RAYON_TOUT_PRES_KM, limite: place })
   // Elle a écrit sa ville autrement (« Lyon 3e », « Saint Etienne ») mais c'est
   // bien la même : elle rejoint la ville, pas « Tout près ».
-  const memeVille = (p: ProTrouvee) => !!p.villeLien && (p.villeLien === ville.slug
-    || new RegExp(`^${ville.slug}-\\d+[a-z]{0,3}$`).test(p.villeLien)
-    || p.villeLien.replace(/^saint-/, 'st-') === ville.slug.replace(/^saint-/, 'st-'))
+  const memeVille = (p: ProTrouvee) => !!p.villeLien && formesDeVille(p.villeLien).includes(ville.slug)
   const rejointes = autour.filter(memeVille)
   const proches = autour.filter(p => !memeVille(p))
     .map(p => ({ ...p, prochaine: true }))
@@ -228,7 +238,8 @@ async function prosDansLeRayon(lat: number, lon: number, km: number, choix?: Cho
 /** Pour « Tout près » : écarter celles déjà montrées, garder les plus proches du centre, AVANT de calculer leurs dispos. */
 type Choix = { exclure: Set<string>; centre: { lat: number; lon: number }; km: number; limite: number }
 
-async function assembler(directes: Profil[], deduites: { pro_id: string; lat: number; lon: number }[], choix?: Choix): Promise<ProTrouvee[]> {
+async function assembler(directes: Profil[], deduites: { pro_id: string; lat: number; lon: number }[], choix?: Choix,
+  centreVille?: { lat: number; lon: number; pays: string }): Promise<ProTrouvee[]> {
   const position = new Map<string, { lat: number; lon: number }>()
   const profils = new Map<string, Profil>()
   for (const p of directes) {
@@ -243,6 +254,12 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
     for (const d of manquants) if (!position.has(d.pro_id as string)) position.set(d.pro_id as string, { lat: d.lat as number, lon: d.lon as number })
   }
 
+  // Elle a donné sa ville mais pas de position : sur la page de SA ville, on la
+  // pose au centre (flouté comme les autres) plutôt que de la cacher (12 oct. 2026).
+  if (centreVille) for (const p of directes) if (!position.has(p.id) && (p.pays ?? 'FR').toUpperCase() === centreVille.pays.toUpperCase()) position.set(p.id, centreVille)
+  // Même nom, autre ville (Saint-Denis de La Réunion sur la page de Saint-Denis
+  // en Seine-Saint-Denis) : à plus de 40 km du centre, ce n'est pas elle.
+  if (centreVille) for (const [id, pos] of position) if (kmEntre(centreVille, pos) > 40) position.delete(id)
   let retenues = [...profils.values()]
     .filter(p => p.sur_glamia !== false && ouverte(p) && position.has(p.id) && p.slug)
   if (choix) {
@@ -299,7 +316,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
-      villeLien: p.ville ? versRecherche(p.ville).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : undefined,
+      villeLien: p.ville ?? undefined,
     }
   })
     // LA MISE EN AVANT (Chadi, 9 oct. 2026) : les Ultra d'abord — c'est la
