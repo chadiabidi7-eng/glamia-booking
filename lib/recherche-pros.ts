@@ -78,6 +78,8 @@ export type ProTrouvee = {
   photos: string[]
   /** Page d'une ville : elle n'est pas dans la ville mais à moins de 10 km de son centre (« Tout près »). */
   prochaine?: boolean
+  /** La ville qu'elle a écrite, mise à la forme des liens (« lyon-3e ») : sert à la ranger dans sa ville. */
+  villeLien?: string
 }
 
 export type Ville = { nom: string; slug: string; pays: string; lat: number | null; lon: number | null }
@@ -118,10 +120,14 @@ async function centreDe(nom: string, pays: string): Promise<{ lat: number; lon: 
   try {
     const url = pays === 'FR'
       ? `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(nom)}&type=municipality&limit=1`
-      : `https://photon.komoot.io/api/?q=${encodeURIComponent(nom)}&osm_tag=place:city&limit=1`
+      // Toute sorte de lieu (Ixelles est une « town », pas une « city »), mais dans
+      // le bon pays : le premier résultat du même pays (12 oct. 2026).
+      : `https://photon.komoot.io/api/?q=${encodeURIComponent(nom)}&osm_tag=place&limit=5`
     const r = await fetch(url, { next: { revalidate: 86400 } })
     if (!r.ok) return null
-    const c = (await r.json())?.features?.[0]?.geometry?.coordinates
+    const features = ((await r.json())?.features ?? []) as { geometry?: { coordinates?: number[] }; properties?: { countrycode?: string } }[]
+    const f = pays === 'FR' ? features[0] : features.find(x => (x.properties?.countrycode ?? '').toUpperCase() === pays.toUpperCase())
+    const c = f?.geometry?.coordinates
     return Array.isArray(c) ? { lon: c[0], lat: c[1] } : null
   } catch { return null }
 }
@@ -145,8 +151,9 @@ type Profil = {
   avis_actifs: boolean | null; sur_glamia: boolean | null
   photos_travail: unknown
   bio: string | null; message_accueil: string | null
+  ville: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville'
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -172,14 +179,20 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
   if (!place) return dansLaVille
   const autour = await prosDansLeRayon(ville.lat, ville.lon, RAYON_TOUT_PRES_KM,
     { exclure: deja, centre, km: RAYON_TOUT_PRES_KM, limite: place })
-  const proches = autour
+  // Elle a écrit sa ville autrement (« Lyon 3e », « Saint Etienne ») mais c'est
+  // bien la même : elle rejoint la ville, pas « Tout près ».
+  const memeVille = (p: ProTrouvee) => !!p.villeLien && (p.villeLien === ville.slug
+    || new RegExp(`^${ville.slug}-\\d+[a-z]{0,3}$`).test(p.villeLien)
+    || p.villeLien.replace(/^saint-/, 'st-') === ville.slug.replace(/^saint-/, 'st-'))
+  const rejointes = autour.filter(memeVille)
+  const proches = autour.filter(p => !memeVille(p))
     .map(p => ({ ...p, prochaine: true }))
     // La mise en avant tient aussi ici : les Ultra d'abord, puis la plus proche.
     .sort((a, b) => Number(b.enAvant) - Number(a.enAvant)
       || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
       || kmEntre(centre, a) - kmEntre(centre, b))
     .slice(0, place)
-  return [...dansLaVille, ...proches]
+  return [...[...dansLaVille, ...rejointes].sort(ordreVille), ...proches]
 }
 
 const RAYON_TOUT_PRES_KM = 10
@@ -286,6 +299,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
+      villeLien: p.ville ? versRecherche(p.ville).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') : undefined,
     }
   })
     // LA MISE EN AVANT (Chadi, 9 oct. 2026) : les Ultra d'abord — c'est la
@@ -293,11 +307,13 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
     // elles, l'ordre change chaque jour pour que chacune ait sa place en tête.
     // Puis, comme avant : celles qui montrent leur travail (27 sept. 2026),
     // puis la plus tôt disponible.
-    .sort((a, b) => Number(b.enAvant) - Number(a.enAvant)
-      || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
-      || Number(b.avecPhotos) - Number(a.avecPhotos)
-      || (a.dispo ? `${a.dispo.date}T${a.dispo.heure}` : 'z').localeCompare(b.dispo ? `${b.dispo.date}T${b.dispo.heure}` : 'z'))
+    .sort(ordreVille)
 }
+
+const ordreVille = (a: ProTrouvee, b: ProTrouvee) => Number(b.enAvant) - Number(a.enAvant)
+  || (a.enAvant && b.enAvant ? a.rangDuJour - b.rangDuJour : 0)
+  || Number(b.avecPhotos) - Number(a.avecPhotos)
+  || (a.dispo ? `${a.dispo.date}T${a.dispo.heure}` : 'z').localeCompare(b.dispo ? `${b.dispo.date}T${b.dispo.heure}` : 'z')
 
 /** Un rang stable sur la journée, différent d'un jour à l'autre : l'identifiant et la date, hachés. */
 function rangDuJour(id: string): number {
