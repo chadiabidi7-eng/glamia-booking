@@ -3960,7 +3960,8 @@ export default function ReservationPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 40, height: 40, borderRadius: 12, background: PINK_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <SpecialiteIcon specialite={rdv.specialite} size={20} />
+                              {/* L'illustration remplit son carré (Chadi, 12 oct. 2026) : à 20 px, elle flottait au milieu. */}
+                              <SpecialiteIcon specialite={rdv.specialite} size={32} />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
