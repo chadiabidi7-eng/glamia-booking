@@ -83,10 +83,17 @@ export type Ville = { nom: string; slug: string; pays: string; lat: number | nul
 export const versRecherche = (v: string) =>
   v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')
 
+/** « le-plessis-robinson » → le motif qui retrouve « le plessis-robinson » dans la liste. */
+const motifVille = (slug: string) => slug.replace(/[%_]/g, '').replace(/-/g, '_')
+
 /** « dijon » → la ville la plus peuplée de ce nom, et son centre. */
-export async function villeDepuisSlug(slug: string): Promise<Ville | null> {
+export async function villeDepuisSlug(brut: string): Promise<Ville | null> {
+  let slug = brut
+  try { slug = versRecherche(decodeURIComponent(brut)) } catch { /* lien abîmé */ }
   if (!/^[a-z0-9-]{2,80}$/.test(slug)) return null
-  const { data } = await admin.from('villes').select('nom, pays').eq('nom_recherche', slug)
+  // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
+  // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
+  const { data } = await admin.from('villes').select('nom, pays').like('nom_recherche', motifVille(slug))
     .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
   if (!data) return null
   const centre = await centreDe(data.nom as string, data.pays as string)
@@ -250,9 +257,9 @@ export async function villesProposees(q: string): Promise<{ nom: string; slug: s
   const s = versRecherche(q.trim())
   if (s.length < 2) return []
   const { data } = await admin.from('villes').select('nom, nom_recherche, zone, pays')
-    .ilike('nom_recherche', `${s.replace(/[%_]/g, '')}%`)
+    .like('nom_recherche', `${motifVille(s)}%`)
     .order('population', { ascending: false, nullsFirst: false }).limit(8)
   const vus = new Set<string>()
   return (data ?? []).filter(v => !vus.has(v.nom_recherche as string) && vus.add(v.nom_recherche as string))
-    .map(v => ({ nom: v.nom as string, slug: v.nom_recherche as string, zone: (v.zone as string) ?? null }))
+    .map(v => ({ nom: v.nom as string, slug: versRecherche(v.nom_recherche as string), zone: (v.zone as string) ?? null }))
 }
