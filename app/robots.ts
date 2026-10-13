@@ -1,4 +1,6 @@
 import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers'
+import { estGlamiaFr, SITE_GLAMIA_FR } from '@/lib/site-recherche'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CE QUE GOOGLE A LE DROIT DE REGARDER.
@@ -18,7 +20,15 @@ import type { MetadataRoute } from 'next'
 
 const SITE = 'https://booking.glamia.pro'
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  // glamia.fr ne sert que la recherche (/beaute) : tout le reste y redirige
+  // vers glamia.pro. Sa propre liste de pages est sur glamia.fr.
+  if (estGlamiaFr((await headers()).get('host'))) {
+    return {
+      rules: [{ userAgent: '*', allow: ['/', '/api/villes'], disallow: ['/api/'] }],
+      sitemap: `${SITE_GLAMIA_FR}/sitemap.xml`,
+    }
+  }
   return {
     rules: [
       {
