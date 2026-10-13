@@ -578,6 +578,11 @@ export default function ReservationPage() {
   const [iconesPerso, setIconesPerso] = useState<Record<string, string | null>>({})
   const [photosPerso, setPhotosPerso] = useState<Record<string, string | null>>({})
   const [pageState,  setPageState]  = useState<'loading' | 'ready' | 'notfound' | 'confirmed' | 'blocked'>('loading')
+  // La fiche jointe par le serveur pour Google (layout) : utile tant que la page
+  // charge, retirée dès qu'elle s'affiche — la cliente ne voit que la vraie page.
+  useEffect(() => {
+    if (pageState !== 'loading') document.getElementById('fiche-serveur')?.remove()
+  }, [pageState])
   const [submitting, setSubmitting] = useState(false)
   // ── LE REFUS DE CARTE NE PASSE PLUS PAR UNE BOÎTE DU NAVIGATEUR ───────────
   // Une alerte système grise, sur une page de réservation soignée, ressemble à

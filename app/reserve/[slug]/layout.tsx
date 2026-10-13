@@ -5,6 +5,7 @@ import { libelleCategorie } from '@/lib/categorie-autre'
 import { traduireDans } from '@/lib/i18n'
 import LangueDeLaPro from './LangueDeLaPro'
 import { couleurValide } from '@/lib/teinte'
+import FicheServeur from './FicheServeur'
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -31,7 +32,7 @@ const supabaseServer = createClient(
 const profilDuSlug = cache(async (slug: string) => {
   const { data } = await supabaseServer
     .from('profiles')
-    .select('prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, compte_test, abonnement_actif, trial_ends_at, page_couleur, prestations(data)')
+    .select('id, prenom, nom, pseudo, langue, specialite, adresse_publique, categorie_autre_nom, referencement_google, pro_pay_actif, compte_test, abonnement_actif, trial_ends_at, page_couleur, bio, avatar_url, ville, ville_affichee, pays, devise, avis_actifs, prestations(data)')
     .eq('slug', slug)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -300,5 +301,40 @@ export default async function ReserveLayout({
     // Une base qui ne répond pas ne doit pas empêcher la page de s'ouvrir :
     // on repart sur le français et le rose, comme avant.
   }
-  return <LangueDeLaPro langue={langue} couleur={couleur}>{children}</LangueDeLaPro>
+  // ── CE QUE GOOGLE LIT EN PREMIER (13 oct. 2026) ─────────────────────────
+  // La page se construit dans le navigateur : le HTML qui part ne disait que
+  // « Chargement… », et Google jugeait la page vide. Pour une page référencée
+  // (Ultra + interrupteur), le serveur joint la fiche de la pro — nom, métier,
+  // ville, prestations, prix, note — et ses données structurées. La cliente
+  // ne la voit pas : elle est sous l'écran d'attente, et la page la retire dès
+  // qu'elle s'affiche.
+  let fiche: React.ReactNode = null
+  try {
+    const profil = await profilDuSlug(slug)
+    if (profil && referencee(profil)) {
+      const catalogue = (profil as { prestations?: { data?: unknown } | { data?: unknown }[] }).prestations
+      const bloc = Array.isArray(catalogue) ? catalogue[0]?.data : catalogue?.data
+      const p = profil as Record<string, unknown>
+      const ville = (typeof p.ville_affichee === 'string' && p.ville_affichee.trim())
+        || (typeof p.ville === 'string' && p.ville.trim())
+        || villeLisible(p.adresse_publique)
+      let note: { note: number; nombre: number } | null = null
+      if (p.avis_actifs !== false) {
+        const { data } = await supabaseServer.from('avis_note_par_pro').select('note, nombre').eq('pro_id', p.id as string).maybeSingle()
+        if (data && Number(data.nombre) > 0) note = { note: Number(data.note), nombre: Number(data.nombre) }
+      }
+      fiche = (
+        <FicheServeur slug={slug} nom={nomPublic(profil)} langue={langue}
+          metiers={metiers(p.specialite, p.categorie_autre_nom)} ville={ville || null}
+          pays={typeof p.pays === 'string' ? p.pays.toUpperCase() : null}
+          devise={typeof p.devise === 'string' ? p.devise : 'EUR'}
+          bio={typeof p.bio === 'string' ? p.bio : null}
+          image={typeof p.avatar_url === 'string' ? p.avatar_url : null}
+          catalogue={bloc} note={note} />
+      )
+    }
+  } catch {
+    // Sans fiche, la page reste ce qu'elle était : rien ne doit l'empêcher de s'ouvrir.
+  }
+  return <LangueDeLaPro langue={langue} couleur={couleur}>{children}{fiche}</LangueDeLaPro>
 }
