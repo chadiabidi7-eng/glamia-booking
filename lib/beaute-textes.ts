@@ -7,6 +7,10 @@ export type Langue = 'fr' | 'en' | 'es'
 export type Metier = 'manucure' | 'pedicure' | 'cils' | 'sourcils' | 'coiffure' | 'epilation' | 'soinVisage'
   | 'maquillage' | 'maquillageSemi' | 'massage' | 'soinDentaire' | 'bronzage'
 
+/** « à Lyon », « au Plessis-Robinson », « aux Lilas » : l'article de la ville se contracte. */
+export const aVille = (v: string) => (/^Le /.test(v) ? `au ${v.slice(3)}` : /^Les /.test(v) ? `aux ${v.slice(4)}` : `à ${v}`)
+const presDe = (v: string) => (/^Le /.test(v) ? `près du ${v.slice(3)}` : /^Les /.test(v) ? `près des ${v.slice(4)}` : `près de ${v}`)
+
 export const TEXTES = {
   fr: {
     titre: 'Trouve ta pro beauté',
@@ -45,11 +49,12 @@ export const TEXTES = {
       accueilTitre: 'Trouve ta pro beauté près de chez toi | Glamia',
       accueilDescription: 'Manucure, cils, coiffure, soins : les pros beauté près de chez toi, leurs disponibilités, leurs prix et leurs avis. Réserve en ligne en quelques secondes.',
       // « Manucure, cils, coiffure à Lyon : 12 pros, prix et avis | Glamia »
-      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Pros beauté'} à ${ville} : ${n} ${n === 1 ? 'pro' : 'pros'}${plus} | Glamia`,
-      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Pros beauté'} près de ${ville} : ${n} ${n === 1 ? 'pro' : 'pros'} tout près | Glamia`,
+      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Pros beauté'} ${aVille(ville)} : ${n} ${n === 1 ? 'pro' : 'pros'}${plus} | Glamia`,
+      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Pros beauté'} ${presDe(ville)} : ${n} ${n === 1 ? 'pro' : 'pros'} tout près | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Pros beauté'} ${aVille(ville)} | Glamia`,
       plus: (prix: boolean, avis: boolean) => (prix && avis ? ', prix et avis' : prix ? ', prix' : avis ? ', avis' : ''),
       villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
-        `Réserve en ligne ta pro beauté à ${ville}${metiers ? ` : ${metiers}` : ''}. Leurs disponibilités${prix ? ', leurs prix' : ''}${avis ? ' et leurs avis' : ''}, en un coup d'œil.`,
+        `Réserve en ligne ta pro beauté ${aVille(ville)}${metiers ? ` : ${metiers}` : ''}. Leurs disponibilités${prix ? ', leurs prix' : ''}${avis ? ' et leurs avis' : ''}, en un coup d'œil.`,
       beaute: 'Beauté',
       metiers: { manucure: 'Manucure', pedicure: 'Pédicure', cils: 'Extension de cils', sourcils: 'Sourcils', coiffure: 'Coiffure', epilation: 'Épilation', soinVisage: 'Soin du visage', maquillage: 'Maquillage', maquillageSemi: 'Maquillage semi-permanent', massage: 'Massage', soinDentaire: 'Soin dentaire', bronzage: 'Bronzage' } as Record<Metier, string>,
     },
@@ -92,6 +97,7 @@ export const TEXTES = {
       accueilTitre: 'Find your beauty pro near you | Glamia',
       accueilDescription: 'Nails, lashes, hair, facials: beauty pros near you, their availability, prices and reviews. Book online in seconds.',
       villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Beauty pros'} in ${ville}: ${n} ${n === 1 ? 'pro' : 'pros'}${plus} | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Beauty pros'} in ${ville} | Glamia`,
       procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Beauty pros'} near ${ville}: ${n} ${n === 1 ? 'pro' : 'pros'} nearby | Glamia`,
       plus: (prix: boolean, avis: boolean) => (prix && avis ? ', prices and reviews' : prix ? ', prices' : avis ? ', reviews' : ''),
       villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
@@ -138,6 +144,7 @@ export const TEXTES = {
       accueilTitre: 'Encuentra tu profesional de belleza cerca de ti | Glamia',
       accueilDescription: 'Uñas, pestañas, peluquería, tratamientos: profesionales de belleza cerca de ti, su disponibilidad, precios y reseñas. Reserva online en segundos.',
       villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Profesionales de belleza'} en ${ville}: ${n} ${n === 1 ? 'profesional' : 'profesionales'}${plus} | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Profesionales de belleza'} en ${ville} | Glamia`,
       procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Profesionales de belleza'} cerca de ${ville}: ${n} ${n === 1 ? 'profesional' : 'profesionales'} muy cerca | Glamia`,
       plus: (prix: boolean, avis: boolean) => (prix && avis ? ', precios y reseñas' : prix ? ', precios' : avis ? ', reseñas' : ''),
       villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>

@@ -222,6 +222,8 @@ const RAYON_TOUT_PRES_KM = 10
 
 /** Les actes de suivi : pas un prix d'appel. */
 const SUIVI = /^(d[ée]pose|retrait|remplissage|retouche|retirada|relleno|removal|refill)/i
+/** Les options qu'on ajoute à une prestation (nail art, réparation, supplément…) : pas une prestation à elles seules. */
+const OPTION = /(nail ?art|r[ée]paration|suppl[ée]ment|d[ée]co|longueur|french|option|strass|ajout|add-?on|extra|reparaci[oó]n|repair)/i
 
 /** Distance à vol d'oiseau, en km (positions déjà floutées de 150 à 400 m : à quelques centaines de mètres près). */
 function kmEntre(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
@@ -311,9 +313,10 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       // « À PARTIR DE » (13 oct. 2026) : le plus petit prix de ce qu'elle a
       // allumé, hors déposes et retouches (des actes de suivi, pas une première visite).
       for (const t of liste) {
-        const it = t as { active?: unknown; prix?: unknown; nom?: unknown }
+        const it = t as { active?: unknown; prix?: unknown; nom?: unknown; duree?: unknown }
         if (it?.active !== true || typeof it.prix !== 'number' || !(it.prix > 0)) continue
-        if (typeof it.nom === 'string' && SUIVI.test(it.nom.trim())) continue
+        if (typeof it.nom === 'string' && (SUIVI.test(it.nom.trim()) || OPTION.test(it.nom))) continue
+        if (typeof it.duree === 'number' && it.duree < 10) continue
         const avant = prixDe.get(c.pro_id as string)
         if (avant === undefined || it.prix < avant) prixDe.set(c.pro_id as string, it.prix)
       }

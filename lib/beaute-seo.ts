@@ -44,7 +44,7 @@ export function metadataVille(d: DonneesVille, langue: Langue, metier?: Metier |
   const metiersTitre = metier ? S.metiers[metier] : listeMetiers(metiersFrequents(base, 3), langue)
   const title = dansLaVille.length
     ? S.villeTitre(metiersTitre, d.ville.nom, dansLaVille.length, S.plus(prix, avis))
-    : S.procheTitre(metiersTitre, d.ville.nom, pros.length)
+    : pros.length ? S.procheTitre(metiersTitre, d.ville.nom, pros.length) : S.videTitre(metiersTitre, d.ville.nom)
   const description = S.villeDescription(d.ville.nom,
     metier ? S.metiers[metier] : listeMetiers(metiersFrequents(base, 5), langue), prix, avis)
   const url = adresseVille(d.ville.slug, metier)
