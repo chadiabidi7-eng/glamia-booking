@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import { prochaineDispo } from '@/lib/prochaine-dispo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +78,8 @@ export type ProTrouvee = {
   accroche: string | null
   /** Ses quatre premières photos de réalisation. */
   photos: string[]
+  /** Son prix le plus bas parmi ce qu'elle propose vraiment (« à partir de »), dans sa monnaie. */
+  prixMin: { montant: number; devise: string } | null
   /** Page d'une ville : elle n'est pas dans la ville mais à moins de 10 km de son centre (« Tout près »). */
   prochaine?: boolean
   /** Elle a choisi la ville à montrer : on ne la range que dans celle-là. */
@@ -162,8 +166,9 @@ type Profil = {
   ville: string | null
   pays: string | null
   ville_affichee: string | null
+  devise: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee, devise'
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -214,6 +219,11 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
 }
 
 const RAYON_TOUT_PRES_KM = 10
+
+/** Les actes de suivi : pas un prix d'appel. */
+const SUIVI = /^(d[ée]pose|retrait|remplissage|retouche|retirada|relleno|removal|refill)/i
+/** Les options qu'on ajoute à une prestation (nail art, réparation, supplément…) : pas une prestation à elles seules. */
+const OPTION = /(nail ?art|r[ée]paration|suppl[ée]ment|d[ée]co|longueur|french|option|strass|ajout|add-?on|extra|reparaci[oó]n|repair)/i
 
 /** Distance à vol d'oiseau, en km (positions déjà floutées de 150 à 400 m : à quelques centaines de mètres près). */
 function kmEntre(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
@@ -293,12 +303,23 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
   ])
   const noteDe = new Map((notes ?? []).map(n => [n.pro_id as string, n]))
   const metiersDe = new Map<string, Metier[]>()
+  const prixDe = new Map<string, number>()
   for (const c of catalogues ?? []) {
     const ms = new Set<Metier>()
     for (const [cat, liste] of Object.entries((c.data ?? {}) as Record<string, unknown>)) {
       if (!Array.isArray(liste) || !liste.some(t => (t as { active?: boolean })?.active !== false)) continue
       const m = metierDe(cat)
       if (m) ms.add(m)
+      // « À PARTIR DE » (13 oct. 2026) : le plus petit prix de ce qu'elle a
+      // allumé, hors déposes et retouches (des actes de suivi, pas une première visite).
+      for (const t of liste) {
+        const it = t as { active?: unknown; prix?: unknown; nom?: unknown; duree?: unknown }
+        if (it?.active !== true || typeof it.prix !== 'number' || !(it.prix > 0)) continue
+        if (typeof it.nom === 'string' && (SUIVI.test(it.nom.trim()) || OPTION.test(it.nom))) continue
+        if (typeof it.duree === 'number' && it.duree < 10) continue
+        const avant = prixDe.get(c.pro_id as string)
+        if (avant === undefined || it.prix < avant) prixDe.set(c.pro_id as string, it.prix)
+      }
     }
     metiersDe.set(c.pro_id as string, METIERS.filter(m => ms.has(m)))
   }
@@ -329,6 +350,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       dispo: dispos.get(p.id) ?? null,
       avecPhotos: Array.isArray(p.photos_travail) && p.photos_travail.length >= 3,
       accroche: ((p.bio ?? p.message_accueil ?? '').replace(/\s+/g, ' ').trim().slice(0, 160)) || null,
+      prixMin: prixDe.has(p.id) ? { montant: prixDe.get(p.id)!, devise: (p.devise || 'EUR').toUpperCase() } : null,
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
@@ -367,4 +389,114 @@ export async function villesProposees(q: string): Promise<{ nom: string; slug: s
   const vus = new Set<string>()
   return (data ?? []).filter(v => !vus.has(v.nom_recherche as string) && vus.add(v.nom_recherche as string))
     .map(v => ({ nom: v.nom as string, slug: versRecherche(v.nom_recherche as string), zone: (v.zone as string) ?? null }))
+}
+
+/**
+ * Une ville écrite par une pro (« Lyon 3e », « Beauvais (60000) ») → la page
+ * qui existe pour elle, sans chercher son centre : une seule lecture bornée
+ * par forme essayée. Sert aux liens (villes proches, fiche de la pro, sitemap).
+ */
+export async function villeConnue(texte: string): Promise<{ nom: string; slug: string } | null> {
+  for (const slug of formesDeVille(texte)) {
+    const { data } = await admin.from('villes').select('nom').like('nom_recherche', motifVille(slug))
+      .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+    if (data) return { nom: data.nom as string, slug }
+  }
+  return null
+}
+
+export type DonneesVille = { ville: Ville; pros: ProTrouvee[]; voisines: { nom: string; slug: string }[] } | null
+
+/**
+ * UNE VILLE, LUE AU PLUS UNE FOIS TOUTES LES CINQ MINUTES (13 oct. 2026).
+ *
+ * La page lisait la langue du navigateur, ce qui la rendait recalculée à
+ * chaque visite : le « cache cinq minutes » annoncé n'agissait pas, et chaque
+ * passage refaisait la ville, les notes, les catalogues et les dispos de
+ * soixante pros. Avec Google qui passe sur toutes les villes, ce n'était plus
+ * tenable pour une base à 60 connexions. Les données sont maintenant gardées
+ * cinq minutes par ville, quelle que soit la langue ; la page de la ville, son
+ * titre et ses pages par métier partagent la même lecture.
+ */
+const donneesVilleEnCache = unstable_cache(async (slug: string): Promise<DonneesVille> => {
+  const ville = await villeDepuisSlug(slug)
+  if (!ville) return null
+  const pros = await prosDeLaVille(ville)
+  // VILLES PROCHES : celles des pros « Tout près », quand elles ont leur page.
+  const textes = [...new Set(pros.filter(p => p.prochaine && p.villeLien).map(p => p.villeLien!.trim()))].slice(0, 8)
+  const trouvees = await Promise.all(textes.map(t => villeConnue(t).catch(() => null)))
+  const vus = new Set<string>([ville.slug])
+  const voisines = trouvees.filter((v): v is { nom: string; slug: string } => !!v && !vus.has(v.slug) && !!vus.add(v.slug))
+  return { ville, pros, voisines }
+}, ['beaute-ville-v2'], { revalidate: 300 })
+
+export const donneesVille = cache((slug: string) => donneesVilleEnCache(slug))
+
+/**
+ * POUR LE SITEMAP : les villes qui ont au moins une pro, et leurs métiers
+ * (13 oct. 2026). Lu au plus une fois par heure. Les métiers sont lus dans le
+ * catalogue, exactement comme la page les montre (ce que la pro a déclaré à
+ * l'inscription ne suit pas toujours son catalogue : la page serait vide).
+ *
+ * Deux lectures bornées pour les pros, leurs catalogues par paquets de 200,
+ * puis les villes par paquets de 40 (chaque nom passe par l'index des villes).
+ */
+export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[] }[]> {
+  const [{ data: profils, error: e1 }, { data: localisees, error: e2 }] = await Promise.all([
+    admin.from('profiles').select('id, ville, ville_affichee, sur_glamia').not('slug', 'is', null).limit(5000),
+    admin.from('pros_localisees').select('pro_id, ville_recherche').limit(5000),
+  ])
+  if (e1 || e2) throw new Error(e1?.message ?? e2?.message)
+  const deduite = new Map((localisees ?? []).map(l => [l.pro_id as string, l.ville_recherche as string]))
+
+  // Pour chaque pro visible : le texte de sa ville (ou la ville déduite).
+  const visibles: { id: string; textes: string[] }[] = []
+  for (const p of profils ?? []) {
+    if (p.sur_glamia === false) continue
+    const texte = ((p.ville_affichee as string | null) || (p.ville as string | null) || '').trim()
+    const textes = texte ? formesDeVille(texte) : deduite.has(p.id as string) ? [deduite.get(p.id as string)!] : []
+    if (textes.length) visibles.push({ id: p.id as string, textes })
+  }
+  // Ses métiers : les catégories de son catalogue où au moins une prestation est allumée (comme la page).
+  const metiersDe = new Map<string, Metier[]>()
+  for (let i = 0; i < visibles.length; i += 200) {
+    const { data, error } = await admin.from('prestations').select('pro_id, data').in('pro_id', visibles.slice(i, i + 200).map(v => v.id)).limit(400)
+    if (error) throw new Error(error.message)
+    for (const c of data ?? []) {
+      const ms = new Set<Metier>()
+      for (const [cat, liste] of Object.entries((c.data ?? {}) as Record<string, unknown>)) {
+        if (!Array.isArray(liste) || !liste.some(t => (t as { active?: boolean })?.active !== false)) continue
+        const m = metierDe(cat)
+        if (m) ms.add(m)
+      }
+      metiersDe.set(c.pro_id as string, METIERS.filter(m => ms.has(m)))
+    }
+  }
+  const pros = visibles.map(v => ({ textes: v.textes, metiers: metiersDe.get(v.id) ?? [] }))
+
+  // Quelles formes correspondent à une ville connue ?
+  const formes = [...new Set(pros.flatMap(p => p.textes))]
+  const connues = new Set<string>()
+  for (let i = 0; i < formes.length; i += 40) {
+    const paquet = formes.slice(i, i + 40)
+    const { data, error } = await admin.from('villes').select('nom_recherche')
+      .or(paquet.map(f => `nom_recherche.like.${motifVille(f)}`).join(',')).limit(2000)
+    if (error) throw new Error(error.message)
+    const noms = (data ?? []).map(v => String(v.nom_recherche))
+    for (const f of paquet) {
+      const re = new RegExp(`^${motifVille(f).replace(/_/g, '.')}$`)
+      if (noms.some(n => re.test(n))) connues.add(f)
+    }
+  }
+
+  const parVille = new Map<string, Set<Metier>>()
+  for (const p of pros) {
+    const slug = p.textes.find(f => connues.has(f))   // la même forme que la page choisit
+    if (!slug) continue
+    const ms = parVille.get(slug) ?? new Set<Metier>()
+    p.metiers.forEach(m => ms.add(m))
+    parVille.set(slug, ms)
+  }
+  return [...parVille.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([slug, ms]) => ({ slug, metiers: METIERS.filter(m => ms.has(m)) }))
 }

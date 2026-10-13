@@ -1,11 +1,17 @@
+import type { Metadata } from 'next'
 import Bandeau from '@/components/beaute/Bandeau'
 import ChoixVille from '@/components/beaute/ChoixVille'
 import Entete from '@/components/beaute/Entete'
 import { langueDuVisiteur } from '@/lib/beaute-langue'
+import { metadataAccueil } from '@/lib/beaute-seo'
 import { TEXTES } from '@/lib/beaute-textes'
 
 // glamia.pro/beaute — l'entrée : la cliente choisit sa ville, ou « Autour de moi ».
 // Dessous, les spécialités défilent. L'entrée des pros est dans l'en-tête.
+
+export async function generateMetadata(): Promise<Metadata> {
+  return metadataAccueil(await langueDuVisiteur())
+}
 
 export default async function Beaute() {
   const langue = await langueDuVisiteur()

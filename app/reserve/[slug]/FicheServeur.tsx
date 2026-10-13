@@ -45,12 +45,12 @@ function prestations(data: unknown, max = 30): Prestation[] {
 }
 
 const MOTS = {
-  fr: { prestations: 'Prestations', avis: 'avis', aPartir: 'à partir de', min: 'min', reserver: 'Réserver en ligne' },
-  en: { prestations: 'Services', avis: 'reviews', aPartir: 'from', min: 'min', reserver: 'Book online' },
-  es: { prestations: 'Servicios', avis: 'reseñas', aPartir: 'desde', min: 'min', reserver: 'Reservar en línea' },
+  fr: { prestations: 'Prestations', avis: 'avis', aPartir: 'à partir de', min: 'min', reserver: 'Réserver en ligne', ville: 'Toutes les pros beauté à' },
+  en: { prestations: 'Services', avis: 'reviews', aPartir: 'from', min: 'min', reserver: 'Book online', ville: 'All beauty pros in' },
+  es: { prestations: 'Servicios', avis: 'reseñas', aPartir: 'desde', min: 'min', reserver: 'Reservar en línea', ville: 'Todas las profesionales de belleza en' },
 } as const
 
-export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, devise, bio, image, catalogue, note }: {
+export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, devise, bio, image, catalogue, note, lienVille = null }: {
   slug: string
   nom: string
   langue: string | null
@@ -62,6 +62,8 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
   image: string | null
   catalogue: unknown
   note: { note: number; nombre: number } | null
+  /** La page de sa ville dans la recherche, quand elle existe (13 oct. 2026). */
+  lienVille?: { nom: string; url: string } | null
 }) {
   const L = langue === 'en' || langue === 'es' ? langue : 'fr'
   const M = MOTS[L]
@@ -117,6 +119,7 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
         </>
       )}
       <p style={{ margin: '20px 0 0' }}><a href={url}>{M.reserver}</a></p>
+      {lienVille && <p style={{ margin: '8px 0 0' }}><a href={lienVille.url}>{M.ville} {lienVille.nom}</a></p>}
     </section>
   )
 }

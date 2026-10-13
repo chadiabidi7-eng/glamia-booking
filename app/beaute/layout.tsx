@@ -10,7 +10,8 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Glamia — Trouve ta pro beauté',
   description: 'Les professionnelles de la beauté près de chez toi. Réserve en ligne en quelques secondes.',
-  robots: { index: false, follow: false },   // hors ligne jusqu'à la sortie de la 3.0
+  // Chaque page dit elle-même si elle entre dans Google (13 oct. 2026) :
+  // l'accueil et les villes qui ont des pros, oui ; « Autour de moi » et les villes vides, non.
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

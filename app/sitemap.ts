@@ -1,5 +1,10 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
+import { unstable_cache } from 'next/cache'
+import { METIER_SLUG } from '@/lib/beaute-textes'
+import { villesAvecPros } from '@/lib/recherche-pros'
+import { estGlamiaFr, rechercheSurGlamiaFr, siteRecherche } from '@/lib/site-recherche'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA LISTE DES PAGES, POUR GOOGLE ET POUR PERSONNE D'AUTRE.
@@ -49,7 +54,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+async function pagesDeResa(): Promise<MetadataRoute.Sitemap> {
   // ON NE LISTE PAS LA RACINE : elle redirige vers glamia.pro depuis le
   // 22 septembre 2026. Une adresse qui redirige n'a rien à faire dans une
   // liste soumise à Google — il la signale comme une erreur, et ça jette un
@@ -122,4 +127,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[sitemap] erreur inattendue :', e)
     return fixes
   }
+}
+
+// ── LA RECHERCHE DES CLIENTES (13 oct. 2026) ─────────────────────────────────
+// /beaute, chaque ville qui a des pros, et chaque ville × métier. Sur
+// l'adresse officielle de la recherche : booking.glamia.pro tant que
+// l'interrupteur RECHERCHE_SUR_GLAMIA_FR n'est pas posé, glamia.fr ensuite —
+// et chaque domaine ne liste que ses propres pages.
+async function pagesDeRecherche(): Promise<MetadataRoute.Sitemap> {
+  const site = siteRecherche()
+  const accueil: MetadataRoute.Sitemap = [{ url: `${site}/beaute`, changeFrequency: 'daily', priority: 0.9 }]
+  try {
+    const villes = await villesAvecPros()
+    return [
+      ...accueil,
+      ...villes.flatMap(v => [
+        { url: `${site}/beaute/${v.slug}`, changeFrequency: 'daily' as const, priority: 0.7 },
+        ...v.metiers.map(m => ({ url: `${site}/beaute/${v.slug}/${METIER_SLUG[m]}`, changeFrequency: 'daily' as const, priority: 0.6 })),
+      ]),
+    ]
+  } catch (e) {
+    console.error('[sitemap] villes non lues :', e)
+    return accueil
+  }
+}
+
+// La page lit l'adresse demandée (booking.glamia.pro ou glamia.fr) : sans ce
+// cache d'une heure, chaque passage de Google relirait la base.
+const resaEnCache = unstable_cache(pagesDeResa, ['sitemap-resa-v1'], { revalidate: 3600 })
+const rechercheEnCache = unstable_cache(pagesDeRecherche, ['sitemap-recherche-v2', rechercheSurGlamiaFr() ? 'fr' : 'pro'], { revalidate: 3600 })
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const surGlamiaFr = estGlamiaFr((await headers()).get('host'))
+  const bascule = rechercheSurGlamiaFr()
+  if (surGlamiaFr) return bascule ? rechercheEnCache() : []
+  const resa = await resaEnCache()
+  return bascule ? resa : [...resa, ...(await rechercheEnCache())]
 }

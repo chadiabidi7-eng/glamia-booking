@@ -7,6 +7,10 @@ export type Langue = 'fr' | 'en' | 'es'
 export type Metier = 'manucure' | 'pedicure' | 'cils' | 'sourcils' | 'coiffure' | 'epilation' | 'soinVisage'
   | 'maquillage' | 'maquillageSemi' | 'massage' | 'soinDentaire' | 'bronzage'
 
+/** « à Lyon », « au Plessis-Robinson », « aux Lilas » : l'article de la ville se contracte. */
+export const aVille = (v: string) => (/^Le /.test(v) ? `au ${v.slice(3)}` : /^Les /.test(v) ? `aux ${v.slice(4)}` : `à ${v}`)
+const presDe = (v: string) => (/^Le /.test(v) ? `près du ${v.slice(3)}` : /^Les /.test(v) ? `près des ${v.slice(4)}` : `près de ${v}`)
+
 export const TEXTES = {
   fr: {
     titre: 'Trouve ta pro beauté',
@@ -38,6 +42,22 @@ export const TEXTES = {
     videTexte: 'Essaie une ville voisine, ou autour de toi.',
     avis: (n: number) => `${n} avis`,
     locale: 'fr-FR',
+    a: 'à',
+    aPartirDe: (prix: string) => `À partir de ${prix}`,
+    villesProches: 'Villes proches',
+    seo: {
+      accueilTitre: 'Trouve ta pro beauté près de chez toi | Glamia',
+      accueilDescription: 'Manucure, cils, coiffure, soins : les pros beauté près de chez toi, leurs disponibilités, leurs prix et leurs avis. Réserve en ligne en quelques secondes.',
+      // « Manucure, cils, coiffure à Lyon : 12 pros, prix et avis | Glamia »
+      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Pros beauté'} ${aVille(ville)} : ${n} ${n === 1 ? 'pro' : 'pros'}${plus} | Glamia`,
+      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Pros beauté'} ${presDe(ville)} : ${n} ${n === 1 ? 'pro' : 'pros'} tout près | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Pros beauté'} ${aVille(ville)} | Glamia`,
+      plus: (prix: boolean, avis: boolean) => (prix && avis ? ', prix et avis' : prix ? ', prix' : avis ? ', avis' : ''),
+      villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
+        `Réserve en ligne ta pro beauté ${aVille(ville)}${metiers ? ` : ${metiers}` : ''}. Leurs disponibilités${prix ? ', leurs prix' : ''}${avis ? ' et leurs avis' : ''}, en un coup d'œil.`,
+      beaute: 'Beauté',
+      metiers: { manucure: 'Manucure', pedicure: 'Pédicure', cils: 'Extension de cils', sourcils: 'Sourcils', coiffure: 'Coiffure', epilation: 'Épilation', soinVisage: 'Soin du visage', maquillage: 'Maquillage', maquillageSemi: 'Maquillage semi-permanent', massage: 'Massage', soinDentaire: 'Soin dentaire', bronzage: 'Bronzage' } as Record<Metier, string>,
+    },
     metiers: { manucure: 'Manucure', pedicure: 'Pédicure', cils: 'Cils', sourcils: 'Sourcils', coiffure: 'Coiffure', epilation: 'Épilation', soinVisage: 'Soin visage', maquillage: 'Maquillage', maquillageSemi: 'Maquillage semi-permanent', massage: 'Massage', soinDentaire: 'Soin dentaire', bronzage: 'Bronzage' } as Record<Metier, string>,
   },
   en: {
@@ -70,6 +90,21 @@ export const TEXTES = {
     videTexte: 'Try a nearby city, or near you.',
     avis: (n: number) => `${n} review${n > 1 ? 's' : ''}`,
     locale: 'en-GB',
+    a: 'in',
+    aPartirDe: (prix: string) => `From ${prix}`,
+    villesProches: 'Nearby cities',
+    seo: {
+      accueilTitre: 'Find your beauty pro near you | Glamia',
+      accueilDescription: 'Nails, lashes, hair, facials: beauty pros near you, their availability, prices and reviews. Book online in seconds.',
+      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Beauty pros'} in ${ville}: ${n} ${n === 1 ? 'pro' : 'pros'}${plus} | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Beauty pros'} in ${ville} | Glamia`,
+      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Beauty pros'} near ${ville}: ${n} ${n === 1 ? 'pro' : 'pros'} nearby | Glamia`,
+      plus: (prix: boolean, avis: boolean) => (prix && avis ? ', prices and reviews' : prix ? ', prices' : avis ? ', reviews' : ''),
+      villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
+        `Book your beauty pro in ${ville} online${metiers ? `: ${metiers}` : ''}. Their availability${prix ? ', prices' : ''}${avis ? ' and reviews' : ''} at a glance.`,
+      beaute: 'Beauty',
+      metiers: { manucure: 'Manicure', pedicure: 'Pedicure', cils: 'Lash extensions', sourcils: 'Brows', coiffure: 'Hair', epilation: 'Waxing', soinVisage: 'Facials', maquillage: 'Make-up', maquillageSemi: 'Semi-permanent make-up', massage: 'Massage', soinDentaire: 'Teeth', bronzage: 'Tanning' } as Record<Metier, string>,
+    },
     metiers: { manucure: 'Manicure', pedicure: 'Pedicure', cils: 'Lashes', sourcils: 'Brows', coiffure: 'Hair', epilation: 'Waxing', soinVisage: 'Facials', maquillage: 'Make-up', maquillageSemi: 'Semi-permanent make-up', massage: 'Massage', soinDentaire: 'Teeth', bronzage: 'Tanning' } as Record<Metier, string>,
   },
   es: {
@@ -102,7 +137,31 @@ export const TEXTES = {
     videTexte: 'Prueba una ciudad cercana, o cerca de ti.',
     avis: (n: number) => `${n} reseña${n > 1 ? 's' : ''}`,
     locale: 'es-ES',
+    a: 'en',
+    aPartirDe: (prix: string) => `Desde ${prix}`,
+    villesProches: 'Ciudades cercanas',
+    seo: {
+      accueilTitre: 'Encuentra tu profesional de belleza cerca de ti | Glamia',
+      accueilDescription: 'Uñas, pestañas, peluquería, tratamientos: profesionales de belleza cerca de ti, su disponibilidad, precios y reseñas. Reserva online en segundos.',
+      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Profesionales de belleza'} en ${ville}: ${n} ${n === 1 ? 'profesional' : 'profesionales'}${plus} | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Profesionales de belleza'} en ${ville} | Glamia`,
+      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Profesionales de belleza'} cerca de ${ville}: ${n} ${n === 1 ? 'profesional' : 'profesionales'} muy cerca | Glamia`,
+      plus: (prix: boolean, avis: boolean) => (prix && avis ? ', precios y reseñas' : prix ? ', precios' : avis ? ', reseñas' : ''),
+      villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
+        `Reserva online tu profesional de belleza en ${ville}${metiers ? `: ${metiers}` : ''}. Su disponibilidad${prix ? ', sus precios' : ''}${avis ? ' y sus reseñas' : ''}, de un vistazo.`,
+      beaute: 'Belleza',
+      metiers: { manucure: 'Manicura', pedicure: 'Pedicura', cils: 'Extensiones de pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', soinVisage: 'Tratamientos faciales', maquillage: 'Maquillaje', maquillageSemi: 'Micropigmentación', massage: 'Masaje', soinDentaire: 'Estética dental', bronzage: 'Bronceado' } as Record<Metier, string>,
+    },
     metiers: { manucure: 'Manicura', pedicure: 'Pedicura', cils: 'Pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', soinVisage: 'Tratamientos faciales', maquillage: 'Maquillaje', maquillageSemi: 'Micropigmentación', massage: 'Masaje', soinDentaire: 'Estética dental', bronzage: 'Bronceado' } as Record<Metier, string>,
   },
 } as const
 export type Textes = (typeof TEXTES)[Langue]
+
+/** Les adresses des pages ville × métier : /beaute/lyon/cils (13 oct. 2026). */
+export const METIER_SLUG: Record<Metier, string> = {
+  manucure: 'manucure', pedicure: 'pedicure', cils: 'cils', sourcils: 'sourcils', coiffure: 'coiffure',
+  epilation: 'epilation', soinVisage: 'soin-visage', maquillage: 'maquillage', maquillageSemi: 'maquillage-semi-permanent',
+  massage: 'massage', soinDentaire: 'soin-dentaire', bronzage: 'bronzage',
+}
+export const metierDuSlug = (slug: string): Metier | null =>
+  (Object.entries(METIER_SLUG) as [Metier, string][]).find(([, s]) => s === slug)?.[0] ?? null

@@ -6,7 +6,7 @@ import { List, Map as IconeCarte, Star } from 'lucide-react'
 import ChoixVille, { POSITION_CLE } from '@/components/beaute/ChoixVille'
 import Entete from '@/components/beaute/Entete'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
-import { TEXTES, type Langue, type Metier } from '@/lib/beaute-textes'
+import { METIER_SLUG, TEXTES, type Langue, type Metier } from '@/lib/beaute-textes'
 import type { ProTrouvee } from '@/lib/recherche-pros'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +44,14 @@ function distanceLisible(m: number, locale: string) {
 }
 
 
-export default function Recherche({ langue, titre, chute, pros, centre, autourDuPoint = false }: {
+/** « À partir de 25 € », dans la monnaie de la pro. */
+function prixLisible(p: { montant: number; devise: string }, locale: string) {
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: p.devise, maximumFractionDigits: Number.isInteger(p.montant) ? 0 : 2 }).format(p.montant)
+  } catch { return `${p.montant} ${p.devise}` }
+}
+
+export default function Recherche({ langue, titre, chute, pros, centre, autourDuPoint = false, baseResa = '', villeSlug, metierInitial = null, voisines = [] }: {
   langue: Langue
   titre: string
   chute: string
@@ -52,15 +59,23 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
   centre: Point | null
   /** Recherche autour d'un point précis (sa position, une adresse) : les distances partent de lui, et le tri aussi. */
   autourDuPoint?: boolean
+  /** Servie depuis glamia.fr : l'adresse absolue des pages de réservation (booking.glamia.pro). */
+  baseResa?: string
+  /** Page d'une ville : les métiers deviennent des liens vers /beaute/<ville>/<métier>. */
+  villeSlug?: string
+  /** Page ville × métier : le filtre est déjà posé à l'arrivée. */
+  metierInitial?: Metier | null
+  /** Les villes des pros « Tout près », quand elles ont leur page. */
+  voisines?: { nom: string; slug: string }[]
 }) {
   const T = TEXTES[langue]
-  const [metier, setMetier] = useState<Metier | null>(null)
+  const [metier, setMetier] = useState<Metier | null>(metierInitial)
   const [actif, setActif] = useState<string | null>(null)
   const [vue, setVue] = useState<'liste' | 'carte'>('liste')
   const [moi, setMoi] = useState<Point | null>(null)
   const cartes = useRef(new Map<string, HTMLAnchorElement>())
   // Servie depuis glamia.pro, la page renvoie au site de réservation.
-  const [base, setBase] = useState('')
+  const [base, setBase] = useState(baseResa)
   useEffect(() => {
     const h = window.location.host
     if (h.endsWith('glamia.pro') && h !== 'booking.glamia.pro') setBase('https://booking.glamia.pro')
@@ -145,12 +160,24 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
 
           {presents.length > 1 && (
             <div className="beaute-filtres">
-              {[null, ...presents].map(m => (
-                <button key={m ?? 'tout'} onClick={() => setMetier(m)} className={`beaute-filtre${metier === m ? ' on' : ''}${m ? '' : ' sans-icone'}`}>
+              {[null, ...presents].map(m => {
+                const contenu = <>
                   {m && <SpecialiteIcon specialite={TEXTES.fr.metiers[m]} size={28} />}
                   {m ? T.metiers[m] : T.tout}
-                </button>
-              ))}
+                </>
+                const classe = `beaute-filtre${metier === m ? ' on' : ''}${m ? '' : ' sans-icone'}`
+                // Sur une ville, chaque métier a sa page (/beaute/lyon/cils) : un vrai
+                // lien, que Google suit ; pour la cliente, le filtre change sur place
+                // et l'adresse suit, sans recharger.
+                if (!villeSlug) return <button key={m ?? 'tout'} onClick={() => setMetier(m)} className={classe}>{contenu}</button>
+                const href = `/beaute/${villeSlug}${m ? `/${METIER_SLUG[m]}` : ''}`
+                return (
+                  <a key={m ?? 'tout'} href={href} className={classe} style={{ textDecoration: 'none' }}
+                    onClick={e => { e.preventDefault(); setMetier(m); try { window.history.replaceState(null, '', href) } catch { /* rien */ } }}>
+                    {contenu}
+                  </a>
+                )
+              })}
             </div>
           )}
 
@@ -200,6 +227,9 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
                         ))}
                       </div>
                     )}
+                    {p.prixMin && (
+                      <p style={{ margin: '5px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>{T.aPartirDe(prixLisible(p.prixMin, T.locale))}</p>
+                    )}
                     {p.accroche && (
                       // Son message, pas une légende : un gris plus foncé que ses spécialités,
                       // aligné à gauche — justifié sur deux lignes coupées, les mots
@@ -230,6 +260,18 @@ export default function Recherche({ langue, titre, chute, pros, centre, autourDu
                 </Fragment>
               ))}
             </div>
+          )}
+
+          {/* Les villes des pros « Tout près » : la cliente (et Google) passent d'une ville à l'autre. */}
+          {voisines.length > 0 && (
+            <nav style={{ marginTop: 32 }} aria-label={T.villesProches}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, letterSpacing: '-0.02em' }}>{T.villesProches}</h2>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {voisines.map(v => (
+                  <a key={v.slug} href={`/beaute/${v.slug}`} className="bouton-pro" style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.nom}</a>
+                ))}
+              </div>
+            </nav>
           )}
         </main>
 

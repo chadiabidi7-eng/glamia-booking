@@ -6,6 +6,8 @@ import { traduireDans } from '@/lib/i18n'
 import LangueDeLaPro from './LangueDeLaPro'
 import { couleurValide } from '@/lib/teinte'
 import FicheServeur from './FicheServeur'
+import { villeConnue } from '@/lib/recherche-pros'
+import { siteRecherche } from '@/lib/site-recherche'
 
 // Clé service role et non clé publique : ce fichier ne s'exécute QUE sur le
 // serveur, pour composer le titre de la page. Avec la clé publique il aurait
@@ -323,8 +325,17 @@ export default async function ReserveLayout({
         const { data } = await supabaseServer.from('avis_note_par_pro').select('note, nombre').eq('pro_id', p.id as string).maybeSingle()
         if (data && Number(data.nombre) > 0) note = { note: Number(data.note), nombre: Number(data.nombre) }
       }
+      // LE MAILLAGE (13 oct. 2026) : la fiche renvoie vers la page de sa ville
+      // dans la recherche, si cette page existe. Pages référencées seulement.
+      let lienVille: { nom: string; url: string } | null = null
+      if (ville) {
+        try {
+          const v = await villeConnue(ville)
+          if (v) lienVille = { nom: v.nom, url: `${siteRecherche()}/beaute/${v.slug}` }
+        } catch { /* sans lien, la fiche reste la même */ }
+      }
       fiche = (
-        <FicheServeur slug={slug} nom={nomPublic(profil)} langue={langue}
+        <FicheServeur lienVille={lienVille} slug={slug} nom={nomPublic(profil)} langue={langue}
           metiers={metiers(p.specialite, p.categorie_autre_nom)} ville={ville || null}
           pays={typeof p.pays === 'string' ? p.pays.toUpperCase() : null}
           devise={typeof p.devise === 'string' ? p.devise : 'EUR'}
