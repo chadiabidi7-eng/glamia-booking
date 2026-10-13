@@ -23,7 +23,12 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        // LA PAGE DE RÉSA SE REMPLIT EN DEMANDANT LA PRO, SES CRÉNEAUX ET SA
+        // VITRINE À CES GUICHETS. Les fermer à Google (13 oct. 2026) faisait
+        // échouer la page chez lui : il voyait « page introuvable » et classait
+        // les pages Ultra en « soft 404 ». La règle la plus précise l'emporte :
+        // ces trois chemins restent ouverts, tout le reste de /api/ est fermé.
+        allow: ['/', '/api/pro', '/api/creneaux', '/api/clic-app'],
         disallow: [
           // Les guichets : ils répondent à l'app et à la page, pas au public.
           '/api/',
