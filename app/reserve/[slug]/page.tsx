@@ -581,7 +581,9 @@ export default function ReservationPage() {
   // La fiche jointe par le serveur pour Google (layout) : utile tant que la page
   // charge, retirée dès qu'elle s'affiche — la cliente ne voit que la vraie page.
   useEffect(() => {
-    if (pageState !== 'loading') document.getElementById('fiche-serveur')?.remove()
+    // Pas sur « introuvable » : si la page n'a pas pu se remplir, la fiche du
+    // serveur reste la seule chose vraie à montrer.
+    if (pageState !== 'loading' && pageState !== 'notfound') document.getElementById('fiche-serveur')?.remove()
   }, [pageState])
   const [submitting, setSubmitting] = useState(false)
   // ── LE REFUS DE CARTE NE PASSE PLUS PAR UNE BOÎTE DU NAVIGATEUR ───────────
