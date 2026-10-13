@@ -434,32 +434,45 @@ export const donneesVille = cache((slug: string) => donneesVilleEnCache(slug))
 
 /**
  * POUR LE SITEMAP : les villes qui ont au moins une pro, et leurs métiers
- * (13 oct. 2026). Lu au plus une fois par heure. Les métiers viennent de ce
- * que la pro a déclaré (« Manucure · Cils ») : léger pour la base, et la page
- * elle-même reste hors de Google si, au final, elle n'a personne à montrer.
+ * (13 oct. 2026). Lu au plus une fois par heure. Les métiers sont lus dans le
+ * catalogue, exactement comme la page les montre (ce que la pro a déclaré à
+ * l'inscription ne suit pas toujours son catalogue : la page serait vide).
  *
- * Trois lectures bornées pour les pros, puis les villes par paquets de 40
- * (chaque nom passe par l'index des villes).
+ * Deux lectures bornées pour les pros, leurs catalogues par paquets de 200,
+ * puis les villes par paquets de 40 (chaque nom passe par l'index des villes).
  */
 export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[] }[]> {
   const [{ data: profils, error: e1 }, { data: localisees, error: e2 }] = await Promise.all([
-    admin.from('profiles').select('id, ville, ville_affichee, specialite, sur_glamia').not('slug', 'is', null).limit(5000),
+    admin.from('profiles').select('id, ville, ville_affichee, sur_glamia').not('slug', 'is', null).limit(5000),
     admin.from('pros_localisees').select('pro_id, ville_recherche').limit(5000),
   ])
   if (e1 || e2) throw new Error(e1?.message ?? e2?.message)
   const deduite = new Map((localisees ?? []).map(l => [l.pro_id as string, l.ville_recherche as string]))
 
-  // Pour chaque pro visible : le texte de sa ville (ou la ville déduite), et ses métiers.
-  const pros: { textes: string[]; metiers: Metier[] }[] = []
+  // Pour chaque pro visible : le texte de sa ville (ou la ville déduite).
+  const visibles: { id: string; textes: string[] }[] = []
   for (const p of profils ?? []) {
     if (p.sur_glamia === false) continue
     const texte = ((p.ville_affichee as string | null) || (p.ville as string | null) || '').trim()
     const textes = texte ? formesDeVille(texte) : deduite.has(p.id as string) ? [deduite.get(p.id as string)!] : []
-    if (!textes.length) continue
-    const ms = new Set<Metier>()
-    for (const s of String(p.specialite ?? '').split('·')) { const m = metierDe(s); if (m) ms.add(m) }
-    pros.push({ textes, metiers: METIERS.filter(m => ms.has(m)) })
+    if (textes.length) visibles.push({ id: p.id as string, textes })
   }
+  // Ses métiers : les catégories de son catalogue où au moins une prestation est allumée (comme la page).
+  const metiersDe = new Map<string, Metier[]>()
+  for (let i = 0; i < visibles.length; i += 200) {
+    const { data, error } = await admin.from('prestations').select('pro_id, data').in('pro_id', visibles.slice(i, i + 200).map(v => v.id)).limit(400)
+    if (error) throw new Error(error.message)
+    for (const c of data ?? []) {
+      const ms = new Set<Metier>()
+      for (const [cat, liste] of Object.entries((c.data ?? {}) as Record<string, unknown>)) {
+        if (!Array.isArray(liste) || !liste.some(t => (t as { active?: boolean })?.active !== false)) continue
+        const m = metierDe(cat)
+        if (m) ms.add(m)
+      }
+      metiersDe.set(c.pro_id as string, METIERS.filter(m => ms.has(m)))
+    }
+  }
+  const pros = visibles.map(v => ({ textes: v.textes, metiers: metiersDe.get(v.id) ?? [] }))
 
   // Quelles formes correspondent à une ville connue ?
   const formes = [...new Set(pros.flatMap(p => p.textes))]
