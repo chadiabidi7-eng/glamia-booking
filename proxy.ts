@@ -21,6 +21,8 @@ function servieSurGlamiaFr(chemin: string): boolean {
   if (chemin.startsWith('/_next/') || chemin.startsWith('/_vercel/')) return true
   if (chemin === '/api/villes') return true          // les villes proposées pendant la frappe
   if (chemin.startsWith('/icons/')) return true       // les dessins des spécialités
+  // Le fichier qui prouve à Google Search Console que glamia.fr est à nous (13 oct. 2026).
+  if (/^\/google[0-9a-f]+\.html$/.test(chemin)) return true
   // Les fichiers à la racine : logo, fleur, icônes, robots.txt, sitemap.xml.
   return /^\/[\w.-]+\.(png|jpe?g|svg|webp|ico|txt|xml|webmanifest)$/i.test(chemin)
 }
