@@ -155,7 +155,7 @@ async function pagesDeRecherche(): Promise<MetadataRoute.Sitemap> {
 // La page lit l'adresse demandée (booking.glamia.pro ou glamia.fr) : sans ce
 // cache d'une heure, chaque passage de Google relirait la base.
 const resaEnCache = unstable_cache(pagesDeResa, ['sitemap-resa-v1'], { revalidate: 3600 })
-const rechercheEnCache = unstable_cache(pagesDeRecherche, ['sitemap-recherche-v1', rechercheSurGlamiaFr() ? 'fr' : 'pro'], { revalidate: 3600 })
+const rechercheEnCache = unstable_cache(pagesDeRecherche, ['sitemap-recherche-v2', rechercheSurGlamiaFr() ? 'fr' : 'pro'], { revalidate: 3600 })
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const surGlamiaFr = estGlamiaFr((await headers()).get('host'))

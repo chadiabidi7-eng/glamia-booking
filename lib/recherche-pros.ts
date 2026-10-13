@@ -428,7 +428,7 @@ const donneesVilleEnCache = unstable_cache(async (slug: string): Promise<Donnees
   const vus = new Set<string>([ville.slug])
   const voisines = trouvees.filter((v): v is { nom: string; slug: string } => !!v && !vus.has(v.slug) && !!vus.add(v.slug))
   return { ville, pros, voisines }
-}, ['beaute-ville-v1'], { revalidate: 300 })
+}, ['beaute-ville-v2'], { revalidate: 300 })
 
 export const donneesVille = cache((slug: string) => donneesVilleEnCache(slug))
 
