@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profil } = await supabaseAdmin
     .from('profiles')
-    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, ville_affichee, pays, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif, abonnement_actif, trial_ends_at')
+    .select('avis_actifs, adresse, adresse_publique, adresse_acces, adresse_moment, accueil, reglement, formulaire, formulaire_actif, demander_inspirations, ville, ville_affichee, ville_lue, pays, adresse_lat, adresse_lon, bio, photo_couverture, photos_travail, page_couleur, bouton_couleur, bouton_texte, pro_pay_actif, abonnement_actif, trial_ends_at')
     .eq('id', proId)
     .maybeSingle()
 
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
   // adresse, sinon ses propres mots (« Fribourg, commune du Gibloux »), et seulement en dernier
   // la ville déduite de son ancienne adresse — qui peut être son village, voire une erreur.
   const choisie = ((profil.ville_affichee as string) || '').trim() || null
-  let villeConnue = choisie || ((profil.ville as string) || '').trim() || ((profil.adresse_publique as string) || '').trim() || null
+  let villeConnue = choisie || ((profil.ville as string) || '').trim() || ((profil.ville_lue as string) || '').trim() || ((profil.adresse_publique as string) || '').trim() || null
   if (choisie && choisie.toLowerCase() !== ((profil.ville as string) || '').trim().toLowerCase()) {
     // Son point se pose au centre de la ville choisie, jamais près de son adresse exacte.
     position = await centreDe(choisie, ((profil.pays as string) || 'FR').toUpperCase())
