@@ -117,10 +117,8 @@ export async function POST(req: NextRequest) {
     // Son point se pose au centre de la ville choisie, jamais près de son adresse exacte.
     position = await centreDe(choisie, ((profil.pays as string) || 'FR').toUpperCase())
   }
-  if (!position || !villeConnue) {
-    const { data: loc } = await supabaseAdmin.from('pros_localisees').select('lat, lon, ville').eq('pro_id', proId).maybeSingle()
-    if (loc) { position ??= { lat: loc.lat as number, lon: loc.lon as number }; villeConnue ??= loc.ville as string }
-  }
+  // Plus jamais de ville ni de position devinées (Chadi, 14 oct. 2026) : sans
+  // adresse donnée par la pro, pas de cercle sur la carte.
   if (position) position = flouter(proId, position.lat, position.lon)
 
   return NextResponse.json({
