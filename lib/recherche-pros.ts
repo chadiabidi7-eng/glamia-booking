@@ -174,9 +174,11 @@ type Profil = {
   ville: string | null
   pays: string | null
   ville_affichee: string | null
+  /** La ville LUE dans le texte d'adresse qu'elle a écrit (« 64340 Boucau », « Marseille ») — jamais devinée (14 oct. 2026). */
+  ville_lue: string | null
   devise: string | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee, devise'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee, devise, ville_lue'
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -191,11 +193,11 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     // remontent, puis on ne garde que la même ville (12 oct. 2026).
     // La ville écrite par l'user, ou la ville qu'elle a choisi d'afficher (12 oct. 2026).
     // Aussi « 64340 Boucau » ou « 1700 Fribourg » : quatre ou cinq chiffres et une espace devant (14 oct. 2026).
-    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike.______${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike._____${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
+    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike.______${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike._____${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_lue.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
     Promise.resolve(AUCUNE_VILLE_DEVINEE),
   ])
   // La ville qu'elle montre : celle qu'elle a choisie, sinon celle de son adresse.
-  const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville) && formesDeVille((p.ville_affichee || p.ville)!).includes(ville.slug)
+  const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville || p.ville_lue) && formesDeVille((p.ville_affichee || p.ville || p.ville_lue)!).includes(ville.slug)
   const tous = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
     undefined, ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon, pays: ville.pays } : undefined)
   // Une user qui a choisi la ville à montrer n'apparaît que dans celle-là — même si son
@@ -367,7 +369,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
       photos: (Array.isArray(p.photos_travail) ? p.photos_travail : []).filter((u): u is string => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 4),
       enAvant: p.pro_pay_actif === true,
       rangDuJour: rangDuJour(p.id),
-      villeLien: p.ville_affichee || p.ville || undefined,
+      villeLien: p.ville_affichee || p.ville || p.ville_lue || undefined,
       villeChoisie: !!(p.ville_affichee ?? '').trim(),
     }
   })
@@ -456,7 +458,7 @@ export const donneesVille = cache((slug: string) => donneesVilleEnCache(slug))
  */
 export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[] }[]> {
   const [{ data: profils, error: e1 }, { data: localisees, error: e2 }] = await Promise.all([
-    admin.from('profiles').select('id, ville, ville_affichee, sur_glamia').not('slug', 'is', null).limit(5000),
+    admin.from('profiles').select('id, ville, ville_affichee, ville_lue, sur_glamia').not('slug', 'is', null).limit(5000),
     Promise.resolve(AUCUNE_VILLE_DEVINEE),
   ])
   if (e1 || e2) throw new Error(e1?.message ?? e2?.message)
@@ -466,7 +468,7 @@ export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[
   const visibles: { id: string; textes: string[] }[] = []
   for (const p of profils ?? []) {
     if (p.sur_glamia === false) continue
-    const texte = ((p.ville_affichee as string | null) || (p.ville as string | null) || '').trim()
+    const texte = ((p.ville_affichee as string | null) || (p.ville as string | null) || (p.ville_lue as string | null) || '').trim()
     const textes = texte ? formesDeVille(texte) : deduite.has(p.id as string) ? [deduite.get(p.id as string)!] : []
     if (textes.length) visibles.push({ id: p.id as string, textes })
   }
