@@ -258,7 +258,9 @@
     "avecMaj": "Avec %{prenom}",
     "continuerAvec": "Continuer avec %{heure} →",
     "proBadgeApp": "Télécharger l'app",
-    "creneauLibereCourt": "Le créneau libéré ne durait que %{duree} : vos soins durent %{choisie}. Choisissez un autre horaire."
+    "creneauLibereCourt": "Le créneau libéré ne durait que %{duree} : vos soins durent %{choisie}. Choisissez un autre horaire.",
+    "enSupplement": "En supplément",
+    "avecUneAutre": "Ce soin se prend avec une autre prestation."
   },
   "commun": {
     "chargement": "Chargement...",

@@ -318,6 +318,8 @@ function normalizeStr(str: string) {
 
 
 function formatDuree(min: number) {
+  // 0 min = un supplément compris dans le temps d'un autre soin (15 oct. 2026).
+  if (min === 0) return traduire('resa.enSupplement')
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
   const m = min % 60
@@ -1490,6 +1492,8 @@ export default function ReservationPage() {
   const questionsSansReponse = questionsEnCours.filter(q => !reponses[q.id])
 
   const dureeTotal = techniquesSelectionnees.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
+  // Rien que des suppléments sans durée : il manque le soin principal.
+  const seulementSupplements = techniquesSelectionnees.length > 0 && dureeTotal === 0
 
   // ── ÉQUIPE : qui peut faire ce panier, et en combien de temps ─────────────
   // Une assistante n'apparaît que si elle assure TOUT le panier ; sa durée est
@@ -5586,6 +5590,10 @@ export default function ReservationPage() {
             {questionsSansReponse.length > 0 && (
               <p style={{ margin: '0 0 8px', fontSize: 12.5, color: PINK_TEXTE, fontWeight: 600, textAlign: 'center' }}>{traduire('resa.questionAuDessus')}</p>
             )}
+            {/* Un supplément sans durée ne se réserve pas seul : il s'ajoute à un autre soin. */}
+            {seulementSupplements && questionsSansReponse.length === 0 && (
+              <p style={{ margin: '0 0 8px', fontSize: 12.5, color: PINK_TEXTE, fontWeight: 600, textAlign: 'center' }}>{traduire('resa.avecUneAutre')}</p>
+            )}
             {/* Total + Continuer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: PINK_TEXTE }}>
@@ -5599,18 +5607,18 @@ export default function ReservationPage() {
                   rien — répondre ne coûte qu'un appui. */}
               <button
                 onClick={() => {
-                  if (questionsSansReponse.length > 0) return
+                  if (questionsSansReponse.length > 0 || seulementSupplements) return
                   // Venue d'un mail de désistement : droit au jour annoncé.
                   if (creneauVise.current) { setDate(creneauVise.current.jour); setHeure(''); setStep(4); return }
                   setStep(3)
                 }}
-                disabled={questionsSansReponse.length > 0}
-                title={questionsSansReponse.length > 0 ? traduire('resa.repondsQuestion') : undefined}
+                disabled={questionsSansReponse.length > 0 || seulementSupplements}
+                title={questionsSansReponse.length > 0 ? traduire('resa.repondsQuestion') : seulementSupplements ? traduire('resa.avecUneAutre') : undefined}
                 style={{
                   background: PINK, color: '#fff', fontWeight: 700, fontSize: 14,
                   padding: '10px 22px', borderRadius: 22, border: 'none',
-                  cursor: questionsSansReponse.length > 0 ? 'default' : 'pointer',
-                  opacity: questionsSansReponse.length > 0 ? 0.45 : 1,
+                  cursor: questionsSansReponse.length > 0 || seulementSupplements ? 'default' : 'pointer',
+                  opacity: questionsSansReponse.length > 0 || seulementSupplements ? 0.45 : 1,
                 }}
               >{traduire('resa.continuer')}</button>
             </div>
