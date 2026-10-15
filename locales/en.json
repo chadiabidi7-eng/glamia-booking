@@ -258,7 +258,9 @@
     "avecMaj": "With %{prenom}",
     "continuerAvec": "Continue with %{heure} →",
     "proBadgeApp": "Get the app",
-    "creneauLibereCourt": "The freed slot was only %{duree} long: your treatments take %{choisie}. Please pick another time."
+    "creneauLibereCourt": "The freed slot was only %{duree} long: your treatments take %{choisie}. Please pick another time.",
+    "enSupplement": "Add-on",
+    "avecUneAutre": "This service is booked together with another one."
   },
   "commun": {
     "chargement": "Loading...",

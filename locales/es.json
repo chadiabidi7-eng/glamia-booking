@@ -258,7 +258,9 @@
     "avecMaj": "Con %{prenom}",
     "continuerAvec": "Continuar con %{heure} →",
     "proBadgeApp": "Descargar la app",
-    "creneauLibereCourt": "El hueco liberado era de solo %{duree}: tus servicios duran %{choisie}. Elige otra hora."
+    "creneauLibereCourt": "El hueco liberado era de solo %{duree}: tus servicios duran %{choisie}. Elige otra hora.",
+    "enSupplement": "Suplemento",
+    "avecUneAutre": "Este servicio se reserva junto con otro."
   },
   "commun": {
     "chargement": "Cargando...",
