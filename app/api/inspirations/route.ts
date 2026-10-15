@@ -4,6 +4,7 @@ import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { normaliserTelephone } from '@/lib/telephone'
 import { delaiAvant } from '@/lib/heure-pro'
+import { avecCanal } from '@/lib/canal-android'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -169,11 +170,11 @@ export async function POST(req: NextRequest) {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify(avecCanal({
             to: pro.push_token,
             title: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirationsTitre'),
             body: traduireDans((pro as { langue?: string })?.langue, 'notif.inspirations', { nom: nomCliente, count: urls.length, date: formatRdvFr(rdv.date, (pro as { langue?: string })?.langue) }),
-          }),
+          })),
         })
       }
     } catch (e) {

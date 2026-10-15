@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { creneauReservable, delaiDe, delaiEntreClientes, minToTime } from '@/lib/creneaux'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { traduireDans } from '@/lib/i18n'
+import { avecCanal } from '@/lib/canal-android'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AVANCER SON RENDEZ-VOUS SUR UNE PLACE LIBÉRÉE (désistement, 11 oct. 2026).
@@ -153,12 +154,12 @@ export async function POST(req: NextRequest) {
       const fmt = (iso: string) => new Date(iso).toLocaleDateString(etiquetteDe(lu.langue), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(avecCanal({
           to: lu.pro.push_token,
           title: traduireDans(lu.langue, 'notif.rdvDecaleTitre'),
           body: traduireDans(lu.langue, 'notif.rdvDecale', { prenom, avant: fmt(ancienne), apres: fmt(lu.nouvelle), heure: minToTime(lu.place.debut_min) }),
           data: { type: 'rdv', lien: `/rdv/${lu.rdv.id}` },
-        }),
+        })),
       })
     }
     await fetch('https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rdv-cliente-mail', {

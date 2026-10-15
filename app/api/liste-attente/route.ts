@@ -5,6 +5,7 @@ import { etiquetteDe } from '@/lib/heures-dates'
 import { normaliserTelephone } from '@/lib/telephone'
 import { aPro, formuleDe } from '@/lib/formule'
 import { jourChezLaPro } from '@/lib/heure-pro'
+import { avecCanal } from '@/lib/canal-android'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inscription d'une cliente sur la liste d'attente d'une journée complète.
@@ -135,11 +136,11 @@ export async function POST(req: NextRequest) {
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(avecCanal({
           to: pro.push_token,
           title: traduireDans(pro?.langue, 'notif.attenteTitre'),
           body: traduireDans(pro?.langue, 'notif.attente', { nom: [prenomNet, nomNet].filter(Boolean).join(' '), jour: jourLisible, duree: dureeLisible }),
-        }),
+        })),
       })
     }
   } catch (e) {

@@ -6,6 +6,7 @@ import { traduireDans } from '@/lib/i18n'
 import { symboleDevise } from '@/lib/devise'
 import { calculerTotalCliente } from '../intent/route'
 import { estLienAcompte, finaliserLienAcompte } from '@/lib/lien-acompte'
+import { avecCanal } from '@/lib/canal-android'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — page de paiement maison (lien d'encaissement de la fiche RDV).
@@ -106,13 +107,13 @@ async function notifierPro(
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(avecCanal({
         to: pro.push_token,
         title: traduireDans(langue, cleTitre),
         body: traduireDans(langue, cleCorps, valeursAvecDevise),
         sound: 'default',
         priority: 'high',
-      }),
+      })),
     })
   } catch (e) {
     console.error('[api/propay/lien] notif:', e)

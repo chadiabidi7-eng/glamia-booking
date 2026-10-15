@@ -5,6 +5,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe-serveur'
 import { traduireDans } from '@/lib/i18n'
 import { symboleDevise } from '@/lib/devise'
+import { avecCanal } from '@/lib/canal-android'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — webhook Stripe (endpoint « Connect » : événements des
@@ -67,11 +68,11 @@ async function pousserNotifPro(
   await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    body: JSON.stringify(avecCanal({
       to: pro.push_token,
       title: traduireDans(langue, cleTitre),
       body: traduireDans(langue, cleCorps, valeursAvecDevise),
-    }),
+    })),
   })
 }
 

@@ -5,6 +5,7 @@ import { instantReel } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 import { traduireDans } from '@/lib/i18n'
 import { avisFenetreMs } from '@/lib/reglages'
+import { avecCanal } from '@/lib/canal-android'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // L'AVIS D'UNE CLIENTE, DÉPOSÉ DEPUIS SON LIEN DE RENDEZ-VOUS.
@@ -270,7 +271,7 @@ export async function POST(
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(avecCanal({
           to: profil.push_token,
           title: traduireDans(profil?.langue, 'notif.nouvelAvisTitre', { etoiles }),
           body: etat.prestations
@@ -278,7 +279,7 @@ export async function POST(
             : traduireDans(profil?.langue, 'notif.avis', { auteur }),
           sound: 'default',
           data: { type: 'avis' },
-        }),
+        })),
       })
     }
   } catch (e) {
