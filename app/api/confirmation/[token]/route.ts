@@ -5,6 +5,7 @@ import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { avecCanal } from '@/lib/canal-android'
 
 // Les noms de jours et de mois étaient écrits en français, en dur. Une pro
 // anglaise recevait « mercredi 15 juillet » dans sa notification. On les
@@ -280,11 +281,11 @@ export async function POST(
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify(avecCanal({
             to: proData.push_token,
             title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
             body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), heureAvant: oldHeureStr, apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
-          }),
+          })),
         })
       }
 
@@ -405,7 +406,7 @@ export async function POST(
       const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: pushToken, title, body }),
+        body: JSON.stringify(avecCanal({ to: pushToken, title, body })),
       })
 
       const pushBody = await pushRes.text()

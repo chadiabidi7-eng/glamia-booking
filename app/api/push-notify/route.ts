@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { avecCanal } from '@/lib/canal-android'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: pushToken, title, body }),
+      body: JSON.stringify(avecCanal({ to: pushToken, title, body })),
     })
 
     const pushBody = await pushRes.text()
