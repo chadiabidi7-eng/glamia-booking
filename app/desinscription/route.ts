@@ -56,7 +56,30 @@ async function lireEnvoi(url: URL) {
   return { envoi, langue, nomPro: echapper((pro?.pseudo || pro?.prenom || 'Glamia') as string), requete: url.search }
 }
 
+// LES MAILS DE GLAMIA AUX PROS (campagnes 3.0, 16 oct. 2026) : « p » = la ligne
+// de l'envoi dans campagnes_3_0. Le refus coupe tous les mails de campagne de
+// Glamia à cette pro (profiles.campagnes_mail_coupees_le) — jamais ses mails
+// de rendez-vous ni ceux de son compte.
+async function lireEnvoiPro(url: URL) {
+  const p = url.searchParams.get('p')
+  if (!estId(p)) return null
+  const { data: envoi } = await supabaseAdmin.from('campagnes_3_0').select('pro_id').eq('id', p).maybeSingle()
+  if (!envoi) return null
+  const { data: pro } = await supabaseAdmin.from('profiles').select('langue').eq('id', envoi.pro_id).maybeSingle()
+  const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' ? pro.langue : 'fr'
+  return { proId: envoi.pro_id as string, langue, requete: url.search }
+}
+
 export async function GET(req: NextRequest) {
+  const pro = await lireEnvoiPro(new URL(req.url))
+  if (pro) {
+    const L = TEXTES[pro.langue]
+    return page(pro.langue, `
+    <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">${L.question('Glamia')}</p>
+    <form method="POST" action="/desinscription${echapper(pro.requete)}">
+      <button type="submit" style="border:0;background:#C2779E;color:#fff;font-size:15px;font-weight:700;padding:13px 26px;border-radius:12px;cursor:pointer;">${L.bouton}</button>
+    </form>`)
+  }
   const lu = await lireEnvoi(new URL(req.url))
   if (!lu) return page('fr', `<p>${TEXTES.fr.inconnu}</p>`, 404)
   const L = TEXTES[lu.langue]
@@ -68,6 +91,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const pro = await lireEnvoiPro(new URL(req.url))
+  if (pro) {
+    await supabaseAdmin.from('profiles').update({ campagnes_mail_coupees_le: new Date().toISOString() })
+      .eq('id', pro.proId).is('campagnes_mail_coupees_le', null)
+    return page(pro.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${TEXTES[pro.langue].fait('Glamia')}</p>`)
+  }
   const lu = await lireEnvoi(new URL(req.url))
   if (!lu) return page('fr', `<p>${TEXTES.fr.inconnu}</p>`, 404)
   await supabaseAdmin.from('clientes').update({ desistement_refuse_le: new Date().toISOString() })
