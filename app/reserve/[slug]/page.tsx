@@ -5705,7 +5705,9 @@ export default function ReservationPage() {
           9 oct. 2026). La même qu'en 2.6.1, neutre, vers glamia.pro, fixée en
           bas : on la voit à l'ouverture. Dès que la réservation commence, c'est
           une cliente qui réserve, pas une pro : elle disparaît. */}
-      {step === 1 && phoneStatus === 'idle' && (
+      {/* « ?photo » dans l'adresse : la page sans la bannière, pour une capture
+          marketing (Chadi, 17 oct. 2026). Rien d'autre ne change. */}
+      {step === 1 && phoneStatus === 'idle' && !rechercheUrl.has('photo') && (
         <PiedProGlamia proId={pro?.id} slug={typeof slug === 'string' ? slug : undefined} variante="barre" />
       )}
     </div>
