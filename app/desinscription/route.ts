@@ -63,7 +63,10 @@ async function lireEnvoi(url: URL) {
 async function lireEnvoiPro(url: URL) {
   const p = url.searchParams.get('p')
   if (!estId(p)) return null
+  // Les mails de la méthode « Conversion » (17 oct. 2026) ont leur propre
+  // journal, conversion_envois : même refus, même effet.
   const { data: envoi } = await supabaseAdmin.from('campagnes_3_0').select('pro_id').eq('id', p).maybeSingle()
+    .then(async r => r.data ? r : await supabaseAdmin.from('conversion_envois').select('pro_id').eq('id', p).maybeSingle())
   if (!envoi) return null
   const { data: pro } = await supabaseAdmin.from('profiles').select('langue').eq('id', envoi.pro_id).maybeSingle()
   const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' ? pro.langue : 'fr'
