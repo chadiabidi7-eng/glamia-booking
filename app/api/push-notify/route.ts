@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  const { proId, title, body, praticienneId } = await req.json()
+  const { proId, title, body, praticienneId, motif } = await req.json()
 
   if (!proId || !title || !body) {
     return NextResponse.json({ error: 'proId, title et body requis' }, { status: 400 })
@@ -15,9 +15,16 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .select('push_token')
+    .select('push_token, app_version')
     .eq('id', proId)
     .maybeSingle()
+
+  // UNE SEULE NOTIFICATION D'ANNULATION (17 oct. 2026) : en 3.0, c'est la base
+  // qui prévient la pro, avec l'invitation à partager sa place en story
+  // (desistement-alerte). L'ancienne « ❌ RDV annulé » ne part plus qu'en 2.x.
+  if (motif === 'annulation' && /^([3-9]|[1-9][0-9])\./.test(String(data?.app_version ?? ''))) {
+    return NextResponse.json({ sent: false, reason: 'remplacee_par_story' })
+  }
 
   if (error) {
     console.error('[api/push-notify] Erreur lecture profil:', error)

@@ -350,12 +350,12 @@ function formatRdvHeure(isoStr: string) {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
-async function envoyerPushNotif(proId: string, title: string, body: string, praticienneId?: string | null) {
+async function envoyerPushNotif(proId: string, title: string, body: string, praticienneId?: string | null, motif?: 'annulation') {
   try {
     const res = await fetch('/api/push-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proId, title, body, praticienneId: praticienneId ?? null }),
+      body: JSON.stringify({ proId, title, body, praticienneId: praticienneId ?? null, motif: motif ?? null }),
     })
     const data = await res.json()
     console.log('[envoyerPushNotif] Résultat:', data)
@@ -2047,7 +2047,8 @@ export default function ReservationPage() {
         envoyerPushNotif(
           pro.id,
           traduire('notif.rdvAnnuleTitre'),
-          traduire('notif.rdvAnnule', { prenom: clientePrenom, date: formatRdvDate(rdv.date), heure: formatRdvHeure(rdv.date) })
+          traduire('notif.rdvAnnule', { prenom: clientePrenom, date: formatRdvDate(rdv.date), heure: formatRdvHeure(rdv.date) }),
+          null, 'annulation',
         )
       }
     } catch (e) {

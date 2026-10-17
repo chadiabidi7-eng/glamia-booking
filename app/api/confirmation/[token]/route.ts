@@ -373,12 +373,17 @@ export async function POST(
   try {
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('push_token, langue')
+      .select('push_token, langue, app_version')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
-    const pushToken = pro?.push_token
-    if (!pushToken) {
+    // En 3.0, l'annulation est annoncée par la base avec la story (17 oct. 2026) :
+    // pas de seconde notification « ❌ RDV annulé ».
+    const remplacee = action === 'annuler' && /^([3-9]|[1-9][0-9])\./.test(String(pro?.app_version ?? ''))
+    const pushToken = remplacee ? null : pro?.push_token
+    if (remplacee) {
+      console.log('[api/confirmation] Annulation : notification remplacée par la story (3.x)')
+    } else if (!pushToken) {
       console.warn('[api/confirmation] Push token absent pour pro_id:', rdv.pro_id)
     } else {
       const { data: cliente } = await supabaseAdmin
