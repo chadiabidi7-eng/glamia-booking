@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
   const { error } = await supabaseAdmin.from('rendez_vous').update({
     date: lu.nouvelle, statut: 'en_attente', nb_decalages: ((lu.rdv.nb_decalages as number) ?? 0) + 1,
     rappel_envoye_count: 0, rappel_envoye_at: null, notif_vue: false,
+    decale_par: 'cliente', decale_le: new Date().toISOString(),
   }).eq('id', lu.rdv.id).neq('statut', 'annule')
   if (error) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.prise}</p>`, 500)
   await supabaseAdmin.from('desistement_envois').update({ pris_le: new Date().toISOString() }).eq('id', lu.envoi.id)
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           to: lu.pro.push_token,
           title: traduireDans(lu.langue, 'notif.rdvDecaleTitre'),
-          body: traduireDans(lu.langue, 'notif.rdvDecale', { prenom, avant: fmt(ancienne), apres: fmt(lu.nouvelle), heure: minToTime(lu.place.debut_min) }),
+          body: traduireDans(lu.langue, 'notif.rdvDecale', { prenom, avant: fmt(ancienne), heureAvant: ancienne.slice(11, 16), apres: fmt(lu.nouvelle), heure: minToTime(lu.place.debut_min) }),
           data: { type: 'rdv', lien: `/rdv/${lu.rdv.id}` },
         }),
       })

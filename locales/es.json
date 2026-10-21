@@ -382,7 +382,7 @@
     "uneClienteMinuscule": "una clienta",
     "taPraticienne": "tu profesional",
     "rdvDecaleTitre": "📅 Cita cambiada de fecha",
-    "rdvDecale": "%{prenom} ha cambiado su cita del %{avant} al %{apres} a las %{heure}",
+    "rdvDecale": "%{prenom} ha cambiado su cita del %{avant} a las %{heureAvant} al %{apres} a las %{heure}",
     "rdvConfirme": "%{prenom} ha confirmado su cita del %{date} a las %{heure}",
     "rdvAnnule": "%{prenom} ha cancelado su cita del %{date} a las %{heure}",
     "avisAvecPrestation": "%{auteur} te ha dejado una reseña sobre %{prestation}.",

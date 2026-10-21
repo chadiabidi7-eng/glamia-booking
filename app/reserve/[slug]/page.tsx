@@ -2393,10 +2393,14 @@ export default function ReservationPage() {
       }
 
       // Push notification
+      // D'où à où : la pro garde la trace de l'ancien créneau (21 oct. 2026).
+      const ancien = rdvsAVenir.find(r => r.id === reprogRdvId)?.date ?? ''
       envoyerPushNotif(
         pro.id,
-        traduire('notif.rdvReprogrammeTitre'),
-        traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
+        traduire('notif.rdvDecaleTitre'),
+        ancien
+          ? traduire('notif.rdvDecale', { prenom: clientePrenom, avant: formatDateLong(ancien.slice(0, 10)), heureAvant: ancien.slice(11, 16), apres: formatDateLong(reprogDate), heure: reprogHeure })
+          : traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
       )
 
       // Mettre à jour la liste locale

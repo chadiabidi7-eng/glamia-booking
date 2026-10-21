@@ -368,7 +368,7 @@
     "uneClienteMinuscule": "une cliente",
     "taPraticienne": "ta praticienne",
     "rdvDecaleTitre": "📅 RDV décalé",
-    "rdvDecale": "%{prenom} a décalé son RDV du %{avant} au %{apres} à %{heure}",
+    "rdvDecale": "%{prenom} a décalé son RDV du %{avant} à %{heureAvant} au %{apres} à %{heure}",
     "rdvConfirme": "%{prenom} a confirmé son RDV du %{date} à %{heure}",
     "rdvAnnule": "%{prenom} a annulé son RDV du %{date} à %{heure}",
     "avisAvecPrestation": "%{auteur} t'a laissé un avis sur %{prestation}.",

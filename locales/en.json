@@ -368,7 +368,7 @@
     "uneClienteMinuscule": "a client",
     "taPraticienne": "your practitioner",
     "rdvDecaleTitre": "📅 Appointment moved",
-    "rdvDecale": "%{prenom} moved her appointment from %{avant} to %{apres} at %{heure}",
+    "rdvDecale": "%{prenom} moved her appointment from %{avant} at %{heureAvant} to %{apres} at %{heure}",
     "rdvConfirme": "%{prenom} confirmed her appointment on %{date} at %{heure}",
     "rdvAnnule": "%{prenom} cancelled her appointment on %{date} at %{heure}",
     "avisAvecPrestation": "%{auteur} left you a review about %{prestation}.",

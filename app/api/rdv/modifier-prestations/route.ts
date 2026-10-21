@@ -101,6 +101,9 @@ export async function POST(req: NextRequest) {
     patch.date = newDate
     patch.statut = 'en_attente'
     patch.nb_decalages = ((rdv as { nb_decalages?: number }).nb_decalages ?? 0) + 1
+    // La trace pour la pro : l'ancienne date est gardée par la base (21 oct. 2026).
+    patch.decale_par = 'cliente'
+    patch.decale_le = new Date().toISOString()
     patch.rappel_envoye_count = 0
     patch.rappel_envoye_at = null
   }

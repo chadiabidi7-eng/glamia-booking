@@ -248,6 +248,8 @@ export async function POST(
         rappel_envoye_at: null,
         token_confirmation: null,
         token_expiration: null,
+        // La trace pour la pro : l'ancienne date est gardée par la base (21 oct. 2026).
+        decale_par: 'cliente', decale_le: new Date().toISOString(),
       })
       .eq('id', rdv.id)
 
@@ -281,7 +283,7 @@ export async function POST(
           body: JSON.stringify({
             to: proData.push_token,
             title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
-            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
+            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), heureAvant: oldHeureStr, apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
           }),
         })
       }
