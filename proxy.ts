@@ -28,7 +28,7 @@ function servieSurGlamiaFr(chemin: string): boolean {
 }
 
 /** Les pages du site à la racine (dossiers de app/) : jamais prises pour une pro. */
-const PAGES_DU_SITE = new Set([".well-known", "aide", "api", "app", "avancer", "avis", "beaute", "cgu", "confidentialite", "confirmation", "desinscription", "mail-exemple", "ouvrir", "paiement", "payer", "reserve", "stripe", "suppression-compte"])
+const PAGES_DU_SITE = new Set([".well-known", "aide", "api", "app", "avancer", "avis", "beaute", "cgu", "confidentialite", "confirmation", "desinscription", "itineraire", "mail-exemple", "ouvrir", "paiement", "payer", "reserve", "stripe", "suppression-compte"])
 
 export function proxy(req: NextRequest) {
   const hote = (req.headers.get('host') ?? '').toLowerCase().split(':')[0]

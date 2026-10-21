@@ -3505,9 +3505,11 @@ export default function ReservationPage() {
               jamais du profil : une pro qui la donne « la veille » n'en envoie
               rien ici, et il n'y a donc rien à afficher. */}
           {(adresseObtenue || pro?.adresse) && (
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+            // Un vrai lien : sans lui, l'iPhone en faisait un lien vers Plans (21 oct. 2026).
+            <a href={`/itineraire?a=${encodeURIComponent(adresseObtenue || pro?.adresse || '')}&l=${langueActuelle()}`}
+              style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'underline', textDecorationColor: '#e5e7eb' }}>
               <MapPin size={14} color={GLAMIA_PINK} />{adresseObtenue || pro?.adresse}
-            </p>
+            </a>
           )}
 
           {/* Statut d'envoi des photos d'inspiration */}
