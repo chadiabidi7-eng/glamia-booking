@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { traduireDans } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UN PAIEMENT SANS RENDEZ-VOUS SE REPOSE TOUT SEUL.
@@ -46,12 +47,16 @@ const refus = (raison: string, extra: Record<string, unknown> = {}) =>
 
 export async function POST(req: NextRequest) {
   // Réservée au service : elle crée des rendez-vous et lit des données de clientes.
-  if (req.headers.get('Authorization') !== `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`) {
+  // La clé partagée avec le vérificateur (23 oct. 2026) : les deux côtés n'avaient
+  // pas la même clé de service, l'appel était refusé et la réparation morte.
+  const entete = req.headers.get('Authorization') ?? ''
+  const cles = [process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.REPARATION_SECRET].filter(Boolean)
+  if (!cles.some(c => entete === `Bearer ${c}`)) {
     return NextResponse.json({ error: 'non_autorise' }, { status: 401 })
   }
 
   try {
-    const { intent_id } = await req.json()
+    const { intent_id, simulation } = await req.json() as { intent_id?: string; simulation?: boolean }
     if (typeof intent_id !== 'string' || !/^(seti|pi)_[A-Za-z0-9]+$/.test(intent_id)) {
       return NextResponse.json({ error: 'intent_invalide' }, { status: 400 })
     }
@@ -76,6 +81,13 @@ export async function POST(req: NextRequest) {
       ? await stripe().setupIntents.retrieve(intent_id, {}, { stripeAccount })
       : await stripe().paymentIntents.retrieve(intent_id, {}, { stripeAccount })
 
+    // ── JAMAIS DE RENDEZ-VOUS SANS ARGENT REÇU (23 oct. 2026) ─────────────────
+    // On ne repose que ce que Stripe dit abouti, et pour CETTE pro : un paiement
+    // en attente de la banque, échoué ou annulé ne crée rien.
+    if (intent.status !== 'succeeded') return refus('paiement_non_abouti', { etat: intent.status })
+    if (intent.metadata?.glamia_pro_id && intent.metadata.glamia_pro_id !== proId) return refus('autre_pro')
+    if ('amount_received' in intent && !(intent.amount_received > 0)) return refus('paiement_non_abouti', { etat: 'rien_recu' })
+
     let r: Reservation
     try { r = JSON.parse(intent.metadata?.glamia_resa ?? '') } catch { r = {} }
     // Les paiements d'avant le 24 août 2026 ne portent rien : irréparables.
@@ -87,12 +99,28 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pro_id: proId, telephone: r.te, creer: true,
+        pro_id: proId, telephone: r.te, creer: !simulation,
         prenom: r.pr ?? '', nom: r.no ?? '', email: r.em ?? '',
       }),
     })
     const cliente = (await repCliente.json())?.cliente
+    if (!cliente?.id && simulation) {
+      return NextResponse.json({ ok: true, simulation: true, ferait: { cliente: 'nouvelle', jour: r.d, heure: r.h, prestation: r.t ?? null } })
+    }
     if (!cliente?.id) return refus('cliente_impossible')
+
+    // ── PAS DE DOUBLON (23 oct. 2026) ─────────────────────────────────────────
+    // La cliente a peut-être déjà réessayé et repayé (Sophie, 23 oct. ; Melissa,
+    // 3 sept.) : son rendez-vous existe, c'est CE paiement-ci qu'il faut lui
+    // rendre, pas un second rendez-vous qu'il faut créer.
+    const { data: dejaLa } = await supabaseAdmin.from('rendez_vous').select('id')
+      .eq('pro_id', proId).eq('cliente_id', cliente.id).neq('statut', 'annule')
+      .gte('date', `${r.d}T${r.h}:00+00:00`).lte('date', `${r.d}T${r.h}:00+00:00`).limit(1)
+    if ((dejaLa ?? []).length) return refus('doublon', { rdv_id: dejaLa![0].id })
+
+    if (simulation) {
+      return NextResponse.json({ ok: true, simulation: true, ferait: { cliente: cliente.id, jour: r.d, heure: r.h, prestation: r.t ?? null } })
+    }
 
     // ── LE RENDEZ-VOUS ────────────────────────────────────────────────────────
     // `rdv/creer` refuse un créneau pris entre-temps : deux clientes à la même
@@ -139,7 +167,7 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({
               rdv_id: rdv.id,
@@ -157,6 +185,24 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.error('[propay/reparer-orphelin] confirmation non envoyée', e)
       }
+    }
+
+    // ── ON PRÉVIENT LA PRO, COMME POUR UNE RÉSERVATION NORMALE ─────────────────
+    // C'est la page qui envoyait cette notification ; elle était morte.
+    try {
+      const { data: proL } = await supabaseAdmin.from('profiles').select('langue').eq('id', proId).maybeSingle()
+      const langue = (proL?.langue as string | null) ?? 'fr'
+      const jour = new Date(`${r.d}T12:00:00Z`).toLocaleDateString(langue === 'en' ? 'en-GB' : langue === 'es' ? 'es-ES' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+      await fetch(`${req.nextUrl.origin}/api/push-notify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proId,
+          title: traduireDans(langue, 'notif.nouveauRdvTitre'),
+          body: traduireDans(langue, 'notif.nouveauRdv', { prenom: r.pr ?? '', prestations: r.t ?? '', date: jour, heure: r.h, appel: '' }),
+        }),
+      })
+    } catch (e) {
+      console.error('[propay/reparer-orphelin] notification pro non envoyée', e)
     }
 
     await supabaseAdmin.from('paiements_orphelins')
