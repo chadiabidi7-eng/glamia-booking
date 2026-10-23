@@ -25,6 +25,7 @@ const TEXTES = {
   fr: { question: (p: string) => `Ne plus recevoir de messages de ${p} ?`, bouton: 'Ne plus recevoir ces messages', fait: (p: string) => `C'est noté : vous ne recevrez plus ces messages de ${p}.`, inconnu: 'Ce lien ne fonctionne plus.' },
   en: { question: (p: string) => `Stop receiving messages from ${p}?`, bouton: 'Stop these messages', fait: (p: string) => `Done: you won't receive these messages from ${p} anymore.`, inconnu: 'This link no longer works.' },
   es: { question: (p: string) => `¿Dejar de recibir mensajes de ${p}?`, bouton: 'No recibir más estos mensajes', fait: (p: string) => `Hecho: ya no recibirás estos mensajes de ${p}.`, inconnu: 'Este enlace ya no funciona.' },
+  it: { question: (p: string) => `Non ricevere più messaggi da ${p}?`, bouton: 'Non ricevere più questi messaggi', fait: (p: string) => `Fatto: non riceverai più questi messaggi da ${p}.`, inconnu: 'Questo link non funziona più.' },
 } as const
 type Langue = keyof typeof TEXTES
 
@@ -52,7 +53,7 @@ async function lireEnvoi(url: URL) {
   const { data: envoi } = await supabaseAdmin.from(table).select('cliente_id, pro_id').eq('id', id).maybeSingle()
   if (!envoi) return null
   const { data: pro } = await supabaseAdmin.from('profiles').select('pseudo, prenom, langue').eq('id', envoi.pro_id).maybeSingle()
-  const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' ? pro.langue : 'fr'
+  const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' || pro?.langue === 'it' ? pro.langue : 'fr'
   return { envoi, langue, nomPro: echapper((pro?.pseudo || pro?.prenom || 'Glamia') as string), requete: url.search }
 }
 
@@ -69,7 +70,7 @@ async function lireEnvoiPro(url: URL) {
     .then(async r => r.data ? r : await supabaseAdmin.from('conversion_envois').select('pro_id').eq('id', p).maybeSingle())
   if (!envoi) return null
   const { data: pro } = await supabaseAdmin.from('profiles').select('langue').eq('id', envoi.pro_id).maybeSingle()
-  const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' ? pro.langue : 'fr'
+  const langue: Langue = pro?.langue === 'en' || pro?.langue === 'es' || pro?.langue === 'it' ? pro.langue : 'fr'
   return { proId: envoi.pro_id as string, langue, requete: url.search }
 }
 

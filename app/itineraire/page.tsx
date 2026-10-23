@@ -8,7 +8,7 @@
 // Maps est installé : sur iPhone on propose donc les deux, Google Maps d'abord.
 // Sur Android et sur ordinateur, Google Maps s'ouvre directement.
 //
-// /itineraire?a=<adresse>&l=<fr|en|es>
+// /itineraire?a=<adresse>&l=<fr|en|es|it>
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useState } from 'react'
 
@@ -16,6 +16,7 @@ const TEXTES = {
   fr: { titre: 'Ouvrir l’adresse avec', google: 'Google Maps', plans: 'Plans', retour: 'Retour' },
   en: { titre: 'Open the address with', google: 'Google Maps', plans: 'Apple Maps', retour: 'Back' },
   es: { titre: 'Abrir la dirección con', google: 'Google Maps', plans: 'Mapas', retour: 'Volver' },
+  it: { titre: 'Apri l’indirizzo con', google: 'Google Maps', plans: 'Mappe', retour: 'Indietro' },
 } as const
 
 const ROSE = '#D4537E'
@@ -30,7 +31,7 @@ export default function Itineraire() {
     const a = (p.get('a') ?? '').slice(0, 300)
     const l = p.get('l')
     setAdresse(a)
-    if (l === 'en' || l === 'es') setLangue(l)
+    if (l === 'en' || l === 'es' || l === 'it') setLangue(l)
     const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
       || p.get('appareil') === 'iphone' // pour l'essai depuis un ordinateur
     setIphone(ios)

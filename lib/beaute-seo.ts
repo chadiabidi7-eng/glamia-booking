@@ -12,7 +12,7 @@ import { SITE_RESA, siteRecherche } from '@/lib/site-recherche'
 // Google : une page vide est un mauvais signal pour tout le site.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const LOCALE_OG: Record<Langue, string> = { fr: 'fr_FR', en: 'en_GB', es: 'es_ES' }
+const LOCALE_OG: Record<Langue, string> = { fr: 'fr_FR', en: 'en_GB', es: 'es_ES', it: 'it_IT' }
 
 /** Les métiers les plus présents d'abord. */
 function metiersFrequents(pros: ProTrouvee[], max: number): Metier[] {

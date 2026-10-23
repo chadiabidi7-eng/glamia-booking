@@ -42,9 +42,10 @@ export function poserPays(pays: string | null | undefined) {
  * anglaise annonçait « mercredi 15 juillet ».
  */
 export function etiquetteDe(langue: string | null | undefined, pays?: string | null): string {
-  const l = langue === 'en' || langue === 'es' ? langue : 'fr';
+  const l = langue === 'en' || langue === 'es' || langue === 'it' ? langue : 'fr';
   const p = (pays ?? '').toUpperCase();
   if (l === 'fr') return p === 'CA' ? 'fr-CA' : 'fr-FR';
+  if (l === 'it') return p === 'CH' ? 'it-CH' : 'it-IT';
   if (l === 'es') {
     if (p === 'MX') return 'es-MX';
     if (p === 'CO') return 'es-CO';
@@ -61,6 +62,7 @@ export function etiquette(): string {
   const langue = langueActuelle();
   const pays = (paysDeLaPro ?? '').toUpperCase();
   if (langue === 'fr') return pays === 'CA' ? 'fr-CA' : 'fr-FR';
+  if (langue === 'it') return pays === 'CH' ? 'it-CH' : 'it-IT';
   if (langue === 'es') {
     if (pays === 'MX') return 'es-MX';
     if (pays === 'CO') return 'es-CO';
@@ -97,6 +99,8 @@ export function formatHeure(hhmm: string | null | undefined): string {
   const brut = (hhmm ?? '').trim();
   const [h, m] = brut.split(':').map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return brut;
+  // L'italien écrit « 9:30 », sans zéro devant l'heure, comme sur un listino.
+  if (!heure12() && langueActuelle() === 'it') return `${h}:${String(m).padStart(2, '0')}`;
   if (!heure12()) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   const suffixe = h < 12 ? 'AM' : 'PM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -119,6 +123,8 @@ export function formatDuree(minutes: number, options?: { espace?: boolean }): st
   const m = minutes % 60;
   if (minutes < 60) return options?.espace === false ? `${minutes}min` : `${minutes} min`;
   if (m === 0) return `${h}h`;
+  // L'italien, comme l'app : « 1h 30min ».
+  if (langueActuelle() === 'it') return `${h}h ${m}min`;
   return heure12() ? `${h}h ${m}m` : `${h}h${String(m).padStart(2, '0')}`;
 }
 
@@ -190,3 +196,14 @@ export function moisLongs(): string[] {
     }
   });
 }
+
+/**
+ * LA CASSE D'UNE DATE EN ITALIEN (23 oct. 2026).
+ *
+ * Les dates de la page portent une capitale à chaque mot (« Mercredi 19 Août »).
+ * L'italien écrit « venerdì 23 ottobre » : seule la première lettre de la ligne
+ * prend une capitale. Les autres langues gardent leur affichage, inchangé.
+ */
+export const casseDate = (): 'capitalize' | 'none' => (langueActuelle() === 'it' ? 'none' : 'capitalize');
+export const premiereCapitale = (t: string) =>
+  (langueActuelle() === 'it' && t ? t.charAt(0).toUpperCase() + t.slice(1) : t);

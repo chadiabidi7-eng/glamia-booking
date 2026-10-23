@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
     try {
       const { data: proL } = await supabaseAdmin.from('profiles').select('langue').eq('id', proId).maybeSingle()
       const langue = (proL?.langue as string | null) ?? 'fr'
-      const jour = new Date(`${r.d}T12:00:00Z`).toLocaleDateString(langue === 'en' ? 'en-GB' : langue === 'es' ? 'es-ES' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+      const jour = new Date(`${r.d}T12:00:00Z`).toLocaleDateString(langue === 'en' ? 'en-GB' : langue === 'es' ? 'es-ES' : langue === 'it' ? 'it-IT' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
       await fetch(`${req.nextUrl.origin}/api/push-notify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

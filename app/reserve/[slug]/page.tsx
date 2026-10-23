@@ -13,6 +13,7 @@ import { couleurValide, enRgba, pale } from '@/lib/teinte'
 import { LogoInstagram, LogoTikTok, LogoSnapchat } from '@/components/LogosReseaux'
 import PiedProGlamia from '@/components/PiedProGlamia'
 import { libelleCategorie } from '@/lib/categorie-autre'
+import { nomSoinAffiche, nomSpecialiteAffiche, soinsAffiches } from '@/lib/catalogue-affiche'
 import { formatPrix, symboleDevise } from '@/lib/devise';
 import { conditionsAffichees, quandLAdresse } from '@/lib/vitrine';
 import Vitrine, { EnTeteVitrine, TexteReplie } from '@/components/reserve/Vitrine';
@@ -24,7 +25,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
-import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi } from '@/lib/heures-dates'
+import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
 import { normaliserTelephone } from '@/lib/telephone'
@@ -507,7 +508,7 @@ function OffresSection({
                     {techInfos.map((t, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <SpecialiteIcon specialite={t.categorie} size={18} />
-                        <span style={{ fontSize: 12, color: '#6b7280' }}>{t.nom}</span>
+                        <span style={{ fontSize: 12, color: '#6b7280' }}>{nomSoinAffiche(t.nom, t.categorie)}</span>
                       </div>
                     ))}
                   </div>
@@ -3473,9 +3474,9 @@ export default function ReservationPage() {
                         une phrase en plus sur chaque ligne alourdissait pour
                         redire ce que la couleur montre déjà. */}
                     {estDansPack(t) && <BadgeOffre pack={offreAppliquee?.type === 'pack'} petit />}
-                    {t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
+                    {nomSoinAffiche(t.nom, t.categorie)}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
                   </p>
-                  <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
+                  <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{nomSpecialiteAffiche(t.categorie, pro?.categorie_autre_nom)}</p>
                 </div>
                 {/* ── DANS UN PACK, LE PRIX À L'UNITÉ N'EXISTE PLUS ──────────
                     Chaque prestation affichait son tarif normal, et le total en
@@ -3664,11 +3665,11 @@ export default function ReservationPage() {
               bio={vitrine?.bio ?? (pro?.message_accueil?.trim() || null)}
               categories={specialitesActives.map(sp => ({
                 nom: sp.nom,
-                libelle: libelleCategorie(sp.nom, pro?.categorie_autre_nom),
+                libelle: nomSpecialiteAffiche(sp.nom, pro?.categorie_autre_nom),
                 icone: <IconeCategorie categorie={sp.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={22} />,
                 soins: sp.techniques.map(t => ({
                   cle: t.id ?? `${sp.nom}-${t.nom}`,
-                  nom: t.nom,
+                  nom: nomSoinAffiche(t.nom, sp.nom),
                   description: typeof t.description === 'string' && t.description.trim() ? t.description.trim() : null,
                   photos: (t.photos ?? []).filter(u => typeof u === 'string' && u.trim() !== '').slice(0, 5),
                   duree: formatDuree(t.duree),
@@ -4008,7 +4009,7 @@ export default function ReservationPage() {
                           <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: PINK_FONCE }}>{traduire('resa.laisserAvis')}</span>
                           <span style={{ display: 'block', fontSize: 12.5, color: '#A9819B', marginTop: 2 }}>
                             {a.prestations ? `${a.prestations} · ` : ''}
-                            <span style={{ textTransform: 'capitalize' }}>{formatRdvDate(a.date)}</span>
+                            <span style={{ textTransform: casseDate() }}>{premiereCapitale(formatRdvDate(a.date))}</span>
                           </span>
                         </span>
                         <span style={{ fontSize: 20, color: '#D9B9CC' }}>›</span>
@@ -4039,8 +4040,8 @@ export default function ReservationPage() {
                           {reprogDone === rdv.id && (
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />{traduire('resa.rdvReprogramme')}</p>
-                              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}
+                              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', textTransform: casseDate() }}>
+                                {premiereCapitale(formatRdvDate(rdv.date))} · {formatRdvHeure(rdv.date)}
                               </p>
                             </div>
                           )}
@@ -4050,7 +4051,7 @@ export default function ReservationPage() {
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />{traduire('resa.prestationsModifiees')}</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
-                                {rdv.technique}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — un email de confirmation à jour vous a été envoyé
+                                {soinsAffiches(rdv.technique)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — un email de confirmation à jour vous a été envoyé
                               </p>
                             </div>
                           )}
@@ -4062,10 +4063,10 @@ export default function ReservationPage() {
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#1f2937', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {rdv.technique}
+                                {soinsAffiches(rdv.technique)}
                               </p>
-                              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', textTransform: 'capitalize' }}>
-                                {formatRdvDate(rdv.date)} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''}
+                              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', textTransform: casseDate() }}>
+                                {premiereCapitale(formatRdvDate(rdv.date))} · {formatRdvHeure(rdv.date)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''}
                               </p>
                             </div>
                           </div>
@@ -4247,7 +4248,7 @@ export default function ReservationPage() {
                                             Sa cliente lisait « Autre » là où la pro
                                             avait écrit « Réflexologie plantaire ». */}
                                         <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: nbSelec > 0 ? PINK_TEXTE : '#1f2937' }}>
-                                          {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
+                                          {nomSpecialiteAffiche(s.nom, pro?.categorie_autre_nom)}
                                         </span>
                                         {nbSelec > 0 && (
                                           <span style={{
@@ -4284,7 +4285,7 @@ export default function ReservationPage() {
                                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                   color: '#fff', fontSize: 11, fontWeight: 700,
                                                 }}>{selected ? '✓' : ''}</span>
-                                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{t.nom}{selected && t.quantifiable && quantite > 1 ? ` ×${quantite}` : ''}</span>
+                                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1f2937' }}>{nomSoinAffiche(t.nom, s.nom)}{selected && t.quantifiable && quantite > 1 ? ` ×${quantite}` : ''}</span>
                                                 <span style={{ fontSize: 12, color: '#6b7280' }}>
                                                   {t.prix > 0 ? formatPrix(t.prix * quantite, pro?.devise) : ''}{t.prix > 0 ? ' · ' : ''}{formatDuree(t.duree * quantite)}
                                                 </span>
@@ -4410,8 +4411,8 @@ export default function ReservationPage() {
                               {/* Créneaux reprog */}
                               {reprogDate && (
                                 <div ref={reprogSlotsRef} style={{ marginTop: 16, scrollMarginTop: 12 }}>
-                                  <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: '0 0 10px', textTransform: 'capitalize' }}>
-                                    <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{formatDateLong(reprogDate)}
+                                  <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, margin: '0 0 10px', textTransform: casseDate() }}>
+                                    <Clock size={14} color={GLAMIA_PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{premiereCapitale(formatDateLong(reprogDate))}
                                   </p>
                                   {reprogLoadingSlots ? (
                                     <p style={{ textAlign: 'center', color: PINK_TEXTE, fontSize: 14, fontWeight: 600 }}>{traduire('commun.chargement')}</p>
@@ -4638,7 +4639,7 @@ export default function ReservationPage() {
                       >
                         <IconeCategorie categorie={s.nom} icone={pro?.categorie_autre_icone} perso={iconesPerso} photo={pro?.categorie_autre_photo} photos={photosPerso} size={24} />
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 15, color: nbSelec > 0 ? PINK_TEXTE : '#1f2937' }}>
-                          {libelleCategorie(s.nom, pro?.categorie_autre_nom)}
+                          {nomSpecialiteAffiche(s.nom, pro?.categorie_autre_nom)}
                         </span>
                         {nbSelec > 0 && (
                           <span style={{
@@ -4691,7 +4692,7 @@ export default function ReservationPage() {
                                   {photosTech.length > 0 && (
                                     <img
                                       src={photosTech[0]}
-                                      alt={`${t.nom} — photo`}
+                                      alt={`${nomSoinAffiche(t.nom, s.nom)} — photo`}
                                       loading="lazy"
                                       onClick={e => { e.stopPropagation(); setPhotoOverlay({ photos: photosTech, index: 0 }) }}
                                       style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', cursor: 'zoom-in', flexShrink: 0, background: '#f3f4f6' }}
@@ -4699,7 +4700,7 @@ export default function ReservationPage() {
                                   )}
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: selected ? PINK_TEXTE : '#1f2937' }}>
-                                      {t.nom}
+                                      {nomSoinAffiche(t.nom, s.nom)}
                                     </p>
                                     <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af' }}>
                                       {(() => {
@@ -4729,7 +4730,7 @@ export default function ReservationPage() {
                                     <span
                                       role="button"
                                       aria-expanded={descOuverte === t.id}
-                                      aria-label={t.nom}
+                                      aria-label={nomSoinAffiche(t.nom, s.nom)}
                                       onClick={e => { e.stopPropagation(); setDescOuverte(o => (o === t.id ? null : t.id)) }}
                                       style={{ alignSelf: 'center', display: 'inline-flex', padding: 6, margin: -6, flexShrink: 0, cursor: 'pointer' }}>
                                       <ChevronDown size={18} color="#9ca3af" strokeWidth={2.2}
@@ -4809,7 +4810,7 @@ export default function ReservationPage() {
                                   display: 'block', marginTop: 3, fontSize: 12, fontWeight: 500,
                                   color: active ? 'rgba(255,255,255,0.9)' : '#9ca3af',
                                 }}>
-                                  + {r.prestation.nom} · {formatPrix(r.prestation.prix, pro?.devise)} · {formatDuree(r.prestation.duree)}
+                                  + {nomSoinAffiche(r.prestation.nom)} · {formatPrix(r.prestation.prix, pro?.devise)} · {formatDuree(r.prestation.duree)}
                                 </span>
                               )}
                             </button>
@@ -4892,7 +4893,7 @@ export default function ReservationPage() {
                 <p style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{traduire('resa.prochainCreneau')}</p>
                 {/* La date et l'heure sur une seule ligne, séparées d'un tiret (Chadi, 9 oct. 2026). */}
                 <p style={{ fontSize: 17, fontWeight: 700, color: '#1f2937', margin: '0 0 14px' }}>
-                  <span style={{ textTransform: 'capitalize' }}>{formatDateLong(premierCreneau.date)}</span>
+                  <span style={{ textTransform: casseDate() }}>{premiereCapitale(formatDateLong(premierCreneau.date))}</span>
                   {' — '}
                   {premierCreneau.heure}
                 </p>
@@ -4992,7 +4993,7 @@ export default function ReservationPage() {
           <div>
             <BackBtn onClick={() => setStep(3)} />
             <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color={GLAMIA_PINK} />{traduire('resa.choisissezHeure')}</h2>
-            <p style={{ ...S.sub, textTransform: 'capitalize' }}>{formatDateLong(date)}</p>
+            <p style={{ ...S.sub, textTransform: casseDate() }}>{premiereCapitale(formatDateLong(date))}</p>
             <p style={{ fontSize: 13, color: '#9ca3af', marginTop: -16, marginBottom: 20 }}>
               Durée totale : {formatDuree(dureeTotal)}
             </p>
@@ -5203,8 +5204,8 @@ export default function ReservationPage() {
                     {techniquesSelectionnees.map((t, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: i < techniquesSelectionnees.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
-                          <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</p>
+                          <p style={{ fontSize: 14, color: '#1f2937', fontWeight: 500, margin: 0 }}>{nomSoinAffiche(t.nom, t.categorie)}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}</p>
+                          <p style={{ fontSize: 11, color: '#888888', margin: '2px 0 0' }}>{nomSpecialiteAffiche(t.categorie, pro?.categorie_autre_nom)}</p>
                         </div>
                         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', paddingTop: 2 }}>
                           {t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—'} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}
@@ -5657,9 +5658,9 @@ export default function ReservationPage() {
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', display: 'block' }}>
-                      {t.nom}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
+                      {nomSoinAffiche(t.nom, t.categorie)}{(t.quantite ?? 1) > 1 ? ` ×${t.quantite}` : ''}
                     </span>
-                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{libelleCategorie(t.categorie, pro?.categorie_autre_nom)}</span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{nomSpecialiteAffiche(t.categorie, pro?.categorie_autre_nom)}</span>
                   </div>
                   <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {t.prix_type === 'a_partir_de' ? `A partir de ${formatPrix(t.prix * (t.quantite ?? 1), pro?.devise)}` : (t.prix > 0 ? formatPrix(t.prix * (t.quantite ?? 1), pro?.devise) : '—')} · {formatDuree(dureeDe(t) * (t.quantite ?? 1))}

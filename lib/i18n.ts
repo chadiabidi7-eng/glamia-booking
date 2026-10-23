@@ -3,6 +3,7 @@ import { I18n } from 'i18n-js';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
 import fr from '@/locales/fr.json';
+import it from '@/locales/it.json';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA LANGUE DE LA PAGE DE RÉSERVATION.
@@ -34,10 +35,10 @@ import fr from '@/locales/fr.json';
 // manque.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const LANGUES = ['fr', 'en', 'es'] as const;
+export const LANGUES = ['fr', 'en', 'es', 'it'] as const;
 export type Langue = (typeof LANGUES)[number];
 
-const i18n = new I18n({ fr, en, es });
+const i18n = new I18n({ fr, en, es, it });
 i18n.defaultLocale = 'fr';
 i18n.enableFallback = true;
 i18n.locale = 'fr';

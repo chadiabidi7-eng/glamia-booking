@@ -1,7 +1,7 @@
 // Les textes de la recherche des clientes, dans la langue de SON navigateur :
 // ici on ne connaît pas encore de pro, donc pas encore sa langue à elle.
 // Fichier sans rien de serveur : les composants du navigateur l'importent.
-export type Langue = 'fr' | 'en' | 'es'
+export type Langue = 'fr' | 'en' | 'es' | 'it'
 // Les spécialités du catalogue de l'app, sous leurs noms à elles (pas « Ongles » :
 // Manucure et Pédicure sont deux spécialités). « Autre » n'est pas un filtre.
 export type Metier = 'manucure' | 'pedicure' | 'cils' | 'sourcils' | 'coiffure' | 'epilation' | 'soinVisage'
@@ -153,6 +153,53 @@ export const TEXTES = {
       metiers: { manucure: 'Manicura', pedicure: 'Pedicura', cils: 'Extensiones de pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', soinVisage: 'Tratamientos faciales', maquillage: 'Maquillaje', maquillageSemi: 'Micropigmentación', massage: 'Masaje', soinDentaire: 'Estética dental', bronzage: 'Bronceado' } as Record<Metier, string>,
     },
     metiers: { manucure: 'Manicura', pedicure: 'Pedicura', cils: 'Pestañas', sourcils: 'Cejas', coiffure: 'Peluquería', epilation: 'Depilación', soinVisage: 'Tratamientos faciales', maquillage: 'Maquillaje', maquillageSemi: 'Micropigmentación', massage: 'Masaje', soinDentaire: 'Estética dental', bronzage: 'Bronceado' } as Record<Metier, string>,
+  },
+  it: {
+    titre: 'Trova la tua professionista della bellezza',
+    titreChute: '',
+    surtitre: 'Prenotazione online',
+    villeTitre: 'Professioniste a',
+    sousTitre: 'E prenota online, in pochi secondi.',
+    proQuestion: 'Sei una professionista?',
+    proBandeau: 'La tua agenda e la tua pagina di prenotazione, in un’app.',
+    proBouton: 'Scopri Glamia',
+    villePlaceholder: 'Città, CAP o indirizzo',
+    autour: 'Vicino a me',
+    localisation: 'Localizzazione…',
+    localisationRefusee: 'Consenti la posizione nel browser, oppure scegli la tua città.',
+    pros: (n: number) => (n === 0 ? 'Ancora nessuna professionista' : n === 1 ? '1 professionista' : `${n} professioniste`),
+    toutPres: 'Qui vicino',
+    resume: (n: number, p: number) => (p === 0 ? (n === 0 ? 'Ancora nessuna professionista' : n === 1 ? '1 professionista' : `${n} professioniste`) : n === 0 ? `${p} ${p === 1 ? 'professionista' : 'professioniste'} qui vicino` : `${n} ${n === 1 ? 'professionista' : 'professioniste'} · ${p} qui vicino`),
+    autourTitre: 'Vicino a',
+    autourChute: 'te',
+    tout: 'Tutto',
+    dispo: 'Libera',
+    aujourdhui: 'oggi',
+    demain: 'domani',
+    pasDeDispo: 'Nessun orario libero questo mese',
+    carte: 'Mappa',
+    liste: 'Elenco',
+    changerVille: 'Cambia città',
+    videTitre: 'Ancora nessuna professionista qui',
+    videTexte: 'Prova una città vicina, oppure vicino a te.',
+    avis: (n: number) => `${n} ${n === 1 ? 'recensione' : 'recensioni'}`,
+    locale: 'it-IT',
+    a: 'a',
+    aPartirDe: (prix: string) => `Da ${prix}`,
+    villesProches: 'Città vicine',
+    seo: {
+      accueilTitre: 'Trova la tua professionista della bellezza vicino a te | Glamia',
+      accueilDescription: 'Unghie, ciglia, capelli, trattamenti: le professioniste della bellezza vicino a te, i loro orari liberi, i prezzi e le recensioni. Prenota online in pochi secondi.',
+      villeTitre: (metiers: string, ville: string, n: number, plus: string) => `${metiers || 'Professioniste della bellezza'} a ${ville}: ${n} ${n === 1 ? 'professionista' : 'professioniste'}${plus} | Glamia`,
+      videTitre: (metiers: string, ville: string) => `${metiers || 'Professioniste della bellezza'} a ${ville} | Glamia`,
+      procheTitre: (metiers: string, ville: string, n: number) => `${metiers || 'Professioniste della bellezza'} vicino a ${ville}: ${n} ${n === 1 ? 'professionista' : 'professioniste'} qui vicino | Glamia`,
+      plus: (prix: boolean, avis: boolean) => (prix && avis ? ', prezzi e recensioni' : prix ? ', prezzi' : avis ? ', recensioni' : ''),
+      villeDescription: (ville: string, metiers: string, prix: boolean, avis: boolean) =>
+        `Prenota online la tua professionista della bellezza a ${ville}${metiers ? `: ${metiers}` : ''}. I suoi orari liberi${prix ? ', i prezzi' : ''}${avis ? ' e le recensioni' : ''}, a colpo d’occhio.`,
+      beaute: 'Bellezza',
+      metiers: { manucure: 'Manicure', pedicure: 'Pedicure', cils: 'Extension ciglia', sourcils: 'Sopracciglia', coiffure: 'Parrucchiera', epilation: 'Ceretta', soinVisage: 'Trattamenti viso', maquillage: 'Trucco', maquillageSemi: 'Trucco permanente', massage: 'Massaggi', soinDentaire: 'Estetica dentale', bronzage: 'Abbronzatura' } as Record<Metier, string>,
+    },
+    metiers: { manucure: 'Manicure', pedicure: 'Pedicure', cils: 'Ciglia', sourcils: 'Sopracciglia', coiffure: 'Capelli', epilation: 'Ceretta', soinVisage: 'Trattamenti viso', maquillage: 'Trucco', maquillageSemi: 'Trucco permanente', massage: 'Massaggi', soinDentaire: 'Estetica dentale', bronzage: 'Abbronzatura' } as Record<Metier, string>,
   },
 } as const
 export type Textes = (typeof TEXTES)[Langue]

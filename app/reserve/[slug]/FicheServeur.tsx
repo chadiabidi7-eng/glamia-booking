@@ -16,15 +16,17 @@
 // cliente ne la voit pas. Jamais l'adresse exacte : la ville seulement.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { nomSoinAffiche } from '@/lib/catalogue-affiche'
+
 type Prestation = { nom: string; prix: number | null; duree: number | null; aPartir: boolean }
 
-const SUIVI = /^(d[ée]pose|retrait|retirada|removal)$/i
+const SUIVI = /^(d[ée]pose|retrait|retirada|removal|rimozione)$/i
 
-function prestations(data: unknown, max = 30): Prestation[] {
+function prestations(data: unknown, langue: string | null, max = 30): Prestation[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return []
   const vus = new Set<string>()
   const liste: Prestation[] = []
-  for (const items of Object.values(data as Record<string, unknown>)) {
+  for (const [categorie, items] of Object.entries(data as Record<string, unknown>)) {
     if (!Array.isArray(items)) continue
     for (const item of items) {
       if (liste.length >= max) return liste
@@ -38,7 +40,8 @@ function prestations(data: unknown, max = 30): Prestation[] {
       vus.add(cle)
       const prix = typeof p.prix === 'number' && p.prix > 0 ? p.prix : null
       const duree = typeof p.duree === 'number' && p.duree > 0 ? p.duree : null
-      liste.push({ nom, prix, duree, aPartir: typeof p.prix_type === 'string' && p.prix_type !== 'fixe' })
+      // Affichage seulement : un soin du catalogue se lit dans la langue de la page.
+      liste.push({ nom: nomSoinAffiche(nom, categorie, langue), prix, duree, aPartir: typeof p.prix_type === 'string' && p.prix_type !== 'fixe' })
     }
   }
   return liste
@@ -48,6 +51,7 @@ const MOTS = {
   fr: { prestations: 'Prestations', avis: 'avis', aPartir: 'à partir de', min: 'min', reserver: 'Réserver en ligne', ville: 'Toutes les pros beauté à' },
   en: { prestations: 'Services', avis: 'reviews', aPartir: 'from', min: 'min', reserver: 'Book online', ville: 'All beauty pros in' },
   es: { prestations: 'Servicios', avis: 'reseñas', aPartir: 'desde', min: 'min', reserver: 'Reservar en línea', ville: 'Todas las profesionales de belleza en' },
+  it: { prestations: 'Servizi', avis: 'recensioni', aPartir: 'da', min: 'min', reserver: 'Prenota online', ville: 'Tutte le professioniste della bellezza a' },
 } as const
 
 export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, devise, bio, image, catalogue, note, lienVille = null }: {
@@ -65,11 +69,11 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
   /** La page de sa ville dans la recherche, quand elle existe (13 oct. 2026). */
   lienVille?: { nom: string; url: string } | null
 }) {
-  const L = langue === 'en' || langue === 'es' ? langue : 'fr'
+  const L = langue === 'en' || langue === 'es' || langue === 'it' ? langue : 'fr'
   const M = MOTS[L]
-  const liste = prestations(catalogue)
+  const liste = prestations(catalogue, langue)
   const monnaie = (devise || 'EUR').toUpperCase()
-  const format = new Intl.NumberFormat(L === 'en' ? 'en-GB' : L === 'es' ? 'es-ES' : 'fr-FR', { style: 'currency', currency: monnaie, maximumFractionDigits: 2 })
+  const format = new Intl.NumberFormat(L === 'en' ? 'en-GB' : L === 'es' ? 'es-ES' : L === 'it' ? 'it-IT' : 'fr-FR', { style: 'currency', currency: monnaie, maximumFractionDigits: 2 })
   const url = `https://booking.glamia.pro/reserve/${slug}`
 
   // Les données structurées : un salon de beauté, sa ville, sa note, ses prestations.

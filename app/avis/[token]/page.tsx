@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Camera, CheckCircle, ImagePlus, X } from 'lucide-react'
 import { preparerPhotoAvis, type PhotoPreparee } from '@/lib/photo-avis'
-import { traduire, poserLangueSansPro, poserLangue } from '@/lib/i18n'
+import { traduire, poserLangueSansPro, poserLangue, langueActuelle } from '@/lib/i18n'
+import { soinsAffiches } from '@/lib/catalogue-affiche'
 import { etiquette } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +150,7 @@ export default function PageAvis() {
     <Cadre>
       <h1 style={S.titre}>{traduire('avis.titre')}</h1>
       <p style={S.sousTitre}>
-        {etat.prestations ? `${etat.prestations} · ` : ''}{jour}, avec {etat.pro}
+        {etat.prestations ? `${soinsAffiches(etat.prestations)} · ` : ''}{jour}, {langueActuelle() === 'it' ? traduire('resa.avec', { prenom: etat.pro }) : `avec ${etat.pro}`}
       </p>
 
       {/* ── LA NOTE ── le seul geste obligatoire. */}

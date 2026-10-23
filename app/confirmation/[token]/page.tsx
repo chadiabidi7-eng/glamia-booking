@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
 import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
-import { poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
+import { langueActuelle, poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
 // ─────────────────────────────────────────────
@@ -194,11 +194,22 @@ const MOIS = [
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
+const MOIS_IT = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+const JOURS_IT = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato']
+/** « à 14:00 » ; « alle 14:00 » en italien. */
+const motA = () => (langueActuelle() === 'it' ? 'alle' : 'à')
+/** Les dates en italien restent en minuscules (seule la première lettre de la ligne prend une capitale). */
+const casseDate = (): 'capitalize' | 'none' => (langueActuelle() === 'it' ? 'none' : 'capitalize')
+const premiereCapitale = (t: string) => (langueActuelle() === 'it' && t ? t.charAt(0).toUpperCase() + t.slice(1) : t)
+
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 function formatDateFr(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
+  // L'italien seulement : « venerdì 23 ottobre 2026 ». Les autres langues
+  // gardent l'écriture d'avant, inchangée.
+  if (langueActuelle() === 'it') return `${JOURS_IT[d.getDay()]} ${d.getDate()} ${MOIS_IT[d.getMonth()]} ${d.getFullYear()}`
   const jour = JOURS[d.getDay()]
   return `${jour} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 }
@@ -211,11 +222,16 @@ function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).get
 function buildDateStr(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
-const JOURS_COURT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const MOIS_LONG = [
+const JOURS_COURT_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const MOIS_LONG_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ]
+const JOURS_COURT_IT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+const MOIS_LONG_IT = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+// L'italien a ses noms ; les autres langues gardent ceux d'avant.
+const joursCourts = () => (langueActuelle() === 'it' ? JOURS_COURT_IT : JOURS_COURT_FR)
+const moisLongs = () => (langueActuelle() === 'it' ? MOIS_LONG_IT : MOIS_LONG_FR)
 
 // ─────────────────────────────────────────────
 // Component
@@ -477,7 +493,7 @@ import { traduire } from '@/lib/i18n';
                 donnaient « chezSarahest déjà confirmé ». */}
             <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}{' '}<strong>{proDisplayName}</strong>{' '}{traduire('confirmation.estDejaConfirme')}</p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
+              <p style={{ ...S.infoLine, textTransform: casseDate() }}>{premiereCapitale(formatDateFr(rdv.date))} {motA()} {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {/* Rouvrir ce lien la veille du RDV pour vérifier où aller est
                   l'usage le plus probable de cette page : l'adresse doit y être. */}
@@ -599,7 +615,7 @@ import { traduire } from '@/lib/i18n';
                     style={{ width: 32, height: 32, borderRadius: 16, border: '1px solid #e5e7eb', background: '#fff', cursor: isAtCurrentMonth ? 'default' : 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isAtCurrentMonth ? 0.3 : 1 }}
                   >‹</button>
                   <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15 }}>
-                    {MOIS_LONG[calMonth]} {calYear}
+                    {moisLongs()[calMonth]} {calYear}
                   </span>
                   <button
                     onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
@@ -609,7 +625,7 @@ import { traduire } from '@/lib/i18n';
 
                 {/* Jours de la semaine */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
-                  {JOURS_COURT.map(j => (
+                  {joursCourts().map(j => (
                     <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>{j}</div>
                   ))}
                 </div>
@@ -648,8 +664,8 @@ import { traduire } from '@/lib/i18n';
                 {/* Créneaux */}
                 {decDate && (
                   <div style={{ marginTop: 16 }}>
-                    <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, marginBottom: 10, marginTop: 0, textTransform: 'capitalize' }}>
-                      {formatDateFr(decDate)}
+                    <p style={{ fontWeight: 600, color: '#1f2937', fontSize: 14, marginBottom: 10, marginTop: 0, textTransform: casseDate() }}>
+                      {premiereCapitale(formatDateFr(decDate))}
                     </p>
                     {decRefus && (
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#FEF3F2', border: '1px solid #FECDCA', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
@@ -706,7 +722,7 @@ import { traduire } from '@/lib/i18n';
             <h2 style={S.h2}>{traduire('confirmation.confirme')}</h2>
             <p style={S.grayText}>{traduire('confirmation.votreRdvChez')}{' '}<strong>{proDisplayName}</strong>{' '}{traduire('confirmation.estConfirme')}</p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{formatDateFr(rdv.date)} à {rdv.heure}</p>
+              <p style={{ ...S.infoLine, textTransform: casseDate() }}>{premiereCapitale(formatDateFr(rdv.date))} {motA()} {rdv.heure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.prix != null && rdv.prix > 0 && (
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><CreditCard size={14} color={GLAMIA_PINK} />{formatPrix(rdv.prix, rdv.pro_devise)}</p>
@@ -743,7 +759,7 @@ import { traduire } from '@/lib/i18n';
             <h2 style={S.h2}>{traduire('confirmation.decale')}</h2>
             <p style={S.grayText}>{traduire('confirmation.bienDecale')}</p>
             <div style={S.infoBox}>
-              <p style={S.infoLine}>{formatDateFr(decDate)} à {decHeure}</p>
+              <p style={{ ...S.infoLine, textTransform: casseDate() }}>{premiereCapitale(formatDateFr(decDate))} {motA()} {decHeure}</p>
               <p style={S.infoLineSub}>{prestationLabel}</p>
               {rdv.pro_adresse && (
                 <p style={{ ...S.infoLineSub, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MapPin size={14} color={GLAMIA_PINK} />{rdv.pro_adresse}</p>

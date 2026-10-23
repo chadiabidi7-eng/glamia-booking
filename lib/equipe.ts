@@ -201,6 +201,6 @@ export async function dureeChezAssistante(
 
 /** « avec Sarah », dans la langue de la pro. */
 export function avecPrenom(langue: string | null | undefined, prenom: string): string {
-  const mot = langue === 'en' ? 'with' : langue === 'es' ? 'con' : 'avec'
+  const mot = langue === 'en' ? 'with' : langue === 'es' || langue === 'it' ? 'con' : 'avec'
   return `${mot} ${prenom}`
 }

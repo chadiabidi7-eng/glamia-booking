@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { libelleCategorie } from '@/lib/categorie-autre'
+import { nomSoinAffiche, nomSpecialiteAffiche } from '@/lib/catalogue-affiche'
 import { traduireDans } from '@/lib/i18n'
 import LangueDeLaPro from './LangueDeLaPro'
 import { couleurValide } from '@/lib/teinte'
@@ -77,12 +77,12 @@ function nomPublic(pro: { pseudo?: unknown; prenom?: unknown; nom?: unknown }): 
  * une praticienne. Ce qu'on cherche ici, ce sont les recherches qui amènent
  * quelqu'un de nouveau.
  */
-const SUIVI = /^(d[ée]pose|remplissage|retouche|retirada|relleno|removal|refill)/i
+const SUIVI = /^(d[ée]pose|remplissage|retouche|retirada|relleno|removal|refill|rimozione)/i
 
 /** Deux noms sont les mêmes si seules la casse et les espaces les séparent. */
 const empreinte = (nom: string) => nom.toLowerCase().replace(/\s+/g, ' ').trim()
 
-function prestationsPhares(data: unknown, max = 4, signes = 90): string[] {
+function prestationsPhares(data: unknown, langue: string | null | undefined, max = 4, signes = 90): string[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return []
   const noms: string[] = []
   // LE MÊME NOM DANS DEUX CATÉGORIES, C'EST UN SEUL NOM. « Vernis
@@ -90,15 +90,17 @@ function prestationsPhares(data: unknown, max = 4, signes = 90): string[] {
   // la description annonçait deux fois la même chose, et perdait une place.
   const vus = new Set<string>()
   let longueur = 0
-  for (const liste of Object.values(data as Record<string, unknown>)) {
+  for (const [categorie, liste] of Object.entries(data as Record<string, unknown>)) {
     if (!Array.isArray(liste)) continue
     for (const item of liste) {
       if (noms.length >= max) return noms
       if (!item || typeof item !== 'object') continue
       const p = item as { nom?: unknown; active?: unknown }
       if (p.active !== true) continue
-      const nom = typeof p.nom === 'string' ? p.nom.trim() : ''
-      if (!nom || SUIVI.test(nom)) continue
+      const brut = typeof p.nom === 'string' ? p.nom.trim() : ''
+      if (!brut || SUIVI.test(brut)) continue
+      // Affichage seulement : un soin du catalogue se lit dans la langue de la page.
+      const nom = nomSoinAffiche(brut, categorie, langue)
       const cle = empreinte(nom)
       if (vus.has(cle)) continue
       // La virgule et l'espace qui la suivront comptent aussi.
@@ -119,12 +121,12 @@ function prestationsPhares(data: unknown, max = 4, signes = 90): string[] {
  * `libelleCategorie` n'intervient que sur « Autre », pour rendre le nom que la
  * pro lui a donné — une réflexologue ne doit pas être annoncée sous « Autre ».
  */
-function metiers(specialite: unknown, perso: unknown, max = 3): string {
+function metiers(specialite: unknown, perso: unknown, langue: string | null | undefined, max = 3): string {
   if (typeof specialite !== 'string' || !specialite.trim()) return ''
   const nomPerso = typeof perso === 'string' ? perso : null
   return specialite
     .split('·')
-    .map(s => libelleCategorie(s.trim(), nomPerso))
+    .map(s => nomSpecialiteAffiche(s.trim(), nomPerso, langue))
     .filter(Boolean)
     .slice(0, max)
     .join(', ')
@@ -216,10 +218,11 @@ export async function generateMetadata(
     // pas grand-chose mais ne ment pas.
     const catalogue = (pro as { prestations?: { data?: unknown } | { data?: unknown }[] }).prestations
     const bloc = Array.isArray(catalogue) ? catalogue[0]?.data : catalogue?.data
-    const phares = prestationsPhares(bloc)
+    const phares = prestationsPhares(bloc, langue)
     const listeMetiers = metiers(
       (pro as { specialite?: unknown }).specialite,
       (pro as { categorie_autre_nom?: unknown }).categorie_autre_nom,
+      langue,
     )
 
     const title = listeMetiers
@@ -253,7 +256,7 @@ export async function generateMetadata(
         title,
         description,
         url: `/reserve/${slug}`,
-        locale: langue === 'en' ? 'en_GB' : langue === 'es' ? 'es_ES' : 'fr_FR',
+        locale: langue === 'en' ? 'en_GB' : langue === 'es' ? 'es_ES' : langue === 'it' ? 'it_IT' : 'fr_FR',
         images: [
           {
             url: '/og-image.png',
@@ -336,7 +339,7 @@ export default async function ReserveLayout({
       }
       fiche = (
         <FicheServeur lienVille={lienVille} slug={slug} nom={nomPublic(profil)} langue={langue}
-          metiers={metiers(p.specialite, p.categorie_autre_nom)} ville={ville || null}
+          metiers={metiers(p.specialite, p.categorie_autre_nom, langue)} ville={ville || null}
           pays={typeof p.pays === 'string' ? p.pays.toUpperCase() : null}
           devise={typeof p.devise === 'string' ? p.devise : 'EUR'}
           bio={typeof p.bio === 'string' ? p.bio : null}

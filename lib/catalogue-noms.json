@@ -1,0 +1,750 @@
+{
+  "_source": "Généré depuis Glamia-3.0 : constants/prestations.ts et locales/{fr,en,es,it}.json (clé « catalogue »). Ne pas modifier à la main.",
+  "categories": [
+    {
+      "cle": "manucure",
+      "origine": "Manucure",
+      "techniques": [
+        {
+          "cle": "vernisSemi",
+          "origine": "Vernis semi-permanent",
+          "noms": {
+            "fr": "Vernis semi-permanent",
+            "en": "Gel polish",
+            "es": "Esmalte semipermanente",
+            "it": "Semipermanente"
+          }
+        },
+        {
+          "cle": "manucureSimple",
+          "origine": "Manucure simple",
+          "noms": {
+            "fr": "Manucure simple",
+            "en": "Classic manicure",
+            "es": "Manicura clásica",
+            "it": "Manicure classica"
+          }
+        },
+        {
+          "cle": "capsulesGel",
+          "origine": "Pose capsules gel",
+          "noms": {
+            "fr": "Pose capsules gel",
+            "en": "Gel tips",
+            "es": "Uñas de gel con tips",
+            "it": "Ricostruzione con tip in gel"
+          }
+        },
+        {
+          "cle": "demiCapsules",
+          "origine": "Pose demi-capsules",
+          "noms": {
+            "fr": "Pose demi-capsules",
+            "en": "Half tips",
+            "es": "Medios tips",
+            "it": "Applicazione mezze tip"
+          }
+        },
+        {
+          "cle": "babyboomer",
+          "origine": "Babyboomer",
+          "noms": {
+            "fr": "Babyboomer",
+            "en": "Baby boomer",
+            "es": "Babyboomer",
+            "it": "Baby boomer"
+          }
+        },
+        {
+          "cle": "reparationOngle",
+          "origine": "Réparation ongle cassé",
+          "noms": {
+            "fr": "Réparation ongle cassé",
+            "en": "Broken nail repair",
+            "es": "Reparación de uña rota",
+            "it": "Riparazione unghia rotta"
+          }
+        },
+        {
+          "cle": "remplissageGel",
+          "origine": "Remplissage gel",
+          "noms": {
+            "fr": "Remplissage gel",
+            "en": "Gel infill",
+            "es": "Relleno de gel",
+            "it": "Refill gel"
+          }
+        },
+        {
+          "cle": "nailArtSimple",
+          "origine": "Nail art simple",
+          "noms": {
+            "fr": "Nail art simple",
+            "en": "Simple nail art",
+            "es": "Nail art sencillo",
+            "it": "Nail art semplice"
+          }
+        },
+        {
+          "cle": "nailArtElabore",
+          "origine": "Nail art élaboré",
+          "noms": {
+            "fr": "Nail art élaboré",
+            "en": "Detailed nail art",
+            "es": "Nail art elaborado",
+            "it": "Nail art elaborata"
+          }
+        },
+        {
+          "cle": "frenchSemi",
+          "origine": "French semi-permanent",
+          "noms": {
+            "fr": "French semi-permanent",
+            "en": "Gel French",
+            "es": "Francesa semipermanente",
+            "it": "French semipermanente"
+          }
+        },
+        {
+          "cle": "gainage",
+          "origine": "Gainage / renforcement",
+          "noms": {
+            "fr": "Gainage / renforcement",
+            "en": "Overlay / strengthening",
+            "es": "Refuerzo / endurecido",
+            "it": "Copertura in gel / rinforzo"
+          }
+        },
+        {
+          "cle": "depose",
+          "origine": "Dépose",
+          "noms": {
+            "fr": "Dépose",
+            "en": "Soak-off",
+            "es": "Retirada",
+            "it": "Rimozione"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Manucure",
+        "en": "Manicure",
+        "es": "Manicura",
+        "it": "Manicure"
+      }
+    },
+    {
+      "cle": "pedicure",
+      "origine": "Pédicure",
+      "techniques": [
+        {
+          "cle": "vernisSemi",
+          "origine": "Vernis semi-permanent",
+          "noms": {
+            "fr": "Vernis semi-permanent",
+            "en": "Gel polish",
+            "es": "Esmalte semipermanente",
+            "it": "Semipermanente"
+          }
+        },
+        {
+          "cle": "beautePieds",
+          "origine": "Beauté des pieds",
+          "noms": {
+            "fr": "Beauté des pieds",
+            "en": "Full pedicure",
+            "es": "Belleza de pies",
+            "it": "Pedicure estetico"
+          }
+        },
+        {
+          "cle": "reconstructionOngle",
+          "origine": "Reconstruction ongle",
+          "noms": {
+            "fr": "Reconstruction ongle",
+            "en": "Nail reconstruction",
+            "es": "Reconstrucción de uña",
+            "it": "Ricostruzione unghia"
+          }
+        },
+        {
+          "cle": "frenchSemi",
+          "origine": "French semi-permanent",
+          "noms": {
+            "fr": "French semi-permanent",
+            "en": "Gel French",
+            "es": "Francesa semipermanente",
+            "it": "French semipermanente"
+          }
+        },
+        {
+          "cle": "gainage",
+          "origine": "Gainage / renforcement",
+          "noms": {
+            "fr": "Gainage / renforcement",
+            "en": "Overlay / strengthening",
+            "es": "Refuerzo / endurecido",
+            "it": "Copertura in gel / rinforzo"
+          }
+        },
+        {
+          "cle": "depose",
+          "origine": "Dépose",
+          "noms": {
+            "fr": "Dépose",
+            "en": "Soak-off",
+            "es": "Retirada",
+            "it": "Rimozione"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Pédicure",
+        "en": "Pedicure",
+        "es": "Pedicura",
+        "it": "Pedicure"
+      }
+    },
+    {
+      "cle": "cils",
+      "origine": "Cils",
+      "techniques": [
+        {
+          "cle": "rehaussement",
+          "origine": "Rehaussement de cils",
+          "noms": {
+            "fr": "Rehaussement de cils",
+            "en": "Lash lift",
+            "es": "Lifting de pestañas",
+            "it": "Laminazione ciglia"
+          }
+        },
+        {
+          "cle": "cilACil",
+          "origine": "Pose cil à cil",
+          "noms": {
+            "fr": "Pose cil à cil",
+            "en": "Classic lashes",
+            "es": "Extensiones pelo a pelo",
+            "it": "Extension ciglia one to one"
+          }
+        },
+        {
+          "cle": "mixte",
+          "origine": "Pose mixte",
+          "noms": {
+            "fr": "Pose mixte",
+            "en": "Hybrid lashes",
+            "es": "Extensiones mixtas",
+            "it": "Extension ciglia effetto ibrido"
+          }
+        },
+        {
+          "cle": "volumeRusse",
+          "origine": "Volume russe",
+          "noms": {
+            "fr": "Volume russe",
+            "en": "Russian volume",
+            "es": "Volumen ruso",
+            "it": "Volume russo"
+          }
+        },
+        {
+          "cle": "depose",
+          "origine": "Dépose",
+          "noms": {
+            "fr": "Dépose",
+            "en": "Lash removal",
+            "es": "Retirada de extensiones",
+            "it": "Rimozione"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Cils",
+        "en": "Lashes",
+        "es": "Pestañas",
+        "it": "Ciglia"
+      }
+    },
+    {
+      "cle": "coiffure",
+      "origine": "Coiffure",
+      "techniques": [
+        {
+          "cle": "brushing",
+          "origine": "Brushing",
+          "noms": {
+            "fr": "Brushing",
+            "en": "Blow-dry",
+            "es": "Brushing",
+            "it": "Piega"
+          }
+        },
+        {
+          "cle": "coupeBrushing",
+          "origine": "Coupe + Brushing",
+          "noms": {
+            "fr": "Coupe + Brushing",
+            "en": "Cut + blow-dry",
+            "es": "Corte + brushing",
+            "it": "Taglio + piega"
+          }
+        },
+        {
+          "cle": "coloration",
+          "origine": "Coloration",
+          "noms": {
+            "fr": "Coloration",
+            "en": "Colour",
+            "es": "Coloración",
+            "it": "Colore"
+          }
+        },
+        {
+          "cle": "balayage",
+          "origine": "Balayage / Mèches",
+          "noms": {
+            "fr": "Balayage / Mèches",
+            "en": "Balayage / highlights",
+            "es": "Balayage / mechas",
+            "it": "Balayage / Colpi di sole"
+          }
+        },
+        {
+          "cle": "lissageBresilien",
+          "origine": "Lissage brésilien",
+          "noms": {
+            "fr": "Lissage brésilien",
+            "en": "Brazilian blowout",
+            "es": "Alisado brasileño",
+            "it": "Lisciatura brasiliana"
+          }
+        },
+        {
+          "cle": "colorimetrie",
+          "origine": "Diagnostic colorimétrie",
+          "noms": {
+            "fr": "Diagnostic colorimétrie",
+            "en": "Colour consultation",
+            "es": "Estudio de color",
+            "it": "Analisi armocromia"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Coiffure",
+        "en": "Hair",
+        "es": "Peluquería",
+        "it": "Capelli"
+      }
+    },
+    {
+      "cle": "massage",
+      "origine": "Massage",
+      "techniques": [
+        {
+          "cle": "relaxant",
+          "origine": "Massage relaxant",
+          "noms": {
+            "fr": "Massage relaxant",
+            "en": "Relaxing massage",
+            "es": "Masaje relajante",
+            "it": "Massaggio rilassante"
+          }
+        },
+        {
+          "cle": "dos",
+          "origine": "Massage du dos",
+          "noms": {
+            "fr": "Massage du dos",
+            "en": "Back massage",
+            "es": "Masaje de espalda",
+            "it": "Massaggio schiena"
+          }
+        },
+        {
+          "cle": "pierresChaudes",
+          "origine": "Massage aux pierres chaudes",
+          "noms": {
+            "fr": "Massage aux pierres chaudes",
+            "en": "Hot stone massage",
+            "es": "Masaje con piedras calientes",
+            "it": "Massaggio con pietre calde"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Massage",
+        "en": "Massage",
+        "es": "Masaje",
+        "it": "Massaggi"
+      }
+    },
+    {
+      "cle": "sourcils",
+      "origine": "Sourcils",
+      "techniques": [
+        {
+          "cle": "browlift",
+          "origine": "Browlift",
+          "noms": {
+            "fr": "Browlift",
+            "en": "Brow lift",
+            "es": "Laminado de cejas",
+            "it": "Laminazione sopracciglia"
+          }
+        },
+        {
+          "cle": "microblading",
+          "origine": "Microblading",
+          "noms": {
+            "fr": "Microblading",
+            "en": "Microblading",
+            "es": "Microblading",
+            "it": "Microblading"
+          }
+        },
+        {
+          "cle": "teinture",
+          "origine": "Teinture sourcils",
+          "noms": {
+            "fr": "Teinture sourcils",
+            "en": "Brow tint",
+            "es": "Tinte de cejas",
+            "it": "Tinta sopracciglia"
+          }
+        },
+        {
+          "cle": "epilation",
+          "origine": "Épilation sourcils",
+          "noms": {
+            "fr": "Épilation sourcils",
+            "en": "Brow shaping",
+            "es": "Depilación de cejas",
+            "it": "Definizione sopracciglia"
+          }
+        },
+        {
+          "cle": "microshading",
+          "origine": "Microshading",
+          "noms": {
+            "fr": "Microshading",
+            "en": "Microshading",
+            "es": "Microshading",
+            "it": "Microshading"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Sourcils",
+        "en": "Brows",
+        "es": "Cejas",
+        "it": "Sopracciglia"
+      }
+    },
+    {
+      "cle": "epilation",
+      "origine": "Épilation",
+      "techniques": [
+        {
+          "cle": "jambes",
+          "origine": "Épilation jambes",
+          "noms": {
+            "fr": "Épilation jambes",
+            "en": "Leg wax",
+            "es": "Depilación de piernas",
+            "it": "Ceretta gambe"
+          }
+        },
+        {
+          "cle": "maillot",
+          "origine": "Épilation maillot",
+          "noms": {
+            "fr": "Épilation maillot",
+            "en": "Bikini wax",
+            "es": "Depilación de ingles",
+            "it": "Ceretta inguine"
+          }
+        },
+        {
+          "cle": "aisselles",
+          "origine": "Épilation aisselles",
+          "noms": {
+            "fr": "Épilation aisselles",
+            "en": "Underarm wax",
+            "es": "Depilación de axilas",
+            "it": "Ceretta ascelle"
+          }
+        },
+        {
+          "cle": "bras",
+          "origine": "Épilation bras",
+          "noms": {
+            "fr": "Épilation bras",
+            "en": "Arm wax",
+            "es": "Depilación de brazos",
+            "it": "Ceretta braccia"
+          }
+        },
+        {
+          "cle": "visage",
+          "origine": "Épilation visage",
+          "noms": {
+            "fr": "Épilation visage",
+            "en": "Face wax",
+            "es": "Depilación facial",
+            "it": "Ceretta viso"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Épilation",
+        "en": "Waxing",
+        "es": "Depilación",
+        "it": "Ceretta"
+      }
+    },
+    {
+      "cle": "maquillage",
+      "origine": "Maquillage",
+      "techniques": [
+        {
+          "cle": "evenementiel",
+          "origine": "Maquillage événementiel",
+          "noms": {
+            "fr": "Maquillage événementiel",
+            "en": "Event make-up",
+            "es": "Maquillaje de evento",
+            "it": "Trucco per eventi"
+          }
+        },
+        {
+          "cle": "mariee",
+          "origine": "Maquillage mariée",
+          "noms": {
+            "fr": "Maquillage mariée",
+            "en": "Bridal make-up",
+            "es": "Maquillaje de novia",
+            "it": "Trucco sposa"
+          }
+        },
+        {
+          "cle": "quotidien",
+          "origine": "Maquillage quotidien",
+          "noms": {
+            "fr": "Maquillage quotidien",
+            "en": "Everyday make-up",
+            "es": "Maquillaje de día",
+            "it": "Trucco giorno"
+          }
+        },
+        {
+          "cle": "cours",
+          "origine": "Cours maquillage",
+          "noms": {
+            "fr": "Cours maquillage",
+            "en": "Make-up lesson",
+            "es": "Clase de maquillaje",
+            "it": "Corso di trucco"
+          }
+        },
+        {
+          "cle": "shooting",
+          "origine": "Maquillage shooting photo",
+          "noms": {
+            "fr": "Maquillage shooting photo",
+            "en": "Photoshoot make-up",
+            "es": "Maquillaje para sesión de fotos",
+            "it": "Trucco per shooting"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Maquillage",
+        "en": "Make-up",
+        "es": "Maquillaje",
+        "it": "Trucco"
+      }
+    },
+    {
+      "cle": "maquillageSemi",
+      "origine": "Maquillage semi-permanent",
+      "techniques": [
+        {
+          "cle": "candyLips",
+          "origine": "Candy lips",
+          "noms": {
+            "fr": "Candy lips",
+            "en": "Candy lips",
+            "es": "Candy lips",
+            "it": "Candy lips"
+          }
+        },
+        {
+          "cle": "tachesRousseur",
+          "origine": "Taches de rousseur",
+          "noms": {
+            "fr": "Taches de rousseur",
+            "en": "Freckles",
+            "es": "Pecas",
+            "it": "Lentiggini"
+          }
+        },
+        {
+          "cle": "grainBeaute",
+          "origine": "Grain de beauté",
+          "noms": {
+            "fr": "Grain de beauté",
+            "en": "Beauty spot",
+            "es": "Lunar",
+            "it": "Neo"
+          }
+        },
+        {
+          "cle": "detatouage",
+          "origine": "Détatouage laser",
+          "noms": {
+            "fr": "Détatouage laser",
+            "en": "Laser removal",
+            "es": "Eliminación láser",
+            "it": "Rimozione tatuaggi laser"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Maquillage semi-permanent",
+        "en": "Semi-permanent make-up",
+        "es": "Micropigmentación",
+        "it": "Trucco permanente"
+      }
+    },
+    {
+      "cle": "soinVisage",
+      "origine": "Soin visage",
+      "techniques": [
+        {
+          "cle": "hydrafacial",
+          "origine": "Hydrafacial",
+          "noms": {
+            "fr": "Hydrafacial",
+            "en": "Hydrafacial",
+            "es": "Hydrafacial",
+            "it": "Hydrafacial"
+          }
+        },
+        {
+          "cle": "nettoyagePeau",
+          "origine": "Nettoyage de peau",
+          "noms": {
+            "fr": "Nettoyage de peau",
+            "en": "Deep cleanse",
+            "es": "Limpieza facial",
+            "it": "Pulizia del viso"
+          }
+        },
+        {
+          "cle": "gommage",
+          "origine": "Gommage et soin",
+          "noms": {
+            "fr": "Gommage et soin",
+            "en": "Scrub and treatment",
+            "es": "Exfoliación y tratamiento",
+            "it": "Scrub e trattamento"
+          }
+        },
+        {
+          "cle": "hydratant",
+          "origine": "Soin hydratant",
+          "noms": {
+            "fr": "Soin hydratant",
+            "en": "Hydrating facial",
+            "es": "Tratamiento hidratante",
+            "it": "Trattamento idratante"
+          }
+        },
+        {
+          "cle": "peeling",
+          "origine": "Peeling",
+          "noms": {
+            "fr": "Peeling",
+            "en": "Peel",
+            "es": "Peeling",
+            "it": "Peeling"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Soin visage",
+        "en": "Facials",
+        "es": "Tratamientos faciales",
+        "it": "Trattamenti viso"
+      }
+    },
+    {
+      "cle": "bronzage",
+      "origine": "Bronzage",
+      "techniques": [
+        {
+          "cle": "sprayTan",
+          "origine": "Spray tan",
+          "noms": {
+            "fr": "Spray tan",
+            "en": "Spray tan",
+            "es": "Bronceado en spray",
+            "it": "Spray tan"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Bronzage",
+        "en": "Tanning",
+        "es": "Bronceado",
+        "it": "Abbronzatura"
+      }
+    },
+    {
+      "cle": "soinDentaire",
+      "origine": "Soin dentaire",
+      "techniques": [
+        {
+          "cle": "blanchiment",
+          "origine": "Blanchiment dentaire",
+          "noms": {
+            "fr": "Blanchiment dentaire",
+            "en": "Teeth whitening",
+            "es": "Blanqueamiento dental",
+            "it": "Sbiancamento denti"
+          }
+        },
+        {
+          "cle": "strass",
+          "origine": "Strass dentaires",
+          "noms": {
+            "fr": "Strass dentaires",
+            "en": "Tooth gems",
+            "es": "Brillantes dentales",
+            "it": "Brillantini per denti"
+          }
+        }
+      ],
+      "noms": {
+        "fr": "Soin dentaire",
+        "en": "Teeth",
+        "es": "Estética dental",
+        "it": "Estetica dentale"
+      }
+    },
+    {
+      "cle": "autre",
+      "origine": "Autre",
+      "techniques": [],
+      "noms": {
+        "fr": "Autre",
+        "en": "Other",
+        "es": "Otro",
+        "it": "Altro"
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { traduire, poserLangue, langueActuelle } from '@/lib/i18n'
+import { soinsAffiches } from '@/lib/catalogue-affiche'
 import { symboleDevise } from '@/lib/devise'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ function Payer() {
         {d.mode === 'empreinte' ? (
           <div style={carteDetail}>
             <Ligne
-              label={`${traduire('resa.empreinteBancaire')}${d.prestation ? ` — ${d.prestation}` : ''}`}
+              label={`${traduire('resa.empreinteBancaire')}${d.prestation ? ` — ${soinsAffiches(d.prestation)}` : ''}`}
               val={fmt(d.restant ?? 0, d.devise)}
             />
             <p style={{ fontSize: 12.5, color: '#6b7280', margin: '6px 0 0', lineHeight: 1.45 }}>
@@ -186,7 +187,7 @@ function Payer() {
           <Ligne
             label={`${d.type === 'acompte' ? traduire('resa.ligneAcompte')
               : d.type === 'solde' ? traduire('resa.ligneSolde')
-              : traduire('resa.lignePrestation')}${d.prestation ? ` — ${d.prestation}` : ''}`}
+              : traduire('resa.lignePrestation')}${d.prestation ? ` — ${soinsAffiches(d.prestation)}` : ''}`}
             val={fmt(d.restant ?? 0, d.devise)}
           />
           <Ligne label={traduire('resa.fraisReservation')} val={fmt(d.frais ?? 0, d.devise)} />

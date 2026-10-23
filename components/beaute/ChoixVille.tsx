@@ -55,7 +55,7 @@ async function chercherLieux(q: string, langue: Langue, signal: AbortSignal): Pr
     if (fr.length) return fr
   } catch { if (signal.aborted) return [] }
   try {
-    const r = await fetch(`${PHOTON}?q=${encodeURIComponent(q)}&limit=5&lang=${langue === 'es' ? 'en' : langue}`, { signal })
+    const r = await fetch(`${PHOTON}?q=${encodeURIComponent(q)}&limit=5&lang=${langue === 'es' || langue === 'it' ? 'en' : langue}`, { signal })
     const d = await r.json() as { features?: { properties: { name?: string; street?: string; housenumber?: string; postcode?: string; city?: string; country?: string }; geometry: { coordinates: [number, number] } }[] }
     return (d.features ?? []).map(f => {
       const p = f.properties

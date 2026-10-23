@@ -52,6 +52,15 @@ const TEXTES = {
     deja: 'Esta cita ya se ha adelantado.', prise: 'Este hueco acaba de ocuparse. Tu cita no ha cambiado.',
     annule: 'Esta cita se ha cancelado.', inconnu: 'Este enlace ya no funciona.',
   },
+  it: {
+    titre: 'Anticipa il tuo appuntamento',
+    actuel: (pro: string, q: string) => `Il tuo appuntamento da ${pro} è fissato per <strong>${q}</strong>.`,
+    nouveau: (q: string) => `Si è liberato un posto prima: <strong>${q}</strong>.`,
+    question: 'Vuoi anticiparlo a questa data?', bouton: 'Anticipo il mio appuntamento', garder: 'Tengo la mia data',
+    fait: (q: string) => `Fatto: il tuo appuntamento è stato anticipato a <strong>${q}</strong>. Ti arriva un’email di conferma.`,
+    deja: 'Questo appuntamento è già stato anticipato.', prise: 'Questo posto è appena stato preso. Il tuo appuntamento non è cambiato.',
+    annule: 'Questo appuntamento è stato annullato.', inconnu: 'Questo link non funziona più.',
+  },
 } as const
 type Langue = keyof typeof TEXTES
 
@@ -69,7 +78,7 @@ function quand(iso: string, langue: Langue, pays: string | null): string {
   const d = new Date(iso)
   const jour = d.toLocaleDateString(etiquetteDe(langue, pays), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
   const heure = d.toLocaleTimeString(etiquetteDe(langue, pays), { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
-  return `${jour} ${langue === 'fr' ? 'à' : langue === 'es' ? 'a las' : 'at'} ${heure}`
+  return `${jour} ${langue === 'fr' ? 'à' : langue === 'es' ? 'a las' : langue === 'it' ? 'alle' : 'at'} ${heure}`
 }
 
 async function lire(url: URL) {
@@ -83,7 +92,7 @@ async function lire(url: URL) {
   const { data: place } = await supabaseAdmin.from('desistement_places').select('jour, debut_min').eq('id', envoi.place_id).maybeSingle()
   const { data: rdv } = await supabaseAdmin.from('rendez_vous').select('id, date, duree, statut, nb_decalages, cliente_id').eq('id', envoi.rdv_id).maybeSingle()
   if (!pro || !place || !rdv) return null
-  const langue: Langue = pro.langue === 'en' || pro.langue === 'es' ? pro.langue : 'fr'
+  const langue: Langue = pro.langue === 'en' || pro.langue === 'es' || pro.langue === 'it' ? pro.langue : 'fr'
   const nouvelle = `${place.jour}T${minToTime(place.debut_min)}:00.000Z`
   return { envoi, pro, place, rdv, langue, pays: (pro.pays as string | null) ?? null, nomPro: echapper((pro.pseudo || pro.prenom || 'Glamia') as string), nouvelle, requete: url.search }
 }

@@ -6,7 +6,7 @@ import { estGlamiaFr, SITE_RESA } from '@/lib/site-recherche'
 export async function langueDuVisiteur(): Promise<Langue> {
   const h = (await headers()).get('accept-language') ?? ''
   const l = h.slice(0, 2).toLowerCase()
-  return l === 'en' || l === 'es' ? l : 'fr'
+  return l === 'en' || l === 'es' || l === 'it' ? l : 'fr'
 }
 
 /** Servie depuis glamia.fr, la recherche envoie vers les pages de réservation de booking.glamia.pro. */
