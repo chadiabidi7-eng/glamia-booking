@@ -96,6 +96,10 @@ export async function POST(req: NextRequest) {
     try { r = JSON.parse(intent.metadata?.glamia_resa ?? '') } catch { r = {} }
     // Les paiements d'avant le 24 août 2026 ne portent rien : irréparables.
     if (!r.d || !r.h) return refus('sans_reservation')
+    // Un créneau déjà passé ne se repose pas : il n'y a plus rien à honorer,
+    // il y a de l'argent à rendre (GGLOW, 31 août, rejoué en simulation).
+    const aParis = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date()).replace(' ', 'T')
+    if (`${r.d}T${r.h}` <= aParis) return refus('date_passee')
 
     // ── LA CLIENTE ────────────────────────────────────────────────────────────
     if (!r.te) return refus('sans_telephone')
@@ -120,7 +124,24 @@ export async function POST(req: NextRequest) {
     const { data: dejaLa } = await supabaseAdmin.from('rendez_vous').select('id')
       .eq('pro_id', proId).eq('cliente_id', cliente.id).neq('statut', 'annule')
       .gte('date', `${r.d}T${r.h}:00+00:00`).lte('date', `${r.d}T${r.h}:00+00:00`).limit(1)
-    if ((dejaLa ?? []).length) return refus('doublon', { rdv_id: dejaLa![0].id })
+    if ((dejaLa ?? []).length) {
+      const existant = dejaLa![0].id as string
+      // Le rendez-vous a-t-il déjà son paiement ? Oui : celui-ci est un second
+      // paiement, à rendre. Non : la page a créé le rendez-vous mais n'a pas eu
+      // le temps de rattacher l'argent — on le rattache, on ne crée rien.
+      const { data: sesPaiements } = await supabaseAdmin.from('paiements').select('id').eq('rdv_id', existant).limit(1)
+      if ((sesPaiements ?? []).length) return refus('doublon', { rdv_id: existant })
+      if (simulation) return NextResponse.json({ ok: true, simulation: true, ferait: { rattacher_a: existant } })
+      const repLien = await fetch(`${req.nextUrl.origin}/api/propay/lier`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pro_id: proId, rdv_id: existant, intent_id }),
+      })
+      if (!repLien.ok) return refus('paiement_non_rattachable', { detail: (await repLien.json().catch(() => ({})))?.error ?? null })
+      await supabaseAdmin.from('paiements_orphelins')
+        .update({ statut: 'resolu', rdv_id: existant, resolu_le: new Date().toISOString() })
+        .eq('id', orphelin.id)
+      return NextResponse.json({ ok: true, rdv_id: existant, rattache: true })
+    }
 
     if (simulation) {
       return NextResponse.json({ ok: true, simulation: true, ferait: { cliente: cliente.id, jour: r.d, heure: r.h, prestation: r.t ?? null } })

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
 import { journaliserOrphelin } from '@/lib/orphelins'
+import { normaliserTelephone } from '@/lib/telephone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pro Pay — rembourse un paiement ORPHELIN (audit C11).
@@ -69,6 +70,34 @@ export async function POST(req: NextRequest) {
     if (paiement.status !== 'succeeded') {
       // Rien n'a été capturé (paiement non abouti) → rien à rembourser.
       return NextResponse.json({ success: true, rembourse: false })
+    }
+
+    // ── LE SERVEUR A PEUT-ÊTRE DÉJÀ POSÉ SON RENDEZ-VOUS (23 oct. 2026) ──────
+    // Quand la page se réveille tard (validation dans l'app de la banque), le
+    // serveur a pu créer le rendez-vous à sa place. Son « créneau pris » est
+    // alors SON créneau : rembourser laisserait un rendez-vous sans paiement et
+    // lui dirait qu'il n'existe pas. On ne rend l'argent que si rien n'est posé.
+    const { data: rattache } = await supabaseAdmin.from('paiements')
+      .select('rdv_id').eq('stripe_payment_intent_id', paiement.id).limit(1)
+    if ((rattache ?? []).length) {
+      return NextResponse.json({ success: true, rembourse: false, deja_pose: true, rdv_id: rattache![0].rdv_id })
+    }
+    let resa: { d?: string; h?: string; te?: string } = {}
+    try { resa = JSON.parse(paiement.metadata?.glamia_resa ?? '{}') } catch { /* rien */ }
+    if (resa.d && resa.h && resa.te) {
+      const { data: memeCreneau } = await supabaseAdmin.from('rendez_vous')
+        .select('id, clientes(telephone)')
+        .eq('pro_id', proId).neq('statut', 'annule')
+        .eq('date', `${resa.d}T${resa.h}:00+00:00`)
+        .gte('created_at', new Date((paiement.created - 60) * 1000).toISOString())
+        .limit(5)
+      const cible = normaliserTelephone(resa.te)
+      const sien = (memeCreneau ?? []).find(r => {
+        const c = r.clientes as { telephone?: string } | { telephone?: string }[] | null
+        const tel = Array.isArray(c) ? c[0]?.telephone : c?.telephone
+        return !!cible && normaliserTelephone(tel ?? '') === cible
+      })
+      if (sien) return NextResponse.json({ success: true, rembourse: false, deja_pose: true, rdv_id: sien.id })
     }
     // La cliente récupère tout, frais de service Glamia compris — et la pro ne
     // paie pas ce geste de sa poche : Glamia rend sa part en même temps.

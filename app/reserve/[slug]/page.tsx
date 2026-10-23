@@ -2989,11 +2989,21 @@ export default function ReservationPage() {
         // est invisible pour tout le monde, et c'est le pire des cas.
         if (propayIntentId) {
           try {
-            await fetch('/api/propay/rembourser-orphelin', {
+            const repRemb = await fetch('/api/propay/rembourser-orphelin', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ pro_id: pro.id, intent_id: propayIntentId }),
             })
+            // ── LE SERVEUR L'A DÉJÀ POSÉ (23 oct. 2026) ──────────────────────
+            // Elle a mis du temps à revenir de sa banque : pendant ce temps, le
+            // serveur a créé son rendez-vous, prévenu la pro et lui a envoyé sa
+            // confirmation. Le « créneau pris », c'est le sien. On lui montre
+            // la réussite, sans rien renvoyer ni rembourser.
+            const remb = await repRemb.json().catch(() => ({}))
+            if (remb?.deja_pose) {
+              setPageState('confirmed')
+              return
+            }
           } catch (e) { console.error('[glamia-pay] remboursement du créneau perdu :', e) }
         }
         // ── « TROP DE RÉSERVATIONS » N'EST PAS « CRÉNEAU PERDU » ────────────
