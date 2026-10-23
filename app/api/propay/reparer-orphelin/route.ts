@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       .eq('stripe_intent_id', intent_id)
       .maybeSingle()
     if (!orphelin?.pro_id) return refus('paiement_inconnu')
-    if (orphelin.statut === 'resolu') return NextResponse.json({ ok: true, deja: true })
+    if (orphelin.statut === 'resolu' && !simulation) return NextResponse.json({ ok: true, deja: true })
     const proId = orphelin.pro_id as string
 
     const { data: compte } = await supabaseAdmin
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     // objets différents chez Stripe.
     const intent = intent_id.startsWith('seti_')
       ? await stripe().setupIntents.retrieve(intent_id, {}, { stripeAccount })
-      : await stripe().paymentIntents.retrieve(intent_id, {}, { stripeAccount })
+      : await stripe().paymentIntents.retrieve(intent_id, { expand: ['latest_charge'] }, { stripeAccount })
 
     // ── JAMAIS DE RENDEZ-VOUS SANS ARGENT REÇU (23 oct. 2026) ─────────────────
     // On ne repose que ce que Stripe dit abouti, et pour CETTE pro : un paiement
@@ -87,6 +87,10 @@ export async function POST(req: NextRequest) {
     if (intent.status !== 'succeeded') return refus('paiement_non_abouti', { etat: intent.status })
     if (intent.metadata?.glamia_pro_id && intent.metadata.glamia_pro_id !== proId) return refus('autre_pro')
     if ('amount_received' in intent && !(intent.amount_received > 0)) return refus('paiement_non_abouti', { etat: 'rien_recu' })
+    // Un paiement remboursé reste « succeeded » chez Stripe : l'argent est rendu, rien à reposer.
+    const charge = ('latest_charge' in intent ? intent.latest_charge : null) as { refunded?: boolean; amount_refunded?: number; disputed?: boolean } | string | null
+    if (charge && typeof charge === 'object' && (charge.refunded || (charge.amount_refunded ?? 0) > 0)) return refus('rembourse')
+    if (charge && typeof charge === 'object' && charge.disputed) return refus('litige')
 
     let r: Reservation
     try { r = JSON.parse(intent.metadata?.glamia_resa ?? '') } catch { r = {} }
