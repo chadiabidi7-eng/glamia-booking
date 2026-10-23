@@ -38,7 +38,7 @@ const court = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 
 export async function POST(req: NextRequest) {
   try {
-    const { pro_id, intent_id, reservation } = await req.json()
+    const { pro_id, intent_id, reservation, complet } = await req.json()
     if (typeof pro_id !== 'string' || typeof intent_id !== 'string' || !reservation) {
       return NextResponse.json({ error: 'params' }, { status: 400 })
     }
@@ -85,6 +85,23 @@ export async function POST(req: NextRequest) {
     // comme le filet des métadonnées juste au-dessus. C'est le même compromis :
     // aucune surveillance ne vaut de bloquer une cliente devant son écran.
     await noterPaiementEnCours(intent_id, pro_id, compte.account_id as string)
+
+    // ── LA COPIE COMPLÈTE (23 oct. 2026) ──────────────────────────────────
+    // Tout ce que la page enverrait après le paiement : le rendez-vous, les
+    // réponses, le commentaire, l'offre, la fidélité, le mail, la notification.
+    // Ne sert que si la page meurt (voir lib/reservation-attente.ts). Une copie
+    // déjà prise par la page ou le serveur ne se remplace plus.
+    if (complet && typeof complet === 'object' && JSON.stringify(complet).length < 60_000) {
+      const { data: ligne } = await supabaseAdmin.from('reservations_en_attente')
+        .select('statut').eq('intent_id', intent_id).maybeSingle()
+      if (!ligne || ligne.statut === 'en_attente') {
+        await supabaseAdmin.from('reservations_en_attente').upsert({
+          intent_id, pro_id, corps: complet,
+          source: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? null,
+          statut: 'en_attente', maj_le: new Date().toISOString(),
+        }, { onConflict: 'intent_id' })
+      }
+    }
 
     return NextResponse.json({ ok: true })
   } catch (e) {

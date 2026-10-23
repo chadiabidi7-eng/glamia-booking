@@ -6,6 +6,7 @@ import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
 import { majorer } from '@/lib/majoration'
 import { majorationDuCreneau } from '@/lib/majoration-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
+import { prendreLaCopiePourLaPage } from '@/lib/reservation-attente'
 import { adressePourEtape } from '@/lib/adresse-due'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +64,28 @@ export async function POST(req: NextRequest) {
     // Les seuils sont larges — une cliente qui réserve pour elle, sa sœur et sa
     // mère passe sans s'en apercevoir. On ne vise pas l'usage inhabituel, on
     // vise l'automate.
-    const garde = await gardeReservation(pro_id, (body as { telephone?: unknown }).telephone, req.headers)
+    // ── LA COPIE DE SECOURS (23 oct. 2026) ─────────────────────────────────
+    // Le serveur qui crée à la place d'une page morte se présente avec la clé
+    // partagée et l'adresse d'origine de la cliente : la garde compte alors la
+    // cliente, pas le serveur. La page, elle, prend la copie avant de créer ;
+    // si le serveur l'a déjà prise, son rendez-vous existe : on le lui dit.
+    const cleSecours = process.env.REPARATION_SECRET
+    const parLeServeur = !!cleSecours && req.headers.get('authorization') === `Bearer ${cleSecours}`
+    const intentId = typeof (body as { intent_id?: unknown }).intent_id === 'string' ? (body as { intent_id: string }).intent_id : null
+    if (intentId && !parLeServeur) {
+      const prise = await prendreLaCopiePourLaPage(supabaseAdmin, intentId)
+      if (!prise.libre && prise.refuse) {
+        // Le serveur a dû refuser (créneau parti) et a rendu l'argent.
+        return NextResponse.json({ ok: false, raison: prise.refuse }, { status: 409 })
+      }
+      if (!prise.libre) {
+        return NextResponse.json({ ok: false, raison: 'deja_pose_serveur', rdv_id: prise.rdvId }, { status: 409 })
+      }
+    }
+    const entetesGarde = parLeServeur && req.headers.get('x-glamia-source')
+      ? new Headers({ 'x-forwarded-for': req.headers.get('x-glamia-source')! })
+      : req.headers
+    const garde = await gardeReservation(pro_id, (body as { telephone?: unknown }).telephone, entetesGarde)
     if (garde.ok === false) {
       console.warn('[rdv/creer] garde :', garde.raison, pro_id)
       return NextResponse.json({ ok: false, raison: garde.raison }, { status: 429 })

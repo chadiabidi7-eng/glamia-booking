@@ -2822,6 +2822,72 @@ export default function ReservationPage() {
         setSubmitting(false)
         return
       }
+      // Le rendez-vous tel qu'il part au serveur. Construit une fois : la page
+      // l'envoie elle-même après le paiement, et la copie de secours le garde
+      // à l'identique (lib/reservation-attente.ts).
+      const telNormalise = normaliserTelephone(telephone)
+      const corpsCreation = {
+          pro_id: pro.id,
+          // Sert UNIQUEMENT à la garde contre les réservations en masse, qui
+          // n'en garde qu'une empreinte — jamais le numéro en clair.
+          telephone: telNormalise,
+          date, heure, duree: dureeChoisie,
+          // ÉQUIPE : qui fait le rendez-vous (null = la pro).
+          praticienne_id: quiChoisi,
+          specialite: categoriesStr,
+          technique: techniquesStr,
+          techniques: techniquesSelectionnees,
+          offre_id: offreAppliquee?.id ?? null,
+          prix: prixFinal,
+          notes: commentaire.trim(),
+          demande_rappel: rappel,
+          fidelite_appliquee: recompenseFidelite ?? null,
+          // La campagne qui l'a amenée ici, si elle vient d'un mail de campagne.
+          campagne_id: rechercheUrl.get('c') || null,
+          // CE QU'ELLE A RÉPONDU PART AVEC LE RENDEZ-VOUS. Sans ça, la réponse
+          // sert à ajouter la dépose puis disparaît — alors qu'« ongles posés
+          // ailleurs » dit à la pro ce qu'elle doit préparer, et pourquoi ça
+          // prendra plus de temps. On recopie la question ET la réponse en
+          // clair : la pro peut les renommer ou les supprimer ensuite, un
+          // rendez-vous passé doit rester lisible.
+          reponses_questions: [
+            ...questionsEnCours
+              .filter(q => reponses[q.id])
+              .map(q => ({
+                question: q.texte,
+                reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
+              })),
+            // Celles du formulaire de la pro, déjà en clair.
+            ...questionsValides
+              .filter(q => (reponsesFormulaire[q.id] ?? '').trim())
+              .map(q => ({ question: q.libelle, reponse: reponsesFormulaire[q.id].trim() })),
+          ],
+          reduction_appliquee: reductionCliente
+            ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
+            : null,
+      }
+      // Le mail et la notification, rédigés ici comme d'habitude, pour que la
+      // copie de secours envoie exactement les mêmes.
+      const mentionAppelCopie = rappel ? '\n' + traduire('notif.souhaiteEtreContactee', { prenom: clientePrenom }) : ''
+      const mailConfirmation = clienteEmail.trim() ? {
+        pro_id: pro.id,
+        cliente_email: clienteEmail.trim(),
+        cliente_prenom: clientePrenom.trim(),
+        date: formatDateLong(date),
+        heure,
+        duree: formatDuree(dureeChoisie),
+        prix_total: prixFinal,
+        skip_rappel_notice: (new Date(`${date}T${heure}:00`).getTime() - Date.now()) < 24 * 60 * 60 * 1000,
+        etape: 'reservation' as const,
+        praticienne_id: quiChoisi,
+        techniques: techniquesSelectionnees.map(t => ({
+          nom: t.nom,
+          specialite: t.categorie,
+          prix: t.prix,
+          duree_minutes: t.duree,
+        })),
+      } : null
+
       let propayIntentId: string | null = null
       if (propay?.actif) {
         if (!propayConsent) {
@@ -2886,9 +2952,38 @@ export default function ReservationPage() {
                   prenom: clientePrenom, nom: clienteNom,
                   telephone, email: clienteEmail,
                 },
+                // LA COPIE COMPLÈTE (23 oct. 2026) : ne sert que si cette
+                // page meurt après le paiement. Rien ne change sinon.
+                complet: {
+                  creation: corpsCreation,
+                  cliente: { telephone: telNormalise, prenom: clientePrenom, nom: clienteNom, email: clienteEmail },
+                  fidelite: { active: !!fideliteConfig?.active, recompense_existante: !!recompenseExistante },
+                  reduction_limitee: !!(reductionCliente && reductionCliente.restants != null),
+                  prix_brut: prixTotalBrut,
+                  mail: mailConfirmation,
+                  notif: {
+                    nouvelle: {
+                      title: traduire(rappel ? 'notif.nouvelleClienteContactTitre' : 'notif.nouvelleClienteTitre'),
+                      body: traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
+                    },
+                    habituee: {
+                      title: traduire(rappel ? 'notif.nouveauRdvContactTitre' : 'notif.nouveauRdvTitre'),
+                      body: traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
+                    },
+                  },
+                },
               }),
             })
           } catch { /* le filet manque, la réservation continue */ }
+          // Les photos d'inspiration de la copie : envoyées PENDANT le
+          // paiement, sans jamais le faire attendre.
+          if (inspirations.length > 0) {
+            fetch('/api/propay/reservation-photos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ intent_id: propay.intent_id, photos: inspirations }),
+            }).catch(() => { /* la copie part sans photos */ })
+          }
         }
 
         const resultat = await propayRef.current?.confirmer()
@@ -2936,53 +3031,22 @@ export default function ReservationPage() {
       const repCreation = await fetch('/api/rdv/creer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pro_id: pro.id,
-          cliente_id: cId,
-          // Sert UNIQUEMENT à la garde contre les réservations en masse, qui
-          // n'en garde qu'une empreinte — jamais le numéro en clair.
-          telephone: telNormalized,
-          date, heure, duree: dureeChoisie,
-          // ÉQUIPE : qui fait le rendez-vous (null = la pro).
-          praticienne_id: quiChoisi,
-          specialite: categoriesStr,
-          technique: techniquesStr,
-          techniques: techniquesSelectionnees,
-          offre_id: offreAppliquee?.id ?? null,
-          prix: prixFinal,
-          notes: commentaire.trim(),
-          demande_rappel: rappel,
-          fidelite_appliquee: recompenseFidelite ?? null,
-          // La campagne qui l'a amenée ici, si elle vient d'un mail de campagne.
-          campagne_id: rechercheUrl.get('c') || null,
-          // CE QU'ELLE A RÉPONDU PART AVEC LE RENDEZ-VOUS. Sans ça, la réponse
-          // sert à ajouter la dépose puis disparaît — alors qu'« ongles posés
-          // ailleurs » dit à la pro ce qu'elle doit préparer, et pourquoi ça
-          // prendra plus de temps. On recopie la question ET la réponse en
-          // clair : la pro peut les renommer ou les supprimer ensuite, un
-          // rendez-vous passé doit rester lisible.
-          reponses_questions: [
-            ...questionsEnCours
-              .filter(q => reponses[q.id])
-              .map(q => ({
-                question: q.texte,
-                reponse: q.reponses.find(r => r.id === reponses[q.id])?.texte ?? '',
-              })),
-            // Celles du formulaire de la pro, déjà en clair.
-            ...questionsValides
-              .filter(q => (reponsesFormulaire[q.id] ?? '').trim())
-              .map(q => ({ question: q.libelle, reponse: reponsesFormulaire[q.id].trim() })),
-          ],
-          reduction_appliquee: reductionCliente
-            ? { type: reductionCliente.type, valeur: reductionCliente.valeur, limitee: reductionCliente.restants != null }
-            : null,
-        }),
+        body: JSON.stringify({ ...corpsCreation, cliente_id: cId, intent_id: propayIntentId }),
       })
       const creation = await repCreation.json()
 
       // Créneau devenu indisponible entre l'affichage et la confirmation : on
       // renvoie au choix de l'horaire, avec la raison.
       if (!repCreation.ok || creation?.ok !== true) {
+        // ── LE SERVEUR L'A DÉJÀ CRÉÉ DEPUIS LA COPIE (23 oct. 2026) ─────────
+        // Elle est revenue tard de sa banque : son rendez-vous existe, la pro
+        // est prévenue et son mail est parti. On lui montre la réussite, sans
+        // rien rembourser ni renvoyer.
+        if (creation?.raison === 'deja_pose_serveur') {
+          setRecapFige({ final: prixFinal, total: prixTotal, reduction: reductionCliente })
+          setPageState('confirmed')
+          return
+        }
         // SA CARTE A DÉJÀ ÉTÉ VALIDÉE. Le créneau est parti entre-temps — deux
         // clientes au même instant, ou la pro qui vient de le bloquer. On lui
         // rend son argent tout de suite : un paiement sans rendez-vous en face
