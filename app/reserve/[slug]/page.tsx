@@ -324,7 +324,13 @@ function formatDuree(min: number) {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
   const m = min % 60
-  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+  if (m === 0) return `${h}h`
+  // Comme l'app : « 2h30 » en français, « 2h 30m » en anglais, « 2h 30min »
+  // en espagnol et en italien (24 oct. 2026).
+  const langue = langueActuelle()
+  if (langue === 'en') return `${h}h ${m}m`
+  if (langue === 'es' || langue === 'it') return `${h}h ${m}min`
+  return `${h}h${String(m).padStart(2, '0')}`
 }
 
 function formatDateLong(dateStr: string) {
