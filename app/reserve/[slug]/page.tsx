@@ -5508,7 +5508,7 @@ export default function ReservationPage() {
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
                   {traduire('resa.fraisCarteEtrangere')}
-                  <a href="https://booking.glamia.pro/cgu" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsUtilisation')}</a>.
+                  <a href={`https://booking.glamia.pro/cgu${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsUtilisation')}</a>.
                 </p>
                 <Elements
                   // key = client_secret : si la cliente revient en arrière et
@@ -5633,7 +5633,7 @@ export default function ReservationPage() {
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
               {traduire('resa.consentementDonnees')}{' '}
               <a
-                href="https://booking.glamia.pro/confidentialite"
+                href={`https://booking.glamia.pro/confidentialite${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: PINK_TEXTE, textDecoration: 'underline' }}
