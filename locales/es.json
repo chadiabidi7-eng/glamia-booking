@@ -309,7 +309,19 @@
       "one": "3 fotos como máximo: solo se ha guardado la primera",
       "other": "3 fotos como máximo: solo se han guardado las %{count} primeras"
     },
-    "instructions": "Instrucciones para tu cita"
+    "instructions": "Instrucciones para tu cita",
+    "emailAJour": "te hemos enviado un email de confirmación actualizado",
+    "dureeTotale": "Duración total: %{duree}",
+    "envoiPhoto": "Enviando…",
+    "troisPhotosEnvoyees": "Tus 3 fotos se han enviado.",
+    "ajouterPhotos": {
+      "one": "Enseña lo que tienes en mente: añade hasta %{count} foto (opcional).",
+      "other": "Enseña lo que tienes en mente: añade hasta %{count} fotos (opcional)."
+    },
+    "prendrePhoto": "Hacer",
+    "importerPhoto": "Subir",
+    "confirmationEnCours": "Confirmando...",
+    "annulationEnCours": "Cancelando..."
   },
   "merci": {
     "introuvable": "Pago no encontrado",

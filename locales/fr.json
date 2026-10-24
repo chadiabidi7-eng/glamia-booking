@@ -295,7 +295,19 @@
       "one": "3 photos maximum : seule la première a été gardée",
       "other": "3 photos maximum : seules les %{count} premières ont été gardées"
     },
-    "instructions": "Instructions pour votre RDV"
+    "instructions": "Instructions pour votre RDV",
+    "emailAJour": "un email de confirmation à jour vous a été envoyé",
+    "dureeTotale": "Durée totale : %{duree}",
+    "envoiPhoto": "Envoi…",
+    "troisPhotosEnvoyees": "Tes 3 photos ont bien été transmises.",
+    "ajouterPhotos": {
+      "one": "Montre ce que tu as en tête — ajoute jusqu'à %{count} photo (optionnel).",
+      "other": "Montre ce que tu as en tête — ajoute jusqu'à %{count} photos (optionnel)."
+    },
+    "prendrePhoto": "Prendre",
+    "importerPhoto": "Importer",
+    "confirmationEnCours": "Confirmation...",
+    "annulationEnCours": "Annulation..."
   },
   "merci": {
     "introuvable": "Paiement introuvable",

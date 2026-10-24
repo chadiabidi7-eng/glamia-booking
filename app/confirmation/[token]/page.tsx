@@ -122,7 +122,7 @@ function SectionInspirations({
       flexShrink: 0, opacity: envoi ? 0.5 : 1, boxSizing: 'border-box',
     }}>
       {icone}
-      <span style={{ fontSize: 9.5, color: '#9ca3af', fontWeight: 600 }}>{envoi ? 'Envoi…' : texte}</span>
+      <span style={{ fontSize: 9.5, color: '#9ca3af', fontWeight: 600 }}>{envoi ? traduire('confirmation.envoiPhoto') : texte}</span>
       <input type="file" accept="image/*" onChange={gererAjout} disabled={envoi} style={{ display: 'none' }} {...extraInput} />
     </label>
   )
@@ -144,8 +144,8 @@ function SectionInspirations({
       </div>
       <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 12px', lineHeight: 1.4 }}>
         {photos.length >= 3
-          ? 'Tes 3 photos ont bien été transmises.'
-          : `Montre ce que tu as en tête — ajoute jusqu'à ${3 - photos.length} photo${3 - photos.length > 1 ? 's' : ''} (optionnel).`}
+          ? traduire('confirmation.troisPhotosEnvoyees')
+          : traduire('confirmation.ajouterPhotos', { count: 3 - photos.length })}
       </p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {photos.map((src, i) => (
@@ -158,8 +158,8 @@ function SectionInspirations({
         ))}
         {rdvFutur && photos.length < 3 && (
           <>
-            {tuile(<Camera size={18} color={PINK} />, 'Prendre', { capture: 'environment' })}
-            {tuile(<ImagePlus size={18} color={PINK} />, 'Importer', { multiple: true })}
+            {tuile(<Camera size={18} color={PINK} />, traduire('confirmation.prendrePhoto'), { capture: 'environment' })}
+            {tuile(<ImagePlus size={18} color={PINK} />, traduire('confirmation.importerPhoto'), { multiple: true })}
           </>
         )}
       </div>
@@ -584,14 +584,14 @@ import { traduire } from '@/lib/i18n';
                 onClick={handleConfirmer}
                 disabled={acting}
               >
-                {acting ? 'Confirmation...' : traduire('confirmation.confirmerMonRdv')}
+                {acting ? traduire('confirmation.confirmationEnCours') : traduire('confirmation.confirmerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"
                 onClick={handleAnnuler}
                 disabled={acting}
               >
-                {acting ? 'Annulation...' : traduire('confirmation.annulerMonRdv')}
+                {acting ? traduire('confirmation.annulationEnCours') : traduire('confirmation.annulerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"

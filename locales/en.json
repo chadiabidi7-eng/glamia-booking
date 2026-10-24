@@ -295,7 +295,19 @@
       "one": "3 photos maximum: only the first was kept",
       "other": "3 photos maximum: only the first %{count} were kept"
     },
-    "instructions": "Notes for your appointment"
+    "instructions": "Notes for your appointment",
+    "emailAJour": "an updated confirmation email has been sent to you",
+    "dureeTotale": "Total duration: %{duree}",
+    "envoiPhoto": "Sending…",
+    "troisPhotosEnvoyees": "Your 3 photos have been sent.",
+    "ajouterPhotos": {
+      "one": "Show what you have in mind — add up to %{count} photo (optional).",
+      "other": "Show what you have in mind — add up to %{count} photos (optional)."
+    },
+    "prendrePhoto": "Take",
+    "importerPhoto": "Upload",
+    "confirmationEnCours": "Confirming...",
+    "annulationEnCours": "Cancelling..."
   },
   "merci": {
     "introuvable": "Payment not found",

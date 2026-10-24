@@ -295,7 +295,19 @@
       "one": "Massimo 3 foto: abbiamo tenuto solo la prima",
       "other": "Massimo 3 foto: abbiamo tenuto solo le prime %{count}"
     },
-    "instructions": "Indicazioni per il tuo appuntamento"
+    "instructions": "Indicazioni per il tuo appuntamento",
+    "emailAJour": "ti abbiamo inviato un'email di conferma aggiornata",
+    "dureeTotale": "Durata totale: %{duree}",
+    "envoiPhoto": "Invio…",
+    "troisPhotosEnvoyees": "Le tue 3 foto sono state inviate.",
+    "ajouterPhotos": {
+      "one": "Fai vedere cosa hai in mente: aggiungi fino a %{count} foto (facoltativo).",
+      "other": "Fai vedere cosa hai in mente: aggiungi fino a %{count} foto (facoltativo)."
+    },
+    "prendrePhoto": "Scatta",
+    "importerPhoto": "Carica",
+    "confirmationEnCours": "Conferma in corso...",
+    "annulationEnCours": "Annullamento in corso..."
   },
   "merci": {
     "introuvable": "Pagamento non trovato",

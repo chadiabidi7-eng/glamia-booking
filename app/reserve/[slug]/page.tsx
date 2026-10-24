@@ -4051,7 +4051,7 @@ export default function ReservationPage() {
                             <div ref={confirmationRef} style={{ background: '#ecfdf5', borderRadius: 12, padding: 12, marginBottom: 12, border: '1.5px solid #6ee7b7', textAlign: 'center', scrollMarginTop: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#059669', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={16} color="#059669" />{traduire('resa.prestationsModifiees')}</p>
                               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
-                                {soinsAffiches(rdv.technique)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — un email de confirmation à jour vous a été envoyé
+                                {soinsAffiches(rdv.technique)}{rdv.prix && rdv.prix > 0 ? ` · ${formatPrix(rdv.prix, pro?.devise)}` : ''} — {traduire('confirmation.emailAJour')}
                               </p>
                             </div>
                           )}
@@ -4995,7 +4995,7 @@ export default function ReservationPage() {
             <h2 style={{ ...S.h2, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color={GLAMIA_PINK} />{traduire('resa.choisissezHeure')}</h2>
             <p style={{ ...S.sub, textTransform: casseDate() }}>{premiereCapitale(formatDateLong(date))}</p>
             <p style={{ fontSize: 13, color: '#9ca3af', marginTop: -16, marginBottom: 20 }}>
-              Durée totale : {formatDuree(dureeTotal)}
+              {traduire('confirmation.dureeTotale', { duree: formatDuree(dureeTotal) })}
             </p>
 
             {/* Son créneau du mail, encore libre : il est déjà sélectionné dans
