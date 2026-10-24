@@ -34,7 +34,7 @@
     "mailAvant": "Riceverai un'email 24 ore prima dell'appuntamento per confermare la tua presenza.",
     "verifiezSpams": "Se non ricevi l'email, controlla nella cartella spam.",
     "aBientot": "A presto!",
-    "signatureGlamia": "Glamia, l'app delle libere professioniste della bellezza",
+    "signatureGlamia": "Glamia, l'app delle professioniste beauty indipendenti",
     "reservationEnLigne": "Prenotazione online",
     "bonjour": "Ciao!",
     "entrezNumero": "Inserisci il tuo numero per iniziare.",
@@ -456,7 +456,7 @@
   },
   "cgu": {
     "titre": "Condizioni generali d'uso",
-    "maj": "Ultimo aggiornamento: 27 settembre 2026",
+    "maj": "Ultimo aggiornamento: 24 ottobre 2026",
     "contact": "Per qualsiasi domanda:",
     "sections": [
       {
@@ -567,8 +567,8 @@
       {
         "titre": "14. Legge applicabile e foro competente",
         "paragraphes": [
-          "Se la tua attività ha sede in Italia, queste condizioni sono regolate dalla legge italiana; negli altri casi, dalla legge francese.",
-          "Qualsiasi controversia relativa alla loro formazione, esecuzione o interpretazione è di competenza esclusiva del Foro di Milano se la tua attività ha sede in Italia, e dei tribunali di Parigi negli altri casi, anche in caso di pluralità di convenuti o di chiamata in garanzia. Questa clausola è stipulata tra professionisti e non ti priva delle tutele inderogabili che la legge del tuo Paese ti riconosce.",
+          "Queste condizioni sono regolate dalla legge francese, anche se la tua attività ha sede in Italia o in un altro Paese, come consentito tra professionisti dall'articolo 3 del Regolamento (CE) n. 593/2008 («Roma I»).",
+          "Qualsiasi controversia relativa alla loro formazione, esecuzione o interpretazione è di competenza esclusiva dei tribunali di Parigi (Francia), anche in caso di pluralità di convenuti o di chiamata in garanzia, conformemente all'articolo 25 del Regolamento (UE) n. 1215/2012. Usando il Servizio per la tua attività agisci come professionista e non come consumatrice: questa clausola è stipulata tra professionisti.",
           "Prima di qualsiasi azione, ci impegniamo reciprocamente a cercare una soluzione amichevole: scrivici, ti rispondiamo."
         ]
       },
@@ -685,7 +685,7 @@
       {
         "titre": "13. Reclami",
         "paragraphes": [
-          "Se la nostra risposta non ti soddisfa, puoi rivolgerti al Garante per la protezione dei dati personali (Piazza Venezia 11, 00187 Roma), o all'autorità per la protezione dei dati del tuo Paese di residenza."
+          "Se la nostra risposta non ti soddisfa, puoi rivolgerti al Garante per la protezione dei dati personali (Piazza Venezia 11, 00187 Roma), alla Commission nationale de l'informatique et des libertés (CNIL, 3 place de Fontenoy, 75007 Parigi), autorità di controllo del Paese in cui abbiamo sede, o all'autorità per la protezione dei dati del tuo Paese di residenza."
         ]
       }
     ]
