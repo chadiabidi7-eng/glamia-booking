@@ -333,7 +333,7 @@ export default async function ReserveLayout({
       let lienVille: { nom: string; url: string } | null = null
       if (ville) {
         try {
-          const v = await villeConnue(ville)
+          const v = await villeConnue(ville, { pays: typeof p.pays === 'string' ? p.pays : null })
           if (v) lienVille = { nom: v.nom, url: `${siteRecherche()}/beaute/${v.slug}` }
         } catch { /* sans lien, la fiche reste la même */ }
       }

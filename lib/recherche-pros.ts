@@ -94,7 +94,81 @@ export type ProTrouvee = {
   villeLien?: string
 }
 
-export type Ville = { nom: string; slug: string; pays: string; lat: number | null; lon: number | null }
+/**
+ * `base` : le nom seul (« valence ») ; `slug` : l'adresse de la page, qui porte
+ * aussi la région quand une autre ville du même nom est plus peuplée
+ * (« valence-tarn-et-garonne »). Voir `homonymes` (25 oct. 2026).
+ */
+export type Ville = { nom: string; slug: string; base?: string; zone?: string | null; population?: number; pays: string; lat: number | null; lon: number | null }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LES VILLES DU MÊME NOM (25 oct. 2026).
+//
+// « Valence » est dans la Drôme ET dans le Tarn-et-Garonne ; « Saint-Louis » à
+// La Réunion ET en Alsace ; « Houston » en Écosse ET au Texas. Avant, une page
+// prenait toujours la plus peuplée : la pro de Valence (82) était rangée sur la
+// page de Valence (26), à 300 km de chez elle — où elle n'apparaissait donc pas,
+// et la page restait vide.
+//
+// Maintenant chaque ville a sa page. La plus peuplée garde l'adresse simple
+// (/beaute/valence) ; les autres portent leur région (/beaute/valence-tarn-et-garonne).
+// Une pro est rangée dans la ville de ce nom de SON pays, la plus proche de
+// chez elle — ou, sans position, la plus peuplée de son pays.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** L'outre-mer a son propre code dans la liste des villes, mais c'est la France. */
+const OUTRE_MER = new Set(['RE', 'GP', 'MQ', 'GF', 'YT', 'PM', 'BL', 'MF', 'NC', 'PF', 'WF'])
+const famillePays = (p: string | null | undefined) => { const x = (p || 'FR').toUpperCase(); return OUTRE_MER.has(x) ? 'FR' : x }
+export const memePays = (a: string | null | undefined, b: string | null | undefined) => famillePays(a) === famillePays(b)
+
+export type Homonyme = { nom: string; pays: string; zone: string | null; population: number; slug: string; base: string }
+type LigneVille = { id?: number; nom: string; pays: string; zone: string | null; population: number | null }
+
+const nettoyer = (t: string) => versRecherche(t).replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+
+/** Les villes d'un même nom, la plus peuplée d'abord : elle garde l'adresse simple, les autres prennent leur région. */
+function nommerHomonymes(base: string, lignes: LigneVille[]): Homonyme[] {
+  const vus = new Set<string>()
+  const sortie: Homonyme[] = []
+  lignes.forEach((l, i) => {
+    const slug = i === 0 ? base : `${base}-${nettoyer(l.zone || l.pays) || l.pays.toLowerCase()}`
+    if (vus.has(slug)) return   // deux hameaux du même nom dans la même région : le plus peuplé
+    vus.add(slug)
+    sortie.push({ nom: l.nom, pays: l.pays, zone: l.zone, population: l.population ?? 0, slug, base })
+  })
+  return sortie
+}
+
+/** « valence » → toutes les villes de ce nom. Une lecture, sur l'index des noms. */
+async function homonymes(base: string): Promise<Homonyme[]> {
+  const { data } = await admin.from('villes').select('id, nom, pays, zone, population').like('nom_recherche', motifVille(base))
+    .order('population', { ascending: false, nullsFirst: false }).order('id', { ascending: true }).limit(100)
+  return nommerHomonymes(base, (data ?? []) as LigneVille[])
+}
+
+/**
+ * La ville où ranger une pro, parmi celles du nom qu'elle a écrit : dans son
+ * pays (quand on le connaît), la plus proche de chez elle ; sans position, la
+ * plus peuplée. Aucune ville de ce nom dans son pays et pas de position : null.
+ */
+export async function choisirHomonyme(homs: Homonyme[], pro: { pays?: string | null; lat?: number | null; lon?: number | null }): Promise<Homonyme | null> {
+  if (!homs.length) return null
+  const aPosition = typeof pro.lat === 'number' && typeof pro.lon === 'number'
+  const paysConnu = pro.pays !== undefined
+  const siens = paysConnu ? homs.filter(h => memePays(h.pays, pro.pays)) : homs
+  const parmi = siens.length ? siens : aPosition ? homs : []
+  if (!parmi.length) return null
+  if (parmi.length === 1 || !aPosition) return parmi[0]
+  // Plusieurs villes de ce nom : la plus proche de chez elle (huit au plus, les plus peuplées).
+  const centres = await Promise.all(parmi.slice(0, 8).map(h => centreDe(h.nom, h.pays, { zone: h.zone, population: h.population, principale: h.slug === h.base }).catch(() => null)))
+  let meilleure: Homonyme = parmi[0], distance = Infinity
+  centres.forEach((c, i) => {
+    if (!c) return
+    const d = kmEntre({ lat: pro.lat!, lon: pro.lon! }, c)
+    if (d < distance) { distance = d; meilleure = parmi[i] }
+  })
+  return meilleure
+}
 
 export const versRecherche = (v: string) =>
   v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')
@@ -123,20 +197,80 @@ export async function villeDepuisSlug(brut: string): Promise<Ville | null> {
   // « Lyon 3e », « Saint-Étienne (42) ») : on essaie la ville entière, puis ce
   // qui précède le premier séparateur, puis sans le numéro final (12 oct. 2026).
   const essais = formesDeVille(texte)
-  for (const slug of essais) {
-    // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
-    // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
-    const { data } = await admin.from('villes').select('nom, pays').like('nom_recherche', motifVille(slug))
-      .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
-    if (!data) continue
-    const centre = await centreDe(data.nom as string, data.pays as string)
-    return { nom: data.nom as string, slug, pays: data.pays as string, lat: centre?.lat ?? null, lon: centre?.lon ?? null }
+  const trouver = async (): Promise<Homonyme | null> => {
+    for (const slug of essais) {
+      // La liste des villes écrit « le plessis-robinson » ou « l'hay-les-roses » : un
+      // tiret du lien vaut un tiret, une espace ou une apostrophe (Chadi, 12 oct. 2026).
+      const homs = await homonymes(slug)
+      if (homs.length) return homs[0]
+    }
+    // Pas de ville de ce nom : peut-être une ville et sa région (« valence-tarn-et-garonne »).
+    const parts = (essais[0] ?? '').split('-')
+    if (parts.length < 2 || parts.length > 10) return null
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const homs = await homonymes(parts.slice(0, i).join('-'))
+      const h = homs.find(x => x.slug === essais[0])
+      if (h) return h
+    }
+    return null
   }
-  return null
+  const h = await trouver()
+  if (!h) return null
+  const centre = await centreDe(h.nom, h.pays, { zone: h.zone, population: h.population, principale: h.slug === h.base })
+  return { nom: h.nom, slug: h.slug, base: h.base, zone: h.zone, population: h.population, pays: h.pays, lat: centre?.lat ?? null, lon: centre?.lon ?? null }
 }
 
-/** Le centre de la ville, pour mesurer les distances tant que la cliente ne s'est pas localisée. */
-export async function centreDe(nom: string, pays: string): Promise<{ lat: number; lon: number } | null> {
+const OPEN_METEO = 'https://geocoding-api.open-meteo.com/v1/search'
+
+/**
+ * Le centre de la ville, pour mesurer les distances tant que la cliente ne s'est pas localisée.
+ *
+ * Avec `indice` (la région et la population de la liste des villes), on trouve
+ * LA bonne ville parmi celles du même nom (25 oct. 2026) : la Base Adresse
+ * nationale pour la France et l'outre-mer (La Réunion, la Guadeloupe… que
+ * l'ancien service ne trouvait pas), et pour les autres pays le service
+ * Open-Meteo, tiré de la même liste mondiale que la nôtre (Cadix, Houston).
+ * Sans indice, rien ne change pour la page de réservation.
+ */
+export async function centreDe(nom: string, pays: string, indice?: { zone: string | null; population: number; principale?: boolean }): Promise<{ lat: number; lon: number } | null> {
+  if (indice) {
+    const trouve = await centreParRegion(nom, pays, indice)
+    // Pas trouvée avec sa région : pour la ville principale du nom (l'adresse
+    // simple), on garde l'ancienne recherche, comme avant le 25 octobre.
+    if (trouve || !indice.principale) return trouve
+  }
+  return centreSimple(nom, pays)
+}
+
+async function centreParRegion(nom: string, pays: string, indice: { zone: string | null; population: number }): Promise<{ lat: number; lon: number } | null> {
+  {
+    try {
+      if (famillePays(pays) === 'FR') {
+        const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(nom)}&type=municipality&limit=20`, { next: { revalidate: 86400 } })
+        if (!r.ok) return null
+        const features = ((await r.json())?.features ?? []) as { geometry?: { coordinates?: number[] }; properties?: { name?: string; context?: string } }[]
+        const memeNom = features.filter(f => aplatir(f.properties?.name ?? '').replace(/[^a-z0-9]/g, '') === aplatir(nom).replace(/[^a-z0-9]/g, ''))
+        const z = aplatir(indice.zone ?? '')
+        // Plusieurs villes de ce nom et aucune dans sa région : on ne devine pas.
+        const f = (z ? memeNom.find(x => aplatir(x.properties?.context ?? '').includes(z)) : null) ?? (memeNom.length === 1 ? memeNom[0] : undefined)
+        const c = f?.geometry?.coordinates
+        return Array.isArray(c) ? { lon: c[0], lat: c[1] } : null
+      }
+      const r = await fetch(`${OPEN_METEO}?name=${encodeURIComponent(nom)}&count=20&language=fr`, { next: { revalidate: 86400 } })
+      if (!r.ok) return null
+      const res = ((await r.json())?.results ?? []) as { latitude: number; longitude: number; country_code?: string; population?: number; admin1?: string; admin2?: string }[]
+      const siens = res.filter(x => (x.country_code ?? '').toUpperCase() === pays.toUpperCase())
+      const z = aplatir(indice.zone ?? '')
+      const f = (indice.population > 0 ? siens.find(x => x.population === indice.population) : undefined)
+        ?? (z ? siens.find(x => [x.admin1, x.admin2].some(a => a && (z.includes(aplatir(a)) || aplatir(a).includes(z)))) : undefined)
+        ?? (siens.length === 1 ? siens[0] : undefined)
+      return f ? { lat: f.latitude, lon: f.longitude } : null
+    } catch { return null }
+  }
+}
+
+/** L'ancienne recherche : la première ville de ce nom (France), ou la première du bon pays (ailleurs). */
+async function centreSimple(nom: string, pays: string): Promise<{ lat: number; lon: number } | null> {
   try {
     const url = pays === 'FR'
       ? `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(nom)}&type=municipality&limit=1`
@@ -177,8 +311,17 @@ type Profil = {
   /** La ville LUE dans le texte d'adresse qu'elle a écrit (« 64340 Boucau », « Marseille ») — jamais devinée (14 oct. 2026). */
   ville_lue: string | null
   devise: string | null
+  compte_test: boolean | null
 }
-const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee, devise, ville_lue'
+const CHAMPS = 'id, slug, pseudo, prenom, avatar_url, photo_url, adresse_lat, adresse_lon, abonnement_actif, pro_pay_actif, trial_ends_at, avis_actifs, sur_glamia, photos_travail, bio, message_accueil, ville, pays, ville_affichee, devise, ville_lue, compte_test'
+
+// LES COMPTES D'ESSAI N'ONT RIEN À FAIRE DEVANT LES CLIENTES (25 oct. 2026).
+// Les comptes marqués « test » sortent d'office. Lindsay (lindsaytest), le
+// compte d'essai de la 3.0, ne peut pas être marqué ainsi (ça le passerait en
+// Ultra dans l'app) : il est écarté ici, par son adresse, sans toucher à sa fiche.
+const COMPTES_CACHES = new Set(['lindsaytest'])
+export const compteCache = (p: { slug?: string | null; compte_test?: boolean | null }) =>
+  p.compte_test === true || COMPTES_CACHES.has((p.slug ?? '').toLowerCase())
 
 // 3.0 : toutes les pages sont ouvertes, gratuit compris (4 oct. 2026). Une
 // pro apparaît dans la recherche dès qu'elle n'a pas dit non (sur_glamia).
@@ -187,7 +330,11 @@ const ouverte = (_p: Profil) => true
 /** Les pros d'une ville, prêtes à afficher — puis celles « tout près ». */
 export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
   // 1. Celles qui ont donné leur ville dans la 3.0 (leur fiche fait foi).
-  const [{ data: directes }, { data: deduites }] = await Promise.all([
+  const base = ville.base ?? ville.slug
+  // Même motif, voyelles et lettres accentuables comprises : « Alcalá de Guadaíra »
+  // écrit par la pro, « Alcalá de Guadaira » dans la liste (25 oct. 2026).
+  const souple = ville.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]|[aeiouyAEIOUY]/g, '_')
+  const [{ data: directes }, { data: deduites }, { data: souples }, homs] = await Promise.all([
     // Le début du nom, chaque lettre accentuée ou séparateur valant n'importe
     // quel caractère : « Saint Etienne », « Lyon 3e », « Ixelles — Bruxelles »
     // remontent, puis on ne garde que la même ville (12 oct. 2026).
@@ -195,14 +342,23 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     // Aussi « 64340 Boucau » ou « 1700 Fribourg » : quatre ou cinq chiffres et une espace devant (14 oct. 2026).
     admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike.______${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike._____${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_lue.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
     Promise.resolve(AUCUNE_VILLE_DEVINEE),
+    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${souple}%,ville_affichee.ilike.${souple}%,ville_lue.ilike.${souple}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
+    homonymes(base),
   ])
+  const candidates = new Map<string, Profil>()
+  for (const p of [...((directes ?? []) as Profil[]), ...((souples ?? []) as Profil[])]) candidates.set(p.id, p)
   // La ville qu'elle montre : celle qu'elle a choisie, sinon celle de son adresse.
-  const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville || p.ville_lue) && formesDeVille((p.ville_affichee || p.ville || p.ville_lue)!).includes(ville.slug)
-  const tous = await assembler(((directes ?? []) as Profil[]).filter(memeNom), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
+  const memeNom = (p: Profil) => !!(p.ville_affichee || p.ville || p.ville_lue) && formesDeVille((p.ville_affichee || p.ville || p.ville_lue)!).includes(base)
+  // Parmi les villes de ce nom, est-ce bien celle-ci ? (Valence 26 ou Valence 82.)
+  const choix = await Promise.all([...candidates.values()].filter(memeNom).map(async p => {
+    const h = await choisirHomonyme(homs, { pays: p.pays, lat: p.adresse_lat, lon: p.adresse_lon })
+    return h && h.slug === ville.slug ? p : null
+  }))
+  const tous = await assembler(choix.filter((p): p is Profil => !!p), (deduites ?? []) as { pro_id: string; lat: number; lon: number }[],
     undefined, ville.lat !== null && ville.lon !== null ? { lat: ville.lat, lon: ville.lon, pays: ville.pays } : undefined)
   // Une user qui a choisi la ville à montrer n'apparaît que dans celle-là — même si son
   // adresse, ou la ville déduite de son ancienne adresse, est ailleurs (12 oct. 2026).
-  const dansLaVille = tous.filter(p => !p.villeChoisie || formesDeVille(p.villeLien ?? '').includes(ville.slug))
+  const dansLaVille = tous.filter(p => !p.villeChoisie || formesDeVille(p.villeLien ?? '').includes(base))
   if (ville.lat === null || ville.lon === null) return dansLaVille
 
   // 2. TOUT PRÈS (Chadi, 12 oct. 2026) : une cliente du Plessis-Robinson réserve
@@ -217,7 +373,7 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     { exclure: deja, centre, km: RAYON_TOUT_PRES_KM, limite: place })
   // Elle a écrit sa ville autrement (« Lyon 3e », « Saint Etienne ») mais c'est
   // bien la même : elle rejoint la ville, pas « Tout près ».
-  const memeVille = (p: ProTrouvee) => !!p.villeLien && formesDeVille(p.villeLien).includes(ville.slug)
+  const memeVille = (p: ProTrouvee) => !!p.villeLien && formesDeVille(p.villeLien).includes(base)
   const rejointes = autour.filter(memeVille)
   const proches = autour.filter(p => !memeVille(p))
     .map(p => ({ ...p, prochaine: true }))
@@ -289,7 +445,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
 
   // Elle a donné sa ville mais pas de position : sur la page de SA ville, on la
   // pose au centre (flouté comme les autres) plutôt que de la cacher (12 oct. 2026).
-  if (centreVille) for (const p of directes) if (!position.has(p.id) && (p.pays ?? 'FR').toUpperCase() === centreVille.pays.toUpperCase()) position.set(p.id, centreVille)
+  if (centreVille) for (const p of directes) if (!position.has(p.id) && memePays(p.pays, centreVille.pays)) position.set(p.id, centreVille)
   // ELLE A CHOISI UNE AUTRE VILLE À MONTRER (son village → la ville voisine, 12 oct. 2026) :
   // son point se pose au centre de cette ville, jamais près de son adresse exacte.
   for (const p of profils.values()) {
@@ -302,7 +458,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
   // en Seine-Saint-Denis) : à plus de 40 km du centre, ce n'est pas elle.
   if (centreVille) for (const [id, pos] of position) if (kmEntre(centreVille, pos) > 40) position.delete(id)
   let retenues = [...profils.values()]
-    .filter(p => p.sur_glamia !== false && ouverte(p) && position.has(p.id) && p.slug)
+    .filter(p => p.sur_glamia !== false && !compteCache(p) && ouverte(p) && position.has(p.id) && p.slug)
   if (choix) {
     const km = (p: Profil) => kmEntre(choix.centre, position.get(p.id)!)
     retenues = retenues.filter(p => !choix.exclure.has(p.slug!) && km(p) <= choix.km)
@@ -411,11 +567,13 @@ export async function villesProposees(q: string): Promise<{ nom: string; slug: s
  * qui existe pour elle, sans chercher son centre : une seule lecture bornée
  * par forme essayée. Sert aux liens (villes proches, fiche de la pro, sitemap).
  */
-export async function villeConnue(texte: string): Promise<{ nom: string; slug: string } | null> {
+export async function villeConnue(texte: string, pro?: { pays?: string | null; lat?: number | null; lon?: number | null }): Promise<{ nom: string; slug: string } | null> {
   for (const slug of formesDeVille(texte)) {
-    const { data } = await admin.from('villes').select('nom').like('nom_recherche', motifVille(slug))
-      .order('population', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
-    if (data) return { nom: data.nom as string, slug }
+    const homs = await homonymes(slug)
+    if (!homs.length) continue
+    // Plusieurs villes de ce nom : celle de la pro, quand on sait d'où elle est (25 oct. 2026).
+    const h = pro ? await choisirHomonyme(homs, pro) : homs[0]
+    return h ? { nom: h.nom, slug: h.slug } : null
   }
   return null
 }
@@ -438,39 +596,62 @@ const donneesVilleEnCache = unstable_cache(async (slug: string): Promise<Donnees
   if (!ville) return null
   const pros = await prosDeLaVille(ville)
   // VILLES PROCHES : celles des pros « Tout près », quand elles ont leur page.
-  const textes = [...new Set(pros.filter(p => p.prochaine && p.villeLien).map(p => p.villeLien!.trim()))].slice(0, 8)
-  const trouvees = await Promise.all(textes.map(t => villeConnue(t).catch(() => null)))
+  const parTexte = new Map<string, ProTrouvee>()
+  for (const p of pros) if (p.prochaine && p.villeLien && !parTexte.has(p.villeLien.trim())) parTexte.set(p.villeLien.trim(), p)
+  // Sa position (floutée) suffit à choisir la bonne ville parmi celles du même nom.
+  const trouvees = await Promise.all([...parTexte.entries()].slice(0, 8).map(([t, p]) => villeConnue(t, { lat: p.lat, lon: p.lon }).catch(() => null)))
   const vus = new Set<string>([ville.slug])
   const voisines = trouvees.filter((v): v is { nom: string; slug: string } => !!v && !vus.has(v.slug) && !!vus.add(v.slug))
   return { ville, pros, voisines }
-}, ['beaute-ville-v2'], { revalidate: 300 })
+}, ['beaute-ville-v3'], { revalidate: 300 })
 
 export const donneesVille = cache((slug: string) => donneesVilleEnCache(slug))
 
 /**
- * POUR LE SITEMAP : les villes qui ont au moins une pro, et leurs métiers
- * (13 oct. 2026). Lu au plus une fois par heure. Les métiers sont lus dans le
- * catalogue, exactement comme la page les montre (ce que la pro a déclaré à
- * l'inscription ne suit pas toujours son catalogue : la page serait vide).
+ * POUR LE SITEMAP ET L'ACCUEIL : les villes qui ont au moins une pro, et leurs
+ * métiers (13 oct. 2026). Lu au plus une fois par heure. Les métiers sont lus
+ * dans le catalogue, exactement comme la page les montre (ce que la pro a
+ * déclaré à l'inscription ne suit pas toujours son catalogue : la page serait vide).
+ *
+ * AUCUNE PAGE VIDE DANS LA LISTE (25 oct. 2026) : on refait ici le tri de la
+ * page — la bonne ville parmi celles du même nom, son pays, sa position ou à
+ * défaut le centre de la ville, à moins de 40 km. Le 25 octobre, 31 adresses
+ * sur 1 025 envoyées à Google montraient une page vide (Valence, Saint-Louis,
+ * Houston, Cadix…).
  *
  * Deux lectures bornées pour les pros, leurs catalogues par paquets de 200,
- * puis les villes par paquets de 40 (chaque nom passe par l'index des villes).
+ * puis les villes par paquets de 20 (chaque nom passe par l'index des villes).
  */
-export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[] }[]> {
-  const [{ data: profils, error: e1 }, { data: localisees, error: e2 }] = await Promise.all([
-    admin.from('profiles').select('id, ville, ville_affichee, ville_lue, sur_glamia').not('slug', 'is', null).limit(5000),
-    Promise.resolve(AUCUNE_VILLE_DEVINEE),
-  ])
-  if (e1 || e2) throw new Error(e1?.message ?? e2?.message)
-  const deduite = new Map((localisees ?? []).map(l => [l.pro_id as string, l.ville_recherche as string]))
+export type VilleAvecPros = { slug: string; nom: string; pays: string; zone: string | null; population: number; metiers: Metier[] }
 
-  // Pour chaque pro visible : le texte de sa ville (ou la ville déduite).
-  const visibles: { id: string; textes: string[] }[] = []
-  for (const p of profils ?? []) {
-    if (p.sur_glamia === false) continue
+export async function villesAvecPros(): Promise<VilleAvecPros[]> {
+  // PAR PAGES DE 1 000 (25 oct. 2026) : la base ne rend jamais plus de 1 000
+  // lignes d'un coup, et les pros sont plus nombreuses. Avant, celles d'après
+  // la millième n'entraient jamais dans la liste (Bellecourt, entre autres).
+  const profils: Record<string, unknown>[] = []
+  for (let page = 0; page < 10; page++) {
+    const { data, error } = await admin.from('profiles')
+      .select('id, slug, ville, ville_affichee, ville_lue, sur_glamia, compte_test, pays, adresse_lat, adresse_lon')
+      .not('slug', 'is', null).or('ville.not.is.null,ville_affichee.not.is.null,ville_lue.not.is.null')
+      .order('id', { ascending: true }).range(page * 1000, page * 1000 + 999)
+    if (error) throw new Error(error.message)
+    profils.push(...(data ?? []))
+    if ((data ?? []).length < 1000) break
+  }
+
+  type Visible = { id: string; textes: string[]; pays: string | null; lat: number | null; lon: number | null; ailleurs: boolean }
+  const visibles: Visible[] = []
+  for (const p of profils) {
+    if (p.sur_glamia === false || compteCache(p as { slug: string | null; compte_test: boolean | null })) continue
     const texte = ((p.ville_affichee as string | null) || (p.ville as string | null) || (p.ville_lue as string | null) || '').trim()
-    const textes = texte ? formesDeVille(texte) : deduite.has(p.id as string) ? [deduite.get(p.id as string)!] : []
-    if (textes.length) visibles.push({ id: p.id as string, textes })
+    if (!texte) continue
+    const affichee = ((p.ville_affichee as string | null) ?? '').trim()
+    visibles.push({
+      id: p.id as string, textes: formesDeVille(texte), pays: (p.pays as string | null) ?? null,
+      lat: typeof p.adresse_lat === 'number' ? p.adresse_lat : null, lon: typeof p.adresse_lon === 'number' ? p.adresse_lon : null,
+      // Elle montre une autre ville que la sienne : la page la pose au centre de celle-ci.
+      ailleurs: !!affichee && affichee.toLowerCase() !== ((p.ville as string | null) ?? '').trim().toLowerCase(),
+    })
   }
   // Ses métiers : les catégories de son catalogue où au moins une prestation est allumée (comme la page).
   const metiersDe = new Map<string, Metier[]>()
@@ -487,31 +668,65 @@ export async function villesAvecPros(): Promise<{ slug: string; metiers: Metier[
       metiersDe.set(c.pro_id as string, METIERS.filter(m => ms.has(m)))
     }
   }
-  const pros = visibles.map(v => ({ textes: v.textes, metiers: metiersDe.get(v.id) ?? [] }))
 
-  // Quelles formes correspondent à une ville connue ?
-  const formes = [...new Set(pros.flatMap(p => p.textes))]
-  const connues = new Set<string>()
-  for (let i = 0; i < formes.length; i += 40) {
-    const paquet = formes.slice(i, i + 40)
-    const { data, error } = await admin.from('villes').select('nom_recherche')
-      .or(paquet.map(f => `nom_recherche.like.${motifVille(f)}`).join(',')).limit(2000)
+  // Les villes de chaque nom écrit, la plus peuplée d'abord (même ordre que la page).
+  const formes = [...new Set(visibles.flatMap(p => p.textes))]
+  const homsDe = new Map<string, Homonyme[]>()
+  // La base ne rend jamais plus de 1 000 lignes d'un coup : un paquet qui les
+  // atteint (des noms très répandus, « Saint-Martin »…) est relu nom par nom,
+  // sinon les plus petites villes manqueraient (Bellecourt, 25 oct. 2026).
+  const PLAFOND = 1000
+  for (let i = 0; i < formes.length; i += 20) {
+    const paquet = formes.slice(i, i + 20)
+    const { data, error } = await admin.from('villes').select('id, nom, nom_recherche, pays, zone, population')
+      .or(paquet.map(f => `nom_recherche.like.${motifVille(f)}`).join(','))
+      .order('population', { ascending: false, nullsFirst: false }).order('id', { ascending: true }).limit(PLAFOND)
     if (error) throw new Error(error.message)
-    const noms = (data ?? []).map(v => String(v.nom_recherche))
+    if ((data ?? []).length >= PLAFOND) {
+      for (const f of paquet) { const homs = await homonymes(f); if (homs.length) homsDe.set(f, homs) }
+      continue
+    }
+    const lignes = (data ?? []) as (LigneVille & { nom_recherche: string })[]
     for (const f of paquet) {
       const re = new RegExp(`^${motifVille(f).replace(/_/g, '.')}$`)
-      if (noms.some(n => re.test(n))) connues.add(f)
+      const homs = nommerHomonymes(f, lignes.filter(l => re.test(String(l.nom_recherche))))
+      if (homs.length) homsDe.set(f, homs)
     }
   }
 
-  const parVille = new Map<string, Set<Metier>>()
-  for (const p of pros) {
-    const slug = p.textes.find(f => connues.has(f))   // la même forme que la page choisit
-    if (!slug) continue
-    const ms = parVille.get(slug) ?? new Set<Metier>()
-    p.metiers.forEach(m => ms.add(m))
-    parVille.set(slug, ms)
+  // Chaque pro dans sa ville.
+  const parVille = new Map<string, { h: Homonyme; pros: Visible[] }>()
+  for (let i = 0; i < visibles.length; i += 8) {
+    await Promise.all(visibles.slice(i, i + 8).map(async p => {
+      const forme = p.textes.find(f => homsDe.has(f))   // la même forme que la page choisit
+      if (!forme) return
+      const h = await choisirHomonyme(homsDe.get(forme)!, { pays: p.pays, lat: p.lat, lon: p.lon }).catch(() => null)
+      if (!h) return
+      const v = parVille.get(h.slug) ?? { h, pros: [] }
+      v.pros.push(p)
+      parVille.set(h.slug, v)
+    }))
   }
-  return [...parVille.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([slug, ms]) => ({ slug, metiers: METIERS.filter(m => ms.has(m)) }))
+
+  // La page la montrera-t-elle ? Une position à moins de 40 km du centre, ou le centre lui-même.
+  const sortie: VilleAvecPros[] = []
+  const entrees = [...parVille.values()]
+  for (let i = 0; i < entrees.length; i += 16) {
+    await Promise.all(entrees.slice(i, i + 16).map(async ({ h, pros }) => {
+      const centre = await centreDe(h.nom, h.pays, { zone: h.zone, population: h.population, principale: h.slug === h.base }).catch(() => null)
+      const montrees = pros.filter(p => {
+        if (p.ailleurs) return !!centre
+        if (p.lat !== null && p.lon !== null) return !centre || kmEntre(centre, { lat: p.lat, lon: p.lon }) <= 40
+        return !!centre && memePays(p.pays, h.pays)
+      })
+      if (!montrees.length) return
+      const ms = new Set<Metier>()
+      for (const p of montrees) (metiersDe.get(p.id) ?? []).forEach(m => ms.add(m))
+      sortie.push({ slug: h.slug, nom: h.nom, pays: h.pays, zone: h.zone, population: h.population, metiers: METIERS.filter(m => ms.has(m)) })
+    }))
+  }
+  return sortie.sort((a, b) => a.slug.localeCompare(b.slug))
 }
+
+/** Les mêmes villes, gardées une heure : le sitemap et l'accueil de la recherche les partagent. */
+export const villesAvecProsEnCache = unstable_cache(villesAvecPros, ['beaute-villes-avec-pros-v1'], { revalidate: 3600 })

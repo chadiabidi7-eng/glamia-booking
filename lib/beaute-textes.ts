@@ -45,6 +45,7 @@ export const TEXTES = {
     a: 'à',
     aPartirDe: (prix: string) => `À partir de ${prix}`,
     villesProches: 'Villes proches',
+    villesTitre: 'Les pros beauté par ville',
     seo: {
       accueilTitre: 'Trouve ta pro beauté près de chez toi | Glamia',
       accueilDescription: 'Manucure, cils, coiffure, soins : les pros beauté près de chez toi, leurs disponibilités, leurs prix et leurs avis. Réserve en ligne en quelques secondes.',
@@ -93,6 +94,7 @@ export const TEXTES = {
     a: 'in',
     aPartirDe: (prix: string) => `From ${prix}`,
     villesProches: 'Nearby cities',
+    villesTitre: 'Beauty pros by city',
     seo: {
       accueilTitre: 'Find your beauty pro near you | Glamia',
       accueilDescription: 'Nails, lashes, hair, facials: beauty pros near you, their availability, prices and reviews. Book online in seconds.',
@@ -140,6 +142,7 @@ export const TEXTES = {
     a: 'en',
     aPartirDe: (prix: string) => `Desde ${prix}`,
     villesProches: 'Ciudades cercanas',
+    villesTitre: 'Profesionales de belleza por ciudad',
     seo: {
       accueilTitre: 'Encuentra tu profesional de belleza cerca de ti | Glamia',
       accueilDescription: 'Uñas, pestañas, peluquería, tratamientos: profesionales de belleza cerca de ti, su disponibilidad, precios y reseñas. Reserva online en segundos.',
@@ -187,6 +190,7 @@ export const TEXTES = {
     a: 'a',
     aPartirDe: (prix: string) => `Da ${prix}`,
     villesProches: 'Città vicine',
+    villesTitre: 'Professioniste della bellezza per città',
     seo: {
       accueilTitre: 'Trova la tua professionista della bellezza vicino a te | Glamia',
       accueilDescription: 'Unghie, ciglia, capelli, trattamenti: le professioniste della bellezza vicino a te, i loro orari liberi, i prezzi e le recensioni. Prenota online in pochi secondi.',
