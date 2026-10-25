@@ -237,12 +237,15 @@ export async function centreDe(nom: string, pays: string, indice?: { zone: strin
     const trouve = await centreParRegion(nom, pays, indice)
     // Pas trouvée avec sa région : pour la ville principale du nom (l'adresse
     // simple), on garde l'ancienne recherche, comme avant le 25 octobre.
-    if (trouve || !indice.principale) return trouve
+    // En France, la Base Adresse a déjà été interrogée par le nom : un lieu-dit
+    // qui n'est pas une commune (« Plan de Campagne ») n'a pas de centre, plutôt
+    // qu'un centre pris dans une autre ville.
+    if (trouve || !indice.principale || famillePays(pays) === 'FR') return trouve
   }
   return centreSimple(nom, pays)
 }
 
-async function centreParRegion(nom: string, pays: string, indice: { zone: string | null; population: number }): Promise<{ lat: number; lon: number } | null> {
+async function centreParRegion(nom: string, pays: string, indice: { zone: string | null; population: number; principale?: boolean }): Promise<{ lat: number; lon: number } | null> {
   {
     try {
       if (famillePays(pays) === 'FR') {
@@ -252,7 +255,7 @@ async function centreParRegion(nom: string, pays: string, indice: { zone: string
         const memeNom = features.filter(f => aplatir(f.properties?.name ?? '').replace(/[^a-z0-9]/g, '') === aplatir(nom).replace(/[^a-z0-9]/g, ''))
         const z = aplatir(indice.zone ?? '')
         // Plusieurs villes de ce nom et aucune dans sa région : on ne devine pas.
-        const f = (z ? memeNom.find(x => aplatir(x.properties?.context ?? '').includes(z)) : null) ?? (memeNom.length === 1 ? memeNom[0] : undefined)
+        const f = (z ? memeNom.find(x => aplatir(x.properties?.context ?? '').includes(z)) : null) ?? (memeNom.length === 1 || indice.principale ? memeNom[0] : undefined)
         const c = f?.geometry?.coordinates
         return Array.isArray(c) ? { lon: c[0], lat: c[1] } : null
       }
@@ -715,7 +718,7 @@ export async function villesAvecPros(): Promise<VilleAvecPros[]> {
     await Promise.all(entrees.slice(i, i + 16).map(async ({ h, pros }) => {
       const centre = await centreDe(h.nom, h.pays, { zone: h.zone, population: h.population, principale: h.slug === h.base }).catch(() => null)
       const montrees = pros.filter(p => {
-        if (p.ailleurs) return !!centre
+        if (p.ailleurs) return true   // la page la pose au centre de la ville qu'elle a choisie
         if (p.lat !== null && p.lon !== null) return !centre || kmEntre(centre, { lat: p.lat, lon: p.lon }) <= 40
         return !!centre && memePays(p.pays, h.pays)
       })
