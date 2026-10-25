@@ -27,6 +27,14 @@ function listeMetiers(ms: Metier[], langue: Langue): string {
   return noms.map((n, i) => (i === 0 || langue === 'en' ? n : n.toLowerCase())).join(', ')
 }
 
+/**
+ * Le nom à écrire pour Google : « Valence (Tarn-et-Garonne) » quand une ville
+ * plus peuplée porte le même nom (25 oct. 2026) — sinon deux pages auraient le
+ * même titre, et Google n'en garderait qu'une.
+ */
+export const nomPourGoogle = (v: NonNullable<DonneesVille>['ville']) =>
+  v.base && v.slug !== v.base && v.zone ? `${v.nom} (${v.zone})` : v.nom
+
 export const adresseVille = (slug: string, metier?: Metier | null) =>
   `${siteRecherche()}/beaute/${slug}${metier ? `/${METIER_SLUG[metier]}` : ''}`
 
@@ -36,6 +44,7 @@ export const prosDeLaPage = (d: NonNullable<DonneesVille>, metier?: Metier | nul
 
 export function metadataVille(d: DonneesVille, langue: Langue, metier?: Metier | null): Metadata {
   if (!d) return { robots: { index: false, follow: false } }
+  const nomVille = nomPourGoogle(d.ville)
   const S = TEXTES[langue].seo
   const pros = prosDeLaPage(d, metier)
   const dansLaVille = pros.filter(p => !p.prochaine)
@@ -43,9 +52,9 @@ export function metadataVille(d: DonneesVille, langue: Langue, metier?: Metier |
   const prix = base.some(p => p.prixMin), avis = base.some(p => p.note !== null)
   const metiersTitre = metier ? S.metiers[metier] : listeMetiers(metiersFrequents(base, 3), langue)
   const title = dansLaVille.length
-    ? S.villeTitre(metiersTitre, d.ville.nom, dansLaVille.length, S.plus(prix, avis))
-    : pros.length ? S.procheTitre(metiersTitre, d.ville.nom, pros.length) : S.videTitre(metiersTitre, d.ville.nom)
-  const description = S.villeDescription(d.ville.nom,
+    ? S.villeTitre(metiersTitre, nomVille, dansLaVille.length, S.plus(prix, avis))
+    : pros.length ? S.procheTitre(metiersTitre, nomVille, pros.length) : S.videTitre(metiersTitre, nomVille)
+  const description = S.villeDescription(nomVille,
     metier ? S.metiers[metier] : listeMetiers(metiersFrequents(base, 5), langue), prix, avis)
   const url = adresseVille(d.ville.slug, metier)
   return {
@@ -79,14 +88,14 @@ export function donneesStructurees(d: NonNullable<DonneesVille>, langue: Langue,
   const fil = [
     { name: 'Glamia', item: 'https://glamia.pro' },
     { name: S.beaute, item: `${siteRecherche()}/beaute` },
-    { name: d.ville.nom, item: adresseVille(d.ville.slug) },
+    { name: nomPourGoogle(d.ville), item: adresseVille(d.ville.slug) },
     ...(metier ? [{ name: S.metiers[metier], item: adresseVille(d.ville.slug, metier) }] : []),
   ]
   const graphe = [
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: metier ? `${S.metiers[metier]} — ${d.ville.nom}` : d.ville.nom,
+      name: metier ? `${S.metiers[metier]} — ${nomPourGoogle(d.ville)}` : nomPourGoogle(d.ville),
       numberOfItems: pros.length,
       itemListElement: pros.map((p, i) => ({
         '@type': 'ListItem',
