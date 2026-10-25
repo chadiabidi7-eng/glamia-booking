@@ -22,7 +22,13 @@ const NB_VILLES = 30
 
 async function grandesVilles(): Promise<VilleAvecPros[]> {
   try {
-    const villes = await villesAvecProsEnCache()
+    // La liste se refait au plus une fois par heure (une quinzaine de secondes) :
+    // la cliente n'attend jamais plus de quatre secondes — sans liste, l'accueil
+    // s'affiche comme avant, et les liens reviennent au passage suivant.
+    const villes = await Promise.race([
+      villesAvecProsEnCache(),
+      new Promise<VilleAvecPros[]>(ok => setTimeout(() => ok([]), 4000)),
+    ])
     return [...villes].sort((a, b) => b.population - a.population || a.nom.localeCompare(b.nom)).slice(0, NB_VILLES)
   } catch {
     return []   // sans la liste, l'accueil reste ce qu'il était
