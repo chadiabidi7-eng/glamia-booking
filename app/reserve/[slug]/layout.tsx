@@ -46,6 +46,30 @@ function referencee(pro: { referencement_google?: unknown; pro_pay_actif?: unkno
   return pro.referencement_google === true && pro.pro_pay_actif === true && pro.compte_test !== true
 }
 
+/**
+ * SA VILLE, ÉCRITE COMME GOOGLE L'ATTEND (25 oct. 2026) — pages référencées seulement.
+ *
+ * Les pros écrivent « istres 13800 », « Craon 53400 », « Paris, Nanterre » :
+ * c'est ce texte qui partait dans le titre, la fiche et les données
+ * structurées. Une cliente tape « manucure Istres » ; on lui montre le nom
+ * officiel de la commune quand on le reconnaît, la version nettoyée sinon.
+ * Lu une seule fois par affichage (titre et fiche le partagent).
+ */
+const villeDeLaPro = cache(async (slug: string): Promise<{ nom: string; slug: string | null } | null> => {
+  const p = (await profilDuSlug(slug)) as Record<string, unknown> | null
+  if (!p) return null
+  const brut = (typeof p.ville_affichee === 'string' && p.ville_affichee.trim())
+    || (typeof p.ville === 'string' && p.ville.trim())
+    || (typeof p.adresse_publique === 'string' ? p.adresse_publique : '')
+  const lisible = villeLisible(brut)
+  if (!lisible) return null
+  try {
+    const v = await villeConnue(lisible)
+    if (v) return v
+  } catch { /* la ville nettoyée suffit */ }
+  return { nom: lisible, slug: null }
+})
+
 /** Le nom que la cliente voit sur la page : le pseudo d'abord, le prénom sinon. */
 // LE MÊME QUE SUR LA PAGE, ET C'EST TOUT L'ENJEU. Le titre annonçait
 // « prénom nom » quand la page affichait le pseudo : une pro qui travaille
@@ -206,7 +230,13 @@ export async function generateMetadata(
     // de Londres ne veut pas d'un aperçu en français sous son nom.
     const langue = (pro as { langue?: string }).langue
     const nom = nomPublic(pro)
-    const ville = villeLisible((pro as { adresse_publique?: unknown }).adresse_publique)
+    const ville = referencee(pro)
+      ? ((await villeDeLaPro(slug))?.nom ?? '')
+      : villeLisible((pro as { adresse_publique?: unknown }).adresse_publique)
+    const avatar = typeof (pro as { avatar_url?: unknown }).avatar_url === 'string' ? (pro as { avatar_url: string }).avatar_url : null
+    // L'APERÇU MONTRE LA PRO (25 oct. 2026) : sa photo plutôt que le logo,
+    // pour les pages référencées — c'est elle qu'on vend, pas Glamia.
+    const imageApercu = referencee(pro) && avatar ? avatar : '/og-image.png'
 
     // ── CE QU'ELLE FAIT, ET OÙ ────────────────────────────────────────────
     // Les 1 146 pages annonçaient toutes « Réservez votre rendez-vous beauté
@@ -257,20 +287,15 @@ export async function generateMetadata(
         description,
         url: `/reserve/${slug}`,
         locale: langue === 'en' ? 'en_GB' : langue === 'es' ? 'es_ES' : langue === 'it' ? 'it_IT' : 'fr_FR',
-        images: [
-          {
-            url: '/og-image.png',
-            width: 1024,
-            height: 1024,
-            alt: 'Glamia',
-          },
-        ],
+        images: imageApercu === '/og-image.png'
+          ? [{ url: '/og-image.png', width: 1024, height: 1024, alt: 'Glamia' }]
+          : [{ url: imageApercu, alt: nom }],
       },
       twitter: {
         card: 'summary',
         title,
         description,
-        images: ['/og-image.png'],
+        images: [imageApercu],
       },
     }
   } catch {
@@ -320,23 +345,29 @@ export default async function ReserveLayout({
       const catalogue = (profil as { prestations?: { data?: unknown } | { data?: unknown }[] }).prestations
       const bloc = Array.isArray(catalogue) ? catalogue[0]?.data : catalogue?.data
       const p = profil as Record<string, unknown>
-      const ville = (typeof p.ville_affichee === 'string' && p.ville_affichee.trim())
-        || (typeof p.ville === 'string' && p.ville.trim())
-        || villeLisible(p.adresse_publique)
+      const v = await villeDeLaPro(slug)
+      const ville = v?.nom ?? ''
       let note: { note: number; nombre: number } | null = null
+      // SES AVIS EN TOUTES LETTRES (25 oct. 2026). Les mots de ses clientes
+      // sont le seul texte que personne d'autre n'a : c'est ce qui rend sa
+      // page différente des 1 000 autres aux yeux de Google. Les cinq
+      // derniers avis écrits, ceux que la page affiche de toute façon.
+      let avis: { auteur: string; note: number; texte: string; date: string; importe: boolean }[] = []
       if (p.avis_actifs !== false) {
-        const { data } = await supabaseServer.from('avis_note_par_pro').select('note, nombre').eq('pro_id', p.id as string).maybeSingle()
+        const [{ data }, { data: derniers }] = await Promise.all([
+          supabaseServer.from('avis_note_par_pro').select('note, nombre').eq('pro_id', p.id as string).maybeSingle(),
+          supabaseServer.from('avis_clientes').select('auteur, note, texte, cree_le, source')
+            .eq('pro_id', p.id as string).is('retire_le', null).not('texte', 'is', null)
+            .order('cree_le', { ascending: false }).limit(5),
+        ])
         if (data && Number(data.nombre) > 0) note = { note: Number(data.note), nombre: Number(data.nombre) }
+        avis = (derniers ?? [])
+          .filter(a => typeof a.texte === 'string' && a.texte.trim().length > 0)
+          .map(a => ({ auteur: String(a.auteur ?? '').trim(), note: Number(a.note), texte: String(a.texte).trim(), date: String(a.cree_le ?? ''), importe: !!a.source }))
       }
       // LE MAILLAGE (13 oct. 2026) : la fiche renvoie vers la page de sa ville
       // dans la recherche, si cette page existe. Pages référencées seulement.
-      let lienVille: { nom: string; url: string } | null = null
-      if (ville) {
-        try {
-          const v = await villeConnue(ville)
-          if (v) lienVille = { nom: v.nom, url: `${siteRecherche()}/beaute/${v.slug}` }
-        } catch { /* sans lien, la fiche reste la même */ }
-      }
+      const lienVille = v?.slug ? { nom: v.nom, url: `${siteRecherche()}/beaute/${v.slug}` } : null
       fiche = (
         <FicheServeur lienVille={lienVille} slug={slug} nom={nomPublic(profil)} langue={langue}
           metiers={metiers(p.specialite, p.categorie_autre_nom, langue)} ville={ville || null}
@@ -344,7 +375,7 @@ export default async function ReserveLayout({
           devise={typeof p.devise === 'string' ? p.devise : 'EUR'}
           bio={typeof p.bio === 'string' ? p.bio : null}
           image={typeof p.avatar_url === 'string' ? p.avatar_url : null}
-          catalogue={bloc} note={note} />
+          catalogue={bloc} note={note} avis={avis} />
       )
     }
   } catch {
