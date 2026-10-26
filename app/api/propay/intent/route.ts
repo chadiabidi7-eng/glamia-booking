@@ -441,6 +441,21 @@ export async function POST(req: NextRequest) {
     })
   } catch (e) {
     console.error('[api/propay/intent]', e)
+    // ── STRIPE REFUSE LA CAISSE : ON LAISSE RÉSERVER (26 oct. 2026) ─────────
+    // Le 26 octobre à 18h35, Stripe a fermé le compte de la plateforme : chaque
+    // demande de paiement revient refusée (« The Connect application's Stripe
+    // account must be activated »). La page prenait ce refus pour une panne et
+    // BLOQUAIT la réservation chez toutes les pros à acompte.
+    //
+    // Un REFUS de Stripe (requête refusée, droits retirés) n'est pas une panne
+    // passagère : réessayer ne servira à rien. On répond donc « pas d'acompte »,
+    // et la cliente réserve comme chez une pro sans acompte — la pro garde ses
+    // rendez-vous. Une vraie panne réseau (Stripe injoignable) bloque toujours,
+    // comme avant : elle passe en quelques secondes.
+    const genre = (e as { type?: string })?.type
+    if (genre === 'StripeInvalidRequestError' || genre === 'StripePermissionError' || genre === 'StripeAuthenticationError') {
+      return NextResponse.json({ actif: false, stripe_refuse: true })
+    }
     return NextResponse.json({ error: 'stripe_error' }, { status: 500 })
   }
 }
