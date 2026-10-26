@@ -452,8 +452,9 @@ export async function POST(req: NextRequest) {
     // et la cliente réserve comme chez une pro sans acompte — la pro garde ses
     // rendez-vous. Une vraie panne réseau (Stripe injoignable) bloque toujours,
     // comme avant : elle passe en quelques secondes.
-    const genre = (e as { type?: string })?.type
-    if (genre === 'StripeInvalidRequestError' || genre === 'StripePermissionError' || genre === 'StripeAuthenticationError') {
+    // Un refus porte un code HTTP 4xx ; une panne réseau n'en a pas (ou 5xx).
+    const code = Number((e as { statusCode?: unknown })?.statusCode)
+    if (code >= 400 && code < 500 && code !== 429) {
       return NextResponse.json({ actif: false, stripe_refuse: true })
     }
     return NextResponse.json({ error: 'stripe_error' }, { status: 500 })
