@@ -151,6 +151,9 @@
       "other": ", appliquée automatiquement à vos %{count} prochains rendez-vous."
     },
     "offresEnCours": "Offres en cours",
+    "offrePeriode": "Pour les rendez-vous du %{debut} au %{fin}",
+    "offreJusquau": "Pour les rendez-vous jusqu'au %{fin}",
+    "offreAPartirDu": "Pour les rendez-vous à partir du %{debut}",
     "voirMoins": "Voir moins",
     "voirPlus": "Voir plus",
     "reprogrammer": "Reprogrammer",

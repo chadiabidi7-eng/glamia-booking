@@ -151,6 +151,9 @@
       "other": ", que se aplica automáticamente a tus %{count} próximas citas."
     },
     "offresEnCours": "Ofertas activas",
+    "offrePeriode": "Para citas del %{debut} al %{fin}",
+    "offreJusquau": "Para citas hasta el %{fin}",
+    "offreAPartirDu": "Para citas a partir del %{debut}",
     "voirMoins": "Ver menos",
     "voirPlus": "Ver más",
     "reprogrammer": "Cambiar la fecha",

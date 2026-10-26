@@ -346,6 +346,23 @@ function formatDateCourte(dateStr: string) {
   })
 }
 
+/** « Pour les rendez-vous du 15 décembre au 25 décembre » : les jours où l'offre s'applique. */
+function periodeOffre(o: { date_debut?: string | null; date_fin?: string | null }): string {
+  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' })
+  if (o.date_debut && o.date_fin) return traduire('resa.offrePeriode', { debut: jour(o.date_debut), fin: jour(o.date_fin) })
+  if (o.date_fin) return traduire('resa.offreJusquau', { fin: jour(o.date_fin) })
+  if (o.date_debut) return traduire('resa.offreAPartirDu', { debut: jour(o.date_debut) })
+  return ''
+}
+
+/** Ce jour (AAAA-MM-JJ) tombe-t-il dans la période de l'offre ? Sans offre ni dates : oui. */
+function dansPeriodeOffre(o: { date_debut?: string | null; date_fin?: string | null } | null, jour: string): boolean {
+  if (!o) return true
+  if (o.date_debut && jour < o.date_debut.slice(0, 10)) return false
+  if (o.date_fin && jour > o.date_fin.slice(0, 10)) return false
+  return true
+}
+
 function formatRdvDate(isoStr: string) {
   const d = new Date(isoStr)
   const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
@@ -509,6 +526,13 @@ function OffresSection({
                     </span>
                     <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
                   </div>
+                  {/* LES DATES SONT CELLES DES RENDEZ-VOUS (26 oct. 2026) : on le dit
+                      à la cliente, puisque le calendrier n'ouvrira que ces jours-là. */}
+                  {(o.date_debut || o.date_fin) && (
+                    <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: PINK_TEXTE }}>
+                      {periodeOffre(o)}
+                    </p>
+                  )}
                   {/* Prestations — une par ligne avec icône spécialité */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {techInfos.map((t, i) => (
@@ -1922,7 +1946,7 @@ export default function ReservationPage() {
   // ── Offres éligibles ────────────────────────
   async function chargerOffresEligibles(proId: string, tel: string) {
     try {
-      const { data, error } = await supabase.rpc('get_eligible_offers', {
+      const { data, error } = await supabase.rpc('get_eligible_offers_v2', {
         p_pro_id: proId,
         p_telephone: tel,
       })
@@ -2617,7 +2641,19 @@ export default function ReservationPage() {
   useEffect(() => {
     if (step === 3 && pro && dureeTotal > 0) findPremierCreneau()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, pro, dureeTotal, avecQui])
+  }, [step, pro, dureeTotal, avecQui, offreAppliquee?.id])
+
+  // UNE OFFRE DE DÉCEMBRE OUVRE LE CALENDRIER EN DÉCEMBRE (26 oct. 2026) :
+  // sinon la cliente arrive sur un mois entièrement grisé et croit qu'il n'y a rien.
+  useEffect(() => {
+    if (step !== 3 || !offreAppliquee?.date_debut) return
+    const debut = offreAppliquee.date_debut.slice(0, 10)
+    if (debut <= todayStr) return
+    const [a, m] = debut.split('-').map(Number)
+    setCalYear(a)
+    setCalMonth(m - 1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, offreAppliquee?.id])
 
   // ── Jours complets du mois affiché ────────────────────────────────────────
   // Le calendrier ne connaissait que « passé » et « jour off » : un jour plein
@@ -2703,6 +2739,8 @@ export default function ReservationPage() {
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
         if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
         if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+        // Avec une offre datée, le « prochain créneau » se cherche dans ses jours.
+        if (!dansPeriodeOffre(offreAppliquee, dateStr)) continue
         aTester.push(dateStr)
       }
 
@@ -3159,7 +3197,7 @@ export default function ReservationPage() {
       // Appliquer l'offre si sélectionnée
       if (nouveau?.id && offreAppliquee) {
         try {
-          const result = await supabase.rpc('apply_offer_to_rdv', {
+          const result = await supabase.rpc('apply_offer_to_rdv_v2', {
             p_offre_id: offreAppliquee.id,
             p_rdv_id: nouveau.id,
             p_telephone: telNormalized,
@@ -4948,7 +4986,9 @@ export default function ReservationPage() {
                 // Un jour complet reste CLIQUABLE : c'est justement là qu'on
                 // propose la liste d'attente. Il garde son apparence « complet »
                 // pour ne pas faire espérer un créneau, mais la porte est ouverte.
-                const isDisabled = isPast || isOff
+                // Une offre datée n'ouvre que ses jours (26 oct. 2026).
+                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr)
+                const isDisabled = isPast || isOff || horsOffre
                 const isSelected = date === dateStr
 
                 return (
@@ -4958,7 +4998,7 @@ export default function ReservationPage() {
                     isSelected={isSelected}
                     isToday={dateStr === todayStr}
                     isPast={isPast}
-                    isOff={isOff && !isPast}
+                    isOff={(isOff || horsOffre) && !isPast}
                     isComplet={isComplet}
                     isDisabled={isDisabled}
                     onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setAttenteOuverte(false); setAttenteEtat('repos'); setStep(4) } }}
