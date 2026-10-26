@@ -151,6 +151,9 @@
       "other": ", applicato in automatico ai tuoi prossimi %{count} appuntamenti."
     },
     "offresEnCours": "Offerte in corso",
+    "offrePeriode": "Per appuntamenti dal %{debut} al %{fin}",
+    "offreJusquau": "Per appuntamenti fino al %{fin}",
+    "offreAPartirDu": "Per appuntamenti dal %{debut}",
     "voirMoins": "Mostra meno",
     "voirPlus": "Mostra di più",
     "reprogrammer": "Sposta",

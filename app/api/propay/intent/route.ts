@@ -320,7 +320,7 @@ export async function POST(req: NextRequest) {
   // cesserait de s'afficher perdrait des réservations pour un chantier de
   // sécurité. La création du rendez-vous, elle, refuse — c'est là que l'argent
   // s'engage vraiment.
-  const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id)
+  const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id, body.date)
   // La majoration du créneau (Ultra), relue chez la pro : le même prix que
   // celui que la création du rendez-vous enregistrera.
   const majoration = panier ? await majorationDuCreneau(proId, String(body.date ?? ''), String(body.heure ?? '')) : null

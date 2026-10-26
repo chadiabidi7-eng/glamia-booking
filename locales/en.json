@@ -151,6 +151,9 @@
       "other": ", applied automatically to your next %{count} appointments."
     },
     "offresEnCours": "Offers running",
+    "offrePeriode": "For appointments from %{debut} to %{fin}",
+    "offreJusquau": "For appointments until %{fin}",
+    "offreAPartirDu": "For appointments from %{debut}",
     "voirMoins": "See less",
     "voirPlus": "See more",
     "reprogrammer": "Move it",

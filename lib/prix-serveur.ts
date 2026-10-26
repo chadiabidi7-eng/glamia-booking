@@ -88,6 +88,8 @@ export async function prixReelDuPanier(
   proId: string,
   demandees: unknown,
   offreDemandee?: unknown,
+  /** Le jour du rendez-vous (AAAA-MM-JJ) : une offre datée ne vaut que pour ses jours. */
+  jourRdv?: unknown,
 ): Promise<PrixReel | null> {
   if (!Array.isArray(demandees) || demandees.length === 0) return null
 
@@ -100,7 +102,7 @@ export async function prixReelDuPanier(
   const catalogue = (data?.data ?? null) as Record<string, PrestationCatalogue[]> | null
   if (!catalogue) return null
 
-  const offre = await offreValide(proId, offreDemandee)
+  const offre = await offreValide(proId, offreDemandee, jourRdv)
   /** Cette prestation est-elle couverte par l'offre ? (même test que la page :
       l'offre désigne des identifiants, le panier des noms.) */
   const couverte = (nom: string, categorie: string) =>
@@ -160,6 +162,7 @@ export async function prixReelDuPanier(
 async function offreValide(
   proId: string,
   offreDemandee: unknown,
+  jourRdv?: unknown,
 ): Promise<{ prix_promo: number; prestations_ids: string[] } | null> {
   if (typeof offreDemandee !== 'string' || !/^[0-9a-f-]{36}$/i.test(offreDemandee)) return null
 
@@ -171,9 +174,16 @@ async function offreValide(
     .maybeSingle()
   if (!data || data.active !== true || data.archived_at) return null
 
+  // LES DATES D'UNE OFFRE SONT CELLES DES RENDEZ-VOUS (26 oct. 2026), plus la
+  // période où l'on peut réserver : une offre du 15 au 25 décembre se réserve
+  // dès aujourd'hui, pour un rendez-vous entre le 15 et le 25 décembre.
   const aujourdhui = new Date().toISOString().slice(0, 10)
-  if (data.date_debut && aujourdhui < String(data.date_debut).slice(0, 10)) return null
-  if (data.date_fin && aujourdhui > String(data.date_fin).slice(0, 10)) return null
+  const jour = typeof jourRdv === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(jourRdv) ? jourRdv : null
+  const debut = data.date_debut ? String(data.date_debut).slice(0, 10) : null
+  const fin = data.date_fin ? String(data.date_fin).slice(0, 10) : null
+  if (fin && aujourdhui > fin) return null
+  if (jour && debut && jour < debut) return null
+  if (jour && fin && jour > fin) return null
 
   const prix = Number(data.prix_promo)
   if (!Number.isFinite(prix) || prix < 0) return null
