@@ -36,7 +36,12 @@ export async function POST(req: NextRequest) {
     const cible = normaliserTelephone(telephone)
     // Un numéro trop court reconnaîtrait n'importe qui : on refuse plutôt que
     // de renvoyer une cliente au hasard à quelqu'un qui tâtonne.
-    if (cible.length < 9) {
+    // 8 CHIFFRES SUFFISENT (27 oct. 2026). Le seuil était à 9 alors que la page
+    // laisse continuer dès 8 : une cliente gabonaise qui tapait « 77 12 34 56 »
+    // passait l'étape, puis sa fiche n'était jamais créée, et la validation la
+    // renvoyait sans fin au choix de l'heure (« créneau pris »). Le Danemark, la
+    // Norvège ou Singapour ont aussi des numéros à 8 chiffres.
+    if (cible.length < 8) {
       return NextResponse.json({ cliente: null })
     }
 

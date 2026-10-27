@@ -159,7 +159,7 @@ type Config = Reglage & {
 async function ficheClienteParTelephone(proId: string, telephone: unknown): Promise<string | null> {
   if (typeof telephone !== 'string') return null
   const cible = normaliserTelephone(telephone)
-  if (cible.length < 9) return null
+  if (cible.length < 8) return null
   const { data: clientes } = await supabaseAdmin
     .from('clientes').select('id, telephone').eq('pro_id', proId)
   // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
@@ -186,7 +186,7 @@ async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise
   // dans ce sens demanderait trop d'argent à une fidèle.
   if (typeof telephone !== 'string') return false
   const cible = normaliserTelephone(telephone)
-  if (cible.length < 9) return false
+  if (cible.length < 8) return false
   try {
     const { data: clientes, error } = await supabaseAdmin
       .from('clientes').select('id, telephone').eq('pro_id', proId)
