@@ -19,12 +19,6 @@ import i18n from '@/lib/i18n';
 // réservation, depuis l'app, ou en tapant l'adresse. Les liens qui y mènent
 // ajoutent la langue — /cgu?lang=en. Sans rien, c'est le français, exactement
 // ce que voient les pros d'aujourd'hui.
-//
-// ── CE QUI RESTE VRAI ───────────────────────────────────────────────────────
-//
-// Ce texte est écrit pour protéger Glamia et la pro autant que possible, mais
-// il n'a été relu par aucun juriste — ni en français, ni en anglais. Le faire
-// relire reste la bonne chose à faire, dans les deux langues.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Section = { titre: string; paragraphes: string[]; liste?: string[] };
