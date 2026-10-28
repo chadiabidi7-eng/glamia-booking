@@ -459,7 +459,7 @@
   },
   "cgu": {
     "titre": "Terms of Use",
-    "maj": "Last updated: 27 September 2026",
+    "maj": "Last updated: 28 October 2026",
     "contact": "For any question:",
     "sections": [
       {
@@ -511,6 +511,7 @@
         "paragraphes": [
           "Glamia Pay lets you ask for a deposit, hold a card on file, take card payments and send payment links. Payments are processed by Stripe. Glamia is not a bank and never holds your money: funds move from your client to your own connected account.",
           "You are responsible for the prices you set, for the cancellation and no-show terms you display to your clients, for issuing any refund you owe, and for your own tax and accounting obligations.",
+          "The income you receive through Glamia is taxable and must be declared. In France, you must declare it to the tax authorities (impots.gouv.fr) and declare your social contributions to Urssaf (urssaf.fr; for micro-entrepreneurs: autoentrepreneur.urssaf.fr). If you work outside France, these steps are carried out with the authorities of your country. In accordance with Article 242 bis of the French General Tax Code, we remind you of these obligations and, where the law requires it (Articles 1649 ter A et seq. of the same code), we report to the tax authorities the amounts you received through Glamia.",
           "Where you charge a card on file for a no-show, you must have shown your client the conditions before she paid or authorised the card. Chargebacks and disputes raised by your clients are between you and your client; we will give you the records we hold to help you respond."
         ]
       },
