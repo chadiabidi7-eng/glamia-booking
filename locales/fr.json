@@ -459,7 +459,7 @@
   },
   "cgu": {
     "titre": "Conditions Générales d'Utilisation",
-    "maj": "Dernière mise à jour : 27 septembre 2026",
+    "maj": "Dernière mise à jour : 28 octobre 2026",
     "contact": "Pour toute question :",
     "sections": [
       {
@@ -511,6 +511,7 @@
         "paragraphes": [
           "Glamia Pay vous permet de demander un acompte, de garder une empreinte bancaire, d'encaisser par carte et d'envoyer des liens de paiement. Les paiements sont traités par Stripe. Glamia n'est pas une banque et ne détient jamais votre argent : les fonds vont de votre cliente à votre propre compte connecté.",
           "Vous restez responsable des prix que vous fixez, des conditions d'annulation et d'absence que vous affichez à vos clientes, des remboursements que vous devez, et de vos obligations fiscales et comptables.",
+          "Les revenus que vous encaissez grâce à Glamia sont imposables et doivent être déclarés. En France, vous devez les déclarer à l'administration fiscale (impots.gouv.fr) et déclarer vos cotisations sociales à l'Urssaf (urssaf.fr ; pour les micro-entrepreneurs : autoentrepreneur.urssaf.fr). Si vous exercez hors de France, ces démarches se font auprès des administrations de votre pays. Conformément à l'article 242 bis du Code général des impôts, nous vous rappelons ces obligations, et lorsque la loi l'exige (articles 1649 ter A et suivants du même code), nous transmettons à l'administration fiscale les montants que vous avez perçus par l'intermédiaire de Glamia.",
           "Lorsque vous prélevez une empreinte pour une absence, vous devez avoir affiché les conditions à votre cliente AVANT qu'elle ne paie ou n'autorise sa carte. Les contestations bancaires opposent votre cliente et vous ; nous vous remettrons les traces dont nous disposons pour vous aider à y répondre."
         ]
       },

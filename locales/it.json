@@ -459,7 +459,7 @@
   },
   "cgu": {
     "titre": "Condizioni generali d'uso",
-    "maj": "Ultimo aggiornamento: 24 ottobre 2026",
+    "maj": "Ultimo aggiornamento: 28 ottobre 2026",
     "contact": "Per qualsiasi domanda:",
     "sections": [
       {
@@ -511,6 +511,7 @@
         "paragraphes": [
           "Glamia Pay ti permette di chiedere una caparra, di tenere una carta a garanzia, di incassare con carta e di inviare link di pagamento. I pagamenti sono gestiti da Stripe. Glamia non è una banca e non trattiene mai i tuoi soldi: i fondi vanno dalla tua cliente direttamente al tuo account collegato.",
           "Resti responsabile dei prezzi che fissi, delle condizioni di disdetta e di mancata presentazione che mostri alle tue clienti, dei rimborsi che devi e dei tuoi obblighi fiscali e contabili.",
+          "I redditi che incassi tramite Glamia sono imponibili e devono essere dichiarati. In Francia devi dichiararli all'amministrazione fiscale (impots.gouv.fr) e dichiarare i tuoi contributi sociali all'Urssaf (urssaf.fr; per i micro-imprenditori: autoentrepreneur.urssaf.fr). Se eserciti fuori dalla Francia, questi adempimenti si svolgono presso le amministrazioni del tuo paese. Ai sensi dell'articolo 242 bis del Codice generale delle imposte francese, ti ricordiamo questi obblighi e, quando la legge lo richiede (articoli 1649 ter A e seguenti dello stesso codice), comunichiamo all'amministrazione fiscale gli importi che hai percepito tramite Glamia.",
           "Quando addebiti una carta a garanzia per una mancata presentazione, devi aver mostrato le condizioni alla tua cliente PRIMA che paghi o autorizzi la sua carta. Le contestazioni bancarie riguardano te e la tua cliente; ti forniremo le tracce in nostro possesso per aiutarti a rispondere."
         ]
       },

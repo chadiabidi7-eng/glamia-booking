@@ -467,7 +467,7 @@
   },
   "cgu": {
     "titre": "Condiciones Generales de Uso",
-    "maj": "Última actualización: 27 de septiembre de 2026",
+    "maj": "Última actualización: 28 de octubre de 2026",
     "contact": "Para cualquier duda:",
     "sections": [
       {
@@ -519,6 +519,7 @@
         "paragraphes": [
           "Glamia Pay te permite pedir un anticipo, guardar una retención en tarjeta, cobrar con tarjeta y enviar enlaces de pago. Los pagos los procesa Stripe. Glamia no es un banco y nunca retiene tu dinero: los fondos van de tu clienta a tu propia cuenta conectada.",
           "Sigues siendo responsable de los precios que fijas, de las condiciones de cancelación y de ausencia que muestras a tus clientas, de las devoluciones que debas hacer y de tus obligaciones fiscales y contables.",
+          "Los ingresos que cobras a través de Glamia están sujetos a impuestos y deben declararse. En Francia, debes declararlos a la administración tributaria (impots.gouv.fr) y declarar tus cotizaciones sociales a la Urssaf (urssaf.fr; para microempresarios: autoentrepreneur.urssaf.fr). Si ejerces fuera de Francia, estos trámites se realizan ante las administraciones de tu país. De conformidad con el artículo 242 bis del Código General de Impuestos francés, te recordamos estas obligaciones y, cuando la ley lo exige (artículos 1649 ter A y siguientes del mismo código), comunicamos a la administración tributaria los importes que has percibido a través de Glamia.",
           "Cuando cobras una retención por una ausencia, debes haber mostrado las condiciones a tu clienta ANTES de que pagara o autorizara su tarjeta. Las reclamaciones bancarias son un asunto entre tu clienta y tú; te entregaremos los registros de que dispongamos para ayudarte a responder."
         ]
       },
