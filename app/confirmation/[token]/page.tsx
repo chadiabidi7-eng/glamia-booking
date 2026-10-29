@@ -635,7 +635,7 @@ import { traduire } from '@/lib/i18n';
                     href={`https://instagram.com/${rdv.delai_modif.instagram}`}
                     target="_blank" rel="noopener noreferrer"
                     data-delai-modif="instagram"
-                    style={{ display: 'block', fontSize: 13, color: PINK, textAlign: 'center', lineHeight: 1.4 }}
+                    style={{ display: 'block', fontSize: 13, color: PINK, textAlign: 'center', lineHeight: 1.4, textDecoration: 'underline', textUnderlineOffset: 2 }}
                   >{rdv.delai_modif.message}</a>
                 ) : (
                   <p data-delai-modif="direct" style={{ margin: 0, fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{rdv.delai_modif.message}</p>

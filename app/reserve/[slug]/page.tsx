@@ -4453,7 +4453,7 @@ export default function ReservationPage() {
                                 href={`https://instagram.com/${delaiModif.instagram}`}
                                 target="_blank" rel="noopener noreferrer"
                                 data-delai-modif="instagram"
-                                style={{ display: 'block', marginTop: 8, fontSize: 12, color: PINK_TEXTE, textAlign: 'center', lineHeight: 1.4 }}
+                                style={{ display: 'block', marginTop: 8, fontSize: 12, color: PINK_TEXTE, textAlign: 'center', lineHeight: 1.4, textDecoration: 'underline', textUnderlineOffset: 2 }}
                               >{texteDelaiModif()}</a>
                             ) : (
                               <p data-delai-modif="direct" style={{ margin: '8px 0 0', fontSize: 12, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{texteDelaiModif()}</p>
