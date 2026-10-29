@@ -5,6 +5,7 @@ import { instantReel, maintenantCommeRdv } from '@/lib/heure-pro'
 import { prestationsLisibles } from '@/lib/nomsPrestations'
 import { avisFenetreMs } from '@/lib/reglages'
 import { normaliserTelephone } from '@/lib/telephone'
+import { COLONNES_DELAI_MODIF, delaiModifDepasse, infosDelaiModif } from '@/lib/delai-modif'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — ce qui appartient à UNE cliente : ses rendez-vous à venir
@@ -121,7 +122,9 @@ export async function POST(req: NextRequest) {
     // « À venir » à l'heure de la pro (12 oct. 2026) : aux Antilles, le rendez-vous
     // disparaissait 4 h avant l'heure et la cliente ne pouvait plus l'annuler.
     const { data: fuseauPro } = await supabaseAdmin
-      .from('profiles').select('timezone').eq('id', pro_id).maybeSingle()
+      .from('profiles').select(COLONNES_DELAI_MODIF).eq('id', pro_id).maybeSingle()
+    // Le délai choisi par la pro pour déplacer ou annuler en ligne (29 oct. 2026).
+    const delaiModif = infosDelaiModif(fuseauPro as never)
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
       .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le, praticienne_id')
@@ -157,6 +160,10 @@ export async function POST(req: NextRequest) {
       const p = parRdv.get(r.id as string)
       return {
         ...r,
+        // Passé le délai de la pro : Reprogrammer et Annuler grisés.
+        modif_bloquee: delaiModif
+          ? delaiModifDepasse(r.date as string, (fuseauPro as { timezone?: string | null } | null)?.timezone, delaiModif.heures)
+          : false,
         paiement: p
           ? {
               montant: p.montant as number,
@@ -179,6 +186,8 @@ export async function POST(req: NextRequest) {
       rdvs: rdvsAvecPaiement,
       fidelite: fidelite ?? null,
       delai_annulation: delaiAnnulation,
+      // null = à tout moment. Sinon : le délai, le nom à contacter, son Instagram.
+      delai_modif: delaiModif,
       avis_a_laisser: await avisPromis,
     })
   } catch (e) {

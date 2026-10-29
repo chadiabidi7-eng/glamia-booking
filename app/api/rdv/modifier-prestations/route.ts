@@ -6,6 +6,7 @@ import { delaiAvant } from '@/lib/heure-pro'
 import { jugerDeplacement, librePour, personnesDuRdv, techniquesPropres } from '@/lib/deplacement'
 import { assistanteValide, dureeChezAssistante } from '@/lib/equipe'
 import { messageModification, prevenirDuDeplacement } from '@/lib/notif-deplacement'
+import { refusDelaiModif } from '@/lib/delai-modif'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -82,6 +83,12 @@ export async function POST(req: NextRequest) {
 
   // Modif AVEC changement de date → mêmes gardes que le décalage
   if (newDate) {
+    // Le délai choisi par la pro : seulement si l'heure change vraiment.
+    // Changer ses soins sans bouger l'heure reste permis.
+    if (new Date(newDate).getTime() !== new Date(rdv.date as string).getTime()) {
+      const refusDelai = await refusDelaiModif(supabaseAdmin, rdv.pro_id as string, rdv.date as string)
+      if (refusDelai) return NextResponse.json(refusDelai, { status: 403 })
+    }
     if (await decalageBloque(rdv.id, rdv.date as string, rdv.pro_id as string)) {
       return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
     }

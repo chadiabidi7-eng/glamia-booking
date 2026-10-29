@@ -167,7 +167,12 @@ type RdvAVenir = {
   date_change_pro_le?: string | null
   /** ÉQUIPE : qui le fait (null = la pro). */
   praticienne_id?: string | null
+  /** Passé le délai fixé par la pro : plus de déplacement ni d'annulation en ligne. */
+  modif_bloquee?: boolean
 }
+
+/** Le délai fixé par la pro pour déplacer ou annuler en ligne (null = à tout moment). */
+type DelaiModif = { heures: number; contact: string; instagram: string | null }
 
 
 // ─────────────────────────────────────────────
@@ -1222,6 +1227,8 @@ export default function ReservationPage() {
   // Le délai fixé par la pro : au-delà, l'annulation est remboursée ; en deçà,
   // la somme lui reste. La cliente doit le savoir AVANT de confirmer.
   const [delaiAnnulation,   setDelaiAnnulation]    = useState(24)
+  // Jusqu'à quand elle peut déplacer ou annuler en ligne (réglage de la pro).
+  const [delaiModif,        setDelaiModif]         = useState<DelaiModif | null>(null)
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
 
   // ── Inspirations sur un RDV existant (bouton « Mes inspirations ») ──
@@ -2070,9 +2077,10 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite, rdvs, delai_annulation, avis_a_laisser } = await rep.json()
+      const { fidelite, rdvs, delai_annulation, avis_a_laisser, delai_modif } = await rep.json()
       setFideliteFiche(fidelite ?? null)
       setRdvsAVenir(rdvs ?? [])
+      setDelaiModif(delai_modif ?? null)
       setAvisAlaisser(avis_a_laisser ?? [])
       if (typeof delai_annulation === 'number') setDelaiAnnulation(delai_annulation)
     } catch (e) {
@@ -2150,7 +2158,13 @@ export default function ReservationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rdv_id: rdvId, telephone }),
       })
-      if (!res.ok) throw new Error('annulation_echouee')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        // Passé le délai de la pro (page ouverte depuis longtemps) : on le dit
+        // dans la page, sous le rendez-vous, sans fenêtre.
+        if (d?.error === 'delai_modif_depasse') { bloquerModifRdv(rdvId, d.delai_modif); return }
+        throw new Error('annulation_echouee')
+      }
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
       // Carte de fidélité et réduction limitée : entièrement traitées par le
@@ -2221,6 +2235,24 @@ export default function ReservationPage() {
     if (window.confirm(traduire('resa.confirmerAnnulation', { date: dateLabel, heure: heureLabel, prestation: rdv.technique, avertissement }))) {
       handleAnnulerRdv(rdv.id)
     }
+  }
+
+  // ── Délai de la pro dépassé ──────────────────
+  // Le serveur a refusé (la page était ouverte depuis longtemps) : le rendez-vous
+  // passe en « grisé » avec la ligne qui l'envoie vers sa pro. Pas de fenêtre.
+  function bloquerModifRdv(rdvId: string, infos?: DelaiModif | null) {
+    if (infos && typeof infos.heures === 'number') setDelaiModif(infos)
+    setRdvsAVenir(prev => prev.map(r => (r.id === rdvId ? { ...r, modif_bloquee: true } : r)))
+    setReprogRdvId(prev => (prev === rdvId ? null : prev))
+    setModifPendingTechs(null)
+  }
+
+  function texteDelaiModif(): string {
+    if (!delaiModif) return ''
+    return traduire(delaiModif.instagram ? 'resa.delaiModifInstagram' : 'resa.delaiModifDirect', {
+      heures: delaiModif.heures,
+      pro: delaiModif.contact || pro?.pseudo || pro?.prenom || '',
+    })
   }
 
   // ── Reprogrammer : ouvrir le sélecteur ───────
@@ -2352,6 +2384,11 @@ export default function ReservationPage() {
     if (!res.ok) {
       // Le serveur dit pourquoi (heure prise entre-temps…) : on le montre tel quel.
       const d = await res.json().catch(() => ({}))
+      if (d?.error === 'delai_modif_depasse') {
+        bloquerModifRdv(rdv.id, d.delai_modif)
+        fermerModifPresta()
+        throw Object.assign(new Error('delai_modif_depasse'), { delaiModif: true })
+      }
       throw Object.assign(new Error('modif_echouee'), { messageServeur: typeof d?.message === 'string' ? d.message : null })
     }
 
@@ -2417,6 +2454,13 @@ export default function ReservationPage() {
           ? await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id, undefined, { techniques: modifSelection, avec: rdv.praticienne_id ?? 'pro' })
           : await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
         const tient = (creneaux[dateStr] ?? []).some(s => s.heure === heureActuelle && s.disponible)
+        if (!tient && rdv.modif_bloquee) {
+          // Passé le délai de la pro, l'heure ne peut plus changer en ligne :
+          // la ligne sous le rendez-vous lui dit de la contacter.
+          fermerModifPresta()
+          bloquerModifRdv(rdv.id)
+          return
+        }
         if (!tient) {
           // Le créneau actuel ne suffit plus → choix d'un nouvel horaire
           // (ouvrirReprog d'abord : il réinitialise modifPendingTechs)
@@ -2430,6 +2474,7 @@ export default function ReservationPage() {
       await appliquerModifPresta(rdv, modifSelection, null, null)
     } catch (e) {
       console.error('[confirmerModifPresta] Erreur:', e)
+      if ((e as { delaiModif?: boolean })?.delaiModif) return
       alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.modificationImpossible'))
     } finally {
       setModifSaving(false)
@@ -2515,6 +2560,11 @@ export default function ReservationPage() {
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
+        if (d?.error === 'delai_modif_depasse') {
+          bloquerModifRdv(reprogRdvId, d.delai_modif)
+          setReprogSaving(false)
+          return
+        }
         alert(
           d?.error === 'decalage_max_atteint'
             ? traduire('resa.troisDecalages')
@@ -2573,6 +2623,7 @@ export default function ReservationPage() {
       scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
+      if ((e as { delaiModif?: boolean })?.delaiModif) return
       alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.reprogrammationImpossible'))
     } finally {
       setReprogSaving(false)
@@ -4371,27 +4422,43 @@ export default function ReservationPage() {
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                             <button
                               onClick={() => ouvrirReprog(rdv.id)}
+                              disabled={!!rdv.modif_bloquee}
+                              data-action="reprogrammer"
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
-                                border: `1.5px solid ${PINK}`, background: '#fff',
-                                color: PINK_TEXTE, fontSize: 13, fontWeight: 600,
-                                cursor: 'pointer', transition: 'all 0.15s',
+                                border: `1.5px solid ${rdv.modif_bloquee ? '#e5e7eb' : PINK}`, background: rdv.modif_bloquee ? '#f9fafb' : '#fff',
+                                color: rdv.modif_bloquee ? '#9ca3af' : PINK_TEXTE, fontSize: 13, fontWeight: 600,
+                                cursor: rdv.modif_bloquee ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                               }}
                             >{traduire('resa.reprogrammer')}</button>
                             <button
                               onClick={() => confirmerAnnulation(rdv)}
-                              disabled={annulationEnCours === rdv.id}
+                              disabled={annulationEnCours === rdv.id || !!rdv.modif_bloquee}
+                              data-action="annuler"
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
-                                border: '1.5px solid #fca5a5', background: '#fff',
-                                color: '#ef4444', fontSize: 13, fontWeight: 600,
-                                cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                                border: `1.5px solid ${rdv.modif_bloquee ? '#e5e7eb' : '#fca5a5'}`, background: rdv.modif_bloquee ? '#f9fafb' : '#fff',
+                                color: rdv.modif_bloquee ? '#9ca3af' : '#ef4444', fontSize: 13, fontWeight: 600,
+                                cursor: rdv.modif_bloquee ? 'not-allowed' : 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
                                 transition: 'all 0.15s',
                               }}
                             >
-                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                              {annulationEnCours === rdv.id ? '...' : traduire('resa.annulerRdv')}
                             </button>
                           </div>
+                          {/* Passé le délai de la pro : une ligne pour la contacter. */}
+                          {rdv.modif_bloquee && delaiModif && (
+                            delaiModif.instagram ? (
+                              <a
+                                href={`https://instagram.com/${delaiModif.instagram}`}
+                                target="_blank" rel="noopener noreferrer"
+                                data-delai-modif="instagram"
+                                style={{ display: 'block', marginTop: 8, fontSize: 12, color: PINK_TEXTE, textAlign: 'center', lineHeight: 1.4, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                              >{texteDelaiModif()}</a>
+                            ) : (
+                              <p data-delai-modif="direct" style={{ margin: '8px 0 0', fontSize: 12, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{texteDelaiModif()}</p>
+                            )
+                          )}
 
                           {/* ── Panneau modification des prestations ── */}
                           {modifRdvId === rdv.id && (

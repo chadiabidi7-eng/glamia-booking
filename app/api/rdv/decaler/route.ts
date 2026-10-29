@@ -4,6 +4,7 @@ import { normaliserTelephone } from '@/lib/telephone'
 import { delaiAvant } from '@/lib/heure-pro'
 import { jugerDeplacement, personnesDuRdv } from '@/lib/deplacement'
 import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
+import { refusDelaiModif } from '@/lib/delai-modif'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — décalage d'un RDV par la CLIENTE depuis la page de résa.
@@ -63,6 +64,9 @@ export async function POST(req: NextRequest) {
   if (rdv.statut === 'annule') {
     return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
   }
+  // Le délai choisi par la pro (24, 48 ou 72 h) : passé, plus de décalage en ligne.
+  const refusDelai = await refusDelaiModif(supabaseAdmin, rdv.pro_id as string, rdv.date as string)
+  if (refusDelai) return NextResponse.json(refusDelai, { status: 403 })
   if (await decalageBloque(rdv.id, rdv.date as string, rdv.pro_id as string)) {
     return NextResponse.json({ error: 'decalage_tardif' }, { status: 403 })
   }
