@@ -387,7 +387,7 @@ export default function Vitrine(props: {
           )}
           {surOffres && (
             <div>
-              {offres.map((o, i) => (
+              {(tousSoins ? offres : offres.slice(0, SOINS_VISIBLES)).map((o, i) => (
                 <button key={o.cle} onClick={() => props.onChoisirOffre?.(o.cle)}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', border: 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: ENCRE }}>
                   {/* La photo du soin, avec la pastille d'offre ; sans photo, l'icône sur un fond teinté. */}
@@ -409,7 +409,7 @@ export default function Vitrine(props: {
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
                     {o.nouvelles && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{traduire('resa.nouvellesClientesUniquement')}</span>}
                     {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{o.periode}</span>}
-                    {o.pack && o.soins.length > 0 && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.soins.join(' + ')}</span>}
+                    {o.soins.length > 0 && (o.pack || !o.soins.every(n => o.nom.toLowerCase().includes(n.toLowerCase()))) && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.soins.join(' + ')}</span>}
                     <span style={{ display: 'block', margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>
                       {o.duree ? `${o.duree} · ` : ''}
                       {o.prixAvant && <span style={{ textDecoration: 'line-through', marginRight: 6 }}>{o.prixAvant}</span>}
@@ -419,6 +419,7 @@ export default function Vitrine(props: {
                   </span>
                 </button>
               ))}
+              {!tousSoins && offres.length > SOINS_VISIBLES && <Plus onClick={() => setTousSoins(true)}>{traduire('resa.voirToutesLesOffres', { count: offres.length })}</Plus>}
               <p style={{ margin: '8px 0 0', fontSize: 12, color: ENCRE_DOUCE }}>{traduire('resa.offreToucher')}</p>
             </div>
           )}

@@ -272,7 +272,11 @@
     },
     "offreToucher": "Touchez une offre, puis entrez votre numéro pour en profiter.",
     "offreReserveeNouvelles": "Cette offre est réservée aux nouvelles clientes. Vous pouvez choisir vos soins ci-dessous.",
-    "offrePlusDisponible": "Cette offre n'est plus disponible. Vous pouvez choisir vos soins ci-dessous."
+    "offrePlusDisponible": "Cette offre n'est plus disponible. Vous pouvez choisir vos soins ci-dessous.",
+    "voirToutesLesOffres": {
+      "one": "Voir l'offre",
+      "other": "Voir les %{count} offres"
+    }
   },
   "commun": {
     "chargement": "Chargement...",

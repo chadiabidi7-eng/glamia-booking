@@ -348,7 +348,8 @@ function formatDateCourte(dateStr: string) {
 
 /** « Pour les rendez-vous du 15 décembre au 25 décembre » : les jours où l'offre s'applique. */
 function periodeOffre(o: { date_debut?: string | null; date_fin?: string | null }): string {
-  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' })
+  // « 1er octobre », pas « 1 octobre ».
+  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' }).replace(/^1 (?=\p{L})/u, etiquette().startsWith('fr') ? '1er ' : '1 ')
   if (o.date_debut && o.date_fin) return traduire('resa.offrePeriode', { debut: jour(o.date_debut), fin: jour(o.date_fin) })
   if (o.date_fin) return traduire('resa.offreJusquau', { fin: jour(o.date_fin) })
   if (o.date_debut) return traduire('resa.offreAPartirDu', { debut: jour(o.date_debut) })
@@ -3799,7 +3800,13 @@ export default function ReservationPage() {
                   nouvelles: o.cible === 'nouvelles',
                   periode: o.date_debut || o.date_fin ? periodeOffre(o) : null,
                   places: o.utilisations_max != null ? Math.max(0, o.utilisations_max - (o.utilisations_actuelles ?? 0)) : null,
-                  soins: soinsOffre.map(x => nomSoinAffiche(x.t.nom, x.sp)),
+                  // Même nom dans deux catégories (« Vernis semi-permanent » mains
+                  // et pieds) : on précise la catégorie, sinon on lit un doublon.
+                  soins: soinsOffre.map((x, _, tous) => {
+                    const nom = nomSoinAffiche(x.t.nom, x.sp)
+                    const double = tous.some(y => y !== x && nomSoinAffiche(y.t.nom, y.sp) === nom)
+                    return double ? `${nom} (${nomSpecialiteAffiche(x.sp, pro?.categorie_autre_nom)})` : nom
+                  }),
                   photo,
                   duree: duree > 0 ? formatDuree(duree) : null,
                   prixAvant: prixAvant > 0 && prixAvant !== Number(o.prix_promo) ? formatPrix(prixAvant, pro?.devise) : null,

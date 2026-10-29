@@ -272,7 +272,11 @@
     },
     "offreToucher": "Tap an offer, then enter your number to get it.",
     "offreReserveeNouvelles": "This offer is for new clients only. You can choose your services below.",
-    "offrePlusDisponible": "This offer is no longer available. You can choose your services below."
+    "offrePlusDisponible": "This offer is no longer available. You can choose your services below.",
+    "voirToutesLesOffres": {
+      "one": "See the offer",
+      "other": "See all %{count} offers"
+    }
   },
   "commun": {
     "chargement": "Loading...",
