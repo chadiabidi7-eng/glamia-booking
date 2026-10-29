@@ -92,11 +92,14 @@ async function creneauxServeur(
   proId: string, duree: number, dates: string[], exclureRdv?: string,
   // ÉQUIPE : qui peut recevoir, et en combien de temps. Absent pour une pro seule.
   personnes?: PersonneCreneaux[],
+  // ÉQUIPE, DÉPLACEMENT : le serveur déduit lui-même du rendez-vous (exclureRdv)
+  // qui peut le recevoir — la même règle que celle qui jugera l'enregistrement.
+  deplacer?: { techniques?: TechSelec[]; avec?: string },
 ): Promise<Record<string, SlotQui[]>> {
   const rep = await fetch('/api/creneaux', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes }),
+    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes, deplacer }),
   })
   if (!rep.ok) throw new Error('creneaux')
   const { creneaux } = await rep.json()
@@ -162,6 +165,8 @@ type RdvAVenir = {
   paiement: { montant: number; nature: string } | null
   /** Quand la PRO a déplacé ce rendez-vous. Suspend le délai d'annulation. */
   date_change_pro_le?: string | null
+  /** ÉQUIPE : qui le fait (null = la pro). */
+  praticienne_id?: string | null
 }
 
 
@@ -1231,7 +1236,10 @@ export default function ReservationPage() {
   const [reprogRdvId, setReprogRdvId]       = useState<string | null>(null)
   const [reprogDate, setReprogDate]         = useState('')
   const [reprogHeure, setReprogHeure]       = useState('')
-  const [reprogSlots, setReprogSlots]       = useState<Slot[]>([])
+  const [reprogSlots, setReprogSlots]       = useState<SlotQui[]>([])
+  // ÉQUIPE (29 oct. 2026) : même choix « avec qui » qu'à la réservation, et qui tient l'heure choisie.
+  const [reprogAvecQui, setReprogAvecQui]   = useState<'peu_importe' | 'pro' | string>('peu_importe')
+  const [reprogQui, setReprogQui]           = useState<string | null>(null)
 
   // ── Modification des prestations d'un RDV à venir ──
   const [modifRdvId, setModifRdvId]           = useState<string | null>(null)
@@ -1564,6 +1572,13 @@ export default function ReservationPage() {
     for (const a of assistantesPossibles) if (avecQui === 'peu_importe' || avecQui === a.id) liste.push({ id: a.id, duree: a.duree })
     return liste
   }, [equipe.length, avecQui, assistantesPossibles, dureeTotal])
+  /** ÉQUIPE, déplacement : les assistantes qui assurent tous les soins d'un rendez-vous déjà pris. */
+  const assistantesPourSoins = (techs: { nom: string; categorie?: string }[] | null | undefined): AssistantePage[] =>
+    equipe.filter(a => (techs ?? []).every(t => {
+      const tech = (catalogue[t.categorie ?? ''] ?? []).find(x => x.nom === t.nom)
+      const reglage = tech?.id ? a.prestations[tech.id] : undefined
+      return !reglage || reglage.assure
+    }))
   /** La durée du rendez-vous tel qu'il sera posé : celle de qui le fait. */
   const dureeChoisie = quiChoisi ? (assistantesPossibles.find((a: AssistantePage & { duree: number }) => a.id === quiChoisi)?.duree ?? dureeTotal) : dureeTotal
   const prenomDe = (id: string | null | undefined) => equipe.find(a => a.id === id)?.prenom ?? ''
@@ -2214,6 +2229,8 @@ export default function ReservationPage() {
     setReprogDate('')
     setReprogHeure('')
     setReprogSlots([])
+    setReprogAvecQui('peu_importe')
+    setReprogQui(null)
     setReprogDone(null)
     setReprogCalYear(todayJs.getFullYear())
     setReprogCalMonth(todayJs.getMonth())
@@ -2227,6 +2244,7 @@ export default function ReservationPage() {
     setReprogDate('')
     setReprogHeure('')
     setReprogSlots([])
+    setReprogQui(null)
     setModifPendingTechs(null)
   }
 
@@ -2301,7 +2319,7 @@ export default function ReservationPage() {
   }
 
   // Applique la modification (et éventuellement une nouvelle date/heure)
-  async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null) {
+  async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null, qui?: string | null) {
     if (!pro) return
     const duree = techs.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
     const base = techs.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
@@ -2327,16 +2345,17 @@ export default function ReservationPage() {
         duree,
         prix: prix > 0 ? prix : null,
         new_date: (newDate && newHeure) ? dateISO : undefined,
+        // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+        ...(equipe.length > 0 && newDate && newHeure ? { praticienne_id: qui ?? null } : {}),
       }),
     })
-    if (!res.ok) throw new Error('modif_echouee')
+    if (!res.ok) {
+      // Le serveur dit pourquoi (heure prise entre-temps…) : on le montre tel quel.
+      const d = await res.json().catch(() => ({}))
+      throw Object.assign(new Error('modif_echouee'), { messageServeur: typeof d?.message === 'string' ? d.message : null })
+    }
 
-    // Push à la pro
-    envoyerPushNotif(
-      pro.id,
-      traduire('notif.rdvModifieTitre'),
-      traduire('notif.prestationsModifiees', { prenom: clientePrenom, date: dateAffichee, heure: heureAffichee, prestations: labels })
-    )
+    // La notification à la pro part désormais du serveur (29 oct. 2026).
 
     // Email de confirmation à jour pour la cliente
     if (clienteEmail.trim()) {
@@ -2373,7 +2392,7 @@ export default function ReservationPage() {
     // Mise à jour locale
     setRdvsAVenir(prev => prev.map(r =>
       r.id === rdv.id
-        ? { ...r, date: dateISO, technique: labels, specialite: specs, duree, prix: prix > 0 ? prix : null, techniques: techs, ...(newDate ? { statut: 'en_attente' } : {}) }
+        ? { ...r, date: dateISO, technique: labels, specialite: specs, duree, prix: prix > 0 ? prix : null, techniques: techs, ...(newDate ? { statut: 'en_attente' } : {}), ...(equipe.length > 0 && newDate ? { praticienne_id: qui ?? null } : {}) }
         : r
     ))
     setModifDone(rdv.id)
@@ -2393,7 +2412,10 @@ export default function ReservationPage() {
       if (nouvelleDuree > rdv.duree) {
         const dateStr = (rdv.date as string).slice(0, 10)
         const heureActuelle = formatRdvHeure(rdv.date)
-        const creneaux = await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
+        // ÉQUIPE : vérifiée chez celle qui fait le rendez-vous, avec SA durée.
+        const creneaux = equipe.length > 0
+          ? await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id, undefined, { techniques: modifSelection, avec: rdv.praticienne_id ?? 'pro' })
+          : await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
         const tient = (creneaux[dateStr] ?? []).some(s => s.heure === heureActuelle && s.disponible)
         if (!tient) {
           // Le créneau actuel ne suffit plus → choix d'un nouvel horaire
@@ -2408,7 +2430,7 @@ export default function ReservationPage() {
       await appliquerModifPresta(rdv, modifSelection, null, null)
     } catch (e) {
       console.error('[confirmerModifPresta] Erreur:', e)
-      alert(traduire('resa.modificationImpossible'))
+      alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.modificationImpossible'))
     } finally {
       setModifSaving(false)
     }
@@ -2426,9 +2448,10 @@ export default function ReservationPage() {
     else setReprogCalMonth(m => m + 1)
   }
 
-  async function reprogSelectDate(dateStr: string) {
+  async function reprogSelectDate(dateStr: string, avec: string = reprogAvecQui) {
     setReprogDate(dateStr)
     setReprogHeure('')
+    setReprogQui(null)
     if (!pro || !reprogRdvId) return
 
     const rdv = rdvsAVenir.find(r => r.id === reprogRdvId)
@@ -2444,7 +2467,11 @@ export default function ReservationPage() {
 
       // Le RDV qu'on déplace est exclu côté serveur : son propre créneau ne
       // doit pas se bloquer lui-même.
-      const creneaux = await creneauxServeur(pro.id, dureeEffective, [dateStr], reprogRdvId ?? undefined)
+      // ÉQUIPE (29 oct. 2026) : les heures de la pro ET de l'assistante, comme
+      // à la réservation ; le serveur déduit du rendez-vous qui peut le faire.
+      const creneaux = equipe.length > 0
+        ? await creneauxServeur(pro.id, modifPendingTechs ? modifPendingTechs.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0) : dureeEffective, [dateStr], reprogRdvId, undefined, { techniques: modifPendingTechs ?? undefined, avec })
+        : await creneauxServeur(pro.id, dureeEffective, [dateStr], reprogRdvId ?? undefined)
       setReprogSlots(creneaux[dateStr] ?? [])
       // 'start' et non 'center' : sur petit iPhone la grille dépasse l'écran,
       // un centrage couperait la date et le haut des créneaux
@@ -2464,7 +2491,7 @@ export default function ReservationPage() {
       if (modifPendingTechs) {
         const rdvCible = rdvsAVenir.find(r => r.id === reprogRdvId)
         if (rdvCible) {
-          await appliquerModifPresta(rdvCible, modifPendingTechs, reprogDate, reprogHeure)
+          await appliquerModifPresta(rdvCible, modifPendingTechs, reprogDate, reprogHeure, reprogQui)
           setReprogDate('')
           setReprogHeure('')
           setReprogSlots([])
@@ -2480,7 +2507,11 @@ export default function ReservationPage() {
       const res = await fetch('/api/rdv/decaler', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rdv_id: reprogRdvId, telephone, new_date: newDateISO }),
+        body: JSON.stringify({
+          rdv_id: reprogRdvId, telephone, new_date: newDateISO,
+          // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+          ...(equipe.length > 0 ? { praticienne_id: reprogQui } : {}),
+        }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -2489,27 +2520,21 @@ export default function ReservationPage() {
             ? traduire('resa.troisDecalages')
             : d?.error === 'decalage_tardif'
               ? traduire('resa.decalageTropTard')
-              : traduire('resa.reprogrammationImpossible'),
+              : (typeof d?.message === 'string' && d.message) || traduire('resa.reprogrammationImpossible'),
         )
+        // L'heure a pu partir entre-temps : la grille est redemandée, à jour.
+        if (d?.error === 'creneau_indisponible') reprogSelectDate(reprogDate)
         setReprogSaving(false)
         return
       }
 
-      // Push notification
-      // D'où à où : la pro garde la trace de l'ancien créneau (21 oct. 2026).
-      const ancien = rdvsAVenir.find(r => r.id === reprogRdvId)?.date ?? ''
-      envoyerPushNotif(
-        pro.id,
-        traduire('notif.rdvDecaleTitre'),
-        ancien
-          ? traduire('notif.rdvDecale', { prenom: clientePrenom, avant: formatDateLong(ancien.slice(0, 10)), heureAvant: ancien.slice(11, 16), apres: formatDateLong(reprogDate), heure: reprogHeure })
-          : traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
-      )
+      // La notification à la pro (et à l'assistante concernée) part désormais
+      // du serveur, juste après l'enregistrement (29 oct. 2026).
 
       // Mettre à jour la liste locale
       setRdvsAVenir(prev => prev.map(r =>
         r.id === reprogRdvId
-          ? { ...r, date: newDateISO, statut: 'en_attente' }
+          ? { ...r, date: newDateISO, statut: 'en_attente', ...(equipe.length > 0 ? { praticienne_id: reprogQui } : {}) }
           : r
       ))
 
@@ -2548,7 +2573,7 @@ export default function ReservationPage() {
       scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
-      alert(traduire('resa.reprogrammationImpossible'))
+      alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.reprogrammationImpossible'))
     } finally {
       setReprogSaving(false)
     }
@@ -4502,6 +4527,24 @@ export default function ReservationPage() {
                                 <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>{traduire('resa.fermer')}</button>
                               </div>
 
+                              {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
+                              {(() => {
+                                const possibles = assistantesPourSoins(modifPendingTechs ?? rdv.techniques)
+                                if (equipe.length === 0 || possibles.length === 0) return null
+                                return (
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 12 }}>
+                                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: pro?.pseudo || pro?.prenom || '' }, ...possibles.map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                                      <button
+                                        key={o.cle}
+                                        onClick={() => { setReprogAvecQui(o.cle); if (reprogDate) reprogSelectDate(reprogDate, o.cle) }}
+                                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${reprogAvecQui === o.cle ? PINK : '#e5e7eb'}`, background: reprogAvecQui === o.cle ? PINK : '#fff', color: reprogAvecQui === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                                        {o.libelle}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )
+                              })()}
+
                               {/* Calendrier reprog */}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                                 <button
@@ -4530,7 +4573,9 @@ export default function ReservationPage() {
                                   const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
                                   const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
                                   const isPast = dayDate < today0
-                                  const isOff = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques)
+                                  // ÉQUIPE : comme à la réservation, un jour fermé pour la pro peut être
+                                  // ouvert pour l'assistante — ce sont les heures qui décident.
+                                  const isOff = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
                                   const isDisabled = isPast || isOff
                                   const isSelected = reprogDate === dateStr
 
@@ -4572,7 +4617,7 @@ export default function ReservationPage() {
                                       {reprogSlots.filter(s => s.disponible).map(s => (
                                         <button
                                           key={s.heure}
-                                          onClick={() => { setReprogHeure(s.heure); scrollVers(reprogConfirmRef, 'center') }}
+                                          onClick={() => { setReprogHeure(s.heure); setReprogQui(s.qui ?? null); scrollVers(reprogConfirmRef, 'center') }}
                                           style={{
                                             padding: '10px 0', borderRadius: 10,
                                             border: `1.5px solid ${reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
@@ -4584,6 +4629,7 @@ export default function ReservationPage() {
                                           }}
                                         >
                                           {s.heure}
+                                          {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: reprogHeure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: prenomDe(s.qui) })}</span> : null}
                                         </button>
                                       ))}
                                     </div>

@@ -35,6 +35,8 @@ type RdvInfo = {
   duree: number
   instructions: string | null
   inspirations: string[]
+  /** ÉQUIPE : les assistantes qui peuvent recevoir ce rendez-vous (vide pour une pro seule). */
+  equipe?: { id: string; prenom: string }[]
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -215,7 +217,7 @@ function formatDateFr(iso: string): string {
 }
 
 // ── Helpers décalage ────────────────────────
-type SlotInfo = { heure: string; disponible: boolean }
+type SlotInfo = { heure: string; disponible: boolean; qui?: string | null }
 
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
@@ -258,6 +260,9 @@ function ConfirmationPage() {
   const [decDate, setDecDate] = useState('')
   const [decHeure, setDecHeure] = useState('')
   const [decSlots, setDecSlots] = useState<SlotInfo[]>([])
+  // ÉQUIPE (29 oct. 2026) : même choix « avec qui » qu'à la réservation, et qui tient l'heure choisie.
+  const [decAvec, setDecAvec] = useState<string>('peu_importe')
+  const [decQui, setDecQui] = useState<string | null>(null)
   /** Le refus du serveur, dit à la cliente sans la sortir de l'écran. */
   const [decRefus, setDecRefus] = useState<string | null>(null)
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -355,14 +360,16 @@ function ConfirmationPage() {
   }
 
   // ── Décaler : charger créneaux ────────────────
-  const handlePickDate = async (dateStr: string) => {
+  const handlePickDate = async (dateStr: string, avec: string = decAvec) => {
     if (!rdv) return
     setDecDate(dateStr)
     setDecHeure('')
+    setDecQui(null)
     setDecRefus(null)
     setLoadingSlots(true)
     try {
-      const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}`)
+      const avecParam = (rdv.equipe?.length ?? 0) > 0 ? `&avec=${encodeURIComponent(avec)}` : ''
+      const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}${avecParam}`)
       if (!res.ok) { setDecSlots([]); return }
       const info = await res.json()
       // Le serveur a calculé la grille avec TOUTES les règles : horaires,
@@ -385,7 +392,11 @@ function ConfirmationPage() {
       const res = await fetch(`/api/confirmation/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'decaler', new_date: newDateISO }),
+        body: JSON.stringify({
+          action: 'decaler', new_date: newDateISO,
+          // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+          ...((rdv.equipe?.length ?? 0) > 0 ? { praticienne_id: decQui } : {}),
+        }),
       })
       if (!res.ok) {
         // Un créneau pris entre-temps, ou une journée fermée depuis que la
@@ -607,6 +618,20 @@ import { traduire } from '@/lib/i18n';
               <div style={{ marginTop: 24 }}>
                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>{traduire('confirmation.choisirNouvelleDate')}</p>
 
+                {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
+                {(rdv.equipe?.length ?? 0) > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '0 0 12px' }}>
+                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: rdv.pro_pseudo || rdv.pro_prenom }, ...(rdv.equipe ?? []).map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                      <button
+                        key={o.cle}
+                        onClick={() => { setDecAvec(o.cle); if (decDate) handlePickDate(decDate, o.cle) }}
+                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${decAvec === o.cle ? PINK : '#e5e7eb'}`, background: decAvec === o.cle ? PINK : '#fff', color: decAvec === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        {o.libelle}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Navigation mois */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <button
@@ -639,9 +664,10 @@ import { traduire } from '@/lib/i18n';
                     const dayDate = new Date(calYear, calMonth, day)
                     const today0Date = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate())
                     const isPast = dayDate < today0Date
-                    const isOff =
+                    // ÉQUIPE : un jour fermé pour la pro peut être ouvert pour l'assistante.
+                    const isOff = (rdv.equipe?.length ?? 0) === 0 && (
                       !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable, rdv.jours_differents)
-                      || isDayBlocked(dateStr, rdv.creneaux_bloques ?? [])
+                      || isDayBlocked(dateStr, rdv.creneaux_bloques ?? []))
                     const isDisabled = isPast || isOff
                     const isSelected = decDate === dateStr
                     return (
@@ -682,7 +708,7 @@ import { traduire } from '@/lib/i18n';
                         {decSlots.filter(s => s.disponible).map(s => (
                           <button
                             key={s.heure}
-                            onClick={() => setDecHeure(s.heure)}
+                            onClick={() => { setDecHeure(s.heure); setDecQui(s.qui ?? null) }}
                             style={{
                               padding: '10px 0', borderRadius: 10,
                               border: `1.5px solid ${decHeure === s.heure ? PINK : '#e5e7eb'}`,
@@ -690,7 +716,10 @@ import { traduire } from '@/lib/i18n';
                               color: decHeure === s.heure ? '#fff' : '#374151',
                               fontWeight: 600, fontSize: 14, cursor: 'pointer',
                             }}
-                          >{s.heure}</button>
+                          >
+                            {s.heure}
+                            {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: decHeure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: rdv.equipe?.find(a => a.id === s.qui)?.prenom ?? '' })}</span> : null}
+                          </button>
                         ))}
                       </div>
                     )}

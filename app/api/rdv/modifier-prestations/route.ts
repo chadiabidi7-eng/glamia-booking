@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
 import { normaliserTelephone } from '@/lib/telephone'
 import { delaiAvant } from '@/lib/heure-pro'
+import { jugerDeplacement, librePour, personnesDuRdv, techniquesPropres } from '@/lib/deplacement'
+import { assistanteValide, dureeChezAssistante } from '@/lib/equipe'
+import { messageModification, prevenirDuDeplacement } from '@/lib/notif-deplacement'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -37,7 +40,7 @@ async function decalageBloque(rdvId: string, dateRdv: string, proId: string): Pr
 export async function POST(req: NextRequest) {
   let body: {
     rdv_id?: unknown; telephone?: unknown; techniques?: unknown; technique?: unknown
-    specialite?: unknown; duree?: unknown; prix?: unknown; new_date?: unknown
+    specialite?: unknown; duree?: unknown; prix?: unknown; new_date?: unknown; praticienne_id?: unknown
   }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid_body' }, { status: 400 }) }
 
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, statut, nb_decalages, pro_id, cliente:clientes(telephone)')
+    .select('id, date, duree, techniques, praticienne_id, statut, nb_decalages, pro_id, cliente:clientes(telephone, prenom)')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest) {
   }
 
   const prix = typeof body.prix === 'number' && body.prix > 0 ? body.prix : null
+  let praticienneApres: string | null = (rdv.praticienne_id as string | null) ?? null
   const patch: Record<string, unknown> = {
     techniques: body.techniques,
     technique: body.technique,
@@ -84,18 +88,41 @@ export async function POST(req: NextRequest) {
     if (((rdv as { nb_decalages?: number }).nb_decalages ?? 0) >= MAX_DECALAGES) {
       return NextResponse.json({ error: 'decalage_max_atteint' }, { status: 403 })
     }
-    // LE CRÉNEAU EST-IL VRAIMENT LIBRE ? Ce guichet posait la nouvelle date
-    // sans jamais le demander. La grille affichée le cachait bien, mais elle
-    // vieillit dès qu'elle est dessinée : une page laissée ouverte, deux
-    // clientes en même temps, et plus rien ne disait non.
-    const refus = await creneauIndisponible(
-      rdv.pro_id as string,
-      rdv.id as string,
-      newDate,
-      body.duree as number,
-    )
-    if (refus) {
-      return NextResponse.json({ error: 'creneau_indisponible', message: refus }, { status: 409 })
+    // ── ÉQUIPE : même règle qu'à la réservation (29 oct. 2026) ────────────
+    // Les nouveaux soins, chez la personne qui tient l'heure choisie (sa durée
+    // à elle), revérifiés pour elle ; le rendez-vous note qui le fait. Une
+    // assistante qui n'assure pas ces soins est refusée.
+    const juge = await jugerDeplacement(supabaseAdmin, {
+      proId: rdv.pro_id as string,
+      rdvId: rdv.id as string,
+      nouvelleDate: newDate,
+      personnes: await personnesDuRdv(supabaseAdmin, rdv.pro_id as string, rdv as never, {
+        techniques: techniquesPropres(body.techniques), duree: body.duree as number,
+      }),
+      praticienneDemandee: body.praticienne_id,
+    })
+    if (juge.equipe && !juge.ok) {
+      return NextResponse.json({ error: juge.error, message: juge.message }, { status: juge.error === 'invalid_params' ? 400 : 409 })
+    }
+    if (juge.equipe && juge.ok) {
+      patch.praticienne_id = juge.praticienneId
+      patch.duree = juge.duree
+      praticienneApres = juge.praticienneId
+    } else {
+      // Pro seule : le contrôle d'avant, inchangé.
+      // LE CRÉNEAU EST-IL VRAIMENT LIBRE ? Ce guichet posait la nouvelle date
+      // sans jamais le demander. La grille affichée le cachait bien, mais elle
+      // vieillit dès qu'elle est dessinée : une page laissée ouverte, deux
+      // clientes en même temps, et plus rien ne disait non.
+      const refus = await creneauIndisponible(
+        rdv.pro_id as string,
+        rdv.id as string,
+        newDate,
+        body.duree as number,
+      )
+      if (refus) {
+        return NextResponse.json({ error: 'creneau_indisponible', message: refus }, { status: 409 })
+      }
     }
 
     patch.date = newDate
@@ -106,11 +133,43 @@ export async function POST(req: NextRequest) {
     patch.decale_le = new Date().toISOString()
     patch.rappel_envoye_count = 0
     patch.rappel_envoye_at = null
+  } else if (rdv.praticienne_id) {
+    // ── ÉQUIPE, MÊME HEURE : le rendez-vous reste chez l'assistante ───────
+    // Les nouveaux soins prennent SA durée ; si elle ne les assure pas, ou si
+    // sa nouvelle durée ne tient plus à cette heure, on refuse (la page fait
+    // alors choisir une autre heure).
+    const elle = await assistanteValide(supabaseAdmin, rdv.pro_id as string, rdv.praticienne_id as string)
+    if (elle) {
+      const techs = techniquesPropres(body.techniques)
+      const chezElle = techs.length > 0 ? await dureeChezAssistante(supabaseAdmin, rdv.pro_id as string, elle.id, techs) : (body.duree as number)
+      if (chezElle === null) return NextResponse.json({ error: 'prestation_inconnue' }, { status: 409 })
+      const duree = chezElle > 0 ? chezElle : (body.duree as number)
+      if (duree > ((rdv.duree as number) ?? 0)) {
+        const iso = rdv.date as string
+        const v = await librePour(supabaseAdmin, rdv.pro_id as string, elle.id, iso.slice(0, 10), iso.slice(11, 16), duree, rdv.id as string)
+        if (!v.ok) return NextResponse.json({ error: 'creneau_indisponible', message: v.message || undefined }, { status: 409 })
+      }
+      patch.duree = duree
+    }
   }
 
   const { error: updErr } = await supabaseAdmin
     .from('rendez_vous').update(patch).eq('id', rdvId).neq('statut', 'annule')
   if (updErr) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+
+  // ── LA PRO EST PRÉVENUE PAR LE SERVEUR (29 oct. 2026) ──────────────────
+  // Avant, depuis le navigateur de la cliente. L'assistante concernée aussi.
+  await prevenirDuDeplacement(supabaseAdmin, {
+    proId: rdv.pro_id as string,
+    rdvId,
+    praticiennes: [rdv.praticienne_id as string | null, praticienneApres],
+    message: messageModification(
+      ((rdv as { cliente?: { prenom?: string } }).cliente?.prenom ?? '').trim(),
+      newDate ?? (rdv.date as string),
+      body.technique as string,
+    ),
+    origine: 'api/rdv/modifier-prestations',
+  })
 
   return NextResponse.json({ success: true })
 }
