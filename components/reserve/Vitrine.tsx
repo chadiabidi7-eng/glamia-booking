@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp, CircleAlert, Gift, Star, Tag, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
+import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA VITRINE DE LA PRO — le haut de sa page de réservation (3.0, 27 sept. 2026)
@@ -63,7 +64,7 @@ const PHOTOS_VISIBLES = 6
 function Bloc({ titre, chute, children }: { titre: string; chute?: string; children: ReactNode }) {
   return (
     <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
-      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: 'var(--accent)' }}>{chute}</span></> : null}</h2>
+      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: 'var(--accent-texte, var(--accent))' }}>{chute}</span></> : null}</h2>
       <div style={{ marginTop: 12 }}>{children}</div>
     </section>
   )
@@ -152,11 +153,12 @@ export function EnTeteVitrine(props: {
   couleurPage?: string | null
 }) {
   const ACCENT = props.couleurPage || ROSE
+  const ACCENT_TEXTE = lisibleSurBlanc(ACCENT)
   const [bioEntiere, setBioEntiere] = useState(false)
   // Les guillemets : grands, de sa couleur, COLLÉS au texte — l'ouvrant devant
   // le premier mot, le fermant après le dernier. Replié, le texte est coupé et
   // le fermant avec lui : une phrase coupée ne se ferme pas.
-  const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT, verticalAlign: '-0.32em', padding: '0 2px' }
+  const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT_TEXTE, verticalAlign: '-0.32em', padding: '0 2px' }
   return (
     // Un peu d'air sous l'en-tête, avant le cadre de réservation (Chadi, 9 oct. 2026) : 18 px.
     <div style={{ margin: '-16px -16px 18px' }}>
@@ -172,13 +174,13 @@ export function EnTeteVitrine(props: {
           <div style={{ width: 60, height: 60, borderRadius: 30, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: '3px solid #fff', boxShadow: `0 0 0 2px ${ACCENT}` }}>
             {props.photoProfil
               ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: ACCENT_TEXTE }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', paddingBottom: 2 }}>{props.reseaux}</div>
         </div>
         {/* Nom, note, ville : une seule ligne. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6, minWidth: 0 }}>
-          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{props.nom}</h1>
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage ? lisibleSurBlanc(props.couleurPage) : ENCRE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{props.nom}</h1>
           {props.note !== null && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', flex: 'none' }}>
               <Star size={13} fill={ACCENT} color={ACCENT} strokeWidth={0} />
@@ -242,6 +244,7 @@ export default function Vitrine(props: {
   boutonApresDefilement?: number
 }) {
   const ACCENT = props.couleurPage || ROSE
+  const ACCENT_TEXTE = lisibleSurBlanc(ACCENT)
   const [boutonVisible, setBoutonVisible] = useState(props.boutonApresDefilement == null)
   const [reglementOuvert, setReglementOuvert] = useState(false)
   useEffect(() => {
@@ -290,14 +293,14 @@ export default function Vitrine(props: {
       setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
     } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
   }
-  const TEXTE_MENTION = ACCENT
+  const TEXTE_MENTION = ACCENT_TEXTE
   const surOffres = aOffres && categorie === -1
   const cat = surOffres ? undefined : (props.categories[categorie] ?? props.categories[0])
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
   const soins = cat ? (tousSoins ? cat.soins : cat.soins.slice(0, SOINS_VISIBLES)) : []
 
   return (
-    <div className="vitrine" style={{ ['--accent' as string]: ACCENT }}>
+    <div className="vitrine" style={{ ['--accent' as string]: ACCENT, ['--accent-texte' as string]: ACCENT_TEXTE }}>
       <style>{`
         .vitrine { color: ${ENCRE}; }
         .vitrine .vitrine-titre { font-size: 17px; font-weight: 700; line-height: 1.3; margin: 0; }
@@ -329,7 +332,7 @@ export default function Vitrine(props: {
           <div style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: `2px solid ${ACCENT}` }}>
             {props.photoProfil
               ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ACCENT_TEXTE }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
           </div>
         </div>
         {props.prochaineDispo && (

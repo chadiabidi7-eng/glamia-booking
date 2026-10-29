@@ -25,6 +25,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
+import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
@@ -223,6 +224,8 @@ let PINK_LIGHT = PINK_LIGHT_DEFAUT
 // deviennent un gris neutre : la page reste sobre, sa couleur y ponctue.
 // Sans couleur choisie, la page garde le rose Glamia d'origine partout.
 let PINK_TEXTE = PINK_DEFAUT
+// Sa couleur quand elle ÉCRIT : à peine foncée si elle est trop pâle (29 oct. 2026).
+let GLAMIA_PINK_TEXTE = GLAMIA_PINK_DEFAUT
 let PINK_FONCE = '#8E4E72'
 let PINK_BORD = '#F2D7E6'
 function teinterPage(couleur: string | null) {
@@ -232,6 +235,7 @@ function teinterPage(couleur: string | null) {
   PINK_FONCE = couleur ? '#1C1C1E' : '#8E4E72'
   PINK_BORD = couleur ? '#E5E7EB' : '#F2D7E6'
   GLAMIA_PINK = couleur ?? GLAMIA_PINK_DEFAUT
+  GLAMIA_PINK_TEXTE = couleur ? lisibleSurBlanc(couleur) : GLAMIA_PINK_DEFAUT
 }
 
 // Profondeur de la recherche du prochain créneau libre, en jours. À 30, une
@@ -821,7 +825,7 @@ export default function ReservationPage() {
             }}>{a.prestations}</span>
           )}
         </span>
-        <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, color: GLAMIA_PINK_TEXTE, letterSpacing: 1, flexShrink: 0 }}>
           {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
         </span>
       </div>
@@ -4082,7 +4086,7 @@ export default function ReservationPage() {
                   <a
                     href={`https://instagram.com/${String(refusResa.instagram).replace(/^@/, '')}`}
                     target="_blank" rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'none' }}>
                     <LogoInstagram size={20} />
                     {traduire('resa.suivreInsta')}
                   </a>
@@ -4146,7 +4150,7 @@ export default function ReservationPage() {
                         <span style={{
                           width: 40, height: 40, borderRadius: 20, background: '#fff',
                           border: '1px solid #F2D7E6', display: 'grid', placeItems: 'center',
-                          fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
+                          fontSize: 19, color: GLAMIA_PINK_TEXTE, lineHeight: 1,
                         }}>★</span>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: PINK_FONCE }}>{traduire('resa.laisserAvis')}</span>
