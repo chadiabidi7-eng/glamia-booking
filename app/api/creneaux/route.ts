@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateSlots, minToTime, type Slot, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { creneauxDe, fusionner } from '@/lib/equipe'
+import { creneauxFusionnes, personnesDuRdv, selonChoix, techniquesPropres } from '@/lib/deplacement'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — les créneaux libres d'une ou plusieurs journées.
@@ -28,10 +29,17 @@ const MAX_DATES = 95
 
 export async function POST(req: NextRequest) {
   try {
-    const { pro_id, duree, dates, exclure_rdv, personnes } = await req.json() as {
+    const { pro_id, duree, dates, exclure_rdv, personnes, deplacer } = await req.json() as {
       pro_id?: string; duree?: number; dates?: string[]; exclure_rdv?: string
       /** ÉQUIPE : qui peut recevoir, et en combien de temps chacune. `id` null = la pro. */
       personnes?: { id: string | null; duree: number }[]
+      /**
+       * ÉQUIPE, DÉPLACEMENT (29 oct. 2026) : le rendez-vous qu'on déplace. Le
+       * serveur en déduit lui-même qui peut le recevoir et en combien de temps
+       * — exactement la règle qui jugera l'enregistrement. `techniques` : les
+       * nouveaux soins s'ils changent ; `avec` : le choix « avec qui ».
+       */
+      deplacer?: { techniques?: unknown; avec?: unknown }
     }
 
     if (!pro_id || typeof duree !== 'number' || duree <= 0 || !Array.isArray(dates) || dates.length === 0) {
@@ -39,6 +47,24 @@ export async function POST(req: NextRequest) {
     }
     if (dates.length > MAX_DATES) {
       return NextResponse.json({ error: 'trop_de_dates' }, { status: 400 })
+    }
+
+    // ── ÉQUIPE, DÉPLACEMENT : les mêmes personnes que celles que le serveur
+    // acceptera à l'enregistrement. Pro seule : on retombe sur le chemin
+    // d'avant, plus bas, inchangé.
+    if (deplacer && typeof exclure_rdv === 'string' && /^[0-9a-f-]{36}$/i.test(exclure_rdv)) {
+      const { data: rdv } = await supabaseAdmin
+        .from('rendez_vous')
+        .select('id, pro_id, duree, techniques, praticienne_id')
+        .eq('id', exclure_rdv)
+        .maybeSingle()
+      if (rdv && rdv.pro_id === pro_id) {
+        const nouvelles = Array.isArray(deplacer.techniques) ? techniquesPropres(deplacer.techniques) : null
+        const qui = await personnesDuRdv(supabaseAdmin, pro_id, rdv, nouvelles ? { techniques: nouvelles, duree } : undefined)
+        if (qui) {
+          return NextResponse.json({ creneaux: await creneauxFusionnes(supabaseAdmin, pro_id, selonChoix(qui, deplacer.avec), dates, exclure_rdv) })
+        }
+      }
     }
 
     // ── ÉQUIPE : les horaires de la pro et de son assistante, fusionnés ─────

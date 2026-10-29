@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       .from('profiles').select('timezone').eq('id', pro_id).maybeSingle()
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
-      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le')
+      .select('id, date, specialite, technique, duree, prix, statut, fidelite_appliquee, reduction_appliquee, techniques, offre_id, inspirations, date_change_pro_le, praticienne_id')
       .eq('cliente_id', cliente_id)
       .eq('pro_id', pro_id)
       .gte('date', maintenantCommeRdv(fuseauPro?.timezone as string | null))

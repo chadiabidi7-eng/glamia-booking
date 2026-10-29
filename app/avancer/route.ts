@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { creneauReservable, delaiDe, delaiEntreClientes, minToTime } from '@/lib/creneaux'
 import { etiquetteDe } from '@/lib/heures-dates'
-import { traduireDans } from '@/lib/i18n'
-import { avecCanal } from '@/lib/canal-android'
+import { librePour, personnesDuRdv } from '@/lib/deplacement'
+import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AVANCER SON RENDEZ-VOUS SUR UNE PLACE LIBÉRÉE (désistement, 11 oct. 2026).
@@ -90,15 +90,38 @@ async function lire(url: URL) {
     .select('pseudo, prenom, langue, pays, timezone, push_token, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, delai_resa_min, resa_jour_meme')
     .eq('id', envoi.pro_id).maybeSingle()
   const { data: place } = await supabaseAdmin.from('desistement_places').select('jour, debut_min').eq('id', envoi.place_id).maybeSingle()
-  const { data: rdv } = await supabaseAdmin.from('rendez_vous').select('id, date, duree, statut, nb_decalages, cliente_id').eq('id', envoi.rdv_id).maybeSingle()
+  const { data: rdv } = await supabaseAdmin.from('rendez_vous').select('id, date, duree, statut, nb_decalages, cliente_id, techniques, praticienne_id').eq('id', envoi.rdv_id).maybeSingle()
   if (!pro || !place || !rdv) return null
   const langue: Langue = pro.langue === 'en' || pro.langue === 'es' || pro.langue === 'it' ? pro.langue : 'fr'
   const nouvelle = `${place.jour}T${minToTime(place.debut_min)}:00.000Z`
   return { envoi, pro, place, rdv, langue, pays: (pro.pays as string | null) ?? null, nomPro: echapper((pro.pseudo || pro.prenom || 'Glamia') as string), nouvelle, requete: url.search }
 }
 
-/** La place est-elle encore libre pour SON rendez-vous (sa durée, hors lui-même) ? */
-async function encoreLibre(lu: NonNullable<Awaited<ReturnType<typeof lire>>>): Promise<boolean> {
+/**
+ * La place est-elle encore libre pour SON rendez-vous (sa durée, hors lui-même) ?
+ *
+ * ÉQUIPE (29 oct. 2026) : chez une pro qui a une assistante, la place doit être
+ * libre pour la personne qui recevra la cliente. On garde celle d'origine si
+ * elle est libre ; sinon l'autre, si elle est libre et assure ces soins ; sinon
+ * « place prise ». Pour une pro seule : le contrôle d'avant, inchangé.
+ */
+type Libre = { libre: false } | { libre: true; equipe: null } | { libre: true; equipe: { praticienne_id: string | null; duree: number } }
+async function encoreLibre(lu: NonNullable<Awaited<ReturnType<typeof lire>>>): Promise<Libre> {
+  const personnes = await personnesDuRdv(supabaseAdmin, lu.envoi.pro_id as string, lu.rdv as never)
+  if (personnes) {
+    const origine = (lu.rdv.praticienne_id as string | null) ?? null
+    const ordre = [...personnes.filter(p => p.id === origine), ...personnes.filter(p => p.id !== origine)]
+    for (const p of ordre) {
+      const v = await librePour(supabaseAdmin, lu.envoi.pro_id as string, p.id, lu.place.jour, minToTime(lu.place.debut_min), p.duree, lu.rdv.id as string)
+      if (v.ok) return { libre: true, equipe: { praticienne_id: p.id, duree: p.duree } }
+    }
+    return { libre: false }
+  }
+  return (await encoreLibreSeule(lu)) ? { libre: true, equipe: null } : { libre: false }
+}
+
+/** Pro seule : le contrôle d'avant (tous ses rendez-vous, ses horaires). */
+async function encoreLibreSeule(lu: NonNullable<Awaited<ReturnType<typeof lire>>>): Promise<boolean> {
   const { data: rdvs } = await supabaseAdmin.from('rendez_vous').select('id, date, duree')
     .eq('pro_id', lu.envoi.pro_id).neq('statut', 'annule')
     .gte('date', `${lu.place.jour}T00:00:00.000Z`).lte('date', `${lu.place.jour}T23:59:59.999Z`)
@@ -125,7 +148,7 @@ export async function GET(req: NextRequest) {
   const L = TEXTES[lu.langue]
   if (lu.envoi.pris_le) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.deja}</p>`)
   if (lu.rdv.statut === 'annule') return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.annule}</p>`)
-  if (!(await encoreLibre(lu))) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.prise}</p>`)
+  if (!(await encoreLibre(lu)).libre) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.prise}</p>`)
   return page(lu.langue, `
     <p style="font-size:20px;font-weight:700;margin:0 0 18px;">${L.titre}</p>
     <p style="font-size:16px;line-height:1.6;margin:0 0 8px;">${L.actuel(lu.nomPro, quand(lu.rdv.date as string, lu.langue, lu.pays))}</p>
@@ -143,12 +166,15 @@ export async function POST(req: NextRequest) {
   const L = TEXTES[lu.langue]
   if (lu.envoi.pris_le) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.deja}</p>`)
   if (lu.rdv.statut === 'annule') return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.annule}</p>`)
-  if (!(await encoreLibre(lu))) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.prise}</p>`)
+  const libre = await encoreLibre(lu)
+  if (!libre.libre) return page(lu.langue, `<p style="font-size:16px;line-height:1.6;margin:0;">${L.prise}</p>`)
 
   const ancienne = lu.rdv.date as string
   // Même geste que « Décaler mon RDV » depuis la page de confirmation : la pro
   // revalide (en_attente), le compteur de décalages avance, les rappels repartent de zéro.
   const { error } = await supabaseAdmin.from('rendez_vous').update({
+    // ÉQUIPE : la personne qui recevra la cliente à cette place, et sa durée.
+    ...(libre.equipe ?? {}),
     date: lu.nouvelle, statut: 'en_attente', nb_decalages: ((lu.rdv.nb_decalages as number) ?? 0) + 1,
     rappel_envoye_count: 0, rappel_envoye_at: null, notif_vue: false,
     decale_par: 'cliente', decale_le: new Date().toISOString(),
@@ -160,18 +186,14 @@ export async function POST(req: NextRequest) {
   try {
     const { data: cliente } = await supabaseAdmin.from('clientes').select('prenom').eq('id', lu.rdv.cliente_id).maybeSingle()
     const prenom = (cliente?.prenom as string | null) ?? ''
-    if (lu.pro.push_token) {
-      const fmt = (iso: string) => new Date(iso).toLocaleDateString(etiquetteDe(lu.langue), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(avecCanal({
-          to: lu.pro.push_token,
-          title: traduireDans(lu.langue, 'notif.rdvDecaleTitre'),
-          body: traduireDans(lu.langue, 'notif.rdvDecale', { prenom, avant: fmt(ancienne), heureAvant: ancienne.slice(11, 16), apres: fmt(lu.nouvelle), heure: minToTime(lu.place.debut_min) }),
-          data: { type: 'rdv', lien: `/rdv/${lu.rdv.id}` },
-        })),
-      })
-    }
+    // La pro, et l'assistante concernée (avant / après), chacune dans sa langue.
+    await prevenirDuDeplacement(supabaseAdmin, {
+      proId: lu.envoi.pro_id as string,
+      rdvId: lu.rdv.id as string,
+      praticiennes: [(lu.rdv.praticienne_id as string | null) ?? null, libre.equipe?.praticienne_id ?? null],
+      message: messageDecalage(prenom, ancienne, lu.nouvelle),
+      origine: 'avancer',
+    })
     await fetch('https://gdgfgbxoapgmrbttdyac.supabase.co/functions/v1/rdv-cliente-mail', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
