@@ -9,6 +9,7 @@ import { avecCanal } from '@/lib/canal-android'
 import { assistantesDe, type SlotQui } from '@/lib/equipe'
 import { creneauxFusionnes, jugerDeplacement, personnesDuRdv, selonChoix } from '@/lib/deplacement'
 import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
+import { delaiModifDepasse, infosDelaiModif, messageDelaiModif, refusDelaiModif } from '@/lib/delai-modif'
 
 // Les noms de jours et de mois étaient écrits en français, en dur. Une pro
 // anglaise recevait « mercredi 15 juillet » dans sa notification. On les
@@ -57,7 +58,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+    .select('prenom, nom, pseudo, instagram, delai_modif_heures, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -125,6 +126,14 @@ export async function GET(
     )
   }
 
+  // Le délai choisi par la pro : passé, « Annuler » et « Décaler » sont grisés
+  // (« Confirmer » reste possible) et une ligne l'envoie vers sa pro.
+  const proDelai = pro as { timezone?: string | null; langue?: string | null } | null
+  const infosDelai = infosDelaiModif(pro as never)
+  const delaiModif = infosDelai && delaiModifDepasse(data.date as string, proDelai?.timezone, infosDelai.heures)
+    ? { ...infosDelai, message: messageDelaiModif(proDelai?.langue, infosDelai) }
+    : null
+
   return NextResponse.json({
     id: data.id,
     date: dateStr,
@@ -161,6 +170,8 @@ export async function GET(
     planning_variable: (pro as any)?.planning_variable === true,
     // ÉQUIPE : celles qui peuvent recevoir ce rendez-vous (vide pour une pro seule).
     equipe,
+    // null = la cliente peut encore annuler ou décaler en ligne.
+    delai_modif: delaiModif,
   })
 }
 
@@ -190,6 +201,13 @@ export async function POST(
 
   if (rdv.token_expiration && new Date(rdv.token_expiration) < new Date()) {
     return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+
+  // Le délai choisi par la pro (24, 48 ou 72 h) : passé, ni annulation ni
+  // décalage en ligne. Confirmer sa présence reste toujours possible.
+  if (action === 'annuler' || action === 'decaler') {
+    const refusDelai = await refusDelaiModif(supabaseAdmin, rdv.pro_id as string, rdv.date as string)
+    if (refusDelai) return NextResponse.json(refusDelai, { status: 403 })
   }
 
   // ── Action : décaler ──────────────────────────────────────────────────

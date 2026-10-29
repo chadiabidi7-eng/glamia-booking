@@ -37,6 +37,8 @@ type RdvInfo = {
   inspirations: string[]
   /** ÉQUIPE : les assistantes qui peuvent recevoir ce rendez-vous (vide pour une pro seule). */
   equipe?: { id: string; prenom: string }[]
+  /** Passé le délai fixé par la pro : plus d'annulation ni de décalage en ligne. */
+  delai_modif?: { heures: number; contact: string; instagram: string | null; message: string } | null
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -305,8 +307,19 @@ function ConfirmationPage() {
   useEffect(() => {
     if (state !== 'ready' || !rdv || !actionParam) return
     if (actionParam === 'confirmer') handleConfirmer()
-    else if (actionParam === 'annuler') handleAnnuler()
+    else if (actionParam === 'annuler' && !rdv.delai_modif) handleAnnuler()
   }, [state, rdv, actionParam])
+
+  // Le serveur a refusé : délai de la pro dépassé (page ouverte depuis
+  // longtemps). On grise et on affiche la ligne, sans fenêtre ni écran d'erreur.
+  const refusDelaiModif = async (res: Response): Promise<boolean> => {
+    if (res.status !== 403) return false
+    const d = await res.json().catch(() => null)
+    if (d?.error !== 'delai_modif_depasse') return false
+    setRdv(prev => (prev ? { ...prev, delai_modif: { ...d.delai_modif, message: d.message } } : prev))
+    setShowDecaler(false)
+    return true
+  }
 
   // ── Actions ─────────────────────────────────
   const handleConfirmer = async () => {
@@ -347,6 +360,7 @@ function ConfirmationPage() {
       })
       console.log('[confirmation] Réponse status:', res.status)
 
+      if (!res.ok && await refusDelaiModif(res)) { setActing(false); return }
       if (!res.ok) { setState('error'); setActing(false); return }
 
       const data = await res.json()
@@ -398,6 +412,7 @@ function ConfirmationPage() {
           ...((rdv.equipe?.length ?? 0) > 0 ? { praticienne_id: decQui } : {}),
         }),
       })
+      if (!res.ok && await refusDelaiModif(res)) { setActing(false); return }
       if (!res.ok) {
         // Un créneau pris entre-temps, ou une journée fermée depuis que la
         // grille a été dessinée : on le lui DIT et on la laisse là, avec une
@@ -600,21 +615,36 @@ import { traduire } from '@/lib/i18n';
               <button
                 className="glamia-btn-cancel"
                 onClick={handleAnnuler}
-                disabled={acting}
+                disabled={acting || !!rdv.delai_modif}
+                data-action="annuler"
               >
                 {acting ? traduire('confirmation.annulationEnCours') : traduire('confirmation.annulerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"
                 onClick={() => setShowDecaler(!showDecaler)}
-                disabled={acting}
+                disabled={acting || !!rdv.delai_modif}
+                data-action="decaler"
                 style={{ borderColor: PINK, color: PINK }}
               >
                 <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{traduire('confirmation.decaler')}</button>
+              {/* Passé le délai de la pro : une ligne pour la contacter. */}
+              {rdv.delai_modif && (
+                rdv.delai_modif.instagram ? (
+                  <a
+                    href={`https://instagram.com/${rdv.delai_modif.instagram}`}
+                    target="_blank" rel="noopener noreferrer"
+                    data-delai-modif="instagram"
+                    style={{ display: 'block', fontSize: 13, color: PINK, textAlign: 'center', lineHeight: 1.4 }}
+                  >{rdv.delai_modif.message}</a>
+                ) : (
+                  <p data-delai-modif="direct" style={{ margin: 0, fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{rdv.delai_modif.message}</p>
+                )
+              )}
             </div>
 
             {/* ── Interface de décalage ── */}
-            {showDecaler && rdv.horaires && (
+            {showDecaler && rdv.horaires && !rdv.delai_modif && (
               <div style={{ marginTop: 24 }}>
                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>{traduire('confirmation.choisirNouvelleDate')}</p>
 
