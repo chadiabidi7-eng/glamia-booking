@@ -290,6 +290,10 @@ export default function Vitrine(props: {
       setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
     } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
   }
+  // Comme sur le reste de la page (27 sept. 2026) : sa couleur ponctue, elle
+  // n'écrit pas — un jaune pâle rendait la mention illisible. Rose Glamia
+  // quand la pro n'a pas choisi de couleur.
+  const TEXTE_MENTION = props.couleurPage ? ENCRE : ROSE
   const surOffres = aOffres && categorie === -1
   const cat = surOffres ? undefined : (props.categories[categorie] ?? props.categories[0])
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
@@ -407,8 +411,8 @@ export default function Vitrine(props: {
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
-                    {o.nouvelles && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{traduire('resa.nouvellesClientesUniquement')}</span>}
-                    {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{o.periode}</span>}
+                    {o.nouvelles && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}>{traduire('resa.nouvellesClientesUniquement')}</span>}
+                    {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}>{o.periode}</span>}
                     {o.soins.length > 0 && (o.pack || !o.soins.every(n => o.nom.toLowerCase().includes(n.toLowerCase()))) && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.soins.join(' + ')}</span>}
                     <span style={{ display: 'block', margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>
                       {o.duree ? `${o.duree} · ` : ''}
