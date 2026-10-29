@@ -263,7 +263,20 @@
     "proBadgeApp": "Télécharger l'app",
     "creneauLibereCourt": "Le créneau libéré ne durait que %{duree} : vos soins durent %{choisie}. Choisissez un autre horaire.",
     "enSupplement": "En supplément",
-    "avecUneAutre": "Ce soin se prend avec une autre prestation."
+    "avecUneAutre": "Ce soin se prend avec une autre prestation.",
+    "offres": "Offres",
+    "nouvellesClientesUniquement": "Nouvelles clientes uniquement",
+    "placesRestantes": {
+      "one": "Plus qu'une place",
+      "other": "Plus que %{count} places"
+    },
+    "offreToucher": "Touchez une offre, puis entrez votre numéro pour en profiter.",
+    "offreReserveeNouvelles": "Cette offre est réservée aux nouvelles clientes. Vous pouvez choisir vos soins ci-dessous.",
+    "offrePlusDisponible": "Cette offre n'est plus disponible. Vous pouvez choisir vos soins ci-dessous.",
+    "voirToutesLesOffres": {
+      "one": "Voir l'offre",
+      "other": "Voir les %{count} offres"
+    }
   },
   "commun": {
     "chargement": "Chargement...",

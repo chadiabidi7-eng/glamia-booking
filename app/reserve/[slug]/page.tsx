@@ -25,6 +25,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
+import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
@@ -223,6 +224,8 @@ let PINK_LIGHT = PINK_LIGHT_DEFAUT
 // deviennent un gris neutre : la page reste sobre, sa couleur y ponctue.
 // Sans couleur choisie, la page garde le rose Glamia d'origine partout.
 let PINK_TEXTE = PINK_DEFAUT
+// Sa couleur quand elle ÉCRIT : à peine foncée si elle est trop pâle (29 oct. 2026).
+let GLAMIA_PINK_TEXTE = GLAMIA_PINK_DEFAUT
 let PINK_FONCE = '#8E4E72'
 let PINK_BORD = '#F2D7E6'
 function teinterPage(couleur: string | null) {
@@ -232,6 +235,7 @@ function teinterPage(couleur: string | null) {
   PINK_FONCE = couleur ? '#1C1C1E' : '#8E4E72'
   PINK_BORD = couleur ? '#E5E7EB' : '#F2D7E6'
   GLAMIA_PINK = couleur ?? GLAMIA_PINK_DEFAUT
+  GLAMIA_PINK_TEXTE = couleur ? lisibleSurBlanc(couleur) : GLAMIA_PINK_DEFAUT
 }
 
 // Profondeur de la recherche du prochain créneau libre, en jours. À 30, une
@@ -348,7 +352,8 @@ function formatDateCourte(dateStr: string) {
 
 /** « Pour les rendez-vous du 15 décembre au 25 décembre » : les jours où l'offre s'applique. */
 function periodeOffre(o: { date_debut?: string | null; date_fin?: string | null }): string {
-  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' })
+  // « 1er octobre », pas « 1 octobre ».
+  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' }).replace(/^1 (?=\p{L})/u, etiquette().startsWith('fr') ? '1er ' : '1 ')
   if (o.date_debut && o.date_fin) return traduire('resa.offrePeriode', { debut: jour(o.date_debut), fin: jour(o.date_fin) })
   if (o.date_fin) return traduire('resa.offreJusquau', { fin: jour(o.date_fin) })
   if (o.date_debut) return traduire('resa.offreAPartirDu', { debut: jour(o.date_debut) })
@@ -820,7 +825,7 @@ export default function ReservationPage() {
             }}>{a.prestations}</span>
           )}
         </span>
-        <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, color: GLAMIA_PINK_TEXTE, letterSpacing: 1, flexShrink: 0 }}>
           {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
         </span>
       </div>
@@ -1245,6 +1250,14 @@ export default function ReservationPage() {
   // ── Offres ──────────────────────────────────
   const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
   const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
+  // LES OFFRES SUR LA VITRINE (29 oct. 2026, demande de CH Studio Regard) :
+  // avant le numéro, la cliente ne voyait aucune promo. On montre celles
+  // ouvertes à toutes et celles des nouvelles clientes (avec la mention) ;
+  // celles des habituées restent pour l'étape 2, une fois le numéro connu.
+  const [offresVitrine, setOffresVitrine] = useState<Offre[]>([])
+  // L'offre touchée sur la vitrine : appliquée dès que le numéro est vérifié.
+  const [offreVoulue, setOffreVoulue] = useState<string | null>(null)
+  const [offreRefusee, setOffreRefusee] = useState<string | null>(null)
   // ── CE QUI A ÉTÉ RÉGLÉ, GARDÉ POUR LA PAGE DE CONFIRMATION ────────────────
   // `propay` est remis à zéro dès qu'on quitte l'étape 5. La dernière page ne
   // parlait donc que des prestations et du total — pas un mot sur l'acompte que
@@ -1951,13 +1964,72 @@ export default function ReservationPage() {
         p_telephone: tel,
       })
       if (error) { console.error('[chargerOffresEligibles]', error); return }
-      setOffresEligibles((data ?? []).map((o: any) => ({
+      const liste: Offre[] = (data ?? []).map((o: any) => ({
         ...o,
         prestations_ids: Array.isArray(o.prestations_ids) ? o.prestations_ids : [],
-      })))
+      }))
+      setOffresEligibles(liste)
+      // L'offre touchée sur la vitrine : on l'applique si elle est bien pour
+      // elle ; sinon on lui dit pourquoi, plutôt que de la laisser chercher.
+      if (offreVoulue) {
+        const o = liste.find(x => x.id === offreVoulue)
+        if (o) { appliquerOffre(o); setOffreRefusee(null) }
+        else {
+          const v = offresVitrine.find(x => x.id === offreVoulue)
+          setOffreRefusee(v?.cible === 'nouvelles' ? traduire('resa.offreReserveeNouvelles') : traduire('resa.offrePlusDisponible'))
+        }
+        setOffreVoulue(null)
+      }
     } catch (e) {
       console.error('[chargerOffresEligibles]', e)
     }
+  }
+
+  // Sur la vitrine, avant le numéro : les offres de toutes, et celles des
+  // nouvelles clientes. Le même filtre que l'étape 2 (actives, dans leurs
+  // dates, places restantes, soins encore proposés), avec un numéro qui
+  // n'appartient à personne — ce qui écarte d'office les offres des habituées.
+  useEffect(() => {
+    if (!pro?.id) return
+    let annule = false
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_eligible_offers_v2', { p_pro_id: pro.id, p_telephone: '__vitrine__' })
+        if (error || annule) return
+        setOffresVitrine(((data ?? []) as Offre[])
+          .filter(o => o.cible !== 'existantes')
+          .map(o => ({ ...o, prestations_ids: Array.isArray(o.prestations_ids) ? o.prestations_ids : [] })))
+      } catch { /* la vitrine se passe de ses offres */ }
+    })()
+    return () => { annule = true }
+  }, [pro?.id])
+
+  // Appliquer une offre (étape 2, ou depuis la vitrine après le numéro).
+  function appliquerOffre(o: Offre) {
+    setOffreAppliquee(o)
+    if (o.type === 'pack') {
+      const newTechs: TechSelec[] = []
+      for (const [cat, techs] of Object.entries(catalogue)) {
+        for (const t of techs) {
+          if (o.prestations_ids.includes(t.id)) {
+            newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
+          }
+        }
+      }
+      setTechniquesSelectionnees(newTechs)
+    }
+    if (o.type === 'prix_fixe') {
+      for (const [cat, techs] of Object.entries(catalogue)) {
+        for (const t of techs) {
+          if (o.prestations_ids.includes(t.id)) {
+            setTechniquesSelectionnees(prev => prev.some(x => x.nom === t.nom && x.categorie === cat)
+              ? prev : [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
+          }
+        }
+      }
+    }
+    setDate('')
+    setHeure('')
   }
 
   // ── Fidélité ────────────────────────────────
@@ -3720,6 +3792,37 @@ export default function ReservationPage() {
                   prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
                 })),
               }))}
+              offres={offresVitrine.map(o => {
+                const soinsOffre = specialitesActives.flatMap(sp => sp.techniques.filter(t => t.id && o.prestations_ids.includes(t.id)).map(t => ({ sp: sp.nom, t })))
+                const prixAvant = soinsOffre.reduce((n, x) => n + (Number(x.t.prix) || 0), 0)
+                const duree = soinsOffre.reduce((n, x) => n + (Number(x.t.duree) || 0), 0)
+                const photo = soinsOffre.map(x => (x.t.photos ?? []).find(u => typeof u === 'string' && u.trim() !== '')).find(Boolean) ?? null
+                return {
+                  cle: o.id,
+                  nom: o.nom,
+                  pack: o.type === 'pack',
+                  nouvelles: o.cible === 'nouvelles',
+                  periode: o.date_debut || o.date_fin ? periodeOffre(o) : null,
+                  places: o.utilisations_max != null ? Math.max(0, o.utilisations_max - (o.utilisations_actuelles ?? 0)) : null,
+                  // Même nom dans deux catégories (« Vernis semi-permanent » mains
+                  // et pieds) : on précise la catégorie, sinon on lit un doublon.
+                  soins: soinsOffre.map((x, _, tous) => {
+                    const nom = nomSoinAffiche(x.t.nom, x.sp)
+                    const double = tous.some(y => y !== x && nomSoinAffiche(y.t.nom, y.sp) === nom)
+                    return double ? `${nom} (${nomSpecialiteAffiche(x.sp, pro?.categorie_autre_nom)})` : nom
+                  }),
+                  photo,
+                  duree: duree > 0 ? formatDuree(duree) : null,
+                  prixAvant: prixAvant > 0 && prixAvant !== Number(o.prix_promo) ? formatPrix(prixAvant, pro?.devise) : null,
+                  prix: formatPrix(Number(o.prix_promo), pro?.devise),
+                }
+              })}
+              onChoisirOffre={cle => {
+                setOffreVoulue(cle)
+                const champ = document.getElementById('champ-telephone')
+                champ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                setTimeout(() => champ?.focus(), 450)
+              }}
               photos={vitrine?.photos ?? []}
               avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
               chargerAvis={pro?.id ? async depuis => {
@@ -3983,7 +4086,7 @@ export default function ReservationPage() {
                   <a
                     href={`https://instagram.com/${String(refusResa.instagram).replace(/^@/, '')}`}
                     target="_blank" rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'none' }}>
                     <LogoInstagram size={20} />
                     {traduire('resa.suivreInsta')}
                   </a>
@@ -4047,7 +4150,7 @@ export default function ReservationPage() {
                         <span style={{
                           width: 40, height: 40, borderRadius: 20, background: '#fff',
                           border: '1px solid #F2D7E6', display: 'grid', placeItems: 'center',
-                          fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
+                          fontSize: 19, color: GLAMIA_PINK_TEXTE, lineHeight: 1,
                         }}>★</span>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: PINK_FONCE }}>{traduire('resa.laisserAvis')}</span>
@@ -4609,6 +4712,10 @@ export default function ReservationPage() {
           <div>
             <BackBtn onClick={() => setStep(1)} />
 
+            {offreRefusee && (
+              <p style={{ margin: '0 0 14px', padding: '10px 14px', borderRadius: 12, background: PINK_LIGHT, fontSize: 13, color: '#1f2937' }}>{offreRefusee}</p>
+            )}
+
             {/* Offres en cours */}
             {offresEligibles.length > 0 && (
               <OffresSection
@@ -4617,34 +4724,7 @@ export default function ReservationPage() {
                 catalogue={catalogue}
                 devise={pro?.devise}
                 techniquesSelectionnees={techniquesSelectionnees}
-                onApply={(o) => {
-                  setOffreAppliquee(o)
-                  if (o.type === 'pack') {
-                    const newTechs: TechSelec[] = []
-                    for (const [cat, techs] of Object.entries(catalogue)) {
-                      for (const t of techs) {
-                        if (o.prestations_ids.includes(t.id)) {
-                          newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
-                        }
-                      }
-                    }
-                    setTechniquesSelectionnees(newTechs)
-                  }
-                  if (o.type === 'prix_fixe') {
-                    for (const [cat, techs] of Object.entries(catalogue)) {
-                      for (const t of techs) {
-                        if (o.prestations_ids.includes(t.id)) {
-                          const already = techniquesSelectionnees.some(s => s.nom === t.nom && s.categorie === cat)
-                          if (!already) {
-                            setTechniquesSelectionnees(prev => [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
-                          }
-                        }
-                      }
-                    }
-                  }
-                  setDate('')
-                  setHeure('')
-                }}
+                onApply={(o) => { setOffreRefusee(null); appliquerOffre(o) }}
                 onRemove={(o) => {
                   setOffreAppliquee(null)
                   if (o.type === 'pack') {

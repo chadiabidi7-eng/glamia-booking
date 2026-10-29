@@ -263,7 +263,20 @@
     "proBadgeApp": "Get the app",
     "creneauLibereCourt": "The freed slot was only %{duree} long: your treatments take %{choisie}. Please pick another time.",
     "enSupplement": "Add-on",
-    "avecUneAutre": "This service is booked together with another one."
+    "avecUneAutre": "This service is booked together with another one.",
+    "offres": "Offers",
+    "nouvellesClientesUniquement": "New clients only",
+    "placesRestantes": {
+      "one": "Only 1 spot left",
+      "other": "Only %{count} spots left"
+    },
+    "offreToucher": "Tap an offer, then enter your number to get it.",
+    "offreReserveeNouvelles": "This offer is for new clients only. You can choose your services below.",
+    "offrePlusDisponible": "This offer is no longer available. You can choose your services below.",
+    "voirToutesLesOffres": {
+      "one": "See the offer",
+      "other": "See all %{count} offers"
+    }
   },
   "commun": {
     "chargement": "Loading...",
