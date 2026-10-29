@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Gift, Star, Tag, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,6 +37,24 @@ const FILET = '#e5e7eb'
 
 export type SoinVitrine = { cle: string; nom: string; description?: string | null; photos: string[]; duree: string; prix: string }
 /** `icone` : l'image ronde de la spécialité (photo du catalogue, ou la sienne), posée devant son nom. */
+/** Une offre de la pro, montrée en premier onglet des soins (29 oct. 2026). */
+export type OffreVitrine = {
+  cle: string
+  nom: string
+  pack: boolean
+  /** Réservée aux nouvelles clientes : on le dit, sans quoi la cliente fidèle se croit trompée. */
+  nouvelles: boolean
+  /** « Pour les rendez-vous du … au … » quand l'offre est datée. */
+  periode: string | null
+  /** Places restantes quand la pro a fixé un nombre maximal d'utilisations. */
+  places: number | null
+  /** Les soins compris (un pack en contient plusieurs). */
+  soins: string[]
+  photo: string | null
+  duree: string | null
+  prixAvant: string | null
+  prix: string
+}
 export type CategorieVitrine = { nom: string; libelle: string; icone?: React.ReactNode; soins: SoinVitrine[] }
 
 const SOINS_VISIBLES = 4
@@ -199,6 +217,10 @@ export default function Vitrine(props: {
   couverture: string | null
   bio: string | null
   categories: CategorieVitrine[]
+  /** Les offres visibles par toutes (et celles des nouvelles clientes, avec la mention). */
+  offres?: OffreVitrine[]
+  /** Toucher une offre : la page remonte au numéro et la retient. */
+  onChoisirOffre?: (cle: string) => void
   photos: string[]
   avis: ReactNode[]
   /** « Voir tout » : les avis, vingt à la fois (rendus par la page). */
@@ -232,7 +254,16 @@ export default function Vitrine(props: {
   }, [props.boutonApresDefilement])
   // Une seule couleur, la sienne, partout — bouton compris (Chadi, 27 sept.).
   const BOUTON = ACCENT
-  const [categorie, setCategorie] = useState(0)
+  // L'ONGLET « OFFRES » EST TOUJOURS LE PREMIER (Chadi, 29 oct. 2026) : -1.
+  // Les offres arrivent après la page : tant que la cliente n'a touché à rien,
+  // on se place dessus dès qu'elles sont là.
+  const offres = props.offres ?? []
+  const aOffres = offres.length > 0
+  // null : la cliente n'a encore choisi aucun onglet.
+  const [choixOnglet, setChoixOnglet] = useState<number | null>(null)
+  const voulu = choixOnglet ?? (aOffres ? -1 : 0)
+  const categorie = voulu === -1 && !aOffres ? 0 : voulu
+  const setCategorie = (i: number) => setChoixOnglet(i)
   const [tousSoins, setTousSoins] = useState(false)
   const [soinOuvert, setSoinOuvert] = useState<string | null>(null)
   const [toutesPhotos, setToutesPhotos] = useState(false)
@@ -259,7 +290,8 @@ export default function Vitrine(props: {
       setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
     } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
   }
-  const cat = props.categories[categorie] ?? props.categories[0]
+  const surOffres = aOffres && categorie === -1
+  const cat = surOffres ? undefined : (props.categories[categorie] ?? props.categories[0])
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
   const soins = cat ? (tousSoins ? cat.soins : cat.soins.slice(0, SOINS_VISIBLES)) : []
 
@@ -330,8 +362,17 @@ export default function Vitrine(props: {
       {/* 3. LES SOINS */}
       {nbSoins > 0 && (
         <Bloc titre={`${traduire('resa.lesSoins')} (${nbSoins})`}>
-          {props.categories.length > 1 && (
+          {props.categories.length + (aOffres ? 1 : 0) > 1 && (
             <div className="vitrine-onglets">
+              {aOffres && (
+                <button key="__offres" onClick={() => { setCategorie(-1); setTousSoins(false) }}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: surOffres ? ENCRE : ENCRE_DOUCE, borderBottom: `2px solid ${surOffres ? ACCENT : 'transparent'}` }}>
+                  <span style={{ width: 22, height: 22, borderRadius: 11, background: `${ACCENT}1F`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Tag size={12} color={ACCENT} strokeWidth={2.4} />
+                  </span>
+                  {traduire('resa.offres')}
+                </button>
+              )}
               {props.categories.map((c, i) => {
                 const on = i === categorie
                 return (
@@ -342,6 +383,43 @@ export default function Vitrine(props: {
                   </button>
                 )
               })}
+            </div>
+          )}
+          {surOffres && (
+            <div>
+              {offres.map((o, i) => (
+                <button key={o.cle} onClick={() => props.onChoisirOffre?.(o.cle)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', border: 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: ENCRE }}>
+                  {/* La photo du soin, avec la pastille d'offre ; sans photo, l'icône sur un fond teinté. */}
+                  <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+                    {o.photo ? (
+                      <img src={o.photo} alt="" loading="lazy" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <span style={{ width: 52, height: 52, borderRadius: 12, background: `${ACCENT}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {o.pack ? <Gift size={22} color={ACCENT} strokeWidth={2} /> : <Tag size={22} color={ACCENT} strokeWidth={2} />}
+                      </span>
+                    )}
+                    {o.photo && (
+                      <span style={{ position: 'absolute', right: -4, top: -4, width: 20, height: 20, borderRadius: 10, background: ACCENT, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Tag size={10} color="#fff" strokeWidth={2.6} />
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
+                    {o.nouvelles && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{traduire('resa.nouvellesClientesUniquement')}</span>}
+                    {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: ACCENT }}>{o.periode}</span>}
+                    {o.pack && o.soins.length > 0 && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.soins.join(' + ')}</span>}
+                    <span style={{ display: 'block', margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>
+                      {o.duree ? `${o.duree} · ` : ''}
+                      {o.prixAvant && <span style={{ textDecoration: 'line-through', marginRight: 6 }}>{o.prixAvant}</span>}
+                      <span style={{ color: ENCRE, fontWeight: 700 }}>{o.prix}</span>
+                    </span>
+                    {o.places != null && o.places <= 10 && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE }}>{traduire('resa.placesRestantes', { count: o.places })}</span>}
+                  </span>
+                </button>
+              ))}
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: ENCRE_DOUCE }}>{traduire('resa.offreToucher')}</p>
             </div>
           )}
           <div>

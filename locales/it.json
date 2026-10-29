@@ -263,7 +263,16 @@
     "proBadgeApp": "Scarica l'app",
     "creneauLibereCourt": "L'orario liberato durava solo %{duree}: i tuoi servizi durano %{choisie}. Scegli un altro orario.",
     "enSupplement": "In aggiunta",
-    "avecUneAutre": "Questo servizio si prenota insieme a un altro."
+    "avecUneAutre": "Questo servizio si prenota insieme a un altro.",
+    "offres": "Offerte",
+    "nouvellesClientesUniquement": "Solo nuove clienti",
+    "placesRestantes": {
+      "one": "Resta solo 1 posto",
+      "other": "Restano solo %{count} posti"
+    },
+    "offreToucher": "Tocca un'offerta, poi inserisci il tuo numero per approfittarne.",
+    "offreReserveeNouvelles": "Questa offerta è riservata alle nuove clienti. Puoi scegliere i tuoi trattamenti qui sotto.",
+    "offrePlusDisponible": "Questa offerta non è più disponibile. Puoi scegliere i tuoi trattamenti qui sotto."
   },
   "commun": {
     "chargement": "Caricamento...",

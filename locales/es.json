@@ -263,7 +263,16 @@
     "proBadgeApp": "Descargar la app",
     "creneauLibereCourt": "El hueco liberado era de solo %{duree}: tus servicios duran %{choisie}. Elige otra hora.",
     "enSupplement": "Suplemento",
-    "avecUneAutre": "Este servicio se reserva junto con otro."
+    "avecUneAutre": "Este servicio se reserva junto con otro.",
+    "offres": "Ofertas",
+    "nouvellesClientesUniquement": "Solo nuevas clientas",
+    "placesRestantes": {
+      "one": "Solo queda 1 plaza",
+      "other": "Solo quedan %{count} plazas"
+    },
+    "offreToucher": "Toca una oferta y luego introduce tu número para aprovecharla.",
+    "offreReserveeNouvelles": "Esta oferta es solo para nuevas clientas. Puedes elegir tus servicios abajo.",
+    "offrePlusDisponible": "Esta oferta ya no está disponible. Puedes elegir tus servicios abajo."
   },
   "commun": {
     "chargement": "Cargando...",
