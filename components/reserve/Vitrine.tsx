@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronUp, Gift, Star, Tag, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, CircleAlert, Gift, Star, Tag, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,10 +290,7 @@ export default function Vitrine(props: {
       setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
     } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
   }
-  // Comme sur le reste de la page (27 sept. 2026) : sa couleur ponctue, elle
-  // n'écrit pas — un jaune pâle rendait la mention illisible. Rose Glamia
-  // quand la pro n'a pas choisi de couleur.
-  const TEXTE_MENTION = props.couleurPage ? ENCRE : ROSE
+  const TEXTE_MENTION = ACCENT
   const surOffres = aOffres && categorie === -1
   const cat = surOffres ? undefined : (props.categories[categorie] ?? props.categories[0])
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
@@ -411,9 +408,10 @@ export default function Vitrine(props: {
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
-                    {o.nouvelles && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}>{traduire('resa.nouvellesClientesUniquement')}</span>}
+                    {/* Les soins compris, bien lisibles : c'est là qu'on comprend l'offre. */}
+                    {o.soins.length > 0 && <span style={{ display: 'block', margin: '3px 0 0', fontSize: 13, fontWeight: 600, color: ENCRE, lineHeight: 1.35 }}>{o.soins.join(' + ')}</span>}
+                    {o.nouvelles && <span style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}><CircleAlert size={13} strokeWidth={2.4} style={{ flexShrink: 0 }} />{traduire('resa.nouvellesClientesUniquement')}</span>}
                     {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}>{o.periode}</span>}
-                    {o.soins.length > 0 && (o.pack || !o.soins.every(n => o.nom.toLowerCase().includes(n.toLowerCase()))) && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.soins.join(' + ')}</span>}
                     <span style={{ display: 'block', margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>
                       {o.duree ? `${o.duree} · ` : ''}
                       {o.prixAvant && <span style={{ textDecoration: 'line-through', marginRight: 6 }}>{o.prixAvant}</span>}
