@@ -618,6 +618,20 @@ import { traduire } from '@/lib/i18n';
               <div style={{ marginTop: 24 }}>
                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>{traduire('confirmation.choisirNouvelleDate')}</p>
 
+                {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
+                {(rdv.equipe?.length ?? 0) > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '0 0 12px' }}>
+                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: rdv.pro_pseudo || rdv.pro_prenom }, ...(rdv.equipe ?? []).map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                      <button
+                        key={o.cle}
+                        onClick={() => { setDecAvec(o.cle); if (decDate) handlePickDate(decDate, o.cle) }}
+                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${decAvec === o.cle ? PINK : '#e5e7eb'}`, background: decAvec === o.cle ? PINK : '#fff', color: decAvec === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        {o.libelle}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Navigation mois */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <button
@@ -640,20 +654,6 @@ import { traduire } from '@/lib/i18n';
                     <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>{j}</div>
                   ))}
                 </div>
-
-                {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
-                {(rdv.equipe?.length ?? 0) > 0 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '0 0 12px' }}>
-                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: rdv.pro_pseudo || rdv.pro_prenom }, ...(rdv.equipe ?? []).map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
-                      <button
-                        key={o.cle}
-                        onClick={() => { setDecAvec(o.cle); if (decDate) handlePickDate(decDate, o.cle) }}
-                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${decAvec === o.cle ? PINK : '#e5e7eb'}`, background: decAvec === o.cle ? PINK : '#fff', color: decAvec === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                        {o.libelle}
-                      </button>
-                    ))}
-                  </div>
-                )}
 
                 {/* Grille du mois */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
