@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
-import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
+import { isDayWorking, isDayBlocked, dernierJourReservable, horizonDe, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
 import { langueActuelle, poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
@@ -32,6 +32,8 @@ type RdvInfo = {
   jours_differents?: HorairesSpecifiques | null
   creneaux_bloques: CreneauBloque[]
   planning_variable: boolean
+  /** Jours à l'avance au-delà desquels on ne réserve plus (31 oct. 2026) ; null = sans limite. */
+  resa_horizon_jours?: number | null
   duree: number
   instructions: string | null
   inspirations: string[]
@@ -673,7 +675,11 @@ import { traduire } from '@/lib/i18n';
                     {moisLongs()[calMonth]} {calYear}
                   </span>
                   <button
-                    onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
+                    onClick={() => {
+                      const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
+                      if (dernier && buildDateStr(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12, 1) > dernier) return
+                      if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1)
+                    }}
                     style={{ width: 32, height: 32, borderRadius: 16, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >›</button>
                 </div>
@@ -698,7 +704,10 @@ import { traduire } from '@/lib/i18n';
                     const isOff = (rdv.equipe?.length ?? 0) === 0 && (
                       !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable, rdv.jours_differents)
                       || isDayBlocked(dateStr, rdv.creneaux_bloques ?? []))
-                    const isDisabled = isPast || isOff
+                    // Au-delà de la limite de la pro (31 oct. 2026) : grisé comme un jour fermé.
+                    const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
+                    const horsLimite = !!dernier && dateStr > dernier
+                    const isDisabled = isPast || isOff || horsLimite
                     const isSelected = decDate === dateStr
                     return (
                       <button
@@ -707,8 +716,8 @@ import { traduire } from '@/lib/i18n';
                         onClick={() => { if (!isDisabled) handlePickDate(dateStr) }}
                         style={{
                           aspectRatio: '1', borderRadius: '50%', border: 'none',
-                          background: isSelected ? PINK : isPast ? 'transparent' : isOff ? '#E3F2FD' : 'transparent',
-                          color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                          background: isSelected ? PINK : isPast ? 'transparent' : (isOff || horsLimite) ? '#E3F2FD' : 'transparent',
+                          color: isSelected ? '#fff' : isPast ? '#d1d5db' : (isOff || horsLimite) ? '#90CAF9' : '#374151',
                           fontWeight: 500, fontSize: 13, cursor: isDisabled ? 'default' : 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}

@@ -24,12 +24,12 @@ export type Reglage = { assure: boolean; duree: number | null }
 export type AssistanteResa = { id: string; prenom: string; prestations: Record<string, Reglage> }
 export type SlotQui = Slot & { qui: string | null }
 
-export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme'
+export const CHAMPS_HORAIRES = 'horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, resa_horizon_jours'
 
 type ProfilHoraires = {
   horaires: unknown; horaires_specifiques: unknown; jours_differents?: unknown; creneaux_bloques: unknown; planning_variable: boolean | null
   creneaux_a_la_suite: boolean | null; temps_preparation: number | null; temps_preparation_habituel: number | null; timezone: string | null
-  delai_resa_min?: number | null; resa_jour_meme?: boolean | null
+  delai_resa_min?: number | null; resa_jour_meme?: boolean | null; resa_horizon_jours?: number | null
 }
 
 /** Les assistantes actives d'une pro, avec ce qu'elles font et leurs durées. Vide pour une pro seule. */
@@ -90,7 +90,7 @@ export async function profilHorairesPour(admin: SupabaseClient, piloteId: string
   // Le délai avant un rendez-vous est un choix de la pro pour sa page : il
   // vaut pour tout le monde, l'assistante comprise.
   const p = pro as ProfilHoraires
-  return { ...(elle as ProfilHoraires), timezone: p.timezone, delai_resa_min: p.delai_resa_min, resa_jour_meme: p.resa_jour_meme }
+  return { ...(elle as ProfilHoraires), timezone: p.timezone, delai_resa_min: p.delai_resa_min, resa_jour_meme: p.resa_jour_meme, resa_horizon_jours: p.resa_horizon_jours }
 }
 
 /** Les rendez-vous qui occupent CETTE personne (la pro : ceux sans assistante), rangés par jour. */

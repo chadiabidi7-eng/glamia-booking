@@ -134,13 +134,33 @@ export function isDayBlocked(dateStr: string, bloques: CreneauBloque[]) {
  * Le délai ne concerne que les clientes : la pro, depuis son app, pose ce
  * qu'elle veut quand elle veut.
  */
-export type DelaiResa = { minutes: number; jourMeme: boolean }
-export const DELAI_RESA_DEFAUT: DelaiResa = { minutes: 60, jourMeme: true }
-export function delaiDe(pro: { delai_resa_min?: number | null; resa_jour_meme?: boolean | null } | null | undefined): DelaiResa {
+export type DelaiResa = { minutes: number; jourMeme: boolean; horizonJours?: number | null }
+export const DELAI_RESA_DEFAUT: DelaiResa = { minutes: 60, jourMeme: true, horizonJours: null }
+
+/**
+ * JUSQU'À QUAND ON PEUT RÉSERVER (31 oct. 2026) : `resa_horizon_jours`, choisi
+ * par la pro (14, 30, 60, 90, 180 ou 365). Vide = sans limite, comme avant.
+ * Au-delà, un jour n'a plus aucun créneau — pour l'affichage comme pour toutes
+ * les vérifications du serveur, puisqu'elles passent toutes par ici.
+ */
+export const HORIZONS_PERMIS = [14, 30, 60, 90, 180, 365]
+export function horizonDe(valeur: unknown): number | null {
+  const n = typeof valeur === 'number' ? valeur : Number(valeur)
+  return valeur != null && HORIZONS_PERMIS.includes(n) ? n : null
+}
+/** Le dernier jour réservable (AAAA-MM-JJ), à compter d'aujourd'hui chez la pro ; null = sans limite. */
+export function dernierJourReservable(horizon: number | null | undefined, aujourdhui: string): string | null {
+  if (!horizon) return null
+  const d = new Date(Date.UTC(+aujourdhui.slice(0, 4), +aujourdhui.slice(5, 7) - 1, +aujourdhui.slice(8, 10) + horizon))
+  return d.toISOString().slice(0, 10)
+}
+
+export function delaiDe(pro: { delai_resa_min?: number | null; resa_jour_meme?: boolean | null; resa_horizon_jours?: number | null } | null | undefined): DelaiResa {
   const m = Number(pro?.delai_resa_min)
   return {
     minutes: Number.isFinite(m) && m >= 0 ? m : DELAI_RESA_DEFAUT.minutes,
     jourMeme: pro?.resa_jour_meme !== false,
+    horizonJours: horizonDe(pro?.resa_horizon_jours),
   }
 }
 
@@ -240,6 +260,9 @@ export function generateSlots(
   if (date < maintenant.date) return []
   // « Pas le jour même » : aujourd'hui n'a aucun créneau, quelle que soit l'heure.
   if (date === maintenant.date && !delai.jourMeme) return []
+  // Au-delà de la limite choisie par la pro : rien.
+  const dernier = dernierJourReservable(delai.horizonJours, maintenant.date)
+  if (dernier && date > dernier) return []
   // Le délai peut dépasser la journée (24 h, 48 h) : il déborde sur les jours
   // suivants. On le ramène en minutes depuis le début du jour demandé.
   const joursEcart = Math.round((Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) - Date.UTC(+maintenant.date.slice(0, 4), +maintenant.date.slice(5, 7) - 1, +maintenant.date.slice(8, 10))) / 86400000)
