@@ -132,6 +132,8 @@ type ProInfo = {
   formule?: 'free' | 'pro' | 'ultra'
   /** Ultra : ses majorations, fériés déjà résolus en dates (null sinon). */
   majorations?: MajorationsResolues
+  /** Jours à l'avance au-delà desquels on ne réserve plus (31 oct. 2026) ; null = sans limite. */
+  resa_horizon_jours?: number | null
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -1702,6 +1704,7 @@ export default function ReservationPage() {
           jours_differents: (d.pro.jours_differents && typeof d.pro.jours_differents === 'object') ? d.pro.jours_differents : prev.jours_differents,
           planning_variable: d.pro.planning_variable === true,
           majorations: d.pro.majorations ?? null,
+          resa_horizon_jours: typeof d.pro.resa_horizon_jours === 'number' ? d.pro.resa_horizon_jours : null,
         } : prev)
         // Force le recalcul des créneaux : un RDV a pu être pris entretemps.
         setRdvVersion(v => v + 1)
@@ -1859,6 +1862,8 @@ export default function ReservationPage() {
         formule:               found.formule ?? 'free',
         // Les majorations (Ultra) : sans cette ligne, le serveur les envoie et la page les perd.
         majorations:           found.majorations ?? null,
+        // Jusqu'à quand on peut réserver (31 oct. 2026) — même piège : sans cette ligne, la page l'ignore.
+        resa_horizon_jours:    typeof found.resa_horizon_jours === 'number' ? found.resa_horizon_jours : null,
         instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
         snapchat:         found.snapchat ?? undefined,
@@ -3527,7 +3532,7 @@ export default function ReservationPage() {
   const todayStr = buildDateStr(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
   // JUSQU'À QUAND ON PEUT RÉSERVER (31 oct. 2026) : au-delà, jours grisés et flèche arrêtée.
   // Le serveur applique la même limite (lib/creneaux.ts) ; ceci n'est que l'affichage.
-  const dernierResa = dernierJourReservable(horizonDe((pro as { resa_horizon_jours?: number | null } | null)?.resa_horizon_jours), todayStr)
+  const dernierResa = dernierJourReservable(horizonDe(pro?.resa_horizon_jours), todayStr)
   const apresLimite = (dateStr: string) => !!dernierResa && dateStr > dernierResa
   /** Le mois (année, mois 0-11) commence-t-il après la limite ? */
   const moisApresLimite = (annee: number, mois: number) => apresLimite(buildDateStr(annee, mois, 1))
