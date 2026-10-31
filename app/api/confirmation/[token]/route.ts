@@ -58,7 +58,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, instagram, delai_modif_heures, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+    .select('prenom, nom, pseudo, instagram, delai_modif_heures, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme, resa_horizon_jours')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -168,6 +168,8 @@ export async function GET(
     jours_differents: (pro as any)?.jours_differents ?? null,
     creneaux_bloques: Array.isArray((pro as any)?.creneaux_bloques) ? (pro as any).creneaux_bloques : [],
     planning_variable: (pro as any)?.planning_variable === true,
+    // Jusqu'à quand on peut réserver (31 oct. 2026) : le calendrier « Décaler » s'arrête là.
+    resa_horizon_jours: (pro as any)?.resa_horizon_jours ?? null,
     // ÉQUIPE : celles qui peuvent recevoir ce rendez-vous (vide pour une pro seule).
     equipe,
     // null = la cliente peut encore annuler ou décaler en ligne.
@@ -253,7 +255,7 @@ export async function POST(
 
     const { data: proRegles } = parEquipe ? { data: null } : await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme, resa_horizon_jours')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 

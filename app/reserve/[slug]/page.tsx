@@ -20,7 +20,7 @@ import Vitrine, { EnTeteVitrine, TexteReplie } from '@/components/reserve/Vitrin
 import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
-  type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
+  type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot, dernierJourReservable, horizonDe,
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
@@ -2489,6 +2489,7 @@ export default function ReservationPage() {
   }
 
   function reprogNextMonth() {
+    if (moisApresLimite(reprogCalMonth === 11 ? reprogCalYear + 1 : reprogCalYear, (reprogCalMonth + 1) % 12)) return
     if (reprogCalMonth === 11) { setReprogCalMonth(0); setReprogCalYear(y => y + 1) }
     else setReprogCalMonth(m => m + 1)
   }
@@ -2835,6 +2836,7 @@ export default function ReservationPage() {
           if (new Date(calYear, calMonth, jour) < debutDuJour) continue
           if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
           if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+          if (apresLimite(dateStr)) continue
           aTester.push(dateStr)
         }
         if (annule || aTester.length === 0) return
@@ -2889,6 +2891,7 @@ export default function ReservationPage() {
         if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
         // Avec une offre datée, le « prochain créneau » se cherche dans ses jours.
         if (!dansPeriodeOffre(offreAppliquee, dateStr)) continue
+        if (apresLimite(dateStr)) continue
         aTester.push(dateStr)
       }
 
@@ -3522,6 +3525,12 @@ export default function ReservationPage() {
 
   const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
   const todayStr = buildDateStr(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
+  // JUSQU'À QUAND ON PEUT RÉSERVER (31 oct. 2026) : au-delà, jours grisés et flèche arrêtée.
+  // Le serveur applique la même limite (lib/creneaux.ts) ; ceci n'est que l'affichage.
+  const dernierResa = dernierJourReservable(horizonDe((pro as { resa_horizon_jours?: number | null } | null)?.resa_horizon_jours), todayStr)
+  const apresLimite = (dateStr: string) => !!dernierResa && dateStr > dernierResa
+  /** Le mois (année, mois 0-11) commence-t-il après la limite ? */
+  const moisApresLimite = (annee: number, mois: number) => apresLimite(buildDateStr(annee, mois, 1))
 
   function isAtCurrentMonth() {
     return calYear === todayJs.getFullYear() && calMonth === todayJs.getMonth()
@@ -3534,6 +3543,7 @@ export default function ReservationPage() {
   }
 
   function nextMonth() {
+    if (moisApresLimite(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12)) return
     if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
     else setCalMonth(m => m + 1)
   }
@@ -4622,7 +4632,7 @@ export default function ReservationPage() {
                                 <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15, textTransform: 'capitalize' }}>
                                   {MOIS()[reprogCalMonth]} {reprogCalYear}
                                 </span>
-                                <button onClick={reprogNextMonth} style={S.navBtn}>›</button>
+                                <button onClick={reprogNextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(reprogCalMonth === 11 ? reprogCalYear + 1 : reprogCalYear, (reprogCalMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
                               </div>
 
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
@@ -4643,7 +4653,8 @@ export default function ReservationPage() {
                                   // ÉQUIPE : comme à la réservation, un jour fermé pour la pro peut être
                                   // ouvert pour l'assistante — ce sont les heures qui décident.
                                   const isOff = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
-                                  const isDisabled = isPast || isOff
+                                  const horsLimite = apresLimite(dateStr)
+                                  const isDisabled = isPast || isOff || horsLimite
                                   const isSelected = reprogDate === dateStr
 
                                   return (
@@ -4654,8 +4665,8 @@ export default function ReservationPage() {
                                       style={{
                                         aspectRatio: '1', borderRadius: '50%', boxSizing: 'border-box',
                                         border: `1.5px solid ${dateStr === todayStr && !isSelected ? PINK : 'transparent'}`,
-                                        background: isSelected ? PINK : isOff && !isPast ? '#E3F2FD' : 'transparent',
-                                        color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                                        background: isSelected ? PINK : (isOff || horsLimite) && !isPast ? '#E3F2FD' : 'transparent',
+                                        color: isSelected ? '#fff' : isPast ? '#d1d5db' : (isOff || horsLimite) ? '#90CAF9' : '#374151',
                                         fontWeight: 500, fontSize: 13,
                                         cursor: isDisabled ? 'default' : 'pointer',
                                         transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -5155,7 +5166,7 @@ export default function ReservationPage() {
               <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16, textTransform: 'capitalize' }}>
                 {MOIS()[calMonth]} {calYear}
               </span>
-              <button onClick={nextMonth} style={S.navBtn}>›</button>
+              <button onClick={nextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
@@ -5180,7 +5191,7 @@ export default function ReservationPage() {
                 // propose la liste d'attente. Il garde son apparence « complet »
                 // pour ne pas faire espérer un créneau, mais la porte est ouverte.
                 // Une offre datée n'ouvre que ses jours (26 oct. 2026).
-                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr)
+                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr) || apresLimite(dateStr)
                 const isDisabled = isPast || isOff || horsOffre
                 const isSelected = date === dateStr
 

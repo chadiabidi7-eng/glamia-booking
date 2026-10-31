@@ -87,7 +87,7 @@ async function lire(url: URL) {
   const { data: envoi } = await supabaseAdmin.from('desistement_envois').select('id, cliente_id, pro_id, rdv_id, place_id, genre, pris_le').eq('id', e).maybeSingle()
   if (!envoi || envoi.genre !== 'avancer' || !envoi.rdv_id) return null
   const { data: pro } = await supabaseAdmin.from('profiles')
-    .select('pseudo, prenom, langue, pays, timezone, push_token, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, delai_resa_min, resa_jour_meme')
+    .select('pseudo, prenom, langue, pays, timezone, push_token, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, delai_resa_min, resa_jour_meme, resa_horizon_jours')
     .eq('id', envoi.pro_id).maybeSingle()
   const { data: place } = await supabaseAdmin.from('desistement_places').select('jour, debut_min').eq('id', envoi.place_id).maybeSingle()
   const { data: rdv } = await supabaseAdmin.from('rendez_vous').select('id, date, duree, statut, nb_decalages, cliente_id, techniques, praticienne_id').eq('id', envoi.rdv_id).maybeSingle()
