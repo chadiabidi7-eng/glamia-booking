@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { traiterAnnulationPropay } from '@/lib/propay'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
+import { refusDelaiModif } from '@/lib/delai-modif'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — annulation d'un RDV par la CLIENTE depuis la page de résa.
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, pro_id, cliente_id, statut, fidelite_appliquee, reduction_appliquee, cliente:clientes(telephone)')
+    .select('id, pro_id, date, cliente_id, statut, fidelite_appliquee, reduction_appliquee, cliente:clientes(telephone)')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest) {
   if (rdv.statut === 'annule') {
     return NextResponse.json({ success: true, deja: true })
   }
+
+  // Le délai choisi par la pro (24, 48 ou 72 h) : passé, plus d'annulation en ligne.
+  const refusDelai = await refusDelaiModif(supabaseAdmin, rdv.pro_id as string, rdv.date as string)
+  if (refusDelai) return NextResponse.json(refusDelai, { status: 403 })
 
   // 1) Annuler le RDV (origine cliente → traitement paiement normal, garde C16)
   const { error: updErr } = await supabaseAdmin

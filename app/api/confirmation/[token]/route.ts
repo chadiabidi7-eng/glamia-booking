@@ -6,6 +6,10 @@ import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { adressePourEtape } from '@/lib/adresse-due'
 import { avecCanal } from '@/lib/canal-android'
+import { assistantesDe, type SlotQui } from '@/lib/equipe'
+import { creneauxFusionnes, jugerDeplacement, personnesDuRdv, selonChoix } from '@/lib/deplacement'
+import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
+import { delaiModifDepasse, infosDelaiModif, messageDelaiModif, refusDelaiModif } from '@/lib/delai-modif'
 
 // Les noms de jours et de mois étaient écrits en français, en dur. Une pro
 // anglaise recevait « mercredi 15 juillet » dans sa notification. On les
@@ -32,7 +36,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id, duree, instructions, inspirations')
+    .select('id, date, technique, specialite, prix, statut, token_expiration, cliente_id, pro_id, duree, instructions, inspirations, techniques, praticienne_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -54,7 +58,7 @@ export async function GET(
   // Récupérer le profil pro
   const { data: pro } = await supabaseAdmin
     .from('profiles')
-    .select('prenom, nom, pseudo, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+    .select('prenom, nom, pseudo, instagram, delai_modif_heures, avatar_url, push_token, adresse, adresse_moment, horaires, devise, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme, resa_horizon_jours')
     .eq('id', data.pro_id)
     .maybeSingle()
 
@@ -69,8 +73,24 @@ export async function GET(
   // bloqués, les journées fermées, le planning variable et les évènements du
   // calendrier iPhone : une cliente pouvait se décaler en plein congé.
   const slotsDate = req.nextUrl.searchParams.get('slots_date')
-  let slots: Slot[] = []
-  if (slotsDate) {
+  let slots: (Slot | SlotQui)[] = []
+
+  // ── ÉQUIPE (29 oct. 2026) : même règle qu'à la réservation ──────────────
+  // Chez une pro qui a une assistante, la grille montre les heures des deux
+  // (chacune avec ses horaires, ses rendez-vous, sa durée) et dit qui tient
+  // chaque heure. Pour une pro seule, `personnes` est null : chemin d'avant.
+  const personnes = await personnesDuRdv(supabaseAdmin, data.pro_id as string, data as never)
+  let equipe: { id: string; prenom: string }[] = []
+  if (personnes) {
+    const toutes = await assistantesDe(supabaseAdmin, data.pro_id as string)
+    equipe = toutes.filter(a => personnes.some(p => p.id === a.id)).map(a => ({ id: a.id, prenom: a.prenom }))
+  }
+  if (slotsDate && personnes) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(slotsDate)) {
+      const choix = selonChoix(personnes, req.nextUrl.searchParams.get('avec'))
+      slots = (await creneauxFusionnes(supabaseAdmin, data.pro_id as string, choix, [slotsDate], data.id as string))[slotsDate] ?? []
+    }
+  } else if (slotsDate) {
     const { data: rdvs } = await supabaseAdmin
       .from('rendez_vous')
       .select('date, duree')
@@ -106,6 +126,14 @@ export async function GET(
     )
   }
 
+  // Le délai choisi par la pro : passé, « Annuler » et « Décaler » sont grisés
+  // (« Confirmer » reste possible) et une ligne l'envoie vers sa pro.
+  const proDelai = pro as { timezone?: string | null; langue?: string | null } | null
+  const infosDelai = infosDelaiModif(pro as never)
+  const delaiModif = infosDelai && delaiModifDepasse(data.date as string, proDelai?.timezone, infosDelai.heures)
+    ? { ...infosDelai, message: messageDelaiModif(proDelai?.langue, infosDelai) }
+    : null
+
   return NextResponse.json({
     id: data.id,
     date: dateStr,
@@ -140,6 +168,12 @@ export async function GET(
     jours_differents: (pro as any)?.jours_differents ?? null,
     creneaux_bloques: Array.isArray((pro as any)?.creneaux_bloques) ? (pro as any).creneaux_bloques : [],
     planning_variable: (pro as any)?.planning_variable === true,
+    // Jusqu'à quand on peut réserver (31 oct. 2026) : le calendrier « Décaler » s'arrête là.
+    resa_horizon_jours: (pro as any)?.resa_horizon_jours ?? null,
+    // ÉQUIPE : celles qui peuvent recevoir ce rendez-vous (vide pour une pro seule).
+    equipe,
+    // null = la cliente peut encore annuler ou décaler en ligne.
+    delai_modif: delaiModif,
   })
 }
 
@@ -159,7 +193,7 @@ export async function POST(
   // Vérifier que le RDV existe et que le token est valide
   const { data: rdv, error: fetchErr } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, duree, statut, token_expiration, cliente_id, pro_id')
+    .select('id, date, duree, statut, token_expiration, cliente_id, pro_id, techniques, praticienne_id')
     .eq('token_confirmation', token)
     .maybeSingle()
 
@@ -169,6 +203,13 @@ export async function POST(
 
   if (rdv.token_expiration && new Date(rdv.token_expiration) < new Date()) {
     return NextResponse.json({ error: 'expired' }, { status: 410 })
+  }
+
+  // Le délai choisi par la pro (24, 48 ou 72 h) : passé, ni annulation ni
+  // décalage en ligne. Confirmer sa présence reste toujours possible.
+  if (action === 'annuler' || action === 'decaler') {
+    const refusDelai = await refusDelaiModif(supabaseAdmin, rdv.pro_id as string, rdv.date as string)
+    if (refusDelai) return NextResponse.json(refusDelai, { status: 403 })
   }
 
   // ── Action : décaler ──────────────────────────────────────────────────
@@ -195,9 +236,26 @@ export async function POST(
     const nouvelleDate = (newDate as string).slice(0, 10)
     const nouvelleHeure = (newDate as string).slice(11, 16)
 
-    const { data: proRegles } = await supabaseAdmin
+    // ── ÉQUIPE (29 oct. 2026) : revérifiée pour la personne qui tient l'heure,
+    // qui est notée sur le rendez-vous. Pro seule : le verrou d'avant, plus bas.
+    const juge = await jugerDeplacement(supabaseAdmin, {
+      proId: rdv.pro_id as string,
+      rdvId: rdv.id as string,
+      nouvelleDate: newDate,
+      personnes: await personnesDuRdv(supabaseAdmin, rdv.pro_id as string, rdv as never),
+      praticienneDemandee: body.praticienne_id,
+    })
+    if (juge.equipe && !juge.ok) {
+      return NextResponse.json(
+        { error: juge.error, raison: juge.error, message: juge.message },
+        { status: juge.error === 'invalid_params' ? 400 : 409 },
+      )
+    }
+    const parEquipe = juge.equipe && juge.ok ? { praticienne_id: juge.praticienneId, duree: juge.duree } : null
+
+    const { data: proRegles } = parEquipe ? { data: null } : await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, langue, pays, delai_resa_min, resa_jour_meme, resa_horizon_jours')
       .eq('id', rdv.pro_id)
       .maybeSingle()
 
@@ -243,6 +301,7 @@ export async function POST(
     const { error: updateErr } = await supabaseAdmin
       .from('rendez_vous')
       .update({
+        ...(parEquipe ?? {}),
         date: newDate,
         statut: 'en_attente',
         rappel_envoye_count: 0,
@@ -276,18 +335,15 @@ export async function POST(
       const newDateStr = newDate.slice(0, 10)
       const newHeureStr = newDate.slice(11, 16)
 
-      // Push notification à la pro
-      if (proData?.push_token) {
-        await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(avecCanal({
-            to: proData.push_token,
-            title: traduireDans(proData?.langue, 'notif.rdvDecaleTitre'),
-            body: traduireDans(proData?.langue, 'notif.rdvDecale', { prenom: clientePrenom, avant: formatDateFr(oldDateStr, proData?.langue), heureAvant: oldHeureStr, apres: formatDateFr(newDateStr, proData?.langue), heure: newHeureStr }),
-          })),
-        })
-      }
+      // Push notification à la pro — et, chez une pro qui a une assistante, à
+      // l'assistante concernée (avant / après), chacune dans sa langue.
+      await prevenirDuDeplacement(supabaseAdmin, {
+        proId: rdv.pro_id as string,
+        rdvId: rdv.id as string,
+        praticiennes: [rdv.praticienne_id as string | null, parEquipe?.praticienne_id ?? null],
+        message: messageDecalage(cliente?.prenom ?? '', `${oldDateStr}T${oldHeureStr}`, newDate),
+        origine: 'api/confirmation',
+      })
 
       // Email de confirmation à la cliente
       if (cliente?.email) {

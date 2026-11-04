@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
 
     const { data: pro } = await supabaseAdmin
       .from('profiles')
-      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, adresse, adresse_moment')
+      .select('horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, creneaux_a_la_suite, temps_preparation, temps_preparation_habituel, timezone, delai_resa_min, resa_jour_meme, resa_horizon_jours, adresse, adresse_moment')
       .eq('id', pro_id)
       .maybeSingle()
 
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     // Panier introuvable ou prestation désactivée : on refuse. Ce que le
     // navigateur raconte ne correspond alors à rien de réel, et laisser passer
     // reviendrait à accepter n'importe quel prix.
-    const reel = await prixReelDuPanier(pro_id, body.techniques, body.offre_id)
+    const reel = await prixReelDuPanier(pro_id, body.techniques, body.offre_id, date)
     if (Array.isArray(body.techniques) && body.techniques.length > 0 && !reel) {
       console.error('[rdv/creer] panier refusé', pro_id, JSON.stringify(body.techniques).slice(0, 300))
       return NextResponse.json({ ok: false, raison: 'prestation_inconnue' }, { status: 409 })

@@ -20,11 +20,12 @@ import Vitrine, { EnTeteVitrine, TexteReplie } from '@/components/reserve/Vitrin
 import CarteFidelite from '@/components/reserve/CarteFidelite';
 import {
   generateSlots, isDayBlocked, isDayWorking, timeToMin, minToTime,
-  type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot,
+  type CreneauBloque, type HorairesHebdo, type HorairesSpecifiques, type Slot, dernierJourReservable, horizonDe,
 } from '@/lib/creneaux';
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
+import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
 import { exempleTelephone } from '@/lib/telephone-exemple'
@@ -91,11 +92,14 @@ async function creneauxServeur(
   proId: string, duree: number, dates: string[], exclureRdv?: string,
   // ÉQUIPE : qui peut recevoir, et en combien de temps. Absent pour une pro seule.
   personnes?: PersonneCreneaux[],
+  // ÉQUIPE, DÉPLACEMENT : le serveur déduit lui-même du rendez-vous (exclureRdv)
+  // qui peut le recevoir — la même règle que celle qui jugera l'enregistrement.
+  deplacer?: { techniques?: TechSelec[]; avec?: string },
 ): Promise<Record<string, SlotQui[]>> {
   const rep = await fetch('/api/creneaux', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes }),
+    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes, deplacer }),
   })
   if (!rep.ok) throw new Error('creneaux')
   const { creneaux } = await rep.json()
@@ -128,6 +132,8 @@ type ProInfo = {
   formule?: 'free' | 'pro' | 'ultra'
   /** Ultra : ses majorations, fériés déjà résolus en dates (null sinon). */
   majorations?: MajorationsResolues
+  /** Jours à l'avance au-delà desquels on ne réserve plus (31 oct. 2026) ; null = sans limite. */
+  resa_horizon_jours?: number | null
   instagram?: string
   tiktok?: string
   snapchat?: string
@@ -161,7 +167,14 @@ type RdvAVenir = {
   paiement: { montant: number; nature: string } | null
   /** Quand la PRO a déplacé ce rendez-vous. Suspend le délai d'annulation. */
   date_change_pro_le?: string | null
+  /** ÉQUIPE : qui le fait (null = la pro). */
+  praticienne_id?: string | null
+  /** Passé le délai fixé par la pro : plus de déplacement ni d'annulation en ligne. */
+  modif_bloquee?: boolean
 }
+
+/** Le délai fixé par la pro pour déplacer ou annuler en ligne (null = à tout moment). */
+type DelaiModif = { heures: number; contact: string; instagram: string | null }
 
 
 // ─────────────────────────────────────────────
@@ -223,6 +236,8 @@ let PINK_LIGHT = PINK_LIGHT_DEFAUT
 // deviennent un gris neutre : la page reste sobre, sa couleur y ponctue.
 // Sans couleur choisie, la page garde le rose Glamia d'origine partout.
 let PINK_TEXTE = PINK_DEFAUT
+// Sa couleur quand elle ÉCRIT : à peine foncée si elle est trop pâle (29 oct. 2026).
+let GLAMIA_PINK_TEXTE = GLAMIA_PINK_DEFAUT
 let PINK_FONCE = '#8E4E72'
 let PINK_BORD = '#F2D7E6'
 function teinterPage(couleur: string | null) {
@@ -232,6 +247,7 @@ function teinterPage(couleur: string | null) {
   PINK_FONCE = couleur ? '#1C1C1E' : '#8E4E72'
   PINK_BORD = couleur ? '#E5E7EB' : '#F2D7E6'
   GLAMIA_PINK = couleur ?? GLAMIA_PINK_DEFAUT
+  GLAMIA_PINK_TEXTE = couleur ? lisibleSurBlanc(couleur) : GLAMIA_PINK_DEFAUT
 }
 
 // Profondeur de la recherche du prochain créneau libre, en jours. À 30, une
@@ -344,6 +360,24 @@ function formatDateCourte(dateStr: string) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString(etiquette(), {
     weekday: 'long', day: 'numeric', month: 'long',
   })
+}
+
+/** « Pour les rendez-vous du 15 décembre au 25 décembre » : les jours où l'offre s'applique. */
+function periodeOffre(o: { date_debut?: string | null; date_fin?: string | null }): string {
+  // « 1er octobre », pas « 1 octobre ».
+  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' }).replace(/^1 (?=\p{L})/u, etiquette().startsWith('fr') ? '1er ' : '1 ')
+  if (o.date_debut && o.date_fin) return traduire('resa.offrePeriode', { debut: jour(o.date_debut), fin: jour(o.date_fin) })
+  if (o.date_fin) return traduire('resa.offreJusquau', { fin: jour(o.date_fin) })
+  if (o.date_debut) return traduire('resa.offreAPartirDu', { debut: jour(o.date_debut) })
+  return ''
+}
+
+/** Ce jour (AAAA-MM-JJ) tombe-t-il dans la période de l'offre ? Sans offre ni dates : oui. */
+function dansPeriodeOffre(o: { date_debut?: string | null; date_fin?: string | null } | null, jour: string): boolean {
+  if (!o) return true
+  if (o.date_debut && jour < o.date_debut.slice(0, 10)) return false
+  if (o.date_fin && jour > o.date_fin.slice(0, 10)) return false
+  return true
 }
 
 function formatRdvDate(isoStr: string) {
@@ -509,6 +543,13 @@ function OffresSection({
                     </span>
                     <span style={{ fontWeight: 600, fontSize: 14, color: '#1f2937' }}>{o.nom}</span>
                   </div>
+                  {/* LES DATES SONT CELLES DES RENDEZ-VOUS (26 oct. 2026) : on le dit
+                      à la cliente, puisque le calendrier n'ouvrira que ces jours-là. */}
+                  {(o.date_debut || o.date_fin) && (
+                    <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: PINK_TEXTE }}>
+                      {periodeOffre(o)}
+                    </p>
+                  )}
                   {/* Prestations — une par ligne avec icône spécialité */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {techInfos.map((t, i) => (
@@ -796,7 +837,7 @@ export default function ReservationPage() {
             }}>{a.prestations}</span>
           )}
         </span>
-        <span style={{ fontSize: 13, color: GLAMIA_PINK, letterSpacing: 1, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, color: GLAMIA_PINK_TEXTE, letterSpacing: 1, flexShrink: 0 }}>
           {'★'.repeat(a.note)}<span style={{ color: '#E7DBE3' }}>{'★'.repeat(5 - a.note)}</span>
         </span>
       </div>
@@ -1188,6 +1229,8 @@ export default function ReservationPage() {
   // Le délai fixé par la pro : au-delà, l'annulation est remboursée ; en deçà,
   // la somme lui reste. La cliente doit le savoir AVANT de confirmer.
   const [delaiAnnulation,   setDelaiAnnulation]    = useState(24)
+  // Jusqu'à quand elle peut déplacer ou annuler en ligne (réglage de la pro).
+  const [delaiModif,        setDelaiModif]         = useState<DelaiModif | null>(null)
   const [loadingRdvs,       setLoadingRdvs]       = useState(false)
 
   // ── Inspirations sur un RDV existant (bouton « Mes inspirations ») ──
@@ -1202,7 +1245,10 @@ export default function ReservationPage() {
   const [reprogRdvId, setReprogRdvId]       = useState<string | null>(null)
   const [reprogDate, setReprogDate]         = useState('')
   const [reprogHeure, setReprogHeure]       = useState('')
-  const [reprogSlots, setReprogSlots]       = useState<Slot[]>([])
+  const [reprogSlots, setReprogSlots]       = useState<SlotQui[]>([])
+  // ÉQUIPE (29 oct. 2026) : même choix « avec qui » qu'à la réservation, et qui tient l'heure choisie.
+  const [reprogAvecQui, setReprogAvecQui]   = useState<'peu_importe' | 'pro' | string>('peu_importe')
+  const [reprogQui, setReprogQui]           = useState<string | null>(null)
 
   // ── Modification des prestations d'un RDV à venir ──
   const [modifRdvId, setModifRdvId]           = useState<string | null>(null)
@@ -1221,6 +1267,14 @@ export default function ReservationPage() {
   // ── Offres ──────────────────────────────────
   const [offresEligibles, setOffresEligibles] = useState<Offre[]>([])
   const [offreAppliquee, setOffreAppliquee] = useState<Offre | null>(null)
+  // LES OFFRES SUR LA VITRINE (29 oct. 2026, demande de CH Studio Regard) :
+  // avant le numéro, la cliente ne voyait aucune promo. On montre celles
+  // ouvertes à toutes et celles des nouvelles clientes (avec la mention) ;
+  // celles des habituées restent pour l'étape 2, une fois le numéro connu.
+  const [offresVitrine, setOffresVitrine] = useState<Offre[]>([])
+  // L'offre touchée sur la vitrine : appliquée dès que le numéro est vérifié.
+  const [offreVoulue, setOffreVoulue] = useState<string | null>(null)
+  const [offreRefusee, setOffreRefusee] = useState<string | null>(null)
   // ── CE QUI A ÉTÉ RÉGLÉ, GARDÉ POUR LA PAGE DE CONFIRMATION ────────────────
   // `propay` est remis à zéro dès qu'on quitte l'étape 5. La dernière page ne
   // parlait donc que des prestations et du total — pas un mot sur l'acompte que
@@ -1527,6 +1581,13 @@ export default function ReservationPage() {
     for (const a of assistantesPossibles) if (avecQui === 'peu_importe' || avecQui === a.id) liste.push({ id: a.id, duree: a.duree })
     return liste
   }, [equipe.length, avecQui, assistantesPossibles, dureeTotal])
+  /** ÉQUIPE, déplacement : les assistantes qui assurent tous les soins d'un rendez-vous déjà pris. */
+  const assistantesPourSoins = (techs: { nom: string; categorie?: string }[] | null | undefined): AssistantePage[] =>
+    equipe.filter(a => (techs ?? []).every(t => {
+      const tech = (catalogue[t.categorie ?? ''] ?? []).find(x => x.nom === t.nom)
+      const reglage = tech?.id ? a.prestations[tech.id] : undefined
+      return !reglage || reglage.assure
+    }))
   /** La durée du rendez-vous tel qu'il sera posé : celle de qui le fait. */
   const dureeChoisie = quiChoisi ? (assistantesPossibles.find((a: AssistantePage & { duree: number }) => a.id === quiChoisi)?.duree ?? dureeTotal) : dureeTotal
   const prenomDe = (id: string | null | undefined) => equipe.find(a => a.id === id)?.prenom ?? ''
@@ -1643,6 +1704,7 @@ export default function ReservationPage() {
           jours_differents: (d.pro.jours_differents && typeof d.pro.jours_differents === 'object') ? d.pro.jours_differents : prev.jours_differents,
           planning_variable: d.pro.planning_variable === true,
           majorations: d.pro.majorations ?? null,
+          resa_horizon_jours: typeof d.pro.resa_horizon_jours === 'number' ? d.pro.resa_horizon_jours : null,
         } : prev)
         // Force le recalcul des créneaux : un RDV a pu être pris entretemps.
         setRdvVersion(v => v + 1)
@@ -1800,6 +1862,8 @@ export default function ReservationPage() {
         formule:               found.formule ?? 'free',
         // Les majorations (Ultra) : sans cette ligne, le serveur les envoie et la page les perd.
         majorations:           found.majorations ?? null,
+        // Jusqu'à quand on peut réserver (31 oct. 2026) — même piège : sans cette ligne, la page l'ignore.
+        resa_horizon_jours:    typeof found.resa_horizon_jours === 'number' ? found.resa_horizon_jours : null,
         instagram:             found.instagram ?? undefined,
         tiktok:           found.tiktok ?? undefined,
         snapchat:         found.snapchat ?? undefined,
@@ -1922,18 +1986,77 @@ export default function ReservationPage() {
   // ── Offres éligibles ────────────────────────
   async function chargerOffresEligibles(proId: string, tel: string) {
     try {
-      const { data, error } = await supabase.rpc('get_eligible_offers', {
+      const { data, error } = await supabase.rpc('get_eligible_offers_v2', {
         p_pro_id: proId,
         p_telephone: tel,
       })
       if (error) { console.error('[chargerOffresEligibles]', error); return }
-      setOffresEligibles((data ?? []).map((o: any) => ({
+      const liste: Offre[] = (data ?? []).map((o: any) => ({
         ...o,
         prestations_ids: Array.isArray(o.prestations_ids) ? o.prestations_ids : [],
-      })))
+      }))
+      setOffresEligibles(liste)
+      // L'offre touchée sur la vitrine : on l'applique si elle est bien pour
+      // elle ; sinon on lui dit pourquoi, plutôt que de la laisser chercher.
+      if (offreVoulue) {
+        const o = liste.find(x => x.id === offreVoulue)
+        if (o) { appliquerOffre(o); setOffreRefusee(null) }
+        else {
+          const v = offresVitrine.find(x => x.id === offreVoulue)
+          setOffreRefusee(v?.cible === 'nouvelles' ? traduire('resa.offreReserveeNouvelles') : traduire('resa.offrePlusDisponible'))
+        }
+        setOffreVoulue(null)
+      }
     } catch (e) {
       console.error('[chargerOffresEligibles]', e)
     }
+  }
+
+  // Sur la vitrine, avant le numéro : les offres de toutes, et celles des
+  // nouvelles clientes. Le même filtre que l'étape 2 (actives, dans leurs
+  // dates, places restantes, soins encore proposés), avec un numéro qui
+  // n'appartient à personne — ce qui écarte d'office les offres des habituées.
+  useEffect(() => {
+    if (!pro?.id) return
+    let annule = false
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_eligible_offers_v2', { p_pro_id: pro.id, p_telephone: '__vitrine__' })
+        if (error || annule) return
+        setOffresVitrine(((data ?? []) as Offre[])
+          .filter(o => o.cible !== 'existantes')
+          .map(o => ({ ...o, prestations_ids: Array.isArray(o.prestations_ids) ? o.prestations_ids : [] })))
+      } catch { /* la vitrine se passe de ses offres */ }
+    })()
+    return () => { annule = true }
+  }, [pro?.id])
+
+  // Appliquer une offre (étape 2, ou depuis la vitrine après le numéro).
+  function appliquerOffre(o: Offre) {
+    setOffreAppliquee(o)
+    if (o.type === 'pack') {
+      const newTechs: TechSelec[] = []
+      for (const [cat, techs] of Object.entries(catalogue)) {
+        for (const t of techs) {
+          if (o.prestations_ids.includes(t.id)) {
+            newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
+          }
+        }
+      }
+      setTechniquesSelectionnees(newTechs)
+    }
+    if (o.type === 'prix_fixe') {
+      for (const [cat, techs] of Object.entries(catalogue)) {
+        for (const t of techs) {
+          if (o.prestations_ids.includes(t.id)) {
+            setTechniquesSelectionnees(prev => prev.some(x => x.nom === t.nom && x.categorie === cat)
+              ? prev : [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
+          }
+        }
+      }
+    }
+    setDate('')
+    setHeure('')
   }
 
   // ── Fidélité ────────────────────────────────
@@ -1959,9 +2082,10 @@ export default function ReservationPage() {
         body: JSON.stringify({ pro_id: proId, cliente_id: clienteId, telephone }),
       })
       if (!rep.ok) throw new Error('dossier')
-      const { fidelite, rdvs, delai_annulation, avis_a_laisser } = await rep.json()
+      const { fidelite, rdvs, delai_annulation, avis_a_laisser, delai_modif } = await rep.json()
       setFideliteFiche(fidelite ?? null)
       setRdvsAVenir(rdvs ?? [])
+      setDelaiModif(delai_modif ?? null)
       setAvisAlaisser(avis_a_laisser ?? [])
       if (typeof delai_annulation === 'number') setDelaiAnnulation(delai_annulation)
     } catch (e) {
@@ -2039,7 +2163,13 @@ export default function ReservationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rdv_id: rdvId, telephone }),
       })
-      if (!res.ok) throw new Error('annulation_echouee')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        // Passé le délai de la pro (page ouverte depuis longtemps) : on le dit
+        // dans la page, sous le rendez-vous, sans fenêtre.
+        if (d?.error === 'delai_modif_depasse') { bloquerModifRdv(rdvId, d.delai_modif); return }
+        throw new Error('annulation_echouee')
+      }
       setRdvsAVenir(prev => prev.filter(r => r.id !== rdvId))
 
       // Carte de fidélité et réduction limitée : entièrement traitées par le
@@ -2112,12 +2242,32 @@ export default function ReservationPage() {
     }
   }
 
+  // ── Délai de la pro dépassé ──────────────────
+  // Le serveur a refusé (la page était ouverte depuis longtemps) : le rendez-vous
+  // passe en « grisé » avec la ligne qui l'envoie vers sa pro. Pas de fenêtre.
+  function bloquerModifRdv(rdvId: string, infos?: DelaiModif | null) {
+    if (infos && typeof infos.heures === 'number') setDelaiModif(infos)
+    setRdvsAVenir(prev => prev.map(r => (r.id === rdvId ? { ...r, modif_bloquee: true } : r)))
+    setReprogRdvId(prev => (prev === rdvId ? null : prev))
+    setModifPendingTechs(null)
+  }
+
+  function texteDelaiModif(): string {
+    if (!delaiModif) return ''
+    return traduire(delaiModif.instagram ? 'resa.delaiModifInstagram' : 'resa.delaiModifDirect', {
+      heures: delaiModif.heures,
+      pro: delaiModif.contact || pro?.pseudo || pro?.prenom || '',
+    })
+  }
+
   // ── Reprogrammer : ouvrir le sélecteur ───────
   function ouvrirReprog(rdvId: string) {
     setReprogRdvId(rdvId)
     setReprogDate('')
     setReprogHeure('')
     setReprogSlots([])
+    setReprogAvecQui('peu_importe')
+    setReprogQui(null)
     setReprogDone(null)
     setReprogCalYear(todayJs.getFullYear())
     setReprogCalMonth(todayJs.getMonth())
@@ -2131,6 +2281,7 @@ export default function ReservationPage() {
     setReprogDate('')
     setReprogHeure('')
     setReprogSlots([])
+    setReprogQui(null)
     setModifPendingTechs(null)
   }
 
@@ -2205,7 +2356,7 @@ export default function ReservationPage() {
   }
 
   // Applique la modification (et éventuellement une nouvelle date/heure)
-  async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null) {
+  async function appliquerModifPresta(rdv: RdvAVenir, techs: TechSelec[], newDate: string | null, newHeure: string | null, qui?: string | null) {
     if (!pro) return
     const duree = techs.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0)
     const base = techs.reduce((s, t) => s + t.prix * (t.quantite ?? 1), 0)
@@ -2231,16 +2382,22 @@ export default function ReservationPage() {
         duree,
         prix: prix > 0 ? prix : null,
         new_date: (newDate && newHeure) ? dateISO : undefined,
+        // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+        ...(equipe.length > 0 && newDate && newHeure ? { praticienne_id: qui ?? null } : {}),
       }),
     })
-    if (!res.ok) throw new Error('modif_echouee')
+    if (!res.ok) {
+      // Le serveur dit pourquoi (heure prise entre-temps…) : on le montre tel quel.
+      const d = await res.json().catch(() => ({}))
+      if (d?.error === 'delai_modif_depasse') {
+        bloquerModifRdv(rdv.id, d.delai_modif)
+        fermerModifPresta()
+        throw Object.assign(new Error('delai_modif_depasse'), { delaiModif: true })
+      }
+      throw Object.assign(new Error('modif_echouee'), { messageServeur: typeof d?.message === 'string' ? d.message : null })
+    }
 
-    // Push à la pro
-    envoyerPushNotif(
-      pro.id,
-      traduire('notif.rdvModifieTitre'),
-      traduire('notif.prestationsModifiees', { prenom: clientePrenom, date: dateAffichee, heure: heureAffichee, prestations: labels })
-    )
+    // La notification à la pro part désormais du serveur (29 oct. 2026).
 
     // Email de confirmation à jour pour la cliente
     if (clienteEmail.trim()) {
@@ -2277,7 +2434,7 @@ export default function ReservationPage() {
     // Mise à jour locale
     setRdvsAVenir(prev => prev.map(r =>
       r.id === rdv.id
-        ? { ...r, date: dateISO, technique: labels, specialite: specs, duree, prix: prix > 0 ? prix : null, techniques: techs, ...(newDate ? { statut: 'en_attente' } : {}) }
+        ? { ...r, date: dateISO, technique: labels, specialite: specs, duree, prix: prix > 0 ? prix : null, techniques: techs, ...(newDate ? { statut: 'en_attente' } : {}), ...(equipe.length > 0 && newDate ? { praticienne_id: qui ?? null } : {}) }
         : r
     ))
     setModifDone(rdv.id)
@@ -2297,8 +2454,18 @@ export default function ReservationPage() {
       if (nouvelleDuree > rdv.duree) {
         const dateStr = (rdv.date as string).slice(0, 10)
         const heureActuelle = formatRdvHeure(rdv.date)
-        const creneaux = await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
+        // ÉQUIPE : vérifiée chez celle qui fait le rendez-vous, avec SA durée.
+        const creneaux = equipe.length > 0
+          ? await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id, undefined, { techniques: modifSelection, avec: rdv.praticienne_id ?? 'pro' })
+          : await creneauxServeur(pro.id, nouvelleDuree, [dateStr], rdv.id)
         const tient = (creneaux[dateStr] ?? []).some(s => s.heure === heureActuelle && s.disponible)
+        if (!tient && rdv.modif_bloquee) {
+          // Passé le délai de la pro, l'heure ne peut plus changer en ligne :
+          // la ligne sous le rendez-vous lui dit de la contacter.
+          fermerModifPresta()
+          bloquerModifRdv(rdv.id)
+          return
+        }
         if (!tient) {
           // Le créneau actuel ne suffit plus → choix d'un nouvel horaire
           // (ouvrirReprog d'abord : il réinitialise modifPendingTechs)
@@ -2312,7 +2479,8 @@ export default function ReservationPage() {
       await appliquerModifPresta(rdv, modifSelection, null, null)
     } catch (e) {
       console.error('[confirmerModifPresta] Erreur:', e)
-      alert(traduire('resa.modificationImpossible'))
+      if ((e as { delaiModif?: boolean })?.delaiModif) return
+      alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.modificationImpossible'))
     } finally {
       setModifSaving(false)
     }
@@ -2326,13 +2494,15 @@ export default function ReservationPage() {
   }
 
   function reprogNextMonth() {
+    if (moisApresLimite(reprogCalMonth === 11 ? reprogCalYear + 1 : reprogCalYear, (reprogCalMonth + 1) % 12)) return
     if (reprogCalMonth === 11) { setReprogCalMonth(0); setReprogCalYear(y => y + 1) }
     else setReprogCalMonth(m => m + 1)
   }
 
-  async function reprogSelectDate(dateStr: string) {
+  async function reprogSelectDate(dateStr: string, avec: string = reprogAvecQui) {
     setReprogDate(dateStr)
     setReprogHeure('')
+    setReprogQui(null)
     if (!pro || !reprogRdvId) return
 
     const rdv = rdvsAVenir.find(r => r.id === reprogRdvId)
@@ -2348,7 +2518,11 @@ export default function ReservationPage() {
 
       // Le RDV qu'on déplace est exclu côté serveur : son propre créneau ne
       // doit pas se bloquer lui-même.
-      const creneaux = await creneauxServeur(pro.id, dureeEffective, [dateStr], reprogRdvId ?? undefined)
+      // ÉQUIPE (29 oct. 2026) : les heures de la pro ET de l'assistante, comme
+      // à la réservation ; le serveur déduit du rendez-vous qui peut le faire.
+      const creneaux = equipe.length > 0
+        ? await creneauxServeur(pro.id, modifPendingTechs ? modifPendingTechs.reduce((s, t) => s + t.duree * (t.quantite ?? 1), 0) : dureeEffective, [dateStr], reprogRdvId, undefined, { techniques: modifPendingTechs ?? undefined, avec })
+        : await creneauxServeur(pro.id, dureeEffective, [dateStr], reprogRdvId ?? undefined)
       setReprogSlots(creneaux[dateStr] ?? [])
       // 'start' et non 'center' : sur petit iPhone la grille dépasse l'écran,
       // un centrage couperait la date et le haut des créneaux
@@ -2368,7 +2542,7 @@ export default function ReservationPage() {
       if (modifPendingTechs) {
         const rdvCible = rdvsAVenir.find(r => r.id === reprogRdvId)
         if (rdvCible) {
-          await appliquerModifPresta(rdvCible, modifPendingTechs, reprogDate, reprogHeure)
+          await appliquerModifPresta(rdvCible, modifPendingTechs, reprogDate, reprogHeure, reprogQui)
           setReprogDate('')
           setReprogHeure('')
           setReprogSlots([])
@@ -2384,36 +2558,39 @@ export default function ReservationPage() {
       const res = await fetch('/api/rdv/decaler', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rdv_id: reprogRdvId, telephone, new_date: newDateISO }),
+        body: JSON.stringify({
+          rdv_id: reprogRdvId, telephone, new_date: newDateISO,
+          // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+          ...(equipe.length > 0 ? { praticienne_id: reprogQui } : {}),
+        }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
+        if (d?.error === 'delai_modif_depasse') {
+          bloquerModifRdv(reprogRdvId, d.delai_modif)
+          setReprogSaving(false)
+          return
+        }
         alert(
           d?.error === 'decalage_max_atteint'
             ? traduire('resa.troisDecalages')
             : d?.error === 'decalage_tardif'
               ? traduire('resa.decalageTropTard')
-              : traduire('resa.reprogrammationImpossible'),
+              : (typeof d?.message === 'string' && d.message) || traduire('resa.reprogrammationImpossible'),
         )
+        // L'heure a pu partir entre-temps : la grille est redemandée, à jour.
+        if (d?.error === 'creneau_indisponible') reprogSelectDate(reprogDate)
         setReprogSaving(false)
         return
       }
 
-      // Push notification
-      // D'où à où : la pro garde la trace de l'ancien créneau (21 oct. 2026).
-      const ancien = rdvsAVenir.find(r => r.id === reprogRdvId)?.date ?? ''
-      envoyerPushNotif(
-        pro.id,
-        traduire('notif.rdvDecaleTitre'),
-        ancien
-          ? traduire('notif.rdvDecale', { prenom: clientePrenom, avant: formatDateLong(ancien.slice(0, 10)), heureAvant: ancien.slice(11, 16), apres: formatDateLong(reprogDate), heure: reprogHeure })
-          : traduire('notif.rdvReprogramme', { prenom: clientePrenom, date: formatDateLong(reprogDate), heure: reprogHeure })
-      )
+      // La notification à la pro (et à l'assistante concernée) part désormais
+      // du serveur, juste après l'enregistrement (29 oct. 2026).
 
       // Mettre à jour la liste locale
       setRdvsAVenir(prev => prev.map(r =>
         r.id === reprogRdvId
-          ? { ...r, date: newDateISO, statut: 'en_attente' }
+          ? { ...r, date: newDateISO, statut: 'en_attente', ...(equipe.length > 0 ? { praticienne_id: reprogQui } : {}) }
           : r
       ))
 
@@ -2452,7 +2629,8 @@ export default function ReservationPage() {
       scrollVers(confirmationRef, 'center')
     } catch (e) {
       console.error('[handleReprogrammer] Erreur:', e)
-      alert(traduire('resa.reprogrammationImpossible'))
+      if ((e as { delaiModif?: boolean })?.delaiModif) return
+      alert((e as { messageServeur?: string | null })?.messageServeur || traduire('resa.reprogrammationImpossible'))
     } finally {
       setReprogSaving(false)
     }
@@ -2617,7 +2795,19 @@ export default function ReservationPage() {
   useEffect(() => {
     if (step === 3 && pro && dureeTotal > 0) findPremierCreneau()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, pro, dureeTotal, avecQui])
+  }, [step, pro, dureeTotal, avecQui, offreAppliquee?.id])
+
+  // UNE OFFRE DE DÉCEMBRE OUVRE LE CALENDRIER EN DÉCEMBRE (26 oct. 2026) :
+  // sinon la cliente arrive sur un mois entièrement grisé et croit qu'il n'y a rien.
+  useEffect(() => {
+    if (step !== 3 || !offreAppliquee?.date_debut) return
+    const debut = offreAppliquee.date_debut.slice(0, 10)
+    if (debut <= todayStr) return
+    const [a, m] = debut.split('-').map(Number)
+    setCalYear(a)
+    setCalMonth(m - 1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, offreAppliquee?.id])
 
   // ── Jours complets du mois affiché ────────────────────────────────────────
   // Le calendrier ne connaissait que « passé » et « jour off » : un jour plein
@@ -2651,6 +2841,7 @@ export default function ReservationPage() {
           if (new Date(calYear, calMonth, jour) < debutDuJour) continue
           if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
           if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+          if (apresLimite(dateStr)) continue
           aTester.push(dateStr)
         }
         if (annule || aTester.length === 0) return
@@ -2703,6 +2894,9 @@ export default function ReservationPage() {
         const dateStr = buildDateStr(d.getFullYear(), d.getMonth(), d.getDate())
         if (equipe.length === 0 && !isDayWorking(dateStr, pro.horaires, pro.horaires_specifiques, pro.planning_variable, pro.jours_differents)) continue
         if (equipe.length === 0 && isDayBlocked(dateStr, pro.creneaux_bloques)) continue
+        // Avec une offre datée, le « prochain créneau » se cherche dans ses jours.
+        if (!dansPeriodeOffre(offreAppliquee, dateStr)) continue
+        if (apresLimite(dateStr)) continue
         aTester.push(dateStr)
       }
 
@@ -3159,7 +3353,7 @@ export default function ReservationPage() {
       // Appliquer l'offre si sélectionnée
       if (nouveau?.id && offreAppliquee) {
         try {
-          const result = await supabase.rpc('apply_offer_to_rdv', {
+          const result = await supabase.rpc('apply_offer_to_rdv_v2', {
             p_offre_id: offreAppliquee.id,
             p_rdv_id: nouveau.id,
             p_telephone: telNormalized,
@@ -3336,6 +3530,12 @@ export default function ReservationPage() {
 
   const today0 = new Date(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
   const todayStr = buildDateStr(todayJs.getFullYear(), todayJs.getMonth(), todayJs.getDate())
+  // JUSQU'À QUAND ON PEUT RÉSERVER (31 oct. 2026) : au-delà, jours grisés et flèche arrêtée.
+  // Le serveur applique la même limite (lib/creneaux.ts) ; ceci n'est que l'affichage.
+  const dernierResa = dernierJourReservable(horizonDe(pro?.resa_horizon_jours), todayStr)
+  const apresLimite = (dateStr: string) => !!dernierResa && dateStr > dernierResa
+  /** Le mois (année, mois 0-11) commence-t-il après la limite ? */
+  const moisApresLimite = (annee: number, mois: number) => apresLimite(buildDateStr(annee, mois, 1))
 
   function isAtCurrentMonth() {
     return calYear === todayJs.getFullYear() && calMonth === todayJs.getMonth()
@@ -3348,6 +3548,7 @@ export default function ReservationPage() {
   }
 
   function nextMonth() {
+    if (moisApresLimite(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12)) return
     if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
     else setCalMonth(m => m + 1)
   }
@@ -3682,6 +3883,37 @@ export default function ReservationPage() {
                   prix: t.prix_type === 'a_partir_de' ? traduire('resa.aPartirDe', { prix: formatPrix(t.prix, pro?.devise) }) : (t.prix > 0 ? formatPrix(t.prix, pro?.devise) : traduire('resa.gratuit')),
                 })),
               }))}
+              offres={offresVitrine.map(o => {
+                const soinsOffre = specialitesActives.flatMap(sp => sp.techniques.filter(t => t.id && o.prestations_ids.includes(t.id)).map(t => ({ sp: sp.nom, t })))
+                const prixAvant = soinsOffre.reduce((n, x) => n + (Number(x.t.prix) || 0), 0)
+                const duree = soinsOffre.reduce((n, x) => n + (Number(x.t.duree) || 0), 0)
+                const photo = soinsOffre.map(x => (x.t.photos ?? []).find(u => typeof u === 'string' && u.trim() !== '')).find(Boolean) ?? null
+                return {
+                  cle: o.id,
+                  nom: o.nom,
+                  pack: o.type === 'pack',
+                  nouvelles: o.cible === 'nouvelles',
+                  periode: o.date_debut || o.date_fin ? periodeOffre(o) : null,
+                  places: o.utilisations_max != null ? Math.max(0, o.utilisations_max - (o.utilisations_actuelles ?? 0)) : null,
+                  // Même nom dans deux catégories (« Vernis semi-permanent » mains
+                  // et pieds) : on précise la catégorie, sinon on lit un doublon.
+                  soins: soinsOffre.map((x, _, tous) => {
+                    const nom = nomSoinAffiche(x.t.nom, x.sp)
+                    const double = tous.some(y => y !== x && nomSoinAffiche(y.t.nom, y.sp) === nom)
+                    return double ? `${nom} (${nomSpecialiteAffiche(x.sp, pro?.categorie_autre_nom)})` : nom
+                  }),
+                  photo,
+                  duree: duree > 0 ? formatDuree(duree) : null,
+                  prixAvant: prixAvant > 0 && prixAvant !== Number(o.prix_promo) ? formatPrix(prixAvant, pro?.devise) : null,
+                  prix: formatPrix(Number(o.prix_promo), pro?.devise),
+                }
+              })}
+              onChoisirOffre={cle => {
+                setOffreVoulue(cle)
+                const champ = document.getElementById('champ-telephone')
+                champ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                setTimeout(() => champ?.focus(), 450)
+              }}
               photos={vitrine?.photos ?? []}
               avis={avisMontrables.map((a, i) => <div key={i}>{unAvis(a)}</div>)}
               chargerAvis={pro?.id ? async depuis => {
@@ -3945,7 +4177,7 @@ export default function ReservationPage() {
                   <a
                     href={`https://instagram.com/${String(refusResa.instagram).replace(/^@/, '')}`}
                     target="_blank" rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK, fontWeight: 700, textDecoration: 'none' }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'none' }}>
                     <LogoInstagram size={20} />
                     {traduire('resa.suivreInsta')}
                   </a>
@@ -4009,7 +4241,7 @@ export default function ReservationPage() {
                         <span style={{
                           width: 40, height: 40, borderRadius: 20, background: '#fff',
                           border: '1px solid #F2D7E6', display: 'grid', placeItems: 'center',
-                          fontSize: 19, color: GLAMIA_PINK, lineHeight: 1,
+                          fontSize: 19, color: GLAMIA_PINK_TEXTE, lineHeight: 1,
                         }}>★</span>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, color: PINK_FONCE }}>{traduire('resa.laisserAvis')}</span>
@@ -4205,27 +4437,43 @@ export default function ReservationPage() {
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                             <button
                               onClick={() => ouvrirReprog(rdv.id)}
+                              disabled={!!rdv.modif_bloquee}
+                              data-action="reprogrammer"
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
-                                border: `1.5px solid ${PINK}`, background: '#fff',
-                                color: PINK_TEXTE, fontSize: 13, fontWeight: 600,
-                                cursor: 'pointer', transition: 'all 0.15s',
+                                border: `1.5px solid ${rdv.modif_bloquee ? '#e5e7eb' : PINK}`, background: rdv.modif_bloquee ? '#f9fafb' : '#fff',
+                                color: rdv.modif_bloquee ? '#9ca3af' : PINK_TEXTE, fontSize: 13, fontWeight: 600,
+                                cursor: rdv.modif_bloquee ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                               }}
                             >{traduire('resa.reprogrammer')}</button>
                             <button
                               onClick={() => confirmerAnnulation(rdv)}
-                              disabled={annulationEnCours === rdv.id}
+                              disabled={annulationEnCours === rdv.id || !!rdv.modif_bloquee}
+                              data-action="annuler"
                               style={{
                                 flex: 1, padding: '8px 0', borderRadius: 10,
-                                border: '1.5px solid #fca5a5', background: '#fff',
-                                color: '#ef4444', fontSize: 13, fontWeight: 600,
-                                cursor: 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
+                                border: `1.5px solid ${rdv.modif_bloquee ? '#e5e7eb' : '#fca5a5'}`, background: rdv.modif_bloquee ? '#f9fafb' : '#fff',
+                                color: rdv.modif_bloquee ? '#9ca3af' : '#ef4444', fontSize: 13, fontWeight: 600,
+                                cursor: rdv.modif_bloquee ? 'not-allowed' : 'pointer', opacity: annulationEnCours === rdv.id ? 0.5 : 1,
                                 transition: 'all 0.15s',
                               }}
                             >
-                              {annulationEnCours === rdv.id ? '...' : 'Annuler'}
+                              {annulationEnCours === rdv.id ? '...' : traduire('resa.annulerRdv')}
                             </button>
                           </div>
+                          {/* Passé le délai de la pro : une ligne pour la contacter. */}
+                          {rdv.modif_bloquee && delaiModif && (
+                            delaiModif.instagram ? (
+                              <a
+                                href={`https://instagram.com/${delaiModif.instagram}`}
+                                target="_blank" rel="noopener noreferrer"
+                                data-delai-modif="instagram"
+                                style={{ display: 'block', marginTop: 8, fontSize: 12, color: PINK_TEXTE, textAlign: 'center', lineHeight: 1.4, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                              >{texteDelaiModif()}</a>
+                            ) : (
+                              <p data-delai-modif="direct" style={{ margin: '8px 0 0', fontSize: 12, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{texteDelaiModif()}</p>
+                            )
+                          )}
 
                           {/* ── Panneau modification des prestations ── */}
                           {modifRdvId === rdv.id && (
@@ -4361,6 +4609,24 @@ export default function ReservationPage() {
                                 <button onClick={fermerReprog} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, fontWeight: 600 }}>{traduire('resa.fermer')}</button>
                               </div>
 
+                              {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
+                              {(() => {
+                                const possibles = assistantesPourSoins(modifPendingTechs ?? rdv.techniques)
+                                if (equipe.length === 0 || possibles.length === 0) return null
+                                return (
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 12 }}>
+                                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: pro?.pseudo || pro?.prenom || '' }, ...possibles.map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                                      <button
+                                        key={o.cle}
+                                        onClick={() => { setReprogAvecQui(o.cle); if (reprogDate) reprogSelectDate(reprogDate, o.cle) }}
+                                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${reprogAvecQui === o.cle ? PINK : '#e5e7eb'}`, background: reprogAvecQui === o.cle ? PINK : '#fff', color: reprogAvecQui === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                                        {o.libelle}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )
+                              })()}
+
                               {/* Calendrier reprog */}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                                 <button
@@ -4371,7 +4637,7 @@ export default function ReservationPage() {
                                 <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15, textTransform: 'capitalize' }}>
                                   {MOIS()[reprogCalMonth]} {reprogCalYear}
                                 </span>
-                                <button onClick={reprogNextMonth} style={S.navBtn}>›</button>
+                                <button onClick={reprogNextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(reprogCalMonth === 11 ? reprogCalYear + 1 : reprogCalYear, (reprogCalMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
                               </div>
 
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
@@ -4389,8 +4655,11 @@ export default function ReservationPage() {
                                   const dateStr = buildDateStr(reprogCalYear, reprogCalMonth, day)
                                   const dayDate = new Date(reprogCalYear, reprogCalMonth, day)
                                   const isPast = dayDate < today0
-                                  const isOff = !isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques)
-                                  const isDisabled = isPast || isOff
+                                  // ÉQUIPE : comme à la réservation, un jour fermé pour la pro peut être
+                                  // ouvert pour l'assistante — ce sont les heures qui décident.
+                                  const isOff = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
+                                  const horsLimite = apresLimite(dateStr)
+                                  const isDisabled = isPast || isOff || horsLimite
                                   const isSelected = reprogDate === dateStr
 
                                   return (
@@ -4401,8 +4670,8 @@ export default function ReservationPage() {
                                       style={{
                                         aspectRatio: '1', borderRadius: '50%', boxSizing: 'border-box',
                                         border: `1.5px solid ${dateStr === todayStr && !isSelected ? PINK : 'transparent'}`,
-                                        background: isSelected ? PINK : isOff && !isPast ? '#E3F2FD' : 'transparent',
-                                        color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                                        background: isSelected ? PINK : (isOff || horsLimite) && !isPast ? '#E3F2FD' : 'transparent',
+                                        color: isSelected ? '#fff' : isPast ? '#d1d5db' : (isOff || horsLimite) ? '#90CAF9' : '#374151',
                                         fontWeight: 500, fontSize: 13,
                                         cursor: isDisabled ? 'default' : 'pointer',
                                         transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -4431,7 +4700,7 @@ export default function ReservationPage() {
                                       {reprogSlots.filter(s => s.disponible).map(s => (
                                         <button
                                           key={s.heure}
-                                          onClick={() => { setReprogHeure(s.heure); scrollVers(reprogConfirmRef, 'center') }}
+                                          onClick={() => { setReprogHeure(s.heure); setReprogQui(s.qui ?? null); scrollVers(reprogConfirmRef, 'center') }}
                                           style={{
                                             padding: '10px 0', borderRadius: 10,
                                             border: `1.5px solid ${reprogHeure === s.heure ? PINK : '#e5e7eb'}`,
@@ -4443,6 +4712,7 @@ export default function ReservationPage() {
                                           }}
                                         >
                                           {s.heure}
+                                          {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: reprogHeure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: prenomDe(s.qui) })}</span> : null}
                                         </button>
                                       ))}
                                     </div>
@@ -4571,6 +4841,10 @@ export default function ReservationPage() {
           <div>
             <BackBtn onClick={() => setStep(1)} />
 
+            {offreRefusee && (
+              <p style={{ margin: '0 0 14px', padding: '10px 14px', borderRadius: 12, background: PINK_LIGHT, fontSize: 13, color: '#1f2937' }}>{offreRefusee}</p>
+            )}
+
             {/* Offres en cours */}
             {offresEligibles.length > 0 && (
               <OffresSection
@@ -4579,34 +4853,7 @@ export default function ReservationPage() {
                 catalogue={catalogue}
                 devise={pro?.devise}
                 techniquesSelectionnees={techniquesSelectionnees}
-                onApply={(o) => {
-                  setOffreAppliquee(o)
-                  if (o.type === 'pack') {
-                    const newTechs: TechSelec[] = []
-                    for (const [cat, techs] of Object.entries(catalogue)) {
-                      for (const t of techs) {
-                        if (o.prestations_ids.includes(t.id)) {
-                          newTechs.push({ categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type })
-                        }
-                      }
-                    }
-                    setTechniquesSelectionnees(newTechs)
-                  }
-                  if (o.type === 'prix_fixe') {
-                    for (const [cat, techs] of Object.entries(catalogue)) {
-                      for (const t of techs) {
-                        if (o.prestations_ids.includes(t.id)) {
-                          const already = techniquesSelectionnees.some(s => s.nom === t.nom && s.categorie === cat)
-                          if (!already) {
-                            setTechniquesSelectionnees(prev => [...prev, { categorie: cat, nom: t.nom, prix: t.prix, duree: t.duree, prix_type: t.prix_type }])
-                          }
-                        }
-                      }
-                    }
-                  }
-                  setDate('')
-                  setHeure('')
-                }}
+                onApply={(o) => { setOffreRefusee(null); appliquerOffre(o) }}
                 onRemove={(o) => {
                   setOffreAppliquee(null)
                   if (o.type === 'pack') {
@@ -4924,7 +5171,7 @@ export default function ReservationPage() {
               <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 16, textTransform: 'capitalize' }}>
                 {MOIS()[calMonth]} {calYear}
               </span>
-              <button onClick={nextMonth} style={S.navBtn}>›</button>
+              <button onClick={nextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
@@ -4948,7 +5195,9 @@ export default function ReservationPage() {
                 // Un jour complet reste CLIQUABLE : c'est justement là qu'on
                 // propose la liste d'attente. Il garde son apparence « complet »
                 // pour ne pas faire espérer un créneau, mais la porte est ouverte.
-                const isDisabled = isPast || isOff
+                // Une offre datée n'ouvre que ses jours (26 oct. 2026).
+                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr) || apresLimite(dateStr)
+                const isDisabled = isPast || isOff || horsOffre
                 const isSelected = date === dateStr
 
                 return (
@@ -4958,7 +5207,7 @@ export default function ReservationPage() {
                     isSelected={isSelected}
                     isToday={dateStr === todayStr}
                     isPast={isPast}
-                    isOff={isOff && !isPast}
+                    isOff={(isOff || horsOffre) && !isPast}
                     isComplet={isComplet}
                     isDisabled={isDisabled}
                     onClick={() => { if (!isDisabled) { setDate(dateStr); setHeure(''); setAttenteOuverte(false); setAttenteEtat('repos'); setStep(4) } }}

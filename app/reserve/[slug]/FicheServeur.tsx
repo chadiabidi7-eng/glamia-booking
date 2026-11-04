@@ -48,13 +48,19 @@ function prestations(data: unknown, langue: string | null, max = 30): Prestation
 }
 
 const MOTS = {
-  fr: { prestations: 'Prestations', avis: 'avis', aPartir: 'à partir de', min: 'min', reserver: 'Réserver en ligne', ville: 'Toutes les pros beauté à' },
-  en: { prestations: 'Services', avis: 'reviews', aPartir: 'from', min: 'min', reserver: 'Book online', ville: 'All beauty pros in' },
-  es: { prestations: 'Servicios', avis: 'reseñas', aPartir: 'desde', min: 'min', reserver: 'Reservar en línea', ville: 'Todas las profesionales de belleza en' },
-  it: { prestations: 'Servizi', avis: 'recensioni', aPartir: 'da', min: 'min', reserver: 'Prenota online', ville: 'Tutte le professioniste della bellezza a' },
+  fr: { prestations: 'Prestations', avis: 'avis', aPartir: 'à partir de', min: 'min', reserver: 'Réserver en ligne', ville: 'Toutes les pros beauté à', avisTitre: 'Avis des clientes', a: 'à',
+    intro: 'Réservez en ligne, à toute heure : choisissez votre prestation et un créneau parmi ses disponibilités.' },
+  en: { prestations: 'Services', avis: 'reviews', aPartir: 'from', min: 'min', reserver: 'Book online', ville: 'All beauty pros in', avisTitre: 'Client reviews', a: 'in',
+    intro: 'Book online at any time: choose your service and an available slot.' },
+  es: { prestations: 'Servicios', avis: 'reseñas', aPartir: 'desde', min: 'min', reserver: 'Reservar en línea', ville: 'Todas las profesionales de belleza en', avisTitre: 'Opiniones de clientas', a: 'en',
+    intro: 'Reserva en línea a cualquier hora: elige tu servicio y un horario disponible.' },
+  it: { prestations: 'Servizi', avis: 'recensioni', aPartir: 'da', min: 'min', reserver: 'Prenota online', ville: 'Tutte le professioniste della bellezza a', avisTitre: 'Recensioni delle clienti', a: 'a',
+    intro: 'Prenota online a qualsiasi ora: scegli il trattamento e un orario disponibile.' },
 } as const
 
-export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, devise, bio, image, catalogue, note, lienVille = null }: {
+type Avis = { auteur: string; note: number; texte: string; date: string; importe: boolean }
+
+export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, devise, bio, image, catalogue, note, avis = [], lienVille = null }: {
   slug: string
   nom: string
   langue: string | null
@@ -66,6 +72,8 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
   image: string | null
   catalogue: unknown
   note: { note: number; nombre: number } | null
+  /** Ses derniers avis écrits (25 oct. 2026) : le seul texte qui n'appartient qu'à elle. */
+  avis?: Avis[]
   /** La page de sa ville dans la recherche, quand elle existe (13 oct. 2026). */
   lienVille?: { nom: string; url: string } | null
 }) {
@@ -86,6 +94,17 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
     ...(bio ? { description: bio.slice(0, 500) } : metiers ? { description: metiers } : {}),
     ...(ville || pays ? { address: { '@type': 'PostalAddress', ...(ville ? { addressLocality: ville } : {}), ...(pays ? { addressCountry: pays } : {}) } } : {}),
     ...(note ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Math.round(note.note * 10) / 10, reviewCount: note.nombre, bestRating: 5, worstRating: 1 } } : {}),
+    // Les avis repris d'une autre plateforme restent sur la page, mais pas
+    // dans les données structurées : Google n'accepte que ceux recueillis ici.
+    ...(avis.some(a => !a.importe) ? {
+      review: avis.filter(a => !a.importe).map(a => ({
+        '@type': 'Review',
+        author: { '@type': 'Person', name: a.auteur || '—' },
+        ...(a.date ? { datePublished: a.date.slice(0, 10) } : {}),
+        reviewBody: a.texte.slice(0, 600),
+        reviewRating: { '@type': 'Rating', ratingValue: a.note, bestRating: 5, worstRating: 1 },
+      })),
+    } : {}),
     ...(liste.length ? {
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
@@ -104,6 +123,11 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(donnees).replace(/</g, '\\u003c') }} />
       <h1 style={{ fontSize: 22, margin: 0 }}>{nom}</h1>
       {(metiers || ville) && <p style={{ margin: '4px 0 0', color: '#6b7280' }}>{[metiers, ville].filter(Boolean).join(' · ')}</p>}
+      {/* UNE PHRASE QUI DIT CE QUE LA CLIENTE CHERCHE (25 oct. 2026) : son
+          métier et sa ville en toutes lettres, comme on les tape dans Google. */}
+      <p style={{ margin: '10px 0 0' }}>
+        {metiers ? `${nom} : ${L === 'en' ? metiers : metiers.toLowerCase()}${ville ? ` ${M.a} ${ville}` : ''}. ` : ''}{M.intro}
+      </p>
       {note && <p style={{ margin: '6px 0 0' }}>★ {note.note.toFixed(1).replace('.', L === 'en' ? '.' : ',')} · {note.nombre} {M.avis}</p>}
       {bio && <p style={{ margin: '12px 0 0', whiteSpace: 'pre-line' }}>{bio}</p>}
       {liste.length > 0 && (
@@ -120,6 +144,17 @@ export default function FicheServeur({ slug, nom, langue, metiers, ville, pays, 
               </li>
             ))}
           </ul>
+        </>
+      )}
+      {avis.length > 0 && (
+        <>
+          <h2 style={{ fontSize: 17, margin: '20px 0 8px' }}>{M.avisTitre}</h2>
+          {avis.map((a, i) => (
+            <blockquote key={i} style={{ margin: '0 0 10px', padding: 0 }}>
+              <p style={{ margin: 0 }}>{'★'.repeat(Math.max(0, Math.min(5, Math.round(a.note))))} {a.texte}</p>
+              {a.auteur && <footer style={{ color: '#6b7280', fontSize: 14 }}>— {a.auteur}</footer>}
+            </blockquote>
+          ))}
         </>
       )}
       <p style={{ margin: '20px 0 0' }}><a href={url}>{M.reserver}</a></p>

@@ -151,6 +151,9 @@
       "other": ", appliquée automatiquement à vos %{count} prochains rendez-vous."
     },
     "offresEnCours": "Offres en cours",
+    "offrePeriode": "Pour les rendez-vous du %{debut} au %{fin}",
+    "offreJusquau": "Pour les rendez-vous jusqu'au %{fin}",
+    "offreAPartirDu": "Pour les rendez-vous à partir du %{debut}",
     "voirMoins": "Voir moins",
     "voirPlus": "Voir plus",
     "reprogrammer": "Reprogrammer",
@@ -167,6 +170,9 @@
     "modificationImpossible": "Impossible de modifier ce rendez-vous.",
     "troisDecalages": "Ce rendez-vous a déjà été décalé 3 fois. Pour un nouveau changement, contacte directement ta praticienne.",
     "decalageTropTard": "À moins de 24 h du rendez-vous, le décalage en ligne n'est plus possible. Contacte directement ta praticienne.",
+    "delaiModifInstagram": "Moins de %{heures} h avant votre rendez-vous : contactez %{pro} sur Instagram",
+    "delaiModifDirect": "Moins de %{heures} h avant votre rendez-vous : contactez %{pro} directement",
+    "annulerRdv": "Annuler",
     "reprogrammationImpossible": "Impossible de reprogrammer ce rendez-vous.",
     "photoRefusee": "Cette photo n'a pas pu être ajoutée. Réessaie avec une autre image.",
     "photosNonEnvoyees": "Tes photos n'ont pas pu être envoyées. Réessaie.",
@@ -260,7 +266,20 @@
     "proBadgeApp": "Télécharger l'app",
     "creneauLibereCourt": "Le créneau libéré ne durait que %{duree} : vos soins durent %{choisie}. Choisissez un autre horaire.",
     "enSupplement": "En supplément",
-    "avecUneAutre": "Ce soin se prend avec une autre prestation."
+    "avecUneAutre": "Ce soin se prend avec une autre prestation.",
+    "offres": "Offres",
+    "nouvellesClientesUniquement": "Nouvelles clientes uniquement",
+    "placesRestantes": {
+      "one": "Plus qu'une place",
+      "other": "Plus que %{count} places"
+    },
+    "offreToucher": "Touchez une offre, puis entrez votre numéro pour en profiter.",
+    "offreReserveeNouvelles": "Cette offre est réservée aux nouvelles clientes. Vous pouvez choisir vos soins ci-dessous.",
+    "offrePlusDisponible": "Cette offre n'est plus disponible. Vous pouvez choisir vos soins ci-dessous.",
+    "voirToutesLesOffres": {
+      "one": "Voir l'offre",
+      "other": "Voir les %{count} offres"
+    }
   },
   "commun": {
     "chargement": "Chargement...",
@@ -456,7 +475,7 @@
   },
   "cgu": {
     "titre": "Conditions Générales d'Utilisation",
-    "maj": "Dernière mise à jour : 27 septembre 2026",
+    "maj": "Dernière mise à jour : 28 octobre 2026",
     "contact": "Pour toute question :",
     "sections": [
       {
@@ -508,6 +527,7 @@
         "paragraphes": [
           "Glamia Pay vous permet de demander un acompte, de garder une empreinte bancaire, d'encaisser par carte et d'envoyer des liens de paiement. Les paiements sont traités par Stripe. Glamia n'est pas une banque et ne détient jamais votre argent : les fonds vont de votre cliente à votre propre compte connecté.",
           "Vous restez responsable des prix que vous fixez, des conditions d'annulation et d'absence que vous affichez à vos clientes, des remboursements que vous devez, et de vos obligations fiscales et comptables.",
+          "Les revenus que vous encaissez grâce à Glamia sont imposables et doivent être déclarés. En France, vous devez les déclarer à l'administration fiscale (impots.gouv.fr) et déclarer vos cotisations sociales à l'Urssaf (urssaf.fr ; pour les micro-entrepreneurs : autoentrepreneur.urssaf.fr). Si vous exercez hors de France, ces démarches se font auprès des administrations de votre pays. Conformément à l'article 242 bis du Code général des impôts, nous vous rappelons ces obligations, et lorsque la loi l'exige (articles 1649 ter A et suivants du même code), nous transmettons à l'administration fiscale les montants que vous avez perçus par l'intermédiaire de Glamia.",
           "Lorsque vous prélevez une empreinte pour une absence, vous devez avoir affiché les conditions à votre cliente AVANT qu'elle ne paie ou n'autorise sa carte. Les contestations bancaires opposent votre cliente et vous ; nous vous remettrons les traces dont nous disposons pour vous aider à y répondre."
         ]
       },

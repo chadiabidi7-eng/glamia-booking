@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
-import { isDayWorking, isDayBlocked, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
+import { isDayWorking, isDayBlocked, dernierJourReservable, horizonDe, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
 import { langueActuelle, poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
@@ -32,9 +32,15 @@ type RdvInfo = {
   jours_differents?: HorairesSpecifiques | null
   creneaux_bloques: CreneauBloque[]
   planning_variable: boolean
+  /** Jours à l'avance au-delà desquels on ne réserve plus (31 oct. 2026) ; null = sans limite. */
+  resa_horizon_jours?: number | null
   duree: number
   instructions: string | null
   inspirations: string[]
+  /** ÉQUIPE : les assistantes qui peuvent recevoir ce rendez-vous (vide pour une pro seule). */
+  equipe?: { id: string; prenom: string }[]
+  /** Passé le délai fixé par la pro : plus d'annulation ni de décalage en ligne. */
+  delai_modif?: { heures: number; contact: string; instagram: string | null; message: string } | null
 }
 
 type PageState = 'loading' | 'expired' | 'already_confirmed' | 'already_cancelled' | 'ready' | 'confirmed' | 'cancelled' | 'rescheduled' | 'error'
@@ -215,7 +221,7 @@ function formatDateFr(iso: string): string {
 }
 
 // ── Helpers décalage ────────────────────────
-type SlotInfo = { heure: string; disponible: boolean }
+type SlotInfo = { heure: string; disponible: boolean; qui?: string | null }
 
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
@@ -258,6 +264,9 @@ function ConfirmationPage() {
   const [decDate, setDecDate] = useState('')
   const [decHeure, setDecHeure] = useState('')
   const [decSlots, setDecSlots] = useState<SlotInfo[]>([])
+  // ÉQUIPE (29 oct. 2026) : même choix « avec qui » qu'à la réservation, et qui tient l'heure choisie.
+  const [decAvec, setDecAvec] = useState<string>('peu_importe')
+  const [decQui, setDecQui] = useState<string | null>(null)
   /** Le refus du serveur, dit à la cliente sans la sortir de l'écran. */
   const [decRefus, setDecRefus] = useState<string | null>(null)
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -300,8 +309,19 @@ function ConfirmationPage() {
   useEffect(() => {
     if (state !== 'ready' || !rdv || !actionParam) return
     if (actionParam === 'confirmer') handleConfirmer()
-    else if (actionParam === 'annuler') handleAnnuler()
+    else if (actionParam === 'annuler' && !rdv.delai_modif) handleAnnuler()
   }, [state, rdv, actionParam])
+
+  // Le serveur a refusé : délai de la pro dépassé (page ouverte depuis
+  // longtemps). On grise et on affiche la ligne, sans fenêtre ni écran d'erreur.
+  const refusDelaiModif = async (res: Response): Promise<boolean> => {
+    if (res.status !== 403) return false
+    const d = await res.json().catch(() => null)
+    if (d?.error !== 'delai_modif_depasse') return false
+    setRdv(prev => (prev ? { ...prev, delai_modif: { ...d.delai_modif, message: d.message } } : prev))
+    setShowDecaler(false)
+    return true
+  }
 
   // ── Actions ─────────────────────────────────
   const handleConfirmer = async () => {
@@ -342,6 +362,7 @@ function ConfirmationPage() {
       })
       console.log('[confirmation] Réponse status:', res.status)
 
+      if (!res.ok && await refusDelaiModif(res)) { setActing(false); return }
       if (!res.ok) { setState('error'); setActing(false); return }
 
       const data = await res.json()
@@ -355,14 +376,16 @@ function ConfirmationPage() {
   }
 
   // ── Décaler : charger créneaux ────────────────
-  const handlePickDate = async (dateStr: string) => {
+  const handlePickDate = async (dateStr: string, avec: string = decAvec) => {
     if (!rdv) return
     setDecDate(dateStr)
     setDecHeure('')
+    setDecQui(null)
     setDecRefus(null)
     setLoadingSlots(true)
     try {
-      const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}`)
+      const avecParam = (rdv.equipe?.length ?? 0) > 0 ? `&avec=${encodeURIComponent(avec)}` : ''
+      const res = await fetch(`/api/confirmation/${token}?slots_date=${dateStr}${avecParam}`)
       if (!res.ok) { setDecSlots([]); return }
       const info = await res.json()
       // Le serveur a calculé la grille avec TOUTES les règles : horaires,
@@ -385,8 +408,13 @@ function ConfirmationPage() {
       const res = await fetch(`/api/confirmation/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'decaler', new_date: newDateISO }),
+        body: JSON.stringify({
+          action: 'decaler', new_date: newDateISO,
+          // ÉQUIPE : qui tient l'heure choisie (null = la pro). Absent pour une pro seule.
+          ...((rdv.equipe?.length ?? 0) > 0 ? { praticienne_id: decQui } : {}),
+        }),
       })
+      if (!res.ok && await refusDelaiModif(res)) { setActing(false); return }
       if (!res.ok) {
         // Un créneau pris entre-temps, ou une journée fermée depuis que la
         // grille a été dessinée : on le lui DIT et on la laisse là, avec une
@@ -589,23 +617,52 @@ import { traduire } from '@/lib/i18n';
               <button
                 className="glamia-btn-cancel"
                 onClick={handleAnnuler}
-                disabled={acting}
+                disabled={acting || !!rdv.delai_modif}
+                data-action="annuler"
               >
                 {acting ? traduire('confirmation.annulationEnCours') : traduire('confirmation.annulerMonRdv')}
               </button>
               <button
                 className="glamia-btn-cancel"
                 onClick={() => setShowDecaler(!showDecaler)}
-                disabled={acting}
+                disabled={acting || !!rdv.delai_modif}
+                data-action="decaler"
                 style={{ borderColor: PINK, color: PINK }}
               >
                 <Calendar size={16} color={PINK} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{traduire('confirmation.decaler')}</button>
+              {/* Passé le délai de la pro : une ligne pour la contacter. */}
+              {rdv.delai_modif && (
+                rdv.delai_modif.instagram ? (
+                  <a
+                    href={`https://instagram.com/${rdv.delai_modif.instagram}`}
+                    target="_blank" rel="noopener noreferrer"
+                    data-delai-modif="instagram"
+                    style={{ display: 'block', fontSize: 13, color: PINK, textAlign: 'center', lineHeight: 1.4, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                  >{rdv.delai_modif.message}</a>
+                ) : (
+                  <p data-delai-modif="direct" style={{ margin: 0, fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.4 }}>{rdv.delai_modif.message}</p>
+                )
+              )}
             </div>
 
             {/* ── Interface de décalage ── */}
-            {showDecaler && rdv.horaires && (
+            {showDecaler && rdv.horaires && !rdv.delai_modif && (
               <div style={{ marginTop: 24 }}>
                 <p style={{ fontWeight: 700, color: '#1f2937', fontSize: 16, marginBottom: 16, marginTop: 0 }}>{traduire('confirmation.choisirNouvelleDate')}</p>
+
+                {/* ÉQUIPE : « Peu importe · Lila · Sarah », comme à la réservation. */}
+                {(rdv.equipe?.length ?? 0) > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '0 0 12px' }}>
+                    {[{ cle: 'peu_importe', libelle: traduire('resa.peuImporte') }, { cle: 'pro', libelle: rdv.pro_pseudo || rdv.pro_prenom }, ...(rdv.equipe ?? []).map(a => ({ cle: a.id, libelle: a.prenom }))].map(o => (
+                      <button
+                        key={o.cle}
+                        onClick={() => { setDecAvec(o.cle); if (decDate) handlePickDate(decDate, o.cle) }}
+                        style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${decAvec === o.cle ? PINK : '#e5e7eb'}`, background: decAvec === o.cle ? PINK : '#fff', color: decAvec === o.cle ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        {o.libelle}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Navigation mois */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -618,7 +675,11 @@ import { traduire } from '@/lib/i18n';
                     {moisLongs()[calMonth]} {calYear}
                   </span>
                   <button
-                    onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
+                    onClick={() => {
+                      const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
+                      if (dernier && buildDateStr(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12, 1) > dernier) return
+                      if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1)
+                    }}
                     style={{ width: 32, height: 32, borderRadius: 16, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 18, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >›</button>
                 </div>
@@ -639,10 +700,14 @@ import { traduire } from '@/lib/i18n';
                     const dayDate = new Date(calYear, calMonth, day)
                     const today0Date = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate())
                     const isPast = dayDate < today0Date
-                    const isOff =
+                    // ÉQUIPE : un jour fermé pour la pro peut être ouvert pour l'assistante.
+                    const isOff = (rdv.equipe?.length ?? 0) === 0 && (
                       !isDayWorking(dateStr, (rdv.horaires ?? {}) as never, (rdv.horaires_specifiques ?? {}) as never, rdv.planning_variable, rdv.jours_differents)
-                      || isDayBlocked(dateStr, rdv.creneaux_bloques ?? [])
-                    const isDisabled = isPast || isOff
+                      || isDayBlocked(dateStr, rdv.creneaux_bloques ?? []))
+                    // Au-delà de la limite de la pro (31 oct. 2026) : grisé comme un jour fermé.
+                    const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
+                    const horsLimite = !!dernier && dateStr > dernier
+                    const isDisabled = isPast || isOff || horsLimite
                     const isSelected = decDate === dateStr
                     return (
                       <button
@@ -651,8 +716,8 @@ import { traduire } from '@/lib/i18n';
                         onClick={() => { if (!isDisabled) handlePickDate(dateStr) }}
                         style={{
                           aspectRatio: '1', borderRadius: '50%', border: 'none',
-                          background: isSelected ? PINK : isPast ? 'transparent' : isOff ? '#E3F2FD' : 'transparent',
-                          color: isSelected ? '#fff' : isPast ? '#d1d5db' : isOff ? '#90CAF9' : '#374151',
+                          background: isSelected ? PINK : isPast ? 'transparent' : (isOff || horsLimite) ? '#E3F2FD' : 'transparent',
+                          color: isSelected ? '#fff' : isPast ? '#d1d5db' : (isOff || horsLimite) ? '#90CAF9' : '#374151',
                           fontWeight: 500, fontSize: 13, cursor: isDisabled ? 'default' : 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
@@ -682,7 +747,7 @@ import { traduire } from '@/lib/i18n';
                         {decSlots.filter(s => s.disponible).map(s => (
                           <button
                             key={s.heure}
-                            onClick={() => setDecHeure(s.heure)}
+                            onClick={() => { setDecHeure(s.heure); setDecQui(s.qui ?? null) }}
                             style={{
                               padding: '10px 0', borderRadius: 10,
                               border: `1.5px solid ${decHeure === s.heure ? PINK : '#e5e7eb'}`,
@@ -690,7 +755,10 @@ import { traduire } from '@/lib/i18n';
                               color: decHeure === s.heure ? '#fff' : '#374151',
                               fontWeight: 600, fontSize: 14, cursor: 'pointer',
                             }}
-                          >{s.heure}</button>
+                          >
+                            {s.heure}
+                            {s.qui ? <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: decHeure === s.heure ? '#fff' : '#5E44B5', marginTop: 2 }}>{traduire('resa.avec', { prenom: rdv.equipe?.find(a => a.id === s.qui)?.prenom ?? '' })}</span> : null}
+                          </button>
                         ))}
                       </div>
                     )}

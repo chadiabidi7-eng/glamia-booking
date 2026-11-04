@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Bandeau from '@/components/beaute/Bandeau'
 import ChoixVille from '@/components/beaute/ChoixVille'
 import Entete from '@/components/beaute/Entete'
+import ProsReferencees from '@/components/beaute/ProsReferencees'
 import { langueDuVisiteur } from '@/lib/beaute-langue'
 import { metadataAccueil } from '@/lib/beaute-seo'
 import { TEXTES } from '@/lib/beaute-textes'
@@ -67,6 +68,7 @@ export default async function Beaute() {
           </ul>
         </nav>
       )}
+      <ProsReferencees langue={langue} />
     </>
   )
 }

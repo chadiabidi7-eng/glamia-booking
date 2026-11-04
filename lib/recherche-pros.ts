@@ -343,7 +343,7 @@ export async function prosDeLaVille(ville: Ville): Promise<ProTrouvee[]> {
     // remontent, puis on ne garde que la même ville (12 oct. 2026).
     // La ville écrite par l'user, ou la ville qu'elle a choisi d'afficher (12 oct. 2026).
     // Aussi « 64340 Boucau » ou « 1700 Fribourg » : quatre ou cinq chiffres et une espace devant (14 oct. 2026).
-    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike.______${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike._____${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_lue.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
+    admin.from('profiles').select(CHAMPS).or(`ville.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike.______${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville.ilike._____${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_affichee.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%,ville_lue.ilike.${ville.nom.replace(/[^A-Za-z0-9]/g, '_')}%`).not('slug', 'is', null).not('compte_test', 'is', true).limit(MAX_PROS * 2),
     Promise.resolve(AUCUNE_VILLE_DEVINEE),
     admin.from('profiles').select(CHAMPS).or(`ville.ilike.${souple}%,ville_affichee.ilike.${souple}%,ville_lue.ilike.${souple}%`).not('slug', 'is', null).limit(MAX_PROS * 2),
     homonymes(base),
@@ -415,7 +415,7 @@ async function prosDansLeRayon(lat: number, lon: number, km: number, choix?: Cho
     admin.from('profiles').select(CHAMPS)
       .gte('adresse_lat', lat - dLat).lte('adresse_lat', lat + dLat)
       .gte('adresse_lon', lon - dLon).lte('adresse_lon', lon + dLon)
-      .not('slug', 'is', null).limit(MAX_PROS * 2),
+      .not('slug', 'is', null).not('compte_test', 'is', true).limit(MAX_PROS * 2),
     Promise.resolve(AUCUNE_VILLE_DEVINEE),
   ])
   return assembler((directes ?? []) as Profil[], (deduites ?? []) as { pro_id: string; lat: number; lon: number }[], choix)
@@ -435,7 +435,7 @@ async function assembler(directes: Profil[], deduites: { pro_id: string; lat: nu
   // 2. Celles dont la ville a été déduite de leur ancienne adresse.
   const manquants = deduites.filter(d => !profils.has(d.pro_id))
   if (manquants.length) {
-    const { data } = await admin.from('profiles').select(CHAMPS).in('id', manquants.map(d => d.pro_id as string)).not('slug', 'is', null)
+    const { data } = await admin.from('profiles').select(CHAMPS).in('id', manquants.map(d => d.pro_id as string)).not('slug', 'is', null).not('compte_test', 'is', true)
     for (const p of (data ?? []) as Profil[]) profils.set(p.id, p)
     // ELLE A DONNÉ SA VILLE (3.0) : la ville devinée le 26 septembre ne compte
     // plus. NailsBeauty, à Boucau, sortait à Bordeaux (14 oct. 2026).

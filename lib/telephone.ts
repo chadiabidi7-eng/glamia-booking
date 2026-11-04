@@ -53,6 +53,9 @@ const INDICATIFS: Record<string, string> = {
   '213': '0',  // Algérie
   '216': '',   // Tunisie
 
+  // Afrique centrale — « 077 12 34 56 » au Gabon, enregistré ainsi chez les pros
+  '241': '0',  // Gabon
+
   // Amériques
   '1': '',     // États-Unis, Canada et Caraïbes
   '52': '',    // Mexique

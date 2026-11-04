@@ -3,8 +3,9 @@
 /* eslint-disable @next/next/no-img-element */
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, CircleAlert, Gift, Star, Tag, X } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
+import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA VITRINE DE LA PRO — le haut de sa page de réservation (3.0, 27 sept. 2026)
@@ -37,6 +38,24 @@ const FILET = '#e5e7eb'
 
 export type SoinVitrine = { cle: string; nom: string; description?: string | null; photos: string[]; duree: string; prix: string }
 /** `icone` : l'image ronde de la spécialité (photo du catalogue, ou la sienne), posée devant son nom. */
+/** Une offre de la pro, montrée en premier onglet des soins (29 oct. 2026). */
+export type OffreVitrine = {
+  cle: string
+  nom: string
+  pack: boolean
+  /** Réservée aux nouvelles clientes : on le dit, sans quoi la cliente fidèle se croit trompée. */
+  nouvelles: boolean
+  /** « Pour les rendez-vous du … au … » quand l'offre est datée. */
+  periode: string | null
+  /** Places restantes quand la pro a fixé un nombre maximal d'utilisations. */
+  places: number | null
+  /** Les soins compris (un pack en contient plusieurs). */
+  soins: string[]
+  photo: string | null
+  duree: string | null
+  prixAvant: string | null
+  prix: string
+}
 export type CategorieVitrine = { nom: string; libelle: string; icone?: React.ReactNode; soins: SoinVitrine[] }
 
 const SOINS_VISIBLES = 4
@@ -45,7 +64,7 @@ const PHOTOS_VISIBLES = 6
 function Bloc({ titre, chute, children }: { titre: string; chute?: string; children: ReactNode }) {
   return (
     <section style={{ background: '#fff', border: `1.5px solid ${FILET}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
-      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: 'var(--accent)' }}>{chute}</span></> : null}</h2>
+      <h2 className="vitrine-titre">{titre}{chute ? <> <span style={{ color: 'var(--accent-texte, var(--accent))' }}>{chute}</span></> : null}</h2>
       <div style={{ marginTop: 12 }}>{children}</div>
     </section>
   )
@@ -134,11 +153,12 @@ export function EnTeteVitrine(props: {
   couleurPage?: string | null
 }) {
   const ACCENT = props.couleurPage || ROSE
+  const ACCENT_TEXTE = lisibleSurBlanc(ACCENT)
   const [bioEntiere, setBioEntiere] = useState(false)
   // Les guillemets : grands, de sa couleur, COLLÉS au texte — l'ouvrant devant
   // le premier mot, le fermant après le dernier. Replié, le texte est coupé et
   // le fermant avec lui : une phrase coupée ne se ferme pas.
-  const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT, verticalAlign: '-0.32em', padding: '0 2px' }
+  const guillemet: React.CSSProperties = { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, lineHeight: 0, color: ACCENT_TEXTE, verticalAlign: '-0.32em', padding: '0 2px' }
   return (
     // Un peu d'air sous l'en-tête, avant le cadre de réservation (Chadi, 9 oct. 2026) : 18 px.
     <div style={{ margin: '-16px -16px 18px' }}>
@@ -154,13 +174,13 @@ export function EnTeteVitrine(props: {
           <div style={{ width: 60, height: 60, borderRadius: 30, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: '3px solid #fff', boxShadow: `0 0 0 2px ${ACCENT}` }}>
             {props.photoProfil
               ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, color: ACCENT_TEXTE }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', paddingBottom: 2 }}>{props.reseaux}</div>
         </div>
         {/* Nom, note, ville : une seule ligne. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6, minWidth: 0 }}>
-          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage || ENCRE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{props.nom}</h1>
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.25, color: props.couleurPage ? lisibleSurBlanc(props.couleurPage) : ENCRE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{props.nom}</h1>
           {props.note !== null && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', flex: 'none' }}>
               <Star size={13} fill={ACCENT} color={ACCENT} strokeWidth={0} />
@@ -199,6 +219,10 @@ export default function Vitrine(props: {
   couverture: string | null
   bio: string | null
   categories: CategorieVitrine[]
+  /** Les offres visibles par toutes (et celles des nouvelles clientes, avec la mention). */
+  offres?: OffreVitrine[]
+  /** Toucher une offre : la page remonte au numéro et la retient. */
+  onChoisirOffre?: (cle: string) => void
   photos: string[]
   avis: ReactNode[]
   /** « Voir tout » : les avis, vingt à la fois (rendus par la page). */
@@ -220,6 +244,7 @@ export default function Vitrine(props: {
   boutonApresDefilement?: number
 }) {
   const ACCENT = props.couleurPage || ROSE
+  const ACCENT_TEXTE = lisibleSurBlanc(ACCENT)
   const [boutonVisible, setBoutonVisible] = useState(props.boutonApresDefilement == null)
   const [reglementOuvert, setReglementOuvert] = useState(false)
   useEffect(() => {
@@ -232,7 +257,16 @@ export default function Vitrine(props: {
   }, [props.boutonApresDefilement])
   // Une seule couleur, la sienne, partout — bouton compris (Chadi, 27 sept.).
   const BOUTON = ACCENT
-  const [categorie, setCategorie] = useState(0)
+  // L'ONGLET « OFFRES » EST TOUJOURS LE PREMIER (Chadi, 29 oct. 2026) : -1.
+  // Les offres arrivent après la page : tant que la cliente n'a touché à rien,
+  // on se place dessus dès qu'elles sont là.
+  const offres = props.offres ?? []
+  const aOffres = offres.length > 0
+  // null : la cliente n'a encore choisi aucun onglet.
+  const [choixOnglet, setChoixOnglet] = useState<number | null>(null)
+  const voulu = choixOnglet ?? (aOffres ? -1 : 0)
+  const categorie = voulu === -1 && !aOffres ? 0 : voulu
+  const setCategorie = (i: number) => setChoixOnglet(i)
   const [tousSoins, setTousSoins] = useState(false)
   const [soinOuvert, setSoinOuvert] = useState<string | null>(null)
   const [toutesPhotos, setToutesPhotos] = useState(false)
@@ -259,12 +293,14 @@ export default function Vitrine(props: {
       setListe(l => ({ avis: [...(depuis === 0 ? [] : l?.avis ?? []), ...r.avis], suite: r.suite, charge: false }))
     } catch { setListe(l => (l ? { ...l, charge: false } : l)) }
   }
-  const cat = props.categories[categorie] ?? props.categories[0]
+  const TEXTE_MENTION = ACCENT_TEXTE
+  const surOffres = aOffres && categorie === -1
+  const cat = surOffres ? undefined : (props.categories[categorie] ?? props.categories[0])
   const nbSoins = props.categories.reduce((n, c) => n + c.soins.length, 0)
   const soins = cat ? (tousSoins ? cat.soins : cat.soins.slice(0, SOINS_VISIBLES)) : []
 
   return (
-    <div className="vitrine" style={{ ['--accent' as string]: ACCENT }}>
+    <div className="vitrine" style={{ ['--accent' as string]: ACCENT, ['--accent-texte' as string]: ACCENT_TEXTE }}>
       <style>{`
         .vitrine { color: ${ENCRE}; }
         .vitrine .vitrine-titre { font-size: 17px; font-weight: 700; line-height: 1.3; margin: 0; }
@@ -296,7 +332,7 @@ export default function Vitrine(props: {
           <div style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden', flexShrink: 0, background: '#F9EEF4', border: `2px solid ${ACCENT}` }}>
             {props.photoProfil
               ? <img src={props.photoProfil} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ACCENT }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 26, fontWeight: 700, color: ACCENT_TEXTE }}>{props.nom.slice(0, 1).toUpperCase()}</div>}
           </div>
         </div>
         {props.prochaineDispo && (
@@ -330,8 +366,17 @@ export default function Vitrine(props: {
       {/* 3. LES SOINS */}
       {nbSoins > 0 && (
         <Bloc titre={`${traduire('resa.lesSoins')} (${nbSoins})`}>
-          {props.categories.length > 1 && (
+          {props.categories.length + (aOffres ? 1 : 0) > 1 && (
             <div className="vitrine-onglets">
+              {aOffres && (
+                <button key="__offres" onClick={() => { setCategorie(-1); setTousSoins(false) }}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, border: 0, background: 'transparent', padding: '0 0 10px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: surOffres ? ENCRE : ENCRE_DOUCE, borderBottom: `2px solid ${surOffres ? ACCENT : 'transparent'}` }}>
+                  <span style={{ width: 22, height: 22, borderRadius: 11, background: `${ACCENT}1F`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Tag size={12} color={ACCENT} strokeWidth={2.4} />
+                  </span>
+                  {traduire('resa.offres')}
+                </button>
+              )}
               {props.categories.map((c, i) => {
                 const on = i === categorie
                 return (
@@ -342,6 +387,45 @@ export default function Vitrine(props: {
                   </button>
                 )
               })}
+            </div>
+          )}
+          {surOffres && (
+            <div>
+              {(tousSoins ? offres : offres.slice(0, SOINS_VISIBLES)).map((o, i) => (
+                <button key={o.cle} onClick={() => props.onChoisirOffre?.(o.cle)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', border: 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', color: ENCRE }}>
+                  {/* La photo du soin, avec la pastille d'offre ; sans photo, l'icône sur un fond teinté. */}
+                  <span style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
+                    {o.photo ? (
+                      <img src={o.photo} alt="" loading="lazy" style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <span style={{ width: 52, height: 52, borderRadius: 12, background: `${ACCENT}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {o.pack ? <Gift size={22} color={ACCENT} strokeWidth={2} /> : <Tag size={22} color={ACCENT} strokeWidth={2} />}
+                      </span>
+                    )}
+                    {o.photo && (
+                      <span style={{ position: 'absolute', right: -4, top: -4, width: 20, height: 20, borderRadius: 10, background: ACCENT, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Tag size={10} color="#fff" strokeWidth={2.6} />
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.nom}</span>
+                    {/* Les soins compris, bien lisibles : c'est là qu'on comprend l'offre. */}
+                    {o.soins.length > 0 && <span style={{ display: 'block', margin: '3px 0 0', fontSize: 13, fontWeight: 600, color: ENCRE, lineHeight: 1.35 }}>{o.soins.join(' + ')}</span>}
+                    {o.nouvelles && <span style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}><CircleAlert size={13} strokeWidth={2.4} style={{ flexShrink: 0 }} />{traduire('resa.nouvellesClientesUniquement')}</span>}
+                    {o.periode && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: TEXTE_MENTION }}>{o.periode}</span>}
+                    <span style={{ display: 'block', margin: '2px 0 0', fontSize: 13, color: ENCRE_DOUCE }}>
+                      {o.duree ? `${o.duree} · ` : ''}
+                      {o.prixAvant && <span style={{ textDecoration: 'line-through', marginRight: 6 }}>{o.prixAvant}</span>}
+                      <span style={{ color: ENCRE, fontWeight: 700 }}>{o.prix}</span>
+                    </span>
+                    {o.places != null && o.places <= 10 && <span style={{ display: 'block', margin: '2px 0 0', fontSize: 12, color: ENCRE_DOUCE }}>{traduire('resa.placesRestantes', { count: o.places })}</span>}
+                  </span>
+                </button>
+              ))}
+              {!tousSoins && offres.length > SOINS_VISIBLES && <Plus onClick={() => setTousSoins(true)}>{traduire('resa.voirToutesLesOffres', { count: offres.length })}</Plus>}
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: ENCRE_DOUCE }}>{traduire('resa.offreToucher')}</p>
             </div>
           )}
           <div>

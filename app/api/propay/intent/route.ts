@@ -159,7 +159,7 @@ type Config = Reglage & {
 async function ficheClienteParTelephone(proId: string, telephone: unknown): Promise<string | null> {
   if (typeof telephone !== 'string') return null
   const cible = normaliserTelephone(telephone)
-  if (cible.length < 9) return null
+  if (cible.length < 8) return null
   const { data: clientes } = await supabaseAdmin
     .from('clientes').select('id, telephone').eq('pro_id', proId)
   // Numéros stockés dans des formats variés : la comparaison se fait en mémoire.
@@ -186,7 +186,7 @@ async function estUneNouvelleCliente(proId: string, telephone: unknown): Promise
   // dans ce sens demanderait trop d'argent à une fidèle.
   if (typeof telephone !== 'string') return false
   const cible = normaliserTelephone(telephone)
-  if (cible.length < 9) return false
+  if (cible.length < 8) return false
   try {
     const { data: clientes, error } = await supabaseAdmin
       .from('clientes').select('id, telephone').eq('pro_id', proId)
@@ -320,7 +320,7 @@ export async function POST(req: NextRequest) {
   // cesserait de s'afficher perdrait des réservations pour un chantier de
   // sécurité. La création du rendez-vous, elle, refuse — c'est là que l'argent
   // s'engage vraiment.
-  const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id)
+  const panier = await prixReelDuPanier(proId, body.techniques, body.offre_id, body.date)
   // La majoration du créneau (Ultra), relue chez la pro : le même prix que
   // celui que la création du rendez-vous enregistrera.
   const majoration = panier ? await majorationDuCreneau(proId, String(body.date ?? ''), String(body.heure ?? '')) : null
@@ -441,6 +441,22 @@ export async function POST(req: NextRequest) {
     })
   } catch (e) {
     console.error('[api/propay/intent]', e)
+    // ── STRIPE REFUSE LA CAISSE : ON LAISSE RÉSERVER (26 oct. 2026) ─────────
+    // Le 26 octobre à 18h35, Stripe a fermé le compte de la plateforme : chaque
+    // demande de paiement revient refusée (« The Connect application's Stripe
+    // account must be activated »). La page prenait ce refus pour une panne et
+    // BLOQUAIT la réservation chez toutes les pros à acompte.
+    //
+    // Un REFUS de Stripe (requête refusée, droits retirés) n'est pas une panne
+    // passagère : réessayer ne servira à rien. On répond donc « pas d'acompte »,
+    // et la cliente réserve comme chez une pro sans acompte — la pro garde ses
+    // rendez-vous. Une vraie panne réseau (Stripe injoignable) bloque toujours,
+    // comme avant : elle passe en quelques secondes.
+    // Un refus porte un code HTTP 4xx ; une panne réseau n'en a pas (ou 5xx).
+    const code = Number((e as { statusCode?: unknown })?.statusCode)
+    if (code >= 400 && code < 500 && code !== 429) {
+      return NextResponse.json({ actif: false, stripe_refuse: true })
+    }
     return NextResponse.json({ error: 'stripe_error' }, { status: 500 })
   }
 }
