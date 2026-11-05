@@ -41,6 +41,15 @@ export type Langue = (typeof LANGUES)[number];
 const i18n = new I18n({ fr, en, es, it });
 i18n.defaultLocale = 'fr';
 i18n.enableFallback = true;
+
+// AUCUN LANGAGE TECHNIQUE À L'ÉCRAN (5 nov. 2026). Quand un texte manque,
+// i18n-js affiche par défaut « [missing "it.xxx" translation] ». Le repli vers
+// le français passe d'abord ; s'il manque aussi en français, on n'affiche rien.
+i18n.missingTranslation.register('silencieux', (_i18n, scope) => {
+  if (process.env.NODE_ENV !== 'production') console.warn('[i18n] texte absent dans toutes les langues :', scope)
+  return ''
+})
+i18n.missingBehavior = 'silencieux'
 i18n.locale = 'fr';
 
 /**
