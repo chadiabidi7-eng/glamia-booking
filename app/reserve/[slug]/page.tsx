@@ -365,7 +365,12 @@ function formatDateCourte(dateStr: string) {
 /** « Pour les rendez-vous du 15 décembre au 25 décembre » : les jours où l'offre s'applique. */
 function periodeOffre(o: { date_debut?: string | null; date_fin?: string | null }): string {
   // « 1er octobre », pas « 1 octobre ».
-  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), { day: 'numeric', month: 'long' }).replace(/^1 (?=\p{L})/u, etiquette().startsWith('fr') ? '1er ' : '1 ')
+  // L'ANNÉE QUAND IL Y A UN DOUTE (7 nov. 2026) : « du 1er décembre au 1er décembre »
+  // se lisait comme une offre d'un seul jour alors qu'elle courait jusqu'en 2027.
+  // On écrit l'année dès que l'offre ne tient pas dans l'année en cours.
+  const annee = new Date().getFullYear()
+  const avecAnnee = [o.date_debut, o.date_fin].some(d => d && Number(d.slice(0, 4)) !== annee)
+  const jour = (d: string) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString(etiquette(), avecAnnee ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'long' }).replace(/^1 (?=\p{L})/u, etiquette().startsWith('fr') ? '1er ' : '1 ')
   if (o.date_debut && o.date_fin) return traduire('resa.offrePeriode', { debut: jour(o.date_debut), fin: jour(o.date_fin) })
   if (o.date_fin) return traduire('resa.offreJusquau', { fin: jour(o.date_fin) })
   if (o.date_debut) return traduire('resa.offreAPartirDu', { debut: jour(o.date_debut) })
@@ -2030,6 +2035,20 @@ export default function ReservationPage() {
     })()
     return () => { annule = true }
   }, [pro?.id])
+
+  // Retirer l'offre choisie. Un pack emporte ses prestations avec lui.
+  function retirerOffre(o: Offre) {
+    setOffreAppliquee(null)
+    if (o.type === 'pack') {
+      setTechniquesSelectionnees(prev => prev.filter(t => {
+        for (const [cat, techs] of Object.entries(catalogue)) {
+          const match = techs.find(x => o.prestations_ids.includes(x.id) && x.nom === t.nom && cat === t.categorie)
+          if (match) return false
+        }
+        return true
+      }))
+    }
+  }
 
   // Appliquer une offre (étape 2, ou depuis la vitrine après le numéro).
   function appliquerOffre(o: Offre) {
@@ -4854,18 +4873,7 @@ export default function ReservationPage() {
                 devise={pro?.devise}
                 techniquesSelectionnees={techniquesSelectionnees}
                 onApply={(o) => { setOffreRefusee(null); appliquerOffre(o) }}
-                onRemove={(o) => {
-                  setOffreAppliquee(null)
-                  if (o.type === 'pack') {
-                    setTechniquesSelectionnees(prev => prev.filter(t => {
-                      for (const [cat, techs] of Object.entries(catalogue)) {
-                        const match = techs.find(x => o.prestations_ids.includes(x.id) && x.nom === t.nom && cat === t.categorie)
-                        if (match) return false
-                      }
-                      return true
-                    }))
-                  }
-                }}
+                onRemove={retirerOffre}
               />
             )}
 
@@ -5104,6 +5112,23 @@ export default function ReservationPage() {
               {traduire('resa.dispoPourDuree', { duree: formatDuree(dureeTotal) })}
               {loadingJoursComplets && ` ${traduire('resa.verificationJours')}`}
             </p>
+
+            {/* UNE OFFRE DATÉE N'OUVRE QUE SES JOURS (7 nov. 2026). Sans cet encadré,
+                les jours hors offre ressemblaient à des jours fermés : une cliente
+                (et la pro) lisait « décembre est complet ». On dit pourquoi, et on
+                rend tout le calendrier d'un geste en retirant l'offre. */}
+            {offreAppliquee && (offreAppliquee.date_debut || offreAppliquee.date_fin) && (
+              <div style={{ background: '#F7F7F8', borderRadius: 14, padding: '12px 14px', marginBottom: 16, border: '1px solid #e5e7eb' }}>
+                <p style={{ fontSize: 13.5, color: '#374151', margin: 0, lineHeight: 1.5 }}>
+                  <strong>{offreAppliquee.nom}</strong> · {periodeOffre(offreAppliquee)}. {traduire('resa.offreAutresJours')}
+                </p>
+                <button
+                  onClick={() => { const o = offreAppliquee; retirerOffre(o); if (o.type === 'pack') setStep(2) }}
+                  style={{ marginTop: 8, padding: 0, border: 'none', background: 'none', color: PINK_TEXTE, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  {traduire(offreAppliquee.type === 'pack' ? 'resa.offreRetirerPack' : 'resa.offreRetirer')}
+                </button>
+              </div>
+            )}
 
             {/* Carte premier créneau disponible */}
             {loadingPremierCreneau && (
