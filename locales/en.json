@@ -279,7 +279,10 @@
     "voirToutesLesOffres": {
       "one": "See the offer",
       "other": "See all %{count} offers"
-    }
+    },
+    "offreAutresJours": "Other days can still be booked, without the offer.",
+    "offreRetirer": "See all days without the offer",
+    "offreRetirerPack": "Choose another service"
   },
   "commun": {
     "chargement": "Loading...",
