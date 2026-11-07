@@ -103,6 +103,14 @@ export async function remiseParrainage(proId: string, clienteId: string | null, 
     return rien
   }
 
+  // ── L'amie qui reprend rendez-vous après une annulation : sans retaper le code ─
+  const reprise = await repriseDe(clienteId)
+  if (reprise) {
+    const gain = config.filleule as Gain
+    const apres = appliquerGain(prix, gain)
+    return { prix: apres, parrainage: { role: 'filleule', code: reprise.code, ambassadrice_id: reprise.ambassadrice_id, ambassadrice_prenom: reprise.prenom, gain, montant: prix - apres } }
+  }
+
   // ── L'ambassadrice : sa cagnotte, sinon une récompense en attente ─────────
   const { data: c } = await supabaseAdmin.from('clientes').select('cagnotte_parrainage, cagnotte_expire_le').eq('id', clienteId).maybeSingle()
   const cagnotte = Number(c?.cagnotte_parrainage) || 0
@@ -166,11 +174,24 @@ export async function parrainageDe(proId: string, clienteId: string) {
   ])
   if (!c?.code_parrainage) return null
   const valable = !c.cagnotte_expire_le || new Date(`${c.cagnotte_expire_le}T23:59:59`) >= new Date()
+  const reprise = await repriseDe(clienteId)
   return {
+    reprise: reprise ? { prenom: reprise.prenom, gain: config.filleule } : null,
     code: c.code_parrainage as string,
     filleule: config.filleule,
     ambassadrice: config.ambassadrice,
     cagnotte: valable ? Number(c.cagnotte_parrainage) || 0 : 0,
     recompense: ((attente ?? [])[0] as { recompense: Gain } | undefined)?.recompense ?? null,
   }
+}
+
+/** Une amie dont le parrainage a été clos par une annulation, et qui revient. */
+export async function repriseDe(clienteId: string): Promise<{ code: string; ambassadrice_id: string; prenom: string } | null> {
+  const { data } = await supabaseAdmin.from('parrainages').select('code, ambassadrice_id, annule_le, recompense_creditee_le, amb:clientes!parrainages_ambassadrice_id_fkey(prenom)')
+    .eq('filleule_id', clienteId).limit(1)
+  const p = ((data ?? [])[0] ?? null) as unknown as { code: string; ambassadrice_id: string; annule_le: string | null; recompense_creditee_le: string | null; amb: { prenom: string | null } | null } | null
+  if (!p || !p.annule_le || p.recompense_creditee_le) return null
+  return (await estNouvelle(clienteId, p.ambassadrice_id)) === 'reprise'
+    ? { code: p.code, ambassadrice_id: p.ambassadrice_id, prenom: p.amb?.prenom ?? '' }
+    : null
 }

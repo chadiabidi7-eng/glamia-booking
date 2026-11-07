@@ -677,7 +677,7 @@ export default function ReservationPage() {
   const [refusResa, setRefusResa] = useState<{ type: string; instagram?: string | null } | null>(null)
   // LE PARRAINAGE (Ultra, 7 nov. 2026). La cliente reconnue : son code et ce
   // qui l'attend. La nouvelle : le code d'une amie, prérempli par le lien partagé.
-  const [parrainageCliente, setParrainageCliente] = useState<{ code: string; filleule: GainParrainage; ambassadrice: GainParrainage; cagnotte: number; recompense: GainParrainage | null } | null>(null)
+  const [parrainageCliente, setParrainageCliente] = useState<{ code: string; filleule: GainParrainage; ambassadrice: GainParrainage; cagnotte: number; recompense: GainParrainage | null; reprise?: { prenom: string; gain: GainParrainage } | null } | null>(null)
   const [programmeParrainage, setProgrammeParrainage] = useState<{ filleule: GainParrainage } | null>(null)
   const [codeSaisi, setCodeSaisi] = useState(() => (typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('code') ?? '').toUpperCase() : ''))
   const [codeVerifie, setCodeVerifie] = useState<{ code: string; prenom: string; gain: GainParrainage } | null>(null)
@@ -1669,6 +1669,7 @@ export default function ReservationPage() {
   const gainSurPrix = (p: number, g: GainParrainage) => g.type === 'gratuit' ? 0 : g.type === 'euros' ? Math.max(0, p - g.valeur) : g.type === 'pourcentage' ? Math.round(p * (1 - g.valeur / 100)) : p
   const parrainageApplique: { texte: 'filleule' | 'cagnotte' | 'recompense'; prix: number } | null = prixAvantParrainage <= 0 ? null
     : phoneStatus === 'unknown' && codeVerifie ? { texte: 'filleule', prix: gainSurPrix(prixAvantParrainage, codeVerifie.gain) }
+    : phoneStatus === 'known' && parrainageCliente?.reprise ? { texte: 'filleule', prix: gainSurPrix(prixAvantParrainage, parrainageCliente.reprise.gain) }
     : phoneStatus === 'known' && parrainageCliente && parrainageCliente.cagnotte > 0 ? { texte: 'cagnotte', prix: Math.max(0, prixAvantParrainage - parrainageCliente.cagnotte) }
     : phoneStatus === 'known' && parrainageCliente?.recompense ? { texte: 'recompense', prix: gainSurPrix(prixAvantParrainage, parrainageCliente.recompense) }
     : null
@@ -3788,7 +3789,7 @@ export default function ReservationPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('parrainage.badge')}</span>
                 <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
-                  {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && codeVerifie ? ` · ${traduire('parrainage.grace', { prenom: codeVerifie.prenom })}` : ''}
+                  {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && (codeVerifie || parrainageCliente?.reprise) ? ` · ${traduire('parrainage.grace', { prenom: (codeVerifie ?? parrainageCliente?.reprise)!.prenom })}` : ''}
                 </span>
               </div>
             )}
@@ -5574,7 +5575,7 @@ export default function ReservationPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                         <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('parrainage.badge')}</span>
                         <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
-                          {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && codeVerifie ? ` · ${traduire('parrainage.grace', { prenom: codeVerifie.prenom })}` : ''}
+                          {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && (codeVerifie || parrainageCliente?.reprise) ? ` · ${traduire('parrainage.grace', { prenom: (codeVerifie ?? parrainageCliente?.reprise)!.prenom })}` : ''}
                         </span>
                       </div>
                     )}
