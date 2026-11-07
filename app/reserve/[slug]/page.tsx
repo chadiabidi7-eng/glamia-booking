@@ -25,6 +25,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
+import { ChampCodeParrainage, RecompenseParrainage, TicketParrainage, texteGain as texteGainParrainage, type Gain as GainParrainage } from '@/components/reserve/Parrainage'
 import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
 import { majorer, pourcentageDuCreneau, regleDuCreneau, type MajorationsResolues, type RegleResolue } from '@/lib/majoration'
@@ -674,6 +675,12 @@ export default function ReservationPage() {
   // formulé sans jamais le dire) ou « nouvelles_fermees » (page réservée aux
   // clientes, avec le lien Instagram de la pro pour ne pas fermer la porte).
   const [refusResa, setRefusResa] = useState<{ type: string; instagram?: string | null } | null>(null)
+  // LE PARRAINAGE (Ultra, 7 nov. 2026). La cliente reconnue : son code et ce
+  // qui l'attend. La nouvelle : le code d'une amie, prérempli par le lien partagé.
+  const [parrainageCliente, setParrainageCliente] = useState<{ code: string; filleule: GainParrainage; ambassadrice: GainParrainage; cagnotte: number; recompense: GainParrainage | null; reprise?: { prenom: string; gain: GainParrainage } | null } | null>(null)
+  const [programmeParrainage, setProgrammeParrainage] = useState<{ filleule: GainParrainage } | null>(null)
+  const [codeSaisi, setCodeSaisi] = useState(() => (typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('code') ?? '').toUpperCase() : ''))
+  const [codeVerifie, setCodeVerifie] = useState<{ code: string; prenom: string; gain: GainParrainage } | null>(null)
 
   // ── LA VITRINE ── ce que la page montre avant de réserver.
   // Tout est là, mais tout est plié : la première étape reste celle où l'on
@@ -1653,11 +1660,20 @@ export default function ReservationPage() {
         : Math.round(prixTotal * (1 - recompenseFidelite.valeur / 100))
     : prixTotal
   // Réduction personnelle : appliquée après la fidélité (cumul)
-  const prixFinal = reductionCliente && prixApresFidelite > 0
+  const prixAvantParrainage = reductionCliente && prixApresFidelite > 0
     ? reductionCliente.type === 'euros'
       ? Math.max(0, prixApresFidelite - reductionCliente.valeur)
       : Math.round(prixApresFidelite * (1 - reductionCliente.valeur / 100))
     : prixApresFidelite
+  // Le parrainage, en dernier, sur ce qui reste — le même ordre que le serveur.
+  const gainSurPrix = (p: number, g: GainParrainage) => g.type === 'gratuit' ? 0 : g.type === 'euros' ? Math.max(0, p - g.valeur) : g.type === 'pourcentage' ? Math.round(p * (1 - g.valeur / 100)) : p
+  const parrainageApplique: { texte: 'filleule' | 'cagnotte' | 'recompense'; prix: number } | null = prixAvantParrainage <= 0 ? null
+    : phoneStatus === 'unknown' && codeVerifie ? { texte: 'filleule', prix: gainSurPrix(prixAvantParrainage, codeVerifie.gain) }
+    : phoneStatus === 'known' && parrainageCliente?.reprise ? { texte: 'filleule', prix: gainSurPrix(prixAvantParrainage, parrainageCliente.reprise.gain) }
+    : phoneStatus === 'known' && parrainageCliente && parrainageCliente.cagnotte > 0 ? { texte: 'cagnotte', prix: Math.max(0, prixAvantParrainage - parrainageCliente.cagnotte) }
+    : phoneStatus === 'known' && parrainageCliente?.recompense ? { texte: 'recompense', prix: gainSurPrix(prixAvantParrainage, parrainageCliente.recompense) }
+    : null
+  const prixFinal = parrainageApplique ? parrainageApplique.prix : prixAvantParrainage
 
   // ── Load pro ─────────────────────────────────
   useEffect(() => { loadPro() }, [slug])
@@ -1966,6 +1982,7 @@ export default function ReservationPage() {
         // arrivée — puis se remplissait d'un coup. Court, mais elle voyait sa
         // carte remise à zéro sous ses yeux. Le temps d'attente, lui, ne change
         // pas : c'est le même aller-retour, simplement attendu.
+        setParrainageCliente(reponse.parrainage ?? null)
         await chargerDossier(pro.id, found.id)
         setPhoneStatus('known')
       } else {
@@ -1974,6 +1991,16 @@ export default function ReservationPage() {
         setClienteNom('')
         setClienteEmail('')
         setReductionCliente(null)
+        setParrainageCliente(null)
+        fetch(`/api/parrainage/verifier?pro=${pro.id}`).then(r => r.json()).then(d => {
+          setProgrammeParrainage(d?.actif ? { filleule: d.filleule } : null)
+          // Le code arrivé par le lien partagé : vérifié tout de suite.
+          const c = (new URLSearchParams(window.location.search).get('code') ?? '').trim().toUpperCase()
+          if (d?.actif && c.length >= 4) {
+            fetch('/api/parrainage/verifier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: pro.id, code: c }) })
+              .then(r => r.json()).then(v => { if (v?.ok) setCodeVerifie({ code: v.code, prenom: v.prenom, gain: v.gain }) }).catch(() => {})
+          }
+        }).catch(() => setProgrammeParrainage(null))
         setPhoneStatus('unknown')
         setFideliteFiche(null)
         chargerFideliteConfig(pro.id)
@@ -3062,6 +3089,8 @@ export default function ReservationPage() {
           notes: commentaire.trim(),
           demande_rappel: rappel,
           fidelite_appliquee: recompenseFidelite ?? null,
+          // Le code d'une amie : réclamé, le serveur relit tout.
+          code_parrainage: phoneStatus === 'unknown' && codeVerifie ? codeVerifie.code : null,
           // La campagne qui l'a amenée ici, si elle vient d'un mail de campagne.
           campagne_id: rechercheUrl.get('c') || null,
           // CE QU'ELLE A RÉPONDU PART AVEC LE RENDEZ-VOUS. Sans ça, la réponse
@@ -3755,6 +3784,15 @@ export default function ReservationPage() {
                 </span>
               </div>
             )}
+            {/* Parrainage appliqué (7 nov. 2026) */}
+            {parrainageApplique && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('parrainage.badge')}</span>
+                <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
+                  {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && (codeVerifie || parrainageCliente?.reprise) ? ` · ${traduire('parrainage.grace', { prenom: (codeVerifie ?? parrainageCliente?.reprise)!.prenom })}` : ''}
+                </span>
+              </div>
+            )}
             {/* Ligne total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1.5px solid #e5e7eb', marginTop: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: PINK_TEXTE }}>{traduire('resa.total')}</span>
@@ -4244,6 +4282,22 @@ export default function ReservationPage() {
                         : traduire('resa.reductionProchainsRdv', { count: reductionCliente.restants })}
                     </p>
                   </div>
+                )}
+
+                {parrainageCliente && pro && (parrainageCliente.cagnotte > 0 || parrainageCliente.recompense) && (
+                  <RecompenseParrainage rose={PINK} roseTexte={PINK_TEXTE} texte={
+                    parrainageCliente.cagnotte > 0
+                      ? traduire('parrainage.cagnotteAppliquee', { montant: formatPrix(parrainageCliente.cagnotte, pro?.devise) })
+                      : traduire('parrainage.recompenseAppliquee', { gain: texteGainParrainage(parrainageCliente.recompense!, symboleDevise(pro?.devise), true) })
+                  } />
+                )}
+                {parrainageCliente && pro && (
+                  <TicketParrainage
+                    code={parrainageCliente.code} filleule={parrainageCliente.filleule} ambassadrice={parrainageCliente.ambassadrice}
+                    sym={symboleDevise(pro?.devise)} nomPro={pro.pseudo || `${pro.prenom} ${pro.nom}`}
+                    lien={`https://booking.glamia.pro/reserve/${slug}?code=${encodeURIComponent(parrainageCliente.code)}`}
+                    rose={PINK} roseTexte={PINK_TEXTE}
+                  />
                 )}
 
                 {!loadingRdvs && avisAlaisser.length > 0 && (
@@ -4821,6 +4875,12 @@ export default function ReservationPage() {
                     <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder={traduire('resa.emailPlaceholder')} style={S.input} autoCapitalize="none" />
                     <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>{traduire('resa.emailDetail')}</p>
                   </div>
+                  {programmeParrainage && pro && (
+                    <ChampCodeParrainage
+                      proId={pro.id} valeur={codeSaisi} onChange={setCodeSaisi} verifie={codeVerifie} onVerifie={setCodeVerifie}
+                      sym={symboleDevise(pro?.devise)} rose={PINK} roseTexte={PINK_TEXTE} styleInput={S.input} styleLabel={S.label}
+                    />
+                  )}
                 </div>
 
                 {annonceFormulaire(identiteRemplie)}
@@ -5507,6 +5567,15 @@ export default function ReservationPage() {
                         <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('resa.fidelite')}</span>
                         <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
                           {recompenseFidelite.type === 'gratuit' ? traduire('resa.offert') : recompenseFidelite.type === 'euros' ? `-${formatPrix(recompenseFidelite.valeur, pro?.devise)}` : `-${recompenseFidelite.valeur}%`}
+                        </span>
+                      </div>
+                    )}
+                    {/* Parrainage appliqué (7 nov. 2026) */}
+                    {parrainageApplique && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ background: PINK, color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px' }}>{traduire('parrainage.badge')}</span>
+                        <span style={{ fontSize: 13, color: PINK_TEXTE, fontWeight: 600 }}>
+                          {parrainageApplique.prix <= 0 ? traduire('resa.offert') : `-${formatPrix(prixAvantParrainage - parrainageApplique.prix, pro?.devise)}`}{parrainageApplique.texte === 'filleule' && (codeVerifie || parrainageCliente?.reprise) ? ` · ${traduire('parrainage.grace', { prenom: (codeVerifie ?? parrainageCliente?.reprise)!.prenom })}` : ''}
                         </span>
                       </div>
                     )}

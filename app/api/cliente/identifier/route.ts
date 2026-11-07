@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
+import { parrainageDe } from '@/lib/parrainage-serveur'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — reconnaître une cliente à son numéro, ou la créer.
@@ -71,7 +72,9 @@ export async function POST(req: NextRequest) {
     }
     if (trouvee) {
       const { bloquee_le: _b, ...publique } = trouvee as Record<string, unknown>
-      return NextResponse.json({ cliente: publique, creee: false })
+      // LE PARRAINAGE (Ultra, 7 nov. 2026) : une cliente connue voit son code,
+      // ce qu'il rapporte, et ce qui l'attend chez la pro.
+      return NextResponse.json({ cliente: publique, creee: false, parrainage: await parrainageDe(pro_id, trouvee.id as string) })
     }
 
     // PAGE RÉSERVÉE AUX CLIENTES — un numéro absent du fichier est refusé,

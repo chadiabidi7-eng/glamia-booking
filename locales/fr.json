@@ -788,5 +788,30 @@
     "ceJourFerie": "Ce jour férié, une majoration de %{pct} % s’applique.",
     "leJour": "Le %{jour}, une majoration de %{pct} % s’applique.",
     "cettePeriode": "Sur cette période, une majoration de %{pct} % s’applique."
+  },
+  "parrainage": {
+    "tonCode": "Ton code de parrainage",
+    "pourTonAmie": "%{gain} pour ton amie",
+    "pourToi": "%{gain} pour toi",
+    "explication": "Partage-le : ton amie a son cadeau à sa première visite, et toi ta récompense dès qu’elle est venue.",
+    "partager": "Partager mon code",
+    "copie": "Message copié, colle-le à ton amie",
+    "message": "Je te recommande %{pro} ✨ Avec mon code %{code}, tu as %{gain} sur ton premier rendez-vous : %{lien}",
+    "champ": "Un code de parrainage ?",
+    "champExemple": "SARAH-4K7",
+    "champDetail": "Si une amie t’a donné son code, entre-le ici.",
+    "offertPar": "%{gain} offert par %{prenom} 🎁",
+    "codeInconnu": "Ce code n’existe pas chez cette professionnelle.",
+    "cagnotteAppliquee": "Tu as %{montant} dans ta cagnotte de parrainage : ils se déduisent de ce rendez-vous 🎉",
+    "recompenseAppliquee": "Ta récompense de parrainage s’applique : %{gain} sur ce rendez-vous 🎉",
+    "badge": "PARRAINAGE",
+    "grace": "grâce à %{prenom}",
+    "tamponOffert": "Un tampon offert",
+    "soinOffert": "Un soin offert",
+    "pourTonAmieSeul": "pour ton amie",
+    "pourToiSeul": "pour toi, par amie venue",
+    "partagerCourt": "Partager",
+    "copieCourt": "Copié",
+    "pourToiCourt": "pour toi"
   }
 }

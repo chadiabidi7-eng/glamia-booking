@@ -794,5 +794,30 @@
     "ceJourFerie": "A %{pct}% surcharge applies on this public holiday.",
     "leJour": "A %{pct}% surcharge applies on %{jour}s.",
     "cettePeriode": "A %{pct}% surcharge applies during this period."
+  },
+  "parrainage": {
+    "tonCode": "Your referral code",
+    "pourTonAmie": "%{gain} for your friend",
+    "pourToi": "%{gain} for you",
+    "explication": "Share it: your friend gets her gift on her first visit, and you get your reward once she has come.",
+    "partager": "Share my code",
+    "copie": "Message copied, paste it to your friend",
+    "message": "I recommend %{pro} ✨ With my code %{code}, you get %{gain} off your first appointment: %{lien}",
+    "champ": "A referral code?",
+    "champExemple": "SARAH-4K7",
+    "champDetail": "If a friend gave you her code, enter it here.",
+    "offertPar": "%{gain} gifted by %{prenom} 🎁",
+    "codeInconnu": "This code doesn’t exist with this professional.",
+    "cagnotteAppliquee": "You have %{montant} of referral credit: it comes off this appointment 🎉",
+    "recompenseAppliquee": "Your referral reward applies: %{gain} on this appointment 🎉",
+    "badge": "REFERRAL",
+    "grace": "thanks to %{prenom}",
+    "tamponOffert": "A free stamp",
+    "soinOffert": "A free treatment",
+    "pourTonAmieSeul": "for your friend",
+    "pourToiSeul": "for you, per friend who comes",
+    "partagerCourt": "Share",
+    "copieCourt": "Copied",
+    "pourToiCourt": "for you"
   }
 }
