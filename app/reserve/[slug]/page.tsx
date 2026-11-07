@@ -4283,10 +4283,10 @@ export default function ReservationPage() {
                   </div>
                 )}
 
-                {parrainageCliente && pro && parrainageApplique && (
+                {parrainageCliente && pro && (parrainageCliente.cagnotte > 0 || parrainageCliente.recompense) && (
                   <RecompenseParrainage rose={PINK} roseTexte={PINK_TEXTE} texte={
-                    parrainageApplique.texte === 'cagnotte'
-                      ? traduire('parrainage.cagnotteAppliquee', { montant: formatPrix(Math.min(parrainageCliente.cagnotte, prixAvantParrainage), pro?.devise) })
+                    parrainageCliente.cagnotte > 0
+                      ? traduire('parrainage.cagnotteAppliquee', { montant: formatPrix(parrainageCliente.cagnotte, pro?.devise) })
                       : traduire('parrainage.recompenseAppliquee', { gain: texteGainParrainage(parrainageCliente.recompense!, symboleDevise(pro?.devise), true) })
                   } />
                 )}

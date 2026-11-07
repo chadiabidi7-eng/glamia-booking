@@ -808,7 +808,7 @@
     "champDetail": "If a friend gave you her code, enter it here.",
     "offertPar": "%{gain} gifted by %{prenom} 🎁",
     "codeInconnu": "This code doesn’t exist with this professional.",
-    "cagnotteAppliquee": "Your referral credit applies: %{montant} off this appointment 🎉",
+    "cagnotteAppliquee": "You have %{montant} of referral credit: it comes off this appointment 🎉",
     "recompenseAppliquee": "Your referral reward applies: %{gain} on this appointment 🎉",
     "badge": "REFERRAL",
     "grace": "thanks to %{prenom}",

@@ -802,7 +802,7 @@
     "champDetail": "Se un’amica ti ha dato il suo codice, inseriscilo qui.",
     "offertPar": "%{gain} offerto da %{prenom} 🎁",
     "codeInconnu": "Questo codice non esiste presso questa professionista.",
-    "cagnotteAppliquee": "Si applica il tuo credito referral: %{montant} in meno su questo appuntamento 🎉",
+    "cagnotteAppliquee": "Hai %{montant} di credito referral: si scala da questo appuntamento 🎉",
     "recompenseAppliquee": "Si applica il tuo premio referral: %{gain} su questo appuntamento 🎉",
     "badge": "REFERRAL",
     "grace": "grazie a %{prenom}",

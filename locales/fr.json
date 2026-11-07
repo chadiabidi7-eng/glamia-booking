@@ -802,7 +802,7 @@
     "champDetail": "Si une amie t’a donné son code, entre-le ici.",
     "offertPar": "%{gain} offert par %{prenom} 🎁",
     "codeInconnu": "Ce code n’existe pas chez cette professionnelle.",
-    "cagnotteAppliquee": "Ta cagnotte de parrainage s’applique : %{montant} en moins sur ce rendez-vous 🎉",
+    "cagnotteAppliquee": "Tu as %{montant} dans ta cagnotte de parrainage : ils se déduisent de ce rendez-vous 🎉",
     "recompenseAppliquee": "Ta récompense de parrainage s’applique : %{gain} sur ce rendez-vous 🎉",
     "badge": "PARRAINAGE",
     "grace": "grâce à %{prenom}",

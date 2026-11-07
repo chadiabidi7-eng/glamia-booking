@@ -805,7 +805,7 @@
     "champDetail": "Si una amiga te dio su código, escríbelo aquí.",
     "offertPar": "%{gain} regalado por %{prenom} 🎁",
     "codeInconnu": "Este código no existe con esta profesional.",
-    "cagnotteAppliquee": "Se aplica tu saldo de referidos: %{montant} menos en esta cita 🎉",
+    "cagnotteAppliquee": "Tienes %{montant} de saldo de referidos: se descuenta de esta cita 🎉",
     "recompenseAppliquee": "Se aplica tu recompensa de referidos: %{gain} en esta cita 🎉",
     "badge": "REFERIDO",
     "grace": "gracias a %{prenom}",
