@@ -809,6 +809,9 @@
     "tamponOffert": "Un tampon offert",
     "soinOffert": "Un soin offert",
     "pourTonAmieSeul": "pour ton amie",
-    "pourToiSeul": "pour toi, par amie venue"
+    "pourToiSeul": "pour toi, par amie venue",
+    "partagerCourt": "Partager",
+    "copieCourt": "Copié",
+    "pourToiCourt": "pour toi"
   }
 }

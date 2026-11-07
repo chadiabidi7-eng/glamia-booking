@@ -815,6 +815,9 @@
     "tamponOffert": "A free stamp",
     "soinOffert": "A free treatment",
     "pourTonAmieSeul": "for your friend",
-    "pourToiSeul": "for you, per friend who comes"
+    "pourToiSeul": "for you, per friend who comes",
+    "partagerCourt": "Share",
+    "copieCourt": "Copied",
+    "pourToiCourt": "for you"
   }
 }

@@ -812,6 +812,9 @@
     "tamponOffert": "Un sello gratis",
     "soinOffert": "Un servicio gratis",
     "pourTonAmieSeul": "para tu amiga",
-    "pourToiSeul": "para ti, por amiga que viene"
+    "pourToiSeul": "para ti, por amiga que viene",
+    "partagerCourt": "Compartir",
+    "copieCourt": "Copiado",
+    "pourToiCourt": "para ti"
   }
 }
