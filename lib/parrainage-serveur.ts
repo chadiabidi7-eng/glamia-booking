@@ -58,15 +58,27 @@ export async function ambassadriceDuCode(proId: string, code: string) {
   return data as { id: string; prenom: string | null } | null
 }
 
-/** Une vraie nouvelle cliente : fiche toute fraîche, aucun rendez-vous, jamais parrainée. */
-async function estNouvelle(clienteId: string): Promise<boolean> {
-  const [{ data: c }, { data: rdv }, { data: deja }] = await Promise.all([
+/**
+ * Une vraie nouvelle cliente : fiche toute fraîche, aucun rendez-vous, jamais
+ * parrainée. OU une amie déjà parrainée par CE code dont le rendez-vous a été
+ * ANNULÉ (pas une absence) et qui n'est jamais venue : elle reprend
+ * rendez-vous, son cadeau et le parrainage reviennent (Chadi, 7 nov. 2026).
+ */
+async function estNouvelle(clienteId: string, ambassadriceId: string): Promise<'nouvelle' | 'reprise' | null> {
+  const [{ data: c }, { data: rdvs }, { data: deja }] = await Promise.all([
     supabaseAdmin.from('clientes').select('created_at, parrainee_par').eq('id', clienteId).maybeSingle(),
-    supabaseAdmin.from('rendez_vous').select('id').eq('cliente_id', clienteId).limit(1),
-    supabaseAdmin.from('parrainages').select('id').eq('filleule_id', clienteId).limit(1),
+    supabaseAdmin.from('rendez_vous').select('statut, absente_le').eq('cliente_id', clienteId).limit(50),
+    supabaseAdmin.from('parrainages').select('ambassadrice_id, annule_le, recompense_creditee_le').eq('filleule_id', clienteId).limit(1),
   ])
-  if (!c || c.parrainee_par || (deja ?? []).length > 0 || (rdv ?? []).length > 0) return false
-  return Date.now() - new Date(c.created_at as string).getTime() < 6 * 3600e3
+  if (!c) return null
+  const liste = (rdvs ?? []) as { statut: string; absente_le: string | null }[]
+  const p = ((deja ?? [])[0] ?? null) as { ambassadrice_id: string; annule_le: string | null; recompense_creditee_le: string | null } | null
+  if (p) {
+    const seulementAnnules = liste.every(r => r.statut === 'annule' && !r.absente_le)
+    return p.ambassadrice_id === ambassadriceId && p.annule_le && !p.recompense_creditee_le && seulementAnnules ? 'reprise' : null
+  }
+  if (c.parrainee_par || liste.length > 0) return null
+  return Date.now() - new Date(c.created_at as string).getTime() < 6 * 3600e3 ? 'nouvelle' : null
 }
 
 /**
@@ -83,7 +95,7 @@ export async function remiseParrainage(proId: string, clienteId: string | null, 
   const code = normaliserCode(codeDemande)
   if (code) {
     const amb = await ambassadriceDuCode(proId, code)
-    if (amb && amb.id !== clienteId && await estNouvelle(clienteId)) {
+    if (amb && amb.id !== clienteId && await estNouvelle(clienteId, amb.id)) {
       const gain = config.filleule as Gain
       const apres = appliquerGain(prix, gain)
       return { prix: apres, parrainage: { role: 'filleule', code, ambassadrice_id: amb.id, ambassadrice_prenom: amb.prenom ?? '', gain, montant: prix - apres } }
@@ -118,10 +130,12 @@ export async function enregistrerParrainage(proId: string, clienteId: string, rd
   try {
     if (p.role === 'filleule') {
       const config = await configActive(proId)
-      await supabaseAdmin.from('parrainages').insert({
+      // Une amie qui reprend rendez-vous après une annulation : on rouvre sa ligne.
+      await supabaseAdmin.from('parrainages').upsert({
         pro_id: proId, ambassadrice_id: p.ambassadrice_id, filleule_id: clienteId, rdv_id: rdvId,
         code: p.code, avantage_filleule: p.gain, recompense: config?.ambassadrice ?? null,
-      })
+        annule_le: null, venue_le: null,
+      }, { onConflict: 'filleule_id' })
       await supabaseAdmin.from('clientes').update({ parrainee_par: p.ambassadrice_id }).eq('id', clienteId)
       return
     }
