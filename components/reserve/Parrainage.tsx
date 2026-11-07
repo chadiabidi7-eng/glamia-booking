@@ -38,32 +38,35 @@ export function TicketParrainage({ code, filleule, ambassadrice, sym, nomPro, li
     } catch { /* partage annulé */ }
   }
   return (
-    <div style={{ border: `1.5px dashed ${rose}`, background: '#FFF7FA', borderRadius: 16, padding: '11px 13px', marginBottom: 18 }}>
-      {/* Compact (Chadi, 7 nov. 2026) : le code et « Partager » sur une ligne ;
-          le bouton en contour, plus discret que « Prendre rendez-vous » — le but
-          reste qu'elle réserve. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <HeartHandshake size={14} color={roseTexte} />
-        <span style={{ fontSize: 10.5, fontWeight: 800, color: roseTexte, textTransform: 'uppercase', letterSpacing: 0.7 }}>{traduire('parrainage.tonCode')}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
-        <span style={{ fontSize: 22, fontWeight: 800, color: '#1f2937', letterSpacing: 1.5 }}>{code}</span>
+    <div style={{ border: `1px dashed ${rose}`, background: '#FFF9FB', borderRadius: 14, padding: '10px 14px', marginBottom: 16 }}>
+      {/* Petit, et dessiné comme la story (Chadi, 7 nov. 2026) : le code et un
+          simple lien « Partager » en gris — rien qui attire plus l'œil que
+          « Prendre rendez-vous » ; puis les deux gains, séparés d'un filet. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <HeartHandshake size={12} color={roseTexte} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: roseTexte, textTransform: 'uppercase', letterSpacing: 0.7 }}>{traduire('parrainage.tonCode')}</span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#1f2937', letterSpacing: 1.4, marginTop: 1 }}>{code}</div>
+        </div>
         <button type="button" onClick={partager} style={{
-          border: `1.5px solid ${rose}`, background: '#fff', color: roseTexte, borderRadius: 999,
-          fontSize: 13, fontWeight: 700, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0,
+          border: 'none', background: 'transparent', color: '#6b7280', fontSize: 12.5, fontWeight: 600,
+          padding: '4px 0', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 3,
         }}>
-          {copie ? <Check size={14} /> : <Send size={14} />}
+          {copie ? <Check size={13} /> : <Send size={13} />}
           {copie ? traduire('parrainage.copieCourt') : traduire('parrainage.partagerCourt')}
         </button>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 9 }}>
-        <div style={{ flex: 1, background: '#fff', border: '1px solid #F3D5E4', borderRadius: 12, padding: '7px 10px', display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: '#1f2937' }}>{texteGain(filleule, sym)}</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>{traduire('parrainage.pourTonAmieSeul')}</span>
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid #F3D5E4' }}>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 19, fontWeight: 800, color: roseTexte, lineHeight: 1.1 }}>{texteGain(filleule, sym)}</div>
+          <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 2 }}>{traduire('parrainage.pourTonAmieSeul')}</div>
         </div>
-        <div style={{ flex: 1, background: rose, borderRadius: 12, padding: '7px 10px', display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>{texteGain(ambassadrice, sym, true)}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>{traduire('parrainage.pourToiCourt')}</span>
+        <div style={{ width: 1, alignSelf: 'stretch', background: '#F3D5E4' }} />
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div style={{ fontSize: 19, fontWeight: 800, color: roseTexte, lineHeight: 1.1 }}>{texteGain(ambassadrice, sym, true)}</div>
+          <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 2 }}>{traduire('parrainage.pourToiCourt')}</div>
         </div>
       </div>
     </div>
