@@ -801,7 +801,7 @@
     "copie": "Mensaje copiado, pégalo a tu amiga",
     "message": "Te recomiendo a %{pro} ✨ Con mi código %{code}, tienes %{gain} en tu primera cita: %{lien}",
     "champ": "¿Un código de referido?",
-    "champExemple": "Ej. SARAH-4K7",
+    "champExemple": "SARAH-4K7",
     "champDetail": "Si una amiga te dio su código, escríbelo aquí.",
     "offertPar": "%{gain} regalado por %{prenom} 🎁",
     "codeInconnu": "Este código no existe con esta profesional.",

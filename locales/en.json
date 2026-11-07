@@ -804,7 +804,7 @@
     "copie": "Message copied, paste it to your friend",
     "message": "I recommend %{pro} ✨ With my code %{code}, you get %{gain} off your first appointment: %{lien}",
     "champ": "A referral code?",
-    "champExemple": "E.g. SARAH-4K7",
+    "champExemple": "SARAH-4K7",
     "champDetail": "If a friend gave you her code, enter it here.",
     "offertPar": "%{gain} gifted by %{prenom} 🎁",
     "codeInconnu": "This code doesn’t exist with this professional.",

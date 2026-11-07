@@ -798,7 +798,7 @@
     "copie": "Message copié, colle-le à ton amie",
     "message": "Je te recommande %{pro} ✨ Avec mon code %{code}, tu as %{gain} sur ton premier rendez-vous : %{lien}",
     "champ": "Un code de parrainage ?",
-    "champExemple": "Ex. SARAH-4K7",
+    "champExemple": "SARAH-4K7",
     "champDetail": "Si une amie t’a donné son code, entre-le ici.",
     "offertPar": "%{gain} offert par %{prenom} 🎁",
     "codeInconnu": "Ce code n’existe pas chez cette professionnelle.",

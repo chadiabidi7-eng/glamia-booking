@@ -798,7 +798,7 @@
     "copie": "Messaggio copiato, incollalo alla tua amica",
     "message": "Ti consiglio %{pro} ✨ Con il mio codice %{code}, hai %{gain} sul primo appuntamento: %{lien}",
     "champ": "Un codice referral?",
-    "champExemple": "Es. SARAH-4K7",
+    "champExemple": "SARAH-4K7",
     "champDetail": "Se un’amica ti ha dato il suo codice, inseriscilo qui.",
     "offertPar": "%{gain} offerto da %{prenom} 🎁",
     "codeInconnu": "Questo codice non esiste presso questa professionista.",

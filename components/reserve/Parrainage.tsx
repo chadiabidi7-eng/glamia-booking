@@ -92,14 +92,15 @@ export function ChampCodeParrainage({ proId, valeur, onChange, verifie, onVerifi
   }
   return (
     <div style={{ marginTop: 12 }}>
-      <label style={styleLabel}>{traduire('parrainage.champ')}</label>
+      {/* Dans la couleur de la page de la pro (Chadi, 7 nov. 2026) : le champ se remarque. */}
+      <label style={{ ...styleLabel, color: roseTexte }}>{traduire('parrainage.champ')}</label>
       <div style={{ position: 'relative' }}>
         <input
           type="text" value={valeur} autoCapitalize="characters" autoComplete="off" spellCheck={false}
           placeholder={traduire('parrainage.champExemple')}
           onChange={e => { onChange(e.target.value.toUpperCase()); if (verifie) onVerifie(null); setEtat('rien') }}
           onBlur={e => verifier(e.target.value)}
-          style={{ ...styleInput, letterSpacing: 1, fontWeight: 700, ...(verifie ? { borderColor: rose, background: '#FFF7FA' } : {}) }}
+          style={{ ...styleInput, letterSpacing: 1, fontWeight: 700, borderColor: rose, ...(verifie ? { background: '#FFF7FA' } : {}) }}
         />
         {verifie && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, borderRadius: 10, background: '#4CAF7A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={12} color="#fff" strokeWidth={3} /></span>}
       </div>
