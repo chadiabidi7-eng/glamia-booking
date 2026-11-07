@@ -807,6 +807,8 @@
     "badge": "PARRAINAGE",
     "grace": "grâce à %{prenom}",
     "tamponOffert": "Un tampon offert",
-    "soinOffert": "Un soin offert"
+    "soinOffert": "Un soin offert",
+    "pourTonAmieSeul": "pour ton amie",
+    "pourToiSeul": "pour toi, par amie venue"
   }
 }

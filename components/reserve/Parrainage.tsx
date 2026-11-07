@@ -44,9 +44,17 @@ export function TicketParrainage({ code, filleule, ambassadrice, sym, nomPro, li
         <span style={{ fontSize: 11, fontWeight: 800, color: roseTexte, textTransform: 'uppercase', letterSpacing: 0.7 }}>{traduire('parrainage.tonCode')}</span>
       </div>
       <div style={{ fontSize: 26, fontWeight: 800, color: '#1f2937', letterSpacing: 1.8, margin: '6px 0 4px' }}>{code}</div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 700, color: roseTexte }}>
-        <span>{traduire('parrainage.pourTonAmie', { gain: texteGain(filleule, sym) })}</span>
-        <span>{traduire('parrainage.pourToi', { gain: texteGain(ambassadrice, sym, true) })}</span>
+      {/* Les deux gains en pavés, le montant en grand ; « pour toi » en rose plein :
+          c'est ce qui donne envie de partager (Chadi, 7 nov. 2026). */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={{ flex: 1, background: '#fff', border: '1px solid #F3D5E4', borderRadius: 14, padding: '10px 12px' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#1f2937', letterSpacing: -0.4 }}>{texteGain(filleule, sym)}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: '#6b7280', marginTop: 1 }}>{traduire('parrainage.pourTonAmieSeul')}</div>
+        </div>
+        <div style={{ flex: 1, background: rose, borderRadius: 14, padding: '10px 12px' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -0.4 }}>{texteGain(ambassadrice, sym, true)}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,0.92)', marginTop: 1 }}>{traduire('parrainage.pourToiSeul')}</div>
+        </div>
       </div>
       <p style={{ fontSize: 12.5, color: '#6b7280', margin: '8px 0 0', lineHeight: 1.45 }}>{traduire('parrainage.explication')}</p>
       <button type="button" onClick={partager} style={{

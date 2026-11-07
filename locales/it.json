@@ -807,6 +807,8 @@
     "badge": "REFERRAL",
     "grace": "grazie a %{prenom}",
     "tamponOffert": "Un timbro in regalo",
-    "soinOffert": "Un trattamento in regalo"
+    "soinOffert": "Un trattamento in regalo",
+    "pourTonAmieSeul": "per la tua amica",
+    "pourToiSeul": "per te, per amica venuta"
   }
 }

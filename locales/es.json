@@ -810,6 +810,8 @@
     "badge": "REFERIDO",
     "grace": "gracias a %{prenom}",
     "tamponOffert": "Un sello gratis",
-    "soinOffert": "Un servicio gratis"
+    "soinOffert": "Un servicio gratis",
+    "pourTonAmieSeul": "para tu amiga",
+    "pourToiSeul": "para ti, por amiga que viene"
   }
 }

@@ -813,6 +813,8 @@
     "badge": "REFERRAL",
     "grace": "thanks to %{prenom}",
     "tamponOffert": "A free stamp",
-    "soinOffert": "A free treatment"
+    "soinOffert": "A free treatment",
+    "pourTonAmieSeul": "for your friend",
+    "pourToiSeul": "for you, per friend who comes"
   }
 }
