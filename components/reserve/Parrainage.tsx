@@ -40,7 +40,7 @@ export function TicketParrainage({ code, filleule, ambassadrice, sym, nomPro, li
   return (
     <div style={{ border: `1px dashed ${rose}`, background: '#FFF9FB', borderRadius: 14, padding: '10px 14px', marginBottom: 16 }}>
       {/* Petit, et dessiné comme la story (Chadi, 7 nov. 2026) : le code et un
-          simple lien « Partager » en gris — rien qui attire plus l'œil que
+          bouton « Partager » en ovale gris — rien qui attire plus l'œil que
           « Prendre rendez-vous » ; puis les deux gains, séparés d'un filet. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
@@ -51,8 +51,8 @@ export function TicketParrainage({ code, filleule, ambassadrice, sym, nomPro, li
           <div style={{ fontSize: 18, fontWeight: 800, color: '#1f2937', letterSpacing: 1.4, marginTop: 1 }}>{code}</div>
         </div>
         <button type="button" onClick={partager} style={{
-          border: 'none', background: 'transparent', color: '#6b7280', fontSize: 12.5, fontWeight: 600,
-          padding: '4px 0', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 3,
+          border: '1px solid #d1d5db', background: '#fff', color: '#6b7280', fontSize: 12.5, fontWeight: 600, borderRadius: 999,
+          padding: '6px 13px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flexShrink: 0,
         }}>
           {copie ? <Check size={13} /> : <Send size={13} />}
           {copie ? traduire('parrainage.copieCourt') : traduire('parrainage.partagerCourt')}
