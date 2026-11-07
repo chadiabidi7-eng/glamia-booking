@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { assistanteValide, dureeChezAssistante, profilHorairesPour, rdvExistantsDe } from '@/lib/equipe'
 import { prixReelDuPanier, remisesVerifiees } from '@/lib/prix-serveur'
+import { enregistrerParrainage, remiseParrainage } from '@/lib/parrainage-serveur'
 import { majorer } from '@/lib/majoration'
 import { majorationDuCreneau } from '@/lib/majoration-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
@@ -165,6 +166,12 @@ export async function POST(req: NextRequest) {
     const remises = reel
       ? await remisesVerifiees(pro_id, cliente_id, majorer(reel.prix, majoration?.pourcentage ?? 0), body.fidelite_appliquee, body.reduction_appliquee)
       : null
+    // LE PARRAINAGE (Ultra, 7 nov. 2026) : le cadeau de l'amie qui entre un
+    // code, ou la cagnotte de l'ambassadrice. Appliqué après la fidélité et la
+    // réduction, sur ce qui reste ; relu ici, jamais pris au navigateur.
+    const parrainage = remises
+      ? await remiseParrainage(pro_id, cliente_id, remises.prix, (body as { code_parrainage?: unknown }).code_parrainage)
+      : null
 
     // ÉQUIPE : chez l'assistante, la durée est la sienne (le prix reste celui
     // de la pro). Une prestation qu'elle n'assure pas : on refuse.
@@ -186,7 +193,7 @@ export async function POST(req: NextRequest) {
         specialite: body.specialite ?? null,
         technique: body.technique ?? null,
         techniques: reel?.techniques ?? body.techniques ?? [],
-        prix: remises ? remises.prix : (typeof body.prix === 'number' && body.prix > 0 ? body.prix : null),
+        prix: parrainage ? parrainage.prix : remises ? remises.prix : (typeof body.prix === 'number' && body.prix > 0 ? body.prix : null),
         statut: 'en_attente',
         notes: body.notes || null,
         demande_rappel: body.demande_rappel === true,
@@ -196,6 +203,7 @@ export async function POST(req: NextRequest) {
           : null,
         reduction_appliquee: remises ? remises.reduction : (body.reduction_appliquee ?? null),
         majoration_appliquee: majoration,
+        parrainage_applique: parrainage?.parrainage ?? null,
         source: 'booking',
         // SUIVI DES CAMPAGNES (30 sept. 2026) : le mail d'une campagne mène ici
         // avec sa marque ; le rendez-vous la garde, et l'app compte « 3 rendez-vous
@@ -209,6 +217,8 @@ export async function POST(req: NextRequest) {
       console.error('[rdv/creer] insertion', error.message)
       return NextResponse.json({ error: 'creation' }, { status: 500 })
     }
+
+    if (parrainage?.parrainage && cliente_id) await enregistrerParrainage(pro_id, cliente_id, cree.id, parrainage.parrainage)
 
     // L'ADRESSE EXACTE PART D'ICI, ET SEULEMENT SI ELLE EST DUE MAINTENANT.
     //

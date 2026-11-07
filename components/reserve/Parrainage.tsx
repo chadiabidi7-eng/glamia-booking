@@ -1,0 +1,115 @@
+'use client'
+
+import { useState } from 'react'
+import { Check, HeartHandshake, Send } from 'lucide-react'
+import { traduire } from '@/lib/i18n'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LE PARRAINAGE SUR LA PAGE DE RÉSERVATION (Ultra, 7 nov. 2026)
+//
+// · TicketParrainage : la cliente reconnue voit SON code, ce qu'il rapporte à
+//   son amie et à elle, et un bouton pour le partager. Si une récompense
+//   l'attend (cagnotte, % ou soin offert), on le lui dit : elle s'applique à
+//   CE rendez-vous, puisqu'elle est en train de le prendre.
+// · ChampCodeParrainage : la nouvelle cliente peut entrer le code d'une amie ;
+//   « −10 % offert par Sarah » s'affiche aussitôt. La vraie remise est
+//   recalculée par le serveur à la création du rendez-vous.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Gain = { type: 'pourcentage' | 'euros' | 'gratuit' | 'tampon'; valeur: number }
+
+export function texteGain(g: Gain, sym: string, pourElle = false): string {
+  if (g.type === 'pourcentage') return `−${g.valeur} %`
+  if (g.type === 'euros') return pourElle ? `${g.valeur} ${sym}` : `−${g.valeur} ${sym}`
+  if (g.type === 'tampon') return traduire('parrainage.tamponOffert')
+  return traduire('parrainage.soinOffert')
+}
+
+export function TicketParrainage({ code, filleule, ambassadrice, sym, nomPro, lien, rose, roseTexte }: {
+  code: string; filleule: Gain; ambassadrice: Gain; sym: string; nomPro: string; lien: string; rose: string; roseTexte: string
+}) {
+  const [copie, setCopie] = useState(false)
+  const message = traduire('parrainage.message', { pro: nomPro, code, gain: texteGain(filleule, sym), lien })
+  const partager = async () => {
+    try {
+      if (navigator.share) { await navigator.share({ text: message }); return }
+      await navigator.clipboard.writeText(message)
+      setCopie(true); setTimeout(() => setCopie(false), 2200)
+    } catch { /* partage annulé */ }
+  }
+  return (
+    <div style={{ border: `1.5px dashed ${rose}`, background: '#FFF7FA', borderRadius: 18, padding: '14px 16px', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <HeartHandshake size={15} color={roseTexte} />
+        <span style={{ fontSize: 11, fontWeight: 800, color: roseTexte, textTransform: 'uppercase', letterSpacing: 0.7 }}>{traduire('parrainage.tonCode')}</span>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#1f2937', letterSpacing: 1.8, margin: '6px 0 4px' }}>{code}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 700, color: roseTexte }}>
+        <span>{traduire('parrainage.pourTonAmie', { gain: texteGain(filleule, sym) })}</span>
+        <span>{traduire('parrainage.pourToi', { gain: texteGain(ambassadrice, sym, true) })}</span>
+      </div>
+      <p style={{ fontSize: 12.5, color: '#6b7280', margin: '8px 0 0', lineHeight: 1.45 }}>{traduire('parrainage.explication')}</p>
+      <button type="button" onClick={partager} style={{
+        width: '100%', marginTop: 12, border: 'none', borderRadius: 999, background: rose, color: '#fff',
+        fontSize: 14.5, fontWeight: 700, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer',
+      }}>
+        {copie ? <Check size={16} /> : <Send size={16} />}
+        {copie ? traduire('parrainage.copie') : traduire('parrainage.partager')}
+      </button>
+    </div>
+  )
+}
+
+/** Ce que la cliente reconnue a gagné et qui s'applique à CE rendez-vous. */
+export function RecompenseParrainage({ texte, rose, roseTexte }: { texte: string; rose: string; roseTexte: string }) {
+  return (
+    <div style={{ background: 'linear-gradient(135deg, #FFF0F6 0%, #FFF9FB 100%)', border: '1.5px solid #F3D5E4', borderRadius: 16, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ width: 34, height: 34, borderRadius: 17, background: rose, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <HeartHandshake size={17} color="#fff" />
+      </div>
+      <p style={{ margin: 0, fontSize: 14, color: roseTexte, fontWeight: 700, lineHeight: 1.45 }}>{texte}</p>
+    </div>
+  )
+}
+
+export function ChampCodeParrainage({ proId, valeur, onChange, verifie, onVerifie, sym, rose, roseTexte, styleInput, styleLabel }: {
+  proId: string; valeur: string; onChange: (v: string) => void
+  verifie: { code: string; prenom: string; gain: Gain } | null
+  onVerifie: (v: { code: string; prenom: string; gain: Gain } | null) => void
+  sym: string; rose: string; roseTexte: string; styleInput: React.CSSProperties; styleLabel: React.CSSProperties
+}) {
+  const [etat, setEtat] = useState<'rien' | 'verif' | 'faux'>('rien')
+  const verifier = async (v: string) => {
+    const code = v.trim().toUpperCase()
+    if (code.length < 4) { onVerifie(null); setEtat('rien'); return }
+    setEtat('verif')
+    try {
+      const r = await fetch('/api/parrainage/verifier', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pro_id: proId, code }) })
+      const d = await r.json()
+      if (d?.ok) { onVerifie({ code: d.code, prenom: d.prenom, gain: d.gain }); setEtat('rien') }
+      else { onVerifie(null); setEtat('faux') }
+    } catch { onVerifie(null); setEtat('rien') }
+  }
+  return (
+    <div style={{ marginTop: 12 }}>
+      <label style={styleLabel}>{traduire('parrainage.champ')}</label>
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text" value={valeur} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+          placeholder={traduire('parrainage.champExemple')}
+          onChange={e => { onChange(e.target.value.toUpperCase()); if (verifie) onVerifie(null); setEtat('rien') }}
+          onBlur={e => verifier(e.target.value)}
+          style={{ ...styleInput, letterSpacing: 1, fontWeight: 700, ...(verifie ? { borderColor: rose, background: '#FFF7FA' } : {}) }}
+        />
+        {verifie && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, borderRadius: 10, background: '#4CAF7A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={12} color="#fff" strokeWidth={3} /></span>}
+      </div>
+      {verifie && (
+        <p style={{ margin: '6px 0 0', fontSize: 13.5, fontWeight: 700, color: roseTexte }}>
+          {traduire('parrainage.offertPar', { gain: texteGain(verifie.gain, sym), prenom: verifie.prenom })}
+        </p>
+      )}
+      {etat === 'faux' && <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#b45309' }}>{traduire('parrainage.codeInconnu')}</p>}
+      {etat !== 'faux' && !verifie && <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>{traduire('parrainage.champDetail')}</p>}
+    </div>
+  )
+}
