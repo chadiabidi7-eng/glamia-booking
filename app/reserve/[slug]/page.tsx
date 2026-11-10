@@ -83,6 +83,9 @@ type Offre = {
 // `abonnement_actif` et `trial_ends_at` servent à savoir si la page s'ouvre.
 const COLONNES_PUBLIQUES = 'id, prenom, nom, pseudo, slug, created_at, avatar_url, photo_url, message_accueil, instagram, tiktok, snapchat, horaires, horaires_specifiques, jours_differents, creneaux_bloques, planning_variable, fidelite_config, is_pro, devise, langue, pays, timezone, abonnement_actif, trial_ends_at'
 
+/** Le nom des plateformes d'où un avis peut être importé, tel qu'elles l'écrivent. */
+const NOM_PLATEFORME: Record<string, string> = { planity: 'Planity', treatwell: 'Treatwell', booksy: 'Booksy', fresha: 'Fresha', iara: 'IARA' }
+
 /**
  * Les créneaux d'une ou plusieurs journées, calculés par le serveur.
  *
@@ -688,7 +691,7 @@ export default function ReservationPage() {
   type Vitrine = {
     avis_actifs: boolean; note: number | null; nb_avis: number
     avis: { auteur: string; note: number; texte: string | null; prestations: string | null
-            reponse: string | null; cree_le: string; importe?: boolean
+            reponse: string | null; cree_le: string; importe?: boolean; plateforme?: string | null
             photos: { vignette: string; pleine: string }[] }[]
     adresse: { moment: string; ville: string | null; acces: string | null; exacte: string | null }
     accueil: Record<string, boolean | null>
@@ -839,14 +842,19 @@ export default function ReservationPage() {
           fontSize: 12, fontWeight: 800,
         }}>{a.auteur.slice(0, 1).toUpperCase()}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}{a.importe && (
-            <span style={{ fontSize: 12, fontWeight: 400, color: '#A79DAB' }}> ({traduire('resa.avisImporte')})</span>
-          )}</span>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#2D2D2D' }}>{a.auteur}</span>
           {a.prestations && (
             <span style={{
               display: 'block', fontSize: 11.5, color: '#A79DAB',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{a.prestations}</span>
+          )}
+          {a.importe && (
+            <span style={{ display: 'block', fontSize: 11, color: '#A79DAB' }}>
+              {a.plateforme
+                ? traduire('resa.avisImporteDe', { plateforme: NOM_PLATEFORME[a.plateforme] ?? a.plateforme })
+                : traduire('resa.avisImporte')}
+            </span>
           )}
         </span>
         <span style={{ fontSize: 13, color: GLAMIA_PINK_TEXTE, letterSpacing: 1, flexShrink: 0 }}>

@@ -13,6 +13,7 @@
     "sesPrestations": "Ses prestations",
     "reserver": "Réserver",
     "avisImporte": "importé",
+    "avisImporteDe": "Importé de %{plateforme}",
     "reglement": "Règlement",
     "refusDefaut": "Je ne peux pas vous recevoir pour cette demande.",
     "ecrivezLui": "Écrivez-lui, vous en parlerez directement :",

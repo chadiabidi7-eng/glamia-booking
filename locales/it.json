@@ -13,6 +13,7 @@
     "sesPrestations": "I suoi servizi",
     "reserver": "Prenota",
     "avisImporte": "importata",
+    "avisImporteDe": "Importata da %{plateforme}",
     "reglement": "Regolamento",
     "refusDefaut": "Non posso accoglierti per questa richiesta.",
     "ecrivezLui": "Scrivile, ne parlerete direttamente:",

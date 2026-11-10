@@ -91,8 +91,10 @@ export async function POST(req: NextRequest) {
       prestations: a.prestations,
       reponse: a.reponse,
       cree_le: a.cree_le,
-      // Un avis repris d'une autre plateforme le dit, sans la nommer.
+      // Un avis repris d'une autre plateforme le dit, et dit laquelle
+      // (« Importé de Fresha », en gris) : décision de Chadi, 10 nov. 2026.
       importe: !!a.source,
+      plateforme: (a.source as string | null) ?? null,
       // La vignette pour la page, la pleine pour l'ouverture.
       photos: ((a.photos ?? []) as string[]).map(url => ({
         vignette: url.includes('-pleine.jpg') ? url.replace('-pleine.jpg', '-vignette.jpg') : url,

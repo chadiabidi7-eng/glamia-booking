@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     suite: lignes.length > PAQUET,
     avis: lignes.slice(0, PAQUET).map(a => ({
       auteur: a.auteur, note: a.note, texte: a.texte, prestations: a.prestations, reponse: a.reponse,
-      cree_le: a.cree_le, importe: !!a.source,
+      cree_le: a.cree_le, importe: !!a.source, plateforme: (a.source as string | null) ?? null,
       photos: ((a.photos ?? []) as string[]).map(url => ({
         vignette: url.includes('-pleine.jpg') ? url.replace('-pleine.jpg', '-vignette.jpg') : url,
         pleine: url,
