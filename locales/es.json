@@ -286,7 +286,9 @@
     "paiementSecuriseMollie": "Pago seguro con Mollie: el dinero va directamente a tu profesional, Glamia nunca guarda los fondos.",
     "redirigeeMollie": "Vas a pagar en la página segura de Mollie (tarjeta, Apple Pay, Google Pay) y luego volverás aquí.",
     "consentMollie": "Acepto pagar %{somme} ahora: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, se me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, la profesional se queda con la señal.",
-    "payerAcompte": "Pagar %{somme}"
+    "payerAcompte": "Pagar %{somme}",
+    "emailPourPaiement": "Tu correo, para recibir la confirmación del pago",
+    "identitePaiement": "Para pagar la señal, necesitamos tu nombre, apellido y un correo válido."
   },
   "commun": {
     "chargement": "Cargando...",

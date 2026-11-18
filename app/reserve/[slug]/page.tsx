@@ -3183,6 +3183,12 @@ export default function ReservationPage() {
         // elle part chez Mollie. Le rendez-vous naît côté serveur dès que Mollie
         // confirme — même si elle ne revient jamais sur cette page.
         if (propay.mollie) {
+          // JAMAIS DE PAIEMENT ANONYME (18 nov. 2026) : prénom, nom et e-mail, ou pas de paiement.
+          if (!clientePrenom.trim() || !clienteNom.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())) {
+            alert(traduire('resa.identitePaiement'))
+            setSubmitting(false)
+            return
+          }
           const cle = crypto.randomUUID()
           const rep = await fetch('/api/mollie/acompte', {
             method: 'POST',
@@ -5838,6 +5844,13 @@ export default function ReservationPage() {
                 </p>
                 {propay.mollie && (
                   <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45 }}>{traduire('resa.redirigeeMollie')}</p>
+                )}
+                {/* L'e-mail manque sur sa fiche : on le demande ici, il accompagne le paiement et sert au reçu. */}
+                {propay.mollie && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim()) && (
+                  <div style={{ margin: '8px 0 4px' }}>
+                    <label style={{ ...S.label, fontSize: 12 }}>{traduire('resa.emailPourPaiement')}</label>
+                    <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder={traduire('resa.emailPlaceholder')} style={S.input} autoCapitalize="none" />
+                  </div>
                 )}
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
                   <input

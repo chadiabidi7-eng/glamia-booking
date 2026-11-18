@@ -286,7 +286,9 @@
     "paiementSecuriseMollie": "Paiement sécurisé par Mollie — l'argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.",
     "redirigeeMollie": "Tu vas payer sur la page sécurisée de Mollie (carte, Apple Pay, Google Pay), puis revenir ici.",
     "consentMollie": "J'accepte de régler %{somme} maintenant : %{acompte} d'acompte et %{frais} de frais de réservation. Si j'annule plus de %{delai} h avant, mon acompte m'est remboursé ; les frais de réservation restent acquis. Si je ne viens pas ou si j'annule moins de %{delai} h avant, l'acompte est conservé par la praticienne.",
-    "payerAcompte": "Payer %{somme}"
+    "payerAcompte": "Payer %{somme}",
+    "emailPourPaiement": "Ton e-mail, pour recevoir la confirmation du paiement",
+    "identitePaiement": "Pour payer l'acompte, il faut ton prénom, ton nom et un e-mail valable."
   },
   "commun": {
     "chargement": "Chargement...",

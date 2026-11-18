@@ -286,7 +286,9 @@
     "paiementSecuriseMollie": "Secure payment by Mollie — the money goes straight to your professional, Glamia never holds the funds.",
     "redirigeeMollie": "You'll pay on Mollie's secure page (card, Apple Pay, Google Pay), then come back here.",
     "consentMollie": "I agree to pay %{somme} now: a %{acompte} deposit and a %{frais} booking fee. If I cancel more than %{delai} h before, my deposit is refunded; the booking fee is non-refundable. If I don't show up or cancel less than %{delai} h before, the professional keeps the deposit.",
-    "payerAcompte": "Pay %{somme}"
+    "payerAcompte": "Pay %{somme}",
+    "emailPourPaiement": "Your email, to receive the payment confirmation",
+    "identitePaiement": "To pay the deposit, we need your first name, last name and a valid email."
   },
   "commun": {
     "chargement": "Loading...",
