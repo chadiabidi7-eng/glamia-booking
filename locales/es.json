@@ -832,6 +832,9 @@
     "autreCreneau": "Elegir otro horario",
     "longTitre": "Tu pago se está procesando",
     "longTexte": "Tu banco aún no ha respondido. Si el pago se completa, tu cita queda reservada y recibirás un correo de confirmación. Si no, no se cobra nada.",
-    "acompteDeduit": "La señal se descuenta del precio de tu servicio. También recibirás un correo de confirmación."
+    "acompteDeduit": "La señal se descuenta del precio de tu servicio. También recibirás un correo de confirmación.",
+    "payeTitre": "Pago recibido",
+    "paye": "Pagado",
+    "merciPaiement": "Gracias, tu pago ha llegado a tu profesional."
   }
 }

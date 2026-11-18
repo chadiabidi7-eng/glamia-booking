@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe-serveur'
-import { traiterAnnulationPropay } from '@/lib/propay'
+import { traiterAnnulationCliente } from '@/lib/mollie-annulation'
 import { journaliserOrphelin } from '@/lib/orphelins'
 
 
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const rdvIds = [...new Set((paies ?? []).map(p => p.rdv_id as string))]
     for (const rid of rdvIds) {
       try {
-        const { resultat } = await traiterAnnulationPropay(rid)
+        const { resultat } = await traiterAnnulationCliente(rid)
         resultats[rid] = resultat
       } catch (e) {
         resultats[rid] = (e as Error).message ?? 'erreur'

@@ -835,6 +835,9 @@
     "autreCreneau": "Choose another slot",
     "longTitre": "Your payment is being processed",
     "longTexte": "Your bank hasn't answered yet. If the payment goes through, your appointment is booked and you'll get a confirmation email. If not, nothing is charged.",
-    "acompteDeduit": "The deposit is taken off the price of your treatment. You'll also get a confirmation email."
+    "acompteDeduit": "The deposit is taken off the price of your treatment. You'll also get a confirmation email.",
+    "payeTitre": "Payment received",
+    "paye": "Paid",
+    "merciPaiement": "Thank you, your payment has reached your professional."
   }
 }

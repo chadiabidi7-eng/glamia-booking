@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, Calendar, CheckCircle, Clock, CreditCard, Loader } from 'lucide-react'
 import { traduire } from '@/lib/i18n'
 
-type Recap = { date: string | null; heure: string | null; prestations: string | null; acompte: number; frais: number; total: number; devise: string }
+type Recap = { type?: string; date: string | null; heure: string | null; prestations: string | null; acompte: number; frais: number; total: number; devise: string }
 type Etat = { etat: 'attente' | 'confirme' | 'echec' | 'refuse'; recap?: Recap }
 
 const euros = (c: number) => `${(c / 100).toFixed(2).replace('.', ',').replace(',00', '')} €`
@@ -66,7 +66,7 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
   if (etat.etat === 'confirme' && r) {
     return cadre(<>
       {pastille(<CheckCircle size={40} color={couleurs.accent} />)}
-      {titre(traduire('resa.rdvEnregistre'))}
+      {titre(traduire(r.type === 'jour' ? 'retourMollie.payeTitre' : 'resa.rdvEnregistre'))}
       <div style={{ background: couleurs.roseClair, borderRadius: 16, padding: 16, textAlign: 'left', margin: '16px 0' }}>
         {[
           r.date ? { icone: <Calendar size={18} color={couleurs.accent} />, libelle: formatDate(r.date) } : null,
@@ -81,12 +81,12 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
-          <CreditCard size={18} color={couleurs.accent} />{traduire('resa.acompteVerse')}
+          <CreditCard size={18} color={couleurs.accent} />{traduire(r.type === 'jour' ? 'retourMollie.paye' : 'resa.acompteVerse')}
         </span>
         <span style={{ fontSize: 14, fontWeight: 700, color: couleurs.accent, fontVariantNumeric: 'tabular-nums' }}>{euros(r.total)}</span>
       </div>
       {r.frais > 0 && <p style={{ fontSize: 12, color: '#9ca3af', margin: '6px 0 0', textAlign: 'left' }}>{traduire('resa.dontFrais', { somme: euros(r.frais) })}</p>}
-      <p style={{ fontSize: 12.5, color: '#6b7280', margin: '14px 0 0', lineHeight: 1.5, textAlign: 'left' }}>{traduire('retourMollie.acompteDeduit')}</p>
+      <p style={{ fontSize: 12.5, color: '#6b7280', margin: '14px 0 0', lineHeight: 1.5, textAlign: 'left' }}>{traduire(r.type === 'jour' ? 'retourMollie.merciPaiement' : 'retourMollie.acompteDeduit')}</p>
     </>)
   }
   if (etat.etat === 'echec') {

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { libelleCategorie } from '@/lib/categorie-autre'
 import { NextRequest, NextResponse } from 'next/server'
+import { traiterAnnulationCliente } from '@/lib/mollie-annulation'
 import { generateSlots, creneauReservable, isDayWorking, isDayBlocked, type Slot, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
 import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
@@ -429,6 +430,12 @@ export async function POST(
   if (updateErr) {
     console.error('[api/confirmation] Erreur update:', updateErr)
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  }
+
+  // L'acompte Mollie de la cliente qui annule par son lien : même règle que sur la page.
+  if (action === 'annuler') {
+    const { resultat } = await traiterAnnulationCliente(rdv.id)
+    console.log('[api/confirmation] acompte :', rdv.id, resultat)
   }
 
   // ── Envoi push notification à la pro ────────────────────────────────────

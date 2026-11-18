@@ -18,7 +18,7 @@ import { ENTETES_INTERNES } from '@/lib/rdv-depuis-copie'
 export const maxDuration = 60
 
 const lire = (id: string) => supabaseAdmin.from('mollie_paiements')
-  .select('mollie_paiement_id, statut, rdv_id, montant, frais_reservation, total_cliente, devise').eq('id', id).maybeSingle()
+  .select('mollie_paiement_id, type, statut, rdv_id, montant, frais_reservation, total_cliente, devise').eq('id', id).maybeSingle()
 
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('paiement') ?? ''
@@ -49,14 +49,22 @@ export async function GET(req: NextRequest) {
   const { data: copie } = await supabaseAdmin.from('reservations_en_attente')
     .select('statut, corps').eq('intent_id', p.mollie_paiement_id).maybeSingle()
   const creation = ((copie?.corps as { creation?: Record<string, unknown> } | null)?.creation ?? {}) as Record<string, unknown>
+  // Le lien du jour n'a pas de copie : le récapitulatif vient du rendez-vous lui-même.
+  let date = (creation.date as string | undefined) ?? null
+  let heure = (creation.heure as string | undefined) ?? null
+  let prestations = (creation.technique as string | undefined) ?? null
+  if (!date && p.rdv_id) {
+    const { data: r } = await supabaseAdmin.from('rendez_vous').select('date, technique').eq('id', p.rdv_id).maybeSingle()
+    if (r?.date) { date = String(r.date).slice(0, 10); heure = String(r.date).slice(11, 16) }
+    prestations = (r?.technique as string | null) ?? prestations
+  }
   const recap = {
-    date: creation.date ?? null, heure: creation.heure ?? null,
-    prestations: creation.technique ?? null,
+    type: p.type, date, heure, prestations,
     acompte: p.montant, frais: p.frais_reservation, total: p.total_cliente, devise: p.devise,
   }
 
-  if (p.rdv_id) return NextResponse.json({ etat: 'confirme', recap })
   if (['echoue', 'expire', 'annule'].includes(p.statut as string)) return NextResponse.json({ etat: 'echec' })
-  if (copie?.statut === 'refuse' || ['rembourse', 'rembourse_partiel'].includes(p.statut as string)) return NextResponse.json({ etat: 'refuse', recap })
+  if (p.statut === 'paye' && p.rdv_id) return NextResponse.json({ etat: 'confirme', recap })
+  if (copie?.statut === 'refuse' || ['rembourse', 'rembourse_partiel'].includes(p.statut as string)) return NextResponse.json({ etat: p.type === 'jour' ? 'confirme' : 'refuse', recap })
   return NextResponse.json({ etat: 'attente' })
 }

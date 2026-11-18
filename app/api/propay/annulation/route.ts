@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { traiterAnnulationPropay } from '@/lib/propay'
+import { traiterAnnulationCliente } from '@/lib/mollie-annulation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Glamia Pay — annulation d'un RDV depuis la page de résa (numéro reconnu).
@@ -36,6 +36,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'rdv_non_annule' }, { status: 409 })
   }
 
-  const { resultat } = await traiterAnnulationPropay(rdvId)
+  const { resultat } = await traiterAnnulationCliente(rdvId)
   return NextResponse.json({ resultat })
 }

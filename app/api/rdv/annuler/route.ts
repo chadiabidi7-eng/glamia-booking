@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { traiterAnnulationPropay } from '@/lib/propay'
+import { traiterAnnulationCliente } from '@/lib/mollie-annulation'
 import { NextRequest, NextResponse } from 'next/server'
 import { normaliserTelephone } from '@/lib/telephone'
 import { refusDelaiModif } from '@/lib/delai-modif'
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   // au-dessus, et il doit le rester même si le remboursement échoue. Le cron
   // de réconciliation rattrapera ce qui n'a pas abouti.
   try {
-    const { resultat } = await traiterAnnulationPropay(rdvId)
+    const { resultat } = await traiterAnnulationCliente(rdvId)
     console.log('[api/rdv/annuler] paiement :', rdvId, resultat)
   } catch (e) {
     console.error('[api/rdv/annuler] paiement non traité :', rdvId, e)

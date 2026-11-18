@@ -829,6 +829,9 @@
     "autreCreneau": "Scegli un altro orario",
     "longTitre": "Il pagamento è in corso",
     "longTexte": "La tua banca non ha ancora risposto. Se il pagamento va a buon fine, l'appuntamento è prenotato e riceverai un'e-mail di conferma. Altrimenti non viene addebitato nulla.",
-    "acompteDeduit": "L'acconto viene detratto dal prezzo del trattamento. Riceverai anche un'e-mail di conferma."
+    "acompteDeduit": "L'acconto viene detratto dal prezzo del trattamento. Riceverai anche un'e-mail di conferma.",
+    "payeTitre": "Pagamento ricevuto",
+    "paye": "Pagato",
+    "merciPaiement": "Grazie, il tuo pagamento è arrivato alla tua professionista."
   }
 }

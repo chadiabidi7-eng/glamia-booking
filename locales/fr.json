@@ -829,6 +829,9 @@
     "autreCreneau": "Choisir un autre créneau",
     "longTitre": "Ton paiement est en cours",
     "longTexte": "Ta banque n'a pas encore répondu. Si le paiement passe, ton rendez-vous est réservé et tu reçois un mail de confirmation. Sinon, rien n'est prélevé.",
-    "acompteDeduit": "L'acompte est déduit du prix de ta prestation. Tu reçois aussi un mail de confirmation."
+    "acompteDeduit": "L'acompte est déduit du prix de ta prestation. Tu reçois aussi un mail de confirmation.",
+    "payeTitre": "Paiement reçu",
+    "paye": "Payé",
+    "merciPaiement": "Merci, ton paiement est bien arrivé chez ta professionnelle."
   }
 }
