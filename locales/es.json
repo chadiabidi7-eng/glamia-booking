@@ -282,7 +282,11 @@
     },
     "offreAutresJours": "Los demás días se pueden reservar, sin la oferta.",
     "offreRetirer": "Ver todos los días sin la oferta",
-    "offreRetirerPack": "Elegir otro servicio"
+    "offreRetirerPack": "Elegir otro servicio",
+    "paiementSecuriseMollie": "Pago seguro con Mollie: el dinero va directamente a tu profesional, Glamia nunca guarda los fondos.",
+    "redirigeeMollie": "Vas a pagar en la página segura de Mollie (tarjeta, Apple Pay, Google Pay) y luego volverás aquí.",
+    "consentMollie": "Acepto pagar %{somme} ahora: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, se me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, la profesional se queda con la señal.",
+    "payerAcompte": "Pagar %{somme}"
   },
   "commun": {
     "chargement": "Cargando...",
@@ -816,5 +820,18 @@
     "partagerCourt": "Compartir",
     "copieCourt": "Copiado",
     "pourToiCourt": "para ti"
+  },
+  "retourMollie": {
+    "verification": "Estamos comprobando tu pago",
+    "verificationTexte": "Unos segundos. No cierres esta página.",
+    "echecTitre": "El pago no se ha completado",
+    "echecTexte": "No se ha cobrado nada y tu cita no está reservada.",
+    "recommencer": "Volver a reservar",
+    "refuseTitre": "Este horario acaba de ocuparse",
+    "refuseTexte": "Alguien ha reservado este horario mientras pagabas. Se te devuelve todo, gastos incluidos.",
+    "autreCreneau": "Elegir otro horario",
+    "longTitre": "Tu pago se está procesando",
+    "longTexte": "Tu banco aún no ha respondido. Si el pago se completa, tu cita queda reservada y recibirás un correo de confirmación. Si no, no se cobra nada.",
+    "acompteDeduit": "La señal se descuenta del precio de tu servicio. También recibirás un correo de confirmación."
   }
 }

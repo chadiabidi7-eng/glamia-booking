@@ -282,7 +282,11 @@
     },
     "offreAutresJours": "Gli altri giorni restano prenotabili, senza l'offerta.",
     "offreRetirer": "Vedi tutti i giorni senza l'offerta",
-    "offreRetirerPack": "Scegli un altro servizio"
+    "offreRetirerPack": "Scegli un altro servizio",
+    "paiementSecuriseMollie": "Pagamento sicuro con Mollie: il denaro va direttamente alla tua professionista, Glamia non detiene mai i fondi.",
+    "redirigeeMollie": "Pagherai sulla pagina sicura di Mollie (carta, Apple Pay, Google Pay), poi tornerai qui.",
+    "consentMollie": "Accetto di pagare %{somme} ora: %{acompte} di acconto e %{frais} di spese di prenotazione. Se annullo più di %{delai} h prima, l'acconto mi viene rimborsato; le spese di prenotazione non sono rimborsabili. Se non mi presento o annullo meno di %{delai} h prima, l'acconto resta alla professionista.",
+    "payerAcompte": "Paga %{somme}"
   },
   "commun": {
     "chargement": "Caricamento...",
@@ -813,5 +817,18 @@
     "partagerCourt": "Condividi",
     "copieCourt": "Copiato",
     "pourToiCourt": "per te"
+  },
+  "retourMollie": {
+    "verification": "Stiamo verificando il pagamento",
+    "verificationTexte": "Qualche secondo. Non chiudere questa pagina.",
+    "echecTitre": "Il pagamento non è andato a buon fine",
+    "echecTexte": "Non è stato addebitato nulla e il tuo appuntamento non è prenotato.",
+    "recommencer": "Ricomincia la prenotazione",
+    "refuseTitre": "Questo orario è appena stato preso",
+    "refuseTexte": "Qualcuno ha prenotato questo orario mentre pagavi. Vieni rimborsata per intero, spese comprese.",
+    "autreCreneau": "Scegli un altro orario",
+    "longTitre": "Il pagamento è in corso",
+    "longTexte": "La tua banca non ha ancora risposto. Se il pagamento va a buon fine, l'appuntamento è prenotato e riceverai un'e-mail di conferma. Altrimenti non viene addebitato nulla.",
+    "acompteDeduit": "L'acconto viene detratto dal prezzo del trattamento. Riceverai anche un'e-mail di conferma."
   }
 }

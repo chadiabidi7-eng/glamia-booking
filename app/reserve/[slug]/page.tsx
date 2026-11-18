@@ -25,6 +25,7 @@ import {
 import { User, Calendar, Clock, CreditCard, Lock, MapPin, CheckCircle, AlertCircle, Gift, Sparkles, Search, Camera, ChevronDown, ImagePlus, X, Package, Tag, Star, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { QUESTIONS_RESA_ACTIVES } from '@/lib/chantiers'
 import { langueActuelle, poserLangue, traduire } from '@/lib/i18n'
+import RetourMollie from './RetourMollie'
 import { ChampCodeParrainage, RecompenseParrainage, TicketParrainage, texteGain as texteGainParrainage, type Gain as GainParrainage } from '@/components/reserve/Parrainage'
 import { lisibleSurBlanc } from '@/lib/couleur-lisible'
 import { poserPays, moisLongs, etiquette, formatHeure, joursCourtsLundi, casseDate, premiereCapitale } from '@/lib/heures-dates'
@@ -199,6 +200,8 @@ type PropayInfo = {
   stripe_account?: string
   intent_id?: string
   devise?: string         // la monnaie de la caisse de la pro
+  /** L'acompte passe par Mollie (3.3.0) : la cliente paie sur la page de Mollie, puis revient. */
+  mollie?: boolean
 }
 
 type PropayHandle = { confirmer: () => Promise<{ ok: boolean; intentId?: string; erreur?: string }> }
@@ -2807,7 +2810,17 @@ export default function ReservationPage() {
     // total_plein = prix avant la récompense fidélité (Q2) : un RDV OFFERT
     // garde quand même une empreinte basée sur la vraie valeur de la prestation.
     const totalPlein = Math.max(0, prixTotal)
-    fetch('/api/propay/intent', {
+    // ── MOLLIE D'ABORD (3.3.0, 18 nov. 2026) ────────────────────────────────
+    // Le même panier part au serveur, qui recalcule tout. Une pro sans compte
+    // Mollie ouvert répond « rien » : on retombe sur l'ancien chemin, inchangé.
+    const panierDemande = {
+      pro_id: pro.id, telephone, date, heure,
+      techniques: techniquesSelectionnees,
+      offre_id: offreAppliquee?.id ?? null,
+      fidelite_appliquee: recompenseFidelite ?? null,
+      reduction_appliquee: reductionCliente ?? null,
+    }
+    const parStripe = () => fetch('/api/propay/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // Le numéro sert AU SERVEUR à savoir si elle est déjà venue chez cette
@@ -2833,6 +2846,18 @@ export default function ReservationPage() {
       .then(r => r.json())
       .then((d: PropayInfo & { error?: string }) =>
         setPropay(d?.error ? { actif: false, panne: true } : d))
+      .catch(() => setPropay({ actif: false, panne: true }))
+    fetch('/api/mollie/acompte', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'devis', ...panierDemande }),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }: { ok: boolean; d: PropayInfo & { error?: string } }) => {
+        if (!ok || d?.error) { setPropay({ actif: false, panne: true }); return }
+        if (d?.actif) { setPropay({ ...d, mode: 'acompte', mollie: true }); return }
+        parStripe()
+      })
       .catch(() => setPropay({ actif: false, panne: true }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
@@ -3137,6 +3162,27 @@ export default function ReservationPage() {
         })),
       } : null
 
+      // LA COPIE COMPLÈTE (23 oct. 2026) : tout ce que la page enverrait après le
+      // paiement. Avec Mollie, c'est d'elle que le serveur crée le rendez-vous.
+      const copieComplete = {
+        creation: corpsCreation,
+        cliente: { telephone: telNormalise, prenom: clientePrenom, nom: clienteNom, email: clienteEmail },
+        fidelite: { active: !!fideliteConfig?.active, recompense_existante: !!recompenseExistante },
+        reduction_limitee: !!(reductionCliente && reductionCliente.restants != null),
+        prix_brut: prixTotalBrut,
+        mail: mailConfirmation,
+        notif: {
+          nouvelle: {
+            title: traduire(rappel ? 'notif.nouvelleClienteContactTitre' : 'notif.nouvelleClienteTitre'),
+            body: traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
+          },
+          habituee: {
+            title: traduire(rappel ? 'notif.nouveauRdvContactTitre' : 'notif.nouveauRdvTitre'),
+            body: traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
+          },
+        },
+      }
+
       let propayIntentId: string | null = null
       if (propay?.actif) {
         if (!propayConsent) {
@@ -3171,6 +3217,43 @@ export default function ReservationPage() {
           surCreneauRefuse(verdict.message)
           return
         }
+        // ── MOLLIE : LA CLIENTE PAIE SUR LA PAGE DE MOLLIE (18 nov. 2026) ───
+        // On dépose la réservation complète sous le numéro du paiement, puis
+        // elle part chez Mollie. Le rendez-vous naît côté serveur dès que Mollie
+        // confirme — même si elle ne revient jamais sur cette page.
+        if (propay.mollie) {
+          const cle = crypto.randomUUID()
+          const rep = await fetch('/api/mollie/acompte', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'payer', pro_id: pro.id, telephone, date, heure,
+              techniques: techniquesSelectionnees,
+              offre_id: offreAppliquee?.id ?? null,
+              fidelite_appliquee: recompenseFidelite ?? null,
+              reduction_appliquee: reductionCliente ?? null,
+              cle, slug, langue: langueActuelle(),
+              prestation: techniquesStr,
+              cliente: { prenom: clientePrenom.trim(), nom: clienteNom.trim(), mail: clienteEmail.trim() },
+              // Le texte exact de la case qu'elle vient de cocher : la preuve.
+              politique_texte: traduire('resa.consentMollie', {
+                somme: fmtCentimes(propay.total_cliente ?? 0, symPropay),
+                acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
+                frais: fmtCentimes(propay.frais ?? 0, symPropay),
+                delai: propay.delai_annulation ?? 24,
+              }),
+              complet: copieComplete,
+              photos: inspirations.slice(0, 3),
+            }),
+          }).then(r => r.json()).catch(() => null) as { url?: string } | null
+          if (!rep?.url) {
+            alert(traduire('resa.paiementInjoignable'))
+            setSubmitting(false)
+            return
+          }
+          window.location.href = rep.url
+          return
+        }
         // ── LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI ─────────────────
         // Si la connexion meurt juste après l'encaissement, il ne restait
         // qu'un numéro de paiement : ni nom, ni créneau, ni prestation. Une
@@ -3203,24 +3286,7 @@ export default function ReservationPage() {
                 },
                 // LA COPIE COMPLÈTE (23 oct. 2026) : ne sert que si cette
                 // page meurt après le paiement. Rien ne change sinon.
-                complet: {
-                  creation: corpsCreation,
-                  cliente: { telephone: telNormalise, prenom: clientePrenom, nom: clienteNom, email: clienteEmail },
-                  fidelite: { active: !!fideliteConfig?.active, recompense_existante: !!recompenseExistante },
-                  reduction_limitee: !!(reductionCliente && reductionCliente.restants != null),
-                  prix_brut: prixTotalBrut,
-                  mail: mailConfirmation,
-                  notif: {
-                    nouvelle: {
-                      title: traduire(rappel ? 'notif.nouvelleClienteContactTitre' : 'notif.nouvelleClienteTitre'),
-                      body: traduire('notif.nouveauRdvNom', { prenom: clientePrenom, nom: clienteNom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
-                    },
-                    habituee: {
-                      title: traduire(rappel ? 'notif.nouveauRdvContactTitre' : 'notif.nouveauRdvTitre'),
-                      body: traduire('notif.nouveauRdv', { prenom: clientePrenom, prestations: techniquesStr, date: formatDateLong(date), heure, appel: mentionAppelCopie }),
-                    },
-                  },
-                },
+                complet: copieComplete,
               }),
             })
           } catch { /* le filet manque, la réservation continue */ }
@@ -3690,6 +3756,12 @@ export default function ReservationPage() {
         </div>
       </div>
     )
+  }
+
+  // ── RETOUR DE LA PAGE DE PAIEMENT DE MOLLIE (18 nov. 2026) ──
+  const paiementRetour = rechercheUrl.get('paiement')
+  if (paiementRetour && /^[0-9a-f-]{36}$/i.test(paiementRetour)) {
+    return <RetourMollie paiement={paiementRetour} slug={slug} couleurs={{ rose: PINK, roseClair: PINK_LIGHT, roseTexte: PINK_TEXTE }} formatDate={formatDateLong} />
   }
 
   if (pageState === 'confirmed') {
@@ -5749,7 +5821,7 @@ export default function ReservationPage() {
             )}
 
             {/* ── Glamia Pay : empreinte bancaire / acompte ── */}
-            {propay?.actif && propay.client_secret && propay.stripe_account && (
+            {propay?.actif && (propay.mollie || (propay.client_secret && propay.stripe_account)) && (
               <div style={{
                 background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 60%)',
                 border: `1.5px solid ${PINK}`,
@@ -5853,12 +5925,16 @@ export default function ReservationPage() {
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
                   <Lock size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
-                  <span>{traduire('resa.paiementSecurise')}</span>
+                  <span>{traduire(propay.mollie ? 'resa.paiementSecuriseMollie' : 'resa.paiementSecurise')}</span>
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
                   {traduire('resa.fraisCarteEtrangere')}
                   <a href={`https://booking.glamia.pro/cgu${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsUtilisation')}</a>.
                 </p>
+                {propay.mollie && (
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45 }}>{traduire('resa.redirigeeMollie')}</p>
+                )}
+                {!propay.mollie && propay.client_secret && propay.stripe_account && (
                 <Elements
                   // key = client_secret : si la cliente revient en arrière et
                   // change le montant, un nouvel intent est créé et le composant
@@ -5894,6 +5970,7 @@ export default function ReservationPage() {
                     surCreneauRefuse={surCreneauRefuse}
                   />
                 </Elements>
+                )}
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
@@ -5908,7 +5985,14 @@ export default function ReservationPage() {
                         vaut consentement, la seule qui engage vraiment la
                         cliente — en promettait 24. Deux règles contradictoires
                         sur le même écran, dont la plus engageante était fausse. */}
-                    {propay.mode === 'empreinte'
+                    {propay.mollie
+                      ? traduire('resa.consentMollie', {
+                          somme: fmtCentimes(propay.total_cliente ?? 0, symPropay),
+                          acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
+                          frais: fmtCentimes(propay.frais ?? 0, symPropay),
+                          delai: propay.delai_annulation ?? 24,
+                        })
+                      : propay.mode === 'empreinte'
                       ? traduire('resa.consentEmpreinte', {
                           somme: fmtCentimes(propay.acompte ?? 0, symPropay),
                           delai: propay.delai_annulation ?? 24,
@@ -5976,7 +6060,9 @@ export default function ReservationPage() {
                 ? 'Enregistrement...'
                 : acompteActif && propay === null
                   ? traduire('resa.unInstant')
-                  : traduire('resa.confirmerReservation')}
+                  : propay?.actif && propay.mollie
+                    ? traduire('resa.payerAcompte', { somme: fmtCentimes(propay.total_cliente ?? 0, symPropay) })
+                    : traduire('resa.confirmerReservation')}
             </button>
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>

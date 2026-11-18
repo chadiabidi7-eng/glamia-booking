@@ -17,24 +17,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-serveur'
-import { delaiAvant, jourChezLaPro } from '@/lib/heure-pro'
+import { rdvDepuisCopie, type Copie } from '@/lib/rdv-depuis-copie'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
-const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'
-
-type Copie = {
-  creation: Record<string, unknown> & { date: string; heure: string; praticienne_id?: string | null; offre_id?: string | null }
-  cliente: { telephone: string; prenom?: string; nom?: string; email?: string }
-  fidelite?: { active?: boolean; recompense_existante?: boolean }
-  reduction_limitee?: boolean
-  prix_brut?: number
-  mail?: Record<string, unknown> | null
-  notif?: { nouvelle?: { title: string; body: string }; habituee?: { title: string; body: string } }
-  photos?: string[]
-}
 
 export async function POST(req: NextRequest) {
   const cle = process.env.REPARATION_SECRET
@@ -105,101 +93,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, deja: true })
     }
 
-    const { date, heure } = copie.creation
-    const { data: pro } = await supabaseAdmin.from('profiles').select('timezone').eq('id', proId).maybeSingle()
-    if (`${date}T${heure}` <= jourChezLaPro(pro?.timezone) + 'T' + new Intl.DateTimeFormat('fr-FR', { timeZone: pro?.timezone || 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date())) {
-      return refus('date_passee')
-    }
-
-    // ── LA CLIENTE ─────────────────────────────────────────────────────────
-    const repCli = await fetch(`${origine}/api/cliente/identifier`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pro_id: proId, telephone: copie.cliente.telephone, creer: true,
-        prenom: copie.cliente.prenom ?? '', nom: copie.cliente.nom ?? '', email: copie.cliente.email ?? '' }),
-    })
-    const { cliente, creee } = await repCli.json().catch(() => ({})) as { cliente?: { id: string }; creee?: boolean }
-    if (!cliente?.id) return refus('cliente_impossible')
-
-    // ── LE RENDEZ-VOUS, TEL QUE LA PAGE L'AURAIT ENVOYÉ ─────────────────────
-    const repRdv = await fetch(`${origine}/api/rdv/creer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cle}`, ...(prise.source ? { 'x-glamia-source': prise.source as string } : {}) },
-      body: JSON.stringify({ ...copie.creation, pro_id: proId, cliente_id: cliente.id, intent_id }),
-    })
-    const creation = await repRdv.json().catch(() => ({})) as { ok?: boolean; id?: string; raison?: string }
-    if (!repRdv.ok || creation.ok !== true || !creation.id) {
-      // Le créneau est parti entre-temps : comme la page, on rend l'argent.
-      await fetch(`${origine}/api/propay/rembourser-orphelin`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pro_id: proId, intent_id }),
-      }).catch(() => null)
-      return refus('creneau_refuse', { detail: creation.raison ?? null, rembourse: true })
-    }
-    const rdvId = creation.id
-
-    // ── LE PAIEMENT RATTACHÉ ────────────────────────────────────────────────
-    let lie = false
-    for (let i = 0; i < 3 && !lie; i++) {
-      const r = await fetch(`${origine}/api/propay/lier`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pro_id: proId, rdv_id: rdvId, intent_id }),
-      }).catch(() => null)
-      const d = await r?.json().catch(() => ({}))
-      lie = !!(r && ((r.ok && d?.success) || r.status === 409))
-    }
-
-    const tel = copie.cliente.telephone
-    // ── FIDÉLITÉ, RÉDUCTION, OFFRE, PHOTOS ─────────────────────────────────
-    if (copie.fidelite?.active) {
-      await fetch(`${origine}/api/rdv/fidelite`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rdv_id: rdvId, telephone: tel, recompense_existante: !!copie.fidelite.recompense_existante }),
-      }).catch(e => console.error('[rdv/secours] fidélité', e))
-    }
-    if (copie.reduction_limitee) {
-      const { error } = await supabaseAdmin.rpc('consommer_reduction_cliente', { p_cliente_id: cliente.id })
-      if (error) console.error('[rdv/secours] réduction', error)
-    }
-    if (copie.creation.offre_id) {
-      const res = await supabaseAdmin.rpc('apply_offer_to_rdv', { p_offre_id: copie.creation.offre_id, p_rdv_id: rdvId, p_telephone: tel })
-      const ok = (res.data as { success?: boolean } | null)?.success
-      if (res.error || !ok) {
-        await fetch(`${origine}/api/rdv/retirer-offre`, {
+    // ── LE RENDEZ-VOUS, TEL QUE LA PAGE L'AURAIT FAIT (lib/rdv-depuis-copie.ts) ─
+    const issue = await rdvDepuisCopie(supabaseAdmin, {
+      intentId: intent_id, proId, copie, cle, origine, source: (prise.source as string | null) ?? null,
+      lier: async (rdvId) => {
+        const r = await fetch(`${origine}/api/propay/lier`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rdv_id: rdvId, telephone: tel, prix: (copie.prix_brut ?? 0) > 0 ? copie.prix_brut : null }),
-        }).catch(e => console.error('[rdv/secours] retirer-offre', e))
-      }
-    }
-    if (Array.isArray(copie.photos) && copie.photos.length) {
-      await supabaseAdmin.from('rendez_vous').update({ inspirations: copie.photos.slice(0, 3) }).eq('id', rdvId)
-    }
-
-    // ── LE MAIL DE CONFIRMATION À LA CLIENTE ────────────────────────────────
-    if (copie.mail && copie.cliente.email) {
-      await fetch(`${origine}/api/rdv/mail-confirmation`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(copie.mail),
-      }).catch(e => console.error('[rdv/secours] mail', e))
-    }
-
-    // ── LE RAPPEL, SI LE RENDEZ-VOUS EST DANS MOINS DE 24 H (pas le jour même) ─
-    const heuresAvant = delaiAvant(`${date}T${heure}:00.000Z`, pro?.timezone) / 3_600_000
-    if (heuresAvant > 0 && heuresAvant <= 24 && date !== jourChezLaPro(pro?.timezone)) {
-      await fetch(`${SUPABASE}/functions/v1/rappel-confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ rdv_id: rdvId }),
-      }).catch(e => console.error('[rdv/secours] rappel', e))
-    }
-
-    // ── LA NOTIFICATION À LA PRO, LA MÊME QUE D'HABITUDE ────────────────────
-    const notif = creee ? copie.notif?.nouvelle : copie.notif?.habituee
-    if (notif?.title && notif?.body) {
-      await fetch(`${origine}/api/push-notify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proId, title: notif.title, body: notif.body, praticienneId: copie.creation.praticienne_id ?? null }),
-      }).catch(e => console.error('[rdv/secours] notification', e))
-    }
+          body: JSON.stringify({ pro_id: proId, rdv_id: rdvId, intent_id }),
+        }).catch(() => null)
+        const d = await r?.json().catch(() => ({}))
+        return !!(r && ((r.ok && d?.success) || r.status === 409))
+      },
+      rembourser: async () => {
+        await fetch(`${origine}/api/propay/rembourser-orphelin`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pro_id: proId, intent_id }),
+        }).catch(() => null)
+      },
+    })
+    if (!issue.ok) return refus(issue.raison, issue.extra ?? {})
+    const { rdvId, lie } = issue
 
     await finir('cree', { lie }, rdvId)
     await supabaseAdmin.from('paiements_orphelins')
