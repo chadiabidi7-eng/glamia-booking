@@ -1,9 +1,7 @@
 'use client'
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
-import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
 import { couleurInitiale } from '@/lib/couleur-initiale'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
@@ -204,16 +202,7 @@ type PropayInfo = {
   mollie?: boolean
 }
 
-type PropayHandle = { confirmer: () => Promise<{ ok: boolean; intentId?: string; erreur?: string }> }
 
-const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-// Une promesse Stripe par compte connecté (le Payment Element vit sur le
-// compte de la PRO, pas sur la plateforme)
-const stripePromises: Record<string, Promise<StripeJs | null>> = {}
-function getStripePromise(compte: string) {
-  if (!stripePromises[compte]) stripePromises[compte] = loadStripe(STRIPE_PK, { stripeAccount: compte })
-  return stripePromises[compte]
-}
 
 /** Centimes → « 24 € » ou « 24,50 € ». Les montants Stripe sont en centimes. */
 // LES MONTANTS DE L'ACOMPTE S'AFFICHENT DANS LA MONNAIE DE LA PRO. Ce
@@ -1465,7 +1454,6 @@ export default function ReservationPage() {
   const symPropay = symboleDevise(propay?.devise?.toUpperCase() ?? pro?.devise ?? 'EUR')
   const [propayConsent, setPropayConsent] = useState(false)
   const [fraisExpliques, setFraisExpliques] = useState(false)
-  const propayRef = useRef<PropayHandle>(null)
   // La pro demande-t-elle un acompte ? Sert à n'afficher l'avertissement
   // d'annulation à moins de 24 h que si un paiement a pu être engagé.
   const [acompteActif, setAcompteActif] = useState(false)
@@ -2810,9 +2798,9 @@ export default function ReservationPage() {
     // total_plein = prix avant la récompense fidélité (Q2) : un RDV OFFERT
     // garde quand même une empreinte basée sur la vraie valeur de la prestation.
     const totalPlein = Math.max(0, prixTotal)
-    // ── MOLLIE D'ABORD (3.3.0, 18 nov. 2026) ────────────────────────────────
-    // Le même panier part au serveur, qui recalcule tout. Une pro sans compte
-    // Mollie ouvert répond « rien » : on retombe sur l'ancien chemin, inchangé.
+    // ── L'ACOMPTE PASSE PAR MOLLIE, ET PAR LUI SEUL (18 nov. 2026) ──────────
+    // Le panier part au serveur, qui recalcule tout. Stripe, fermé depuis le
+    // 26 oct. 2026, n'est plus appelé.
     const panierDemande = {
       pro_id: pro.id, telephone, date, heure,
       techniques: techniquesSelectionnees,
@@ -2820,33 +2808,6 @@ export default function ReservationPage() {
       fidelite_appliquee: recompenseFidelite ?? null,
       reduction_appliquee: reductionCliente ?? null,
     }
-    const parStripe = () => fetch('/api/propay/intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // Le numéro sert AU SERVEUR à savoir si elle est déjà venue chez cette
-      // pro : certaines demandent une simple empreinte à leurs fidèles et un
-      // acompte à une inconnue. La page ne décide rien — elle transmet.
-      // Le DÉTAIL du panier part avec, pour que le serveur recalcule le prix
-      // lui-même : `total` ne lui sert plus que de repli si le catalogue est
-      // illisible. Les remises sont réclamées, pas fixées — leur valeur est
-      // relue dans la fiche de la cliente.
-      body: JSON.stringify({
-        pro_id: pro.id, total, total_plein: totalPlein, telephone,
-        // Le créneau : le serveur en tire la majoration, s'il y en a une.
-        date, heure,
-        techniques: techniquesSelectionnees,
-        // La promotion est RÉCLAMÉE, pas chiffrée : le serveur relit son tarif
-        // chez la pro. Sans cette ligne il repart du catalogue et l'acompte se
-        // calcule sur un prix que la cliente n'a jamais vu.
-        offre_id: offreAppliquee?.id ?? null,
-        fidelite_appliquee: recompenseFidelite ?? null,
-        reduction_appliquee: reductionCliente ?? null,
-      }),
-    })
-      .then(r => r.json())
-      .then((d: PropayInfo & { error?: string }) =>
-        setPropay(d?.error ? { actif: false, panne: true } : d))
-      .catch(() => setPropay({ actif: false, panne: true }))
     fetch('/api/mollie/acompte', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2855,8 +2816,8 @@ export default function ReservationPage() {
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }: { ok: boolean; d: PropayInfo & { error?: string } }) => {
         if (!ok || d?.error) { setPropay({ actif: false, panne: true }); return }
-        if (d?.actif) { setPropay({ ...d, mode: 'acompte', mollie: true }); return }
-        parStripe()
+        // STRIPE EST DÉBRANCHÉ (18 nov. 2026) : sans acompte Mollie, rien n'est demandé.
+        setPropay(d?.actif ? { ...d, mode: 'acompte', mollie: true } : { actif: false })
       })
       .catch(() => setPropay({ actif: false, panne: true }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3254,64 +3215,8 @@ export default function ReservationPage() {
           window.location.href = rep.url
           return
         }
-        // ── LE PAIEMENT EMPORTE LA RÉSERVATION AVEC LUI ─────────────────
-        // Si la connexion meurt juste après l'encaissement, il ne restait
-        // qu'un numéro de paiement : ni nom, ni créneau, ni prestation. Une
-        // cliente d'Ilana Douceur a ainsi payé le 24 août 2026 un rendez-vous
-        // qui n'a jamais existé, et personne n'a pu dire ce qu'elle voulait.
-        //
-        // On pose donc la réservation sur le paiement AVANT qu'il parte. Le
-        // vérificateur des paiements sans rendez-vous saura le recréer seul.
-        //
-        // JAMAIS BLOQUANT : si ça échoue, la cliente réserve quand même.
-        if (propay.intent_id) {
-          try {
-            await fetch('/api/propay/reservation', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              // TROIS SECONDES, PAS UNE DE PLUS. C'est un filet de sécurité,
-              // posé juste avant l'encaissement : s'il tarde, il fait attendre
-              // une cliente devant son paiement. Mieux vaut réserver sans filet
-              // qu'abandonner devant un bouton qui tourne.
-              signal: AbortSignal.timeout(3000),
-              body: JSON.stringify({
-                pro_id: pro.id,
-                intent_id: propay.intent_id,
-                reservation: {
-                  date, heure, duree: dureeTotal,
-                  specialite: categoriesStr, technique: techniquesStr,
-                  prix: prixFinal,
-                  prenom: clientePrenom, nom: clienteNom,
-                  telephone, email: clienteEmail,
-                },
-                // LA COPIE COMPLÈTE (23 oct. 2026) : ne sert que si cette
-                // page meurt après le paiement. Rien ne change sinon.
-                complet: copieComplete,
-              }),
-            })
-          } catch { /* le filet manque, la réservation continue */ }
-          // Les photos d'inspiration de la copie : envoyées PENDANT le
-          // paiement, sans jamais le faire attendre.
-          if (inspirations.length > 0) {
-            fetch('/api/propay/reservation-photos', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ intent_id: propay.intent_id, photos: inspirations }),
-            }).catch(() => { /* la copie part sans photos */ })
-          }
-        }
-
-        const resultat = await propayRef.current?.confirmer()
-        if (!resultat?.ok) {
-          setRefusCarte(resultat?.erreur ?? traduire('payer.echecCourt'))
-          return
-        }
-        propayIntentId = resultat.intentId ?? null
-        setPropayRegle({
-          mode: propay.mode ?? 'acompte',
-          montant: propay.acompte ?? 0,
-          frais: propay.frais ?? 0,
-        })
+        // Stripe est débranché (18 nov. 2026) : un acompte passe toujours par
+        // Mollie, juste au-dessus. On n'arrive jamais ici avec un paiement.
       }
 
       let cId = clienteId
@@ -5821,7 +5726,7 @@ export default function ReservationPage() {
             )}
 
             {/* ── Glamia Pay : empreinte bancaire / acompte ── */}
-            {propay?.actif && (propay.mollie || (propay.client_secret && propay.stripe_account)) && (
+            {propay?.actif && propay.mollie && (
               <div style={{
                 background: 'linear-gradient(135deg, #FDF3F8 0%, #FFFFFF 60%)',
                 border: `1.5px solid ${PINK}`,
@@ -5933,43 +5838,6 @@ export default function ReservationPage() {
                 </p>
                 {propay.mollie && (
                   <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45 }}>{traduire('resa.redirigeeMollie')}</p>
-                )}
-                {!propay.mollie && propay.client_secret && propay.stripe_account && (
-                <Elements
-                  // key = client_secret : si la cliente revient en arrière et
-                  // change le montant, un nouvel intent est créé et le composant
-                  // se REMONTE dessus. Sans ça, Stripe garde l'ancien secret et
-                  // la cliente pourrait valider un montant différent de l'affiché
-                  // (faille C10).
-                  key={propay.client_secret}
-                  stripe={getStripePromise(propay.stripe_account)}
-                  // Les champs de carte de Stripe suivent la page : « Card
-                  // number » chez une pro anglaise, pas « Numéro de carte ».
-                  options={{ clientSecret: propay.client_secret, locale: langueActuelle() }}
-                >
-                  <BlocGlamiaPay
-                    ref={propayRef}
-                    mode={propay.mode ?? 'empreinte'}
-                    clientSecret={propay.client_secret}
-                    nom={`${clientePrenom.trim()} ${clienteNom.trim()}`.trim()}
-                    email={clienteEmail.trim()}
-                    // ── LE BOUTON APPLE PAY / GOOGLE PAY ────────────────────
-                    // Il paie AVANT que le rendez-vous existe, comme le
-                    // formulaire de carte : même ordre, mêmes garanties. Une
-                    // fois la carte validée, on enchaîne sur la réservation
-                    // exactement comme si elle avait appuyé sur « Confirmer ».
-                    consentementDonne={propayConsent}
-                    surRefusConsentement={() => alert(
-                      (propay.mode ?? 'empreinte') === 'acompte'
-                        ? traduire('resa.cocheAcompte')
-                        : (propay.mode === 'total'
-                          ? traduire('resa.cochePaiement')
-                          : traduire('resa.cocheEmpreinte')))}
-                    surPaiementPortefeuille={() => { handleConfirm() }}
-                    verifierCreneau={controlerCreneau}
-                    surCreneauRefuse={surCreneauRefuse}
-                  />
-                </Elements>
                 )}
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, marginTop: 12, cursor: 'pointer' }}>
                   <input
@@ -6234,244 +6102,6 @@ export default function ReservationPage() {
 // Sub-components
 // ─────────────────────────────────────────────
 // ─────────────────────────────────────────────
-// ─── Glamia Pay : Payment Element + confirmation exposée au parent ───────────
-// Doit vivre SOUS le provider <Elements> ; le parent déclenche confirmer()
-// depuis le bouton Réserver (la carte est validée AVANT la création du RDV).
-const BlocGlamiaPay = forwardRef<PropayHandle, {
-  mode: 'empreinte' | 'acompte' | 'total'
-  /** Le laissez-passer du paiement en cours : il permet de REDEMANDER à Stripe
-      où en est l'argent quand la réponse s'est perdue. */
-  clientSecret: string
-  nom: string
-  email: string
-  consentementDonne: boolean
-  surRefusConsentement: () => void
-  surPaiementPortefeuille: () => void
-  /** Le créneau tient-il toujours ? Demandé juste avant l'encaissement. */
-  verifierCreneau: () => Promise<{ ok: true } | { ok: false; message?: string }>
-  /** Il ne tient plus : la page la renvoie choisir une heure. */
-  surCreneauRefuse: (message?: string) => void
-}>(
-  function BlocGlamiaPay({ mode, clientSecret, nom, email, consentementDonne, surRefusConsentement, surPaiementPortefeuille, verifierCreneau, surCreneauRefuse }, ref) {
-    const stripeJs = useStripe()
-    const elements = useElements()
-
-    // ── QUI DEMANDE LE MAIL : NOUS, OU STRIPE ? ─────────────────────────────
-    // On disait à Stripe « ne demande ni le nom ni le mail, je te les fournis »
-    // — puis on ne fournissait rien quand la cliente n'avait pas d'adresse.
-    // Stripe refusait alors TOUT le paiement, avec une erreur d'intégration.
-    //
-    // Résultat, découvert le 26 août 2026 : AUCUNE CLIENTE SANS ADRESSE MAIL
-    // NE POUVAIT PAYER. Ni acompte, ni empreinte. Elle remplissait tout, elle
-    // validait, ça bloquait — quel que soit son téléphone. 147 clientes sur
-    // 789 sont dans ce cas chez les pros qui demandent un paiement : une sur
-    // cinq. Alyssa, chez Crazynails, a essayé cinq fois.
-    //
-    // On ne se tait donc que sur ce qu'on a vraiment. Le reste, Stripe le
-    // demande lui-même dans le formulaire de carte.
-    //
-    // LA DÉCISION EST FIGÉE AU MONTAGE, exprès : ces réglages ne peuvent pas
-    // changer après l'affichage du formulaire sans que Stripe proteste. Si
-    // elle saisit son mail après coup, le formulaire de carte le redemandera
-    // — un champ de plus vaut mieux qu'un paiement refusé.
-    const [fournitNom] = useState(() => !!nom)
-    const [fournitEmail] = useState(() => !!email)
-    // ── CE QUE LE PORTEFEUILLE A DÉJÀ RÉGLÉ ─────────────────────────────────
-    // Apple Pay et Google Pay paient depuis LEUR bouton, avant que le
-    // rendez-vous existe. La suite de la réservation appelle ensuite
-    // `confirmer()` comme d'habitude : on lui rend l'identifiant déjà obtenu
-    // plutôt que de redemander un paiement qui vient d'être fait.
-    const dejaRegleRef = useRef<string | null>(null)
-
-    // ── UN REFUS NE VEUT PAS DIRE QUE L'ARGENT N'EST PAS PARTI ───────────────
-    //
-    // Le 15 août à 23 h 56, une cliente a payé 38,84 €. La réponse de Stripe
-    // ne lui est jamais revenue — sa page s'était rechargée. L'écran a donc
-    // affiché « une erreur de traitement est survenue, essaie une autre carte »
-    // à quelqu'un qui venait d'être débitée. Elle a réappuyé deux fois ; Stripe
-    // a refusé les deux fois, précisément PARCE QUE c'était déjà payé. Et à
-    // chaque refus, le même message lui conseillait de sortir une autre carte.
-    //
-    // Le paiement ne se fait pas dans le téléphone : il se fait chez Stripe. Ce
-    // que le téléphone n'a pas entendu ne dit rien de ce qui s'est passé
-    // là-bas. Alors on demande. Si l'argent est parti, on continue la
-    // réservation comme si tout s'était bien déroulé.
-    //
-    // Deux façons de savoir, dans cet ordre : le refus de Stripe porte souvent
-    // l'état du paiement avec lui — c'est immédiat et gratuit. Sinon on
-    // l'interroge avec le laissez-passer du paiement.
-    const dejaAbouti = async (
-      erreur: { payment_intent?: { id: string; status: string }; setup_intent?: { id: string; status: string } } | undefined,
-    ): Promise<string | null> => {
-      // Un paiement « réussi », ou une empreinte « prête à être prélevée » :
-      // dans les deux cas la carte a fait son travail.
-      const abouti = (statut?: string) => statut === 'succeeded' || statut === 'requires_capture'
-
-      const porte = mode === 'empreinte' ? erreur?.setup_intent : erreur?.payment_intent
-      if (porte && abouti(porte.status)) return porte.id
-
-      if (!stripeJs || !clientSecret) return null
-      try {
-        if (mode === 'empreinte') {
-          const { setupIntent } = await stripeJs.retrieveSetupIntent(clientSecret)
-          return setupIntent && abouti(setupIntent.status) ? setupIntent.id : null
-        }
-        const { paymentIntent } = await stripeJs.retrievePaymentIntent(clientSecret)
-        return paymentIntent && abouti(paymentIntent.status) ? paymentIntent.id : null
-      } catch (e) {
-        // Injoignable : on ne peut rien affirmer, donc on laisse le refus tel
-        // quel. Mieux vaut un message d'échec qu'un rendez-vous créé sans
-        // argent.
-        console.error('[paiement] état réel indisponible :', e)
-        return null
-      }
-    }
-
-    useImperativeHandle(ref, () => ({
-      async confirmer() {
-        if (dejaRegleRef.current) return { ok: true, intentId: dejaRegleRef.current }
-        if (!stripeJs || !elements) {
-          return { ok: false, erreur: traduire('resa.paiementPasPret') }
-        }
-        // Nom + email fournis ici (on ne les collecte pas dans le Payment Element,
-        // ce qui retire l'invite Link « enregistre tes infos »).
-        const billing_details: { name?: string; email?: string } = {}
-        if (fournitNom) billing_details.name = nom
-        if (fournitEmail) billing_details.email = email
-        if (mode === 'empreinte') {
-          const { error, setupIntent } = await stripeJs.confirmSetup({
-            elements, redirect: 'if_required',
-            confirmParams: { payment_method_data: { billing_details } },
-          })
-          if (error || !setupIntent) {
-            const deja = await dejaAbouti(error)
-            if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
-            return { ok: false, erreur: error?.message ?? traduire('resa.carteRefusee') }
-          }
-          return { ok: true, intentId: setupIntent.id }
-        }
-        const { error, paymentIntent } = await stripeJs.confirmPayment({
-          elements, redirect: 'if_required',
-          confirmParams: { payment_method_data: { billing_details } },
-        })
-        if (error || !paymentIntent) {
-          const deja = await dejaAbouti(error)
-          if (deja) { dejaRegleRef.current = deja; return { ok: true, intentId: deja } }
-          return { ok: false, erreur: error?.message ?? traduire('payer.echecCourt') }
-        }
-        return { ok: true, intentId: paymentIntent.id }
-      },
-    }), [stripeJs, elements, mode, clientSecret, nom, email, fournitNom, fournitEmail])
-
-    const billingWallet: { name?: string; email?: string } = {}
-    if (fournitNom) billingWallet.name = nom
-    if (fournitEmail) billingWallet.email = email
-
-    return (
-      <>
-        {/* ── LE BOUTON DU TÉLÉPHONE, AU-DESSUS DE LA CARTE ──────────────────
-            Apple Pay sur iPhone, Google Pay sur Android, rien ailleurs — le
-            composant décide seul et ne s'affiche pas s'il n'a rien à proposer.
-            Le formulaire de carte reste dessous pour toutes les autres. */}
-        <ExpressCheckoutElement
-          options={{
-            buttonHeight: 48,
-            paymentMethods: { applePay: 'auto', googlePay: 'auto', link: 'never' },
-          }}
-          // LA CASE DOIT ÊTRE COCHÉE AVANT DE PAYER. Le bouton d'un portefeuille
-          // règle en deux secondes : sans ce contrôle, la cliente paierait avant
-          // d'avoir accepté quoi que ce soit. `resolve()` non appelé = le
-          // portefeuille ne s'ouvre pas.
-          onClick={({ resolve }) => {
-            if (!consentementDonne) { surRefusConsentement(); return }
-            resolve({ business: { name: 'Glamia' } })
-          }}
-          onConfirm={async (event) => {
-            if (!stripeJs || !elements) return
-            // ── ON VÉRIFIE LE CRÉNEAU AVANT D'ENCAISSER, ICI AUSSI ──────────
-            //
-            // LE 7 SEPTEMBRE 2026 À 12H35, une cliente de Sun.naaiils a payé
-            // 16,05 € avec le bouton du téléphone pour un créneau que la page
-            // a refusé la seconde d'après. La correction du 3 septembre ne
-            // protégeait que le formulaire de carte : ici, on encaissait
-            // d'abord et on vérifiait ensuite — l'ordre qu'on venait de
-            // corriger.
-            //
-            // Ce moment est le bon : la cliente a validé dans Apple Pay ou
-            // Google Pay, mais rien n'est prélevé tant qu'on n'a pas confirmé
-            // le paiement à Stripe. Si le créneau ne tient plus, on dit au
-            // portefeuille que ça n'a pas abouti, il se referme, et sa carte
-            // n'a pas bougé. Même filet que la carte : deux secondes, jamais
-            // bloquant.
-            const verdict = await verifierCreneau()
-            if (!verdict.ok) {
-              event.paymentFailed({ reason: 'fail' })
-              surCreneauRefuse(verdict.message)
-              return
-            }
-            const commun = { elements, redirect: 'if_required' as const }
-            if (mode === 'empreinte') {
-              const { error, setupIntent } = await stripeJs.confirmSetup({
-                ...commun,
-                confirmParams: { payment_method_data: { billing_details: billingWallet } },
-              })
-              if (error || !setupIntent) {
-                const deja = await dejaAbouti(error)
-                if (!deja) return
-                dejaRegleRef.current = deja
-              } else {
-                dejaRegleRef.current = setupIntent.id
-              }
-            } else {
-              const { error, paymentIntent } = await stripeJs.confirmPayment({
-                ...commun,
-                confirmParams: { payment_method_data: { billing_details: billingWallet } },
-              })
-              if (error || !paymentIntent) {
-                const deja = await dejaAbouti(error)
-                if (!deja) return
-                dejaRegleRef.current = deja
-              } else {
-                dejaRegleRef.current = paymentIntent.id
-              }
-            }
-            // La carte est validée : on enchaîne sur la création du rendez-vous,
-            // exactement comme si elle avait appuyé sur « Confirmer ».
-            surPaiementPortefeuille()
-          }}
-        />
-
-        <PaymentElement options={{
-      layout: 'tabs',
-      // On ne collecte pas nom/email dans l'UI (fournis au confirm) → supprime
-      // l'invite Link « enregistre tes infos pour tes prochains paiements ».
-      fields: { billingDetails: {
-        name: fournitNom ? 'never' : 'auto',
-        email: fournitEmail ? 'never' : 'auto',
-      } },
-      // ── APPLE PAY ET GOOGLE PAY, QUAND L'APPAREIL LES A ─────────────────────
-      // Le bouton s'affiche tout seul selon le téléphone : Apple Pay sur iPhone,
-      // Google Pay sur Android, rien sur un ordinateur qui n'a ni l'un ni
-      // l'autre. Le formulaire de carte reste dessous pour toutes les autres.
-      //
-      // CE QU'IL FAUT SAVOIR : Apple n'autorise son bouton que dans Safari. Une
-      // cliente qui ouvre le lien depuis Instagram ou TikTok arrive dans le
-      // mini-navigateur de l'application et ne le verra pas — elle aura le
-      // formulaire de carte, comme avant. C'est le cas le plus fréquent, les
-      // pros mettant leur lien dans leur bio.
-      //
-      // Il faut AUSSI que le domaine soit déclaré chez Apple sur la caisse de la
-      // pro. C'est fait à l'ouverture de sa caisse, côté serveur.
-      // Les portefeuilles ont leur propre bouton au-dessus : les répéter ici
-      // ferait deux Apple Pay sur le même écran.
-      wallets: { applePay: 'never', googlePay: 'never' },
-        }} />
-      </>
-    )
-  },
-)
-
-
 function BackBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
