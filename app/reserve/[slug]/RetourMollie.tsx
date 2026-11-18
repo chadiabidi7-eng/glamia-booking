@@ -22,7 +22,8 @@ const ESSAIS_MAX = 45
 export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
   paiement: string
   slug: string
-  couleurs: { rose: string; roseClair: string; roseTexte: string }
+  /** Les mêmes que l'écran de confirmation habituel : accent = la couleur de la pro (rose Glamia sans choix). */
+  couleurs: { rose: string; roseClair: string; accent: string }
   formatDate: (d: string) => string
 }) {
   const [etat, setEtat] = useState<Etat>({ etat: 'attente' })
@@ -64,13 +65,13 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
 
   if (etat.etat === 'confirme' && r) {
     return cadre(<>
-      {pastille(<CheckCircle size={40} color={couleurs.roseTexte} />)}
+      {pastille(<CheckCircle size={40} color={couleurs.accent} />)}
       {titre(traduire('resa.rdvEnregistre'))}
       <div style={{ background: couleurs.roseClair, borderRadius: 16, padding: 16, textAlign: 'left', margin: '16px 0' }}>
         {[
-          r.date ? { icone: <Calendar size={18} color={couleurs.roseTexte} />, libelle: formatDate(r.date) } : null,
-          r.heure ? { icone: <Clock size={18} color={couleurs.roseTexte} />, libelle: r.heure } : null,
-          r.prestations ? { icone: <CheckCircle size={18} color={couleurs.roseTexte} />, libelle: r.prestations } : null,
+          r.date ? { icone: <Calendar size={18} color={couleurs.accent} />, libelle: formatDate(r.date) } : null,
+          r.heure ? { icone: <Clock size={18} color={couleurs.accent} />, libelle: r.heure } : null,
+          r.prestations ? { icone: <CheckCircle size={18} color={couleurs.accent} />, libelle: r.prestations } : null,
         ].filter(Boolean).map((l, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{ width: 24, display: 'flex', justifyContent: 'center' }}>{l!.icone}</span>
@@ -80,9 +81,9 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
-          <CreditCard size={18} color={couleurs.roseTexte} />{traduire('resa.acompteVerse')}
+          <CreditCard size={18} color={couleurs.accent} />{traduire('resa.acompteVerse')}
         </span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: couleurs.roseTexte, fontVariantNumeric: 'tabular-nums' }}>{euros(r.total)}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: couleurs.accent, fontVariantNumeric: 'tabular-nums' }}>{euros(r.total)}</span>
       </div>
       {r.frais > 0 && <p style={{ fontSize: 12, color: '#9ca3af', margin: '6px 0 0', textAlign: 'left' }}>{traduire('resa.dontFrais', { somme: euros(r.frais) })}</p>}
       <p style={{ fontSize: 12.5, color: '#6b7280', margin: '14px 0 0', lineHeight: 1.5, textAlign: 'left' }}>{traduire('retourMollie.acompteDeduit')}</p>
@@ -90,7 +91,7 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
   }
   if (etat.etat === 'echec') {
     return cadre(<>
-      {pastille(<AlertCircle size={40} color={couleurs.roseTexte} />)}
+      {pastille(<AlertCircle size={40} color={couleurs.accent} />)}
       {titre(traduire('retourMollie.echecTitre'))}
       {texte(traduire('retourMollie.echecTexte'))}
       {bouton(traduire('retourMollie.recommencer'))}
@@ -98,7 +99,7 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
   }
   if (etat.etat === 'refuse') {
     return cadre(<>
-      {pastille(<AlertCircle size={40} color={couleurs.roseTexte} />)}
+      {pastille(<AlertCircle size={40} color={couleurs.accent} />)}
       {titre(traduire('retourMollie.refuseTitre'))}
       {texte(traduire('retourMollie.refuseTexte'))}
       {bouton(traduire('retourMollie.autreCreneau'))}
@@ -106,13 +107,13 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
   }
   if (long) {
     return cadre(<>
-      {pastille(<Clock size={40} color={couleurs.roseTexte} />)}
+      {pastille(<Clock size={40} color={couleurs.accent} />)}
       {titre(traduire('retourMollie.longTitre'))}
       {texte(traduire('retourMollie.longTexte'))}
     </>)
   }
   return cadre(<>
-    {pastille(<Loader size={36} color={couleurs.roseTexte} style={{ animation: 'glamia-tourne 1s linear infinite' }} />)}
+    {pastille(<Loader size={36} color={couleurs.accent} style={{ animation: 'glamia-tourne 1s linear infinite' }} />)}
     <style>{'@keyframes glamia-tourne { to { transform: rotate(360deg) } } @media (prefers-reduced-motion: reduce) { * { animation: none !important } }'}</style>
     {titre(traduire('retourMollie.verification'))}
     {texte(traduire('retourMollie.verificationTexte'))}

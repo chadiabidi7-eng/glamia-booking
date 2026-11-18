@@ -3761,7 +3761,7 @@ export default function ReservationPage() {
   // ── RETOUR DE LA PAGE DE PAIEMENT DE MOLLIE (18 nov. 2026) ──
   const paiementRetour = rechercheUrl.get('paiement')
   if (paiementRetour && /^[0-9a-f-]{36}$/i.test(paiementRetour)) {
-    return <RetourMollie paiement={paiementRetour} slug={slug} couleurs={{ rose: PINK, roseClair: PINK_LIGHT, roseTexte: PINK_TEXTE }} formatDate={formatDateLong} />
+    return <RetourMollie paiement={paiementRetour} slug={slug} couleurs={{ rose: PINK, roseClair: PINK_LIGHT, accent: GLAMIA_PINK }} formatDate={formatDateLong} />
   }
 
   if (pageState === 'confirmed') {
