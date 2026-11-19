@@ -74,6 +74,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'copie' }, { status: 500 })
       }
     }
+    // ── LE CRÉNEAU TENU 15 MINUTES PENDANT QU'ELLE PAIE (Chadi, 19 nov. 2026) ──
+    // Personne d'autre ne peut le prendre sur la page de réservation. Libéré dès
+    // que le rendez-vous existe, que le paiement échoue, ou au bout de 15 minutes.
+    const cr = (complet as { creation?: Record<string, unknown> }).creation ?? {}
+    const duree = Number(cr.duree)
+    if (typeof b.date === 'string' && typeof b.heure === 'string' && Number.isFinite(duree) && duree > 0) {
+      const { error } = await supabaseAdmin.from('creneaux_tenus').upsert({
+        intent_id: d.mollie, pro_id: proId,
+        praticienne_id: typeof cr.praticienne_id === 'string' && cr.praticienne_id ? cr.praticienne_id : null,
+        date: `${b.date}T${b.heure}:00.000Z`, duree: Math.round(duree),
+        expire_le: new Date(Date.now() + 15 * 60_000).toISOString(),
+      }, { onConflict: 'intent_id' })
+      if (error) console.error('[mollie/acompte] créneau non tenu', error)
+    }
     return NextResponse.json({ url: d.url, paiement: d.paiement })
   } catch (e) {
     console.error('[mollie/acompte]', e)

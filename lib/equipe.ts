@@ -95,7 +95,7 @@ export async function profilHorairesPour(admin: SupabaseClient, piloteId: string
 
 /** Les rendez-vous qui occupent CETTE personne (la pro : ceux sans assistante), rangés par jour. */
 export async function occupationsDe(
-  admin: SupabaseClient, piloteId: string, praticienneId: string | null, debut: string, fin: string, exclureRdv?: string,
+  admin: SupabaseClient, piloteId: string, praticienneId: string | null, debut: string, fin: string, exclureRdv?: string, exclureTenue?: string,
 ): Promise<Map<string, { heure: string; duree: number }[]>> {
   let q = admin
     .from('rendez_vous')
@@ -105,9 +105,21 @@ export async function occupationsDe(
     .lte('date', `${fin}T23:59:59.999Z`)
     .neq('statut', 'annule')
   q = praticienneId ? q.eq('praticienne_id', praticienneId) : q.is('praticienne_id', null)
-  const { data: rdvs } = await q
+  // LES CRÉNEAUX TENUS PENDANT UN PAIEMENT (Chadi, 19 nov. 2026) : une cliente paie son
+  // acompte chez Mollie, sa place lui est gardée 15 minutes. Elle occupe le créneau comme
+  // un rendez-vous — sauf pour le rendez-vous créé après CE paiement-là (exclureTenue).
+  let t = admin
+    .from('creneaux_tenus')
+    .select('intent_id, date, duree')
+    .eq('pro_id', piloteId)
+    .gte('date', `${debut}T00:00:00.000Z`)
+    .lte('date', `${fin}T23:59:59.999Z`)
+    .gt('expire_le', new Date().toISOString())
+    .limit(200)
+  t = praticienneId ? t.eq('praticienne_id', praticienneId) : t.is('praticienne_id', null)
+  const [{ data: rdvs }, { data: tenus }] = await Promise.all([q, t])
   const parJour = new Map<string, { heure: string; duree: number }[]>()
-  for (const r of rdvs ?? []) {
+  for (const r of [...(rdvs ?? []), ...(tenus ?? []).filter(x => x.intent_id !== exclureTenue).map(x => ({ id: null, date: x.date, duree: x.duree }))]) {
     if (exclureRdv && r.id === exclureRdv) continue
     const d = new Date(r.date as string)
     const jour = (r.date as string).slice(0, 10)
@@ -119,8 +131,8 @@ export async function occupationsDe(
 }
 
 /** Les rendez-vous existants d'une personne pour UN jour — pour le juge de création. */
-export async function rdvExistantsDe(admin: SupabaseClient, piloteId: string, praticienneId: string | null, date: string) {
-  const m = await occupationsDe(admin, piloteId, praticienneId, date, date)
+export async function rdvExistantsDe(admin: SupabaseClient, piloteId: string, praticienneId: string | null, date: string, exclureTenue?: string) {
+  const m = await occupationsDe(admin, piloteId, praticienneId, date, date, undefined, exclureTenue)
   return m.get(date) ?? []
 }
 

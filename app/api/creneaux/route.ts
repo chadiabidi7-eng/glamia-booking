@@ -103,8 +103,17 @@ export async function POST(req: NextRequest) {
 
     // Heures murales posées sur UTC — même lecture que partout ailleurs.
     // Le rendez-vous qu'on déplace ne doit pas se bloquer lui-même.
+    // Les créneaux tenus pendant un paiement (19 nov. 2026) occupent comme un rendez-vous.
+    const { data: tenus } = await supabaseAdmin
+      .from('creneaux_tenus')
+      .select('date, duree')
+      .eq('pro_id', pro_id)
+      .gte('date', `${triees[0]}T00:00:00.000Z`)
+      .lte('date', `${triees[triees.length - 1]}T23:59:59.999Z`)
+      .gt('expire_le', new Date().toISOString())
+      .limit(200)
     const parJour = new Map<string, { heure: string; duree: number }[]>()
-    for (const r of rdvs ?? []) {
+    for (const r of [...(rdvs ?? []), ...(tenus ?? []).map(x => ({ id: null as string | null, date: x.date, duree: x.duree }))]) {
       if (exclure_rdv && r.id === exclure_rdv) continue
       const d = new Date(r.date as string)
       const jour = (r.date as string).slice(0, 10)

@@ -144,7 +144,9 @@ export async function POST(req: NextRequest) {
     const heures = praticienneId ? await profilHorairesPour(supabaseAdmin, pro_id, praticienneId) : pro
     if (!heures) return NextResponse.json({ error: 'pro_introuvable' }, { status: 404 })
 
-    const rdvExistants = await rdvExistantsDe(supabaseAdmin, pro_id, praticienneId, date)
+    // Le créneau tenu pendant le paiement ne gêne que les autres : le serveur, qui crée le
+    // rendez-vous de CE paiement-là, passe (jamais un appel direct qui se dirait du même paiement).
+    const rdvExistants = await rdvExistantsDe(supabaseAdmin, pro_id, praticienneId, date, parLeServeur && intentId ? intentId : undefined)
 
     const verdict = creneauReservable({
       date, heure, duree,

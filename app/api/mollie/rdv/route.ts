@@ -51,10 +51,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, raison: 'autre_pro' })
   }
 
-  const finir = (statut: string, resultat: Record<string, unknown>, rdvId: string | null = null) =>
-    supabaseAdmin.from('reservations_en_attente')
+  // Issue définitive (rendez-vous créé, ou refusé) : le créneau tenu pendant le paiement est libéré.
+  const finir = async (statut: string, resultat: Record<string, unknown>, rdvId: string | null = null) => {
+    await supabaseAdmin.from('reservations_en_attente')
       .update({ statut, resultat, rdv_id: rdvId, maj_le: new Date().toISOString() })
       .eq('intent_id', intentId)
+    await supabaseAdmin.from('creneaux_tenus').delete().eq('intent_id', intentId)
+  }
 
   try {
     const issue = await rdvDepuisCopie(supabaseAdmin, {
