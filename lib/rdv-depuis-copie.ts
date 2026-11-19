@@ -16,6 +16,7 @@
 // jamais deux rendez-vous pour un paiement.
 // ─────────────────────────────────────────────────────────────────────────────
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { refusCertain } from '@/lib/refus-creation'
 import { delaiAvant, jourChezLaPro } from '@/lib/heure-pro'
 
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gdgfgbxoapgmrbttdyac.supabase.co'
@@ -40,6 +41,9 @@ export type Copie = {
   notif?: { nouvelle?: { title: string; body: string }; habituee?: { title: string; body: string } }
   photos?: string[]
 }
+
+/** Une panne pendant la création : on ne rembourse pas, on réessaie (voir lib/refus-creation.ts). */
+export class PanneCreation extends Error {}
 
 export type Issue =
   | { ok: true; rdvId: string; lie: boolean }
@@ -73,7 +77,8 @@ export async function rdvDepuisCopie(admin: SupabaseClient, p: {
       prenom: copie.cliente.prenom ?? '', nom: copie.cliente.nom ?? '', email: copie.cliente.email ?? '' }),
   })
   const { cliente, creee } = await repCli.json().catch(() => ({})) as { cliente?: { id: string }; creee?: boolean }
-  if (!cliente?.id) return { ok: false, raison: 'cliente_impossible' }
+  // Pas de fiche cliente : c'est une panne (la cliente existe, elle vient de payer) — on réessaiera.
+  if (!cliente?.id) throw new PanneCreation(`cliente ${repCli.status}`)
 
   // ── LE RENDEZ-VOUS, TEL QUE LA PAGE L'AURAIT ENVOYÉ ─────────────────────
   const repRdv = await fetch(`${origine}/api/rdv/creer`, {
@@ -83,7 +88,10 @@ export async function rdvDepuisCopie(admin: SupabaseClient, p: {
   })
   const creation = await repRdv.json().catch(() => ({})) as { ok?: boolean; id?: string; raison?: string }
   if (!repRdv.ok || creation.ok !== true || !creation.id) {
-    // Le créneau est parti entre-temps : comme la page, on rend l'argent.
+    // INQUIÉTUDE 1 (Chadi, 19 nov. 2026) : on ne rembourse QUE sur un refus certain (créneau
+    // réellement pris, journée fermée…). Une panne (réseau, base saturée, lenteur) n'est
+    // jamais un refus : la réservation reste en attente et Mollie rappellera.
+    if (!refusCertain(repRdv.status, creation.raison)) throw new PanneCreation(`rdv ${repRdv.status} ${creation.raison ?? ''}`.trim())
     await p.rembourser().catch(() => null)
     return { ok: false, raison: 'creneau_refuse', extra: { detail: creation.raison ?? null, rembourse: true } }
   }
@@ -92,6 +100,7 @@ export async function rdvDepuisCopie(admin: SupabaseClient, p: {
   // ── LE PAIEMENT RATTACHÉ ────────────────────────────────────────────────
   let lie = false
   for (let i = 0; i < 3 && !lie; i++) lie = await p.lier(rdvId).catch(() => false)
+  if (!lie) console.error('[rdv-depuis-copie] paiement non rattaché au RDV', intentId, rdvId)
 
   const tel = copie.cliente.telephone
   // ── FIDÉLITÉ, RÉDUCTION, OFFRE, PHOTOS ─────────────────────────────────
