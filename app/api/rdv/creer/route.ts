@@ -74,6 +74,11 @@ export async function POST(req: NextRequest) {
     const cleSecours = process.env.REPARATION_SECRET
     const parLeServeur = !!cleSecours && req.headers.get('authorization') === `Bearer ${cleSecours}`
     const intentId = typeof (body as { intent_id?: unknown }).intent_id === 'string' ? (body as { intent_id: string }).intent_id : null
+    // ESSAI EN LOCAL SEULEMENT : simuler une base qui ne répond pas au moment où le serveur crée
+    // le rendez-vous d'un acompte payé (inquiétude 1). Jamais actif en production.
+    if (process.env.NODE_ENV !== 'production' && process.env.ESSAI_PANNE_CREATION === '1' && parLeServeur) {
+      return NextResponse.json({ error: 'erreur_interne' }, { status: 500 })
+    }
     if (intentId && !parLeServeur) {
       const prise = await prendreLaCopiePourLaPage(supabaseAdmin, intentId)
       if (!prise.libre && prise.refuse) {
