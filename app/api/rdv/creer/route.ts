@@ -9,6 +9,7 @@ import { majorationDuCreneau } from '@/lib/majoration-serveur'
 import { gardeReservation } from '@/lib/garde-reservations'
 import { prendreLaCopiePourLaPage } from '@/lib/reservation-attente'
 import { adressePourEtape } from '@/lib/adresse-due'
+import { appelerMollieAcompte, prixEtCliente, SECRET_MOLLIE } from '@/lib/mollie-reservation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — créer une réservation.
@@ -106,6 +107,29 @@ export async function POST(req: NextRequest) {
     if (clienteBloc?.bloquee_le) {
       console.warn('[rdv/creer] cliente bloquée', pro_id, cliente_id)
       return NextResponse.json({ ok: false, raison: 'indisponible' }, { status: 403 })
+    }
+
+    // ── PAS DE RENDEZ-VOUS SANS L'ACOMPTE QUE LA PRO DEMANDE (19 nov. 2026) ──────
+    // Avec Mollie, un rendez-vous à acompte ne naît QUE côté serveur, après le
+    // paiement (la copie de la réservation). Un appel direct ici, sans être le
+    // serveur, pour un créneau où la pro demande un acompte, serait une réservation
+    // sans payer : on refuse. Le calcul est celui de la page (prix réel, remises,
+    // nouvelle ou habituée) et du serveur Mollie (réglage de la pro, interrupteur,
+    // compte, 2 mois). Si le serveur Mollie ne répond pas, on laisse passer (une pro
+    // sans Mollie ne doit jamais perdre une réservation) et on le note.
+    if (!parLeServeur && SECRET_MOLLIE) {
+      try {
+        const pc = await prixEtCliente(pro_id, body as Record<string, unknown>)
+        if (pc && pc.prix >= 100) {
+          const { status, d } = await appelerMollieAcompte({ action: 'devis', pro_id, prix: pc.prix, nouvelle: pc.nouvelle, date, heure })
+          if (status === 200 && d.actif === true) {
+            console.warn('[rdv/creer] acompte exigé, appel direct refusé', pro_id)
+            return NextResponse.json({ ok: false, raison: 'acompte_requis' }, { status: 402 })
+          }
+        }
+      } catch (e) {
+        console.error('[rdv/creer] vérification de l\'acompte impossible, réservation laissée', pro_id, e)
+      }
     }
 
     const { data: pro } = await supabaseAdmin
