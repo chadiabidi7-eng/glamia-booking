@@ -64,7 +64,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (['echoue', 'expire', 'annule'].includes(p.statut as string)) return NextResponse.json({ etat: 'echec' })
-  if (p.statut === 'paye' && p.rdv_id) return NextResponse.json({ etat: 'confirme', recap })
-  if (copie?.statut === 'refuse' || ['rembourse', 'rembourse_partiel'].includes(p.statut as string)) return NextResponse.json({ etat: p.type === 'jour' ? 'confirme' : 'refuse', recap })
+  // Le rendez-vous a été créé : c'est une réussite, même si le paiement a été rendu ensuite
+  // (la pro a annulé plus tard). « Créneau pris » ne se dit que si la copie a été refusée.
+  if (p.rdv_id && p.statut !== 'cree') return NextResponse.json({ etat: 'confirme', recap })
+  if (copie?.statut === 'refuse') return NextResponse.json({ etat: p.type === 'jour' ? 'confirme' : 'refuse', recap })
   return NextResponse.json({ etat: 'attente' })
 }

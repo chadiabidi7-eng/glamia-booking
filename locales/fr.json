@@ -827,7 +827,7 @@
     "echecTexte": "Aucun montant n'a été prélevé et ton rendez-vous n'est pas réservé.",
     "recommencer": "Recommencer ma réservation",
     "refuseTitre": "Ce créneau vient d'être pris",
-    "refuseTexte": "Quelqu'un a réservé ce créneau pendant ton paiement. Tu es remboursée en entier, frais compris.",
+    "refuseTexte": "Quelqu'un a réservé ce créneau pendant ton paiement. Ton paiement va t'être remboursé en entier, frais compris.",
     "autreCreneau": "Choisir un autre créneau",
     "longTitre": "Ton paiement est en cours",
     "longTexte": "Ta banque n'a pas encore répondu. Si le paiement passe, ton rendez-vous est réservé et tu reçois un mail de confirmation. Sinon, rien n'est prélevé.",

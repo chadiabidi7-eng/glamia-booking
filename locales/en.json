@@ -833,7 +833,7 @@
     "echecTexte": "Nothing was charged and your appointment isn't booked.",
     "recommencer": "Start my booking again",
     "refuseTitre": "This slot was just taken",
-    "refuseTexte": "Someone booked this slot while you were paying. You're fully refunded, fees included.",
+    "refuseTexte": "Someone booked this slot while you were paying. Your payment will be refunded in full, fees included.",
     "autreCreneau": "Choose another slot",
     "longTitre": "Your payment is being processed",
     "longTexte": "Your bank hasn't answered yet. If the payment goes through, your appointment is booked and you'll get a confirmation email. If not, nothing is charged.",

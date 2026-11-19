@@ -827,7 +827,7 @@
     "echecTexte": "Non è stato addebitato nulla e il tuo appuntamento non è prenotato.",
     "recommencer": "Ricomincia la prenotazione",
     "refuseTitre": "Questo orario è appena stato preso",
-    "refuseTexte": "Qualcuno ha prenotato questo orario mentre pagavi. Vieni rimborsata per intero, spese comprese.",
+    "refuseTexte": "Qualcuno ha prenotato questo orario mentre pagavi. Il tuo pagamento ti sarà rimborsato per intero, spese comprese.",
     "autreCreneau": "Scegli un altro orario",
     "longTitre": "Il pagamento è in corso",
     "longTexte": "La tua banca non ha ancora risposto. Se il pagamento va a buon fine, l'appuntamento è prenotato e riceverai un'e-mail di conferma. Altrimenti non viene addebitato nulla.",

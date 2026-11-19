@@ -830,7 +830,7 @@
     "echecTexte": "No se ha cobrado nada y tu cita no está reservada.",
     "recommencer": "Volver a reservar",
     "refuseTitre": "Este horario acaba de ocuparse",
-    "refuseTexte": "Alguien ha reservado este horario mientras pagabas. Se te devuelve todo, gastos incluidos.",
+    "refuseTexte": "Alguien ha reservado este horario mientras pagabas. Tu pago se te devolverá íntegro, gastos incluidos.",
     "autreCreneau": "Elegir otro horario",
     "longTitre": "Tu pago se está procesando",
     "longTexte": "Tu banco aún no ha respondido. Si el pago se completa, tu cita queda reservada y recibirás un correo de confirmación. Si no, no se cobra nada.",
