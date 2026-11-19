@@ -838,5 +838,33 @@
     "payeTitre": "Pago recibido",
     "paye": "Pagado",
     "merciPaiement": "Gracias, tu pago ha llegado a tu profesional."
+  },
+  "lienAcompte": {
+    "titre": "Tu señal para tu cita",
+    "bonjour": "Hola %{prenom}:",
+    "chez": "Con %{pro}",
+    "acompte": "Señal",
+    "frais": "Gastos de reserva",
+    "total": "A pagar ahora",
+    "valable": "Enlace válido hasta el %{date}",
+    "payer": "Pagar %{somme}",
+    "case": "Marca la casilla para continuar",
+    "paiementInjoignable": "No se pudo abrir el pago. Inténtalo de nuevo en un momento.",
+    "payeTitre": "Tu señal está pagada",
+    "payeTexte": "Tu cita está confirmada. Recibirás la confirmación del pago por correo.",
+    "expireTitre": "Este enlace ya no es válido",
+    "expireTexte": "Pide un nuevo enlace a %{pro}.",
+    "annuleTitre": "Esta cita ha sido cancelada",
+    "annuleTexte": "Ya no hay nada que pagar.",
+    "fermeTitre": "El pago en línea no está disponible",
+    "fermeTexte": "Contacta con %{pro} para pagar tu señal.",
+    "inconnuTitre": "Enlace no encontrado",
+    "inconnuTexte": "Comprueba el enlace recibido o pide uno nuevo.",
+    "verification": "Comprobamos tu pago",
+    "verificationTexte": "Unos segundos. No cierres esta página.",
+    "echecTitre": "El pago no se ha completado",
+    "echecTexte": "No se ha cobrado nada. Puedes volver a intentarlo.",
+    "reessayer": "Volver a intentarlo",
+    "fourni": "Pago seguro proporcionado por Mollie BV"
   }
 }

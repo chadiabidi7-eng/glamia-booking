@@ -841,5 +841,33 @@
     "payeTitre": "Payment received",
     "paye": "Paid",
     "merciPaiement": "Thank you, your payment has reached your professional."
+  },
+  "lienAcompte": {
+    "titre": "Your deposit for your appointment",
+    "bonjour": "Hello %{prenom},",
+    "chez": "With %{pro}",
+    "acompte": "Deposit",
+    "frais": "Booking fee",
+    "total": "To pay now",
+    "valable": "Link valid until %{date}",
+    "payer": "Pay %{somme}",
+    "case": "Tick the box to continue",
+    "paiementInjoignable": "The payment could not open. Please try again in a moment.",
+    "payeTitre": "Your deposit is paid",
+    "payeTexte": "Your appointment is confirmed. You will receive the payment confirmation by email.",
+    "expireTitre": "This link is no longer valid",
+    "expireTexte": "Ask %{pro} for a new link.",
+    "annuleTitre": "This appointment was cancelled",
+    "annuleTexte": "There is nothing left to pay.",
+    "fermeTitre": "Online payment is not available",
+    "fermeTexte": "Contact %{pro} to pay your deposit.",
+    "inconnuTitre": "Link not found",
+    "inconnuTexte": "Check the link you received, or ask for a new one.",
+    "verification": "Checking your payment",
+    "verificationTexte": "A few seconds. Don't close this page.",
+    "echecTitre": "The payment didn't go through",
+    "echecTexte": "Nothing was charged. You can try again.",
+    "reessayer": "Try again",
+    "fourni": "Secure payment provided by Mollie BV"
   }
 }

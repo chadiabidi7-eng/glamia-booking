@@ -835,5 +835,33 @@
     "payeTitre": "Paiement reçu",
     "paye": "Payé",
     "merciPaiement": "Merci, ton paiement est bien arrivé chez ta professionnelle."
+  },
+  "lienAcompte": {
+    "titre": "Ton acompte pour ton rendez-vous",
+    "bonjour": "Bonjour %{prenom},",
+    "chez": "Chez %{pro}",
+    "acompte": "Acompte",
+    "frais": "Frais de réservation",
+    "total": "À payer maintenant",
+    "valable": "Lien valable jusqu'au %{date}",
+    "payer": "Payer %{somme}",
+    "case": "Coche la case pour continuer",
+    "paiementInjoignable": "Le paiement n'a pas pu s'ouvrir. Réessaie dans un instant.",
+    "payeTitre": "Ton acompte est payé",
+    "payeTexte": "Ton rendez-vous est confirmé. Tu recevras la confirmation du paiement par e-mail.",
+    "expireTitre": "Ce lien n'est plus valable",
+    "expireTexte": "Demande un nouveau lien à %{pro}.",
+    "annuleTitre": "Ce rendez-vous a été annulé",
+    "annuleTexte": "Il n'y a plus rien à payer.",
+    "fermeTitre": "Le paiement en ligne n'est pas disponible",
+    "fermeTexte": "Contacte %{pro} pour régler ton acompte.",
+    "inconnuTitre": "Lien introuvable",
+    "inconnuTexte": "Vérifie le lien reçu, ou demande-en un nouveau.",
+    "verification": "On vérifie ton paiement",
+    "verificationTexte": "Quelques secondes. Ne ferme pas cette page.",
+    "echecTitre": "Le paiement n'a pas abouti",
+    "echecTexte": "Rien n'a été prélevé. Tu peux réessayer.",
+    "reessayer": "Réessayer",
+    "fourni": "Paiement sécurisé fourni par Mollie BV"
   }
 }

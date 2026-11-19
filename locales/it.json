@@ -835,5 +835,33 @@
     "payeTitre": "Pagamento ricevuto",
     "paye": "Pagato",
     "merciPaiement": "Grazie, il tuo pagamento è arrivato alla tua professionista."
+  },
+  "lienAcompte": {
+    "titre": "Il tuo acconto per l'appuntamento",
+    "bonjour": "Ciao %{prenom},",
+    "chez": "Da %{pro}",
+    "acompte": "Acconto",
+    "frais": "Costi di prenotazione",
+    "total": "Da pagare ora",
+    "valable": "Link valido fino al %{date}",
+    "payer": "Paga %{somme}",
+    "case": "Spunta la casella per continuare",
+    "paiementInjoignable": "Il pagamento non si è aperto. Riprova tra un attimo.",
+    "payeTitre": "Il tuo acconto è pagato",
+    "payeTexte": "Il tuo appuntamento è confermato. Riceverai la conferma del pagamento via e-mail.",
+    "expireTitre": "Questo link non è più valido",
+    "expireTexte": "Chiedi un nuovo link a %{pro}.",
+    "annuleTitre": "Questo appuntamento è stato annullato",
+    "annuleTexte": "Non c'è più nulla da pagare.",
+    "fermeTitre": "Il pagamento online non è disponibile",
+    "fermeTexte": "Contatta %{pro} per pagare il tuo acconto.",
+    "inconnuTitre": "Link non trovato",
+    "inconnuTexte": "Controlla il link ricevuto o chiedine uno nuovo.",
+    "verification": "Verifichiamo il tuo pagamento",
+    "verificationTexte": "Qualche secondo. Non chiudere questa pagina.",
+    "echecTitre": "Il pagamento non è andato a buon fine",
+    "echecTexte": "Non è stato addebitato nulla. Puoi riprovare.",
+    "reessayer": "Riprova",
+    "fourni": "Pagamento sicuro fornito da Mollie BV"
   }
 }
