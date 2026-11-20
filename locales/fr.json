@@ -282,7 +282,17 @@
     },
     "offreAutresJours": "Les autres jours restent réservables, sans l'offre.",
     "offreRetirer": "Voir tous les jours sans l'offre",
-    "offreRetirerPack": "Choisir une autre prestation"
+    "offreRetirerPack": "Choisir une autre prestation",
+    "horizonMessage": "%{pro} prend ses rendez-vous jusqu'à %{duree} à l'avance, pas plus : dates ouvertes jusqu'au %{date}.",
+    "horizonDuree": {
+      "14": "2 semaines",
+      "30": "1 mois",
+      "60": "2 mois",
+      "90": "3 mois",
+      "180": "6 mois",
+      "365": "1 an"
+    },
+    "horizonPro": "ta praticienne"
   },
   "commun": {
     "chargement": "Chargement...",

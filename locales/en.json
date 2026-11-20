@@ -282,7 +282,17 @@
     },
     "offreAutresJours": "Other days can still be booked, without the offer.",
     "offreRetirer": "See all days without the offer",
-    "offreRetirerPack": "Choose another service"
+    "offreRetirerPack": "Choose another service",
+    "horizonMessage": "%{pro} takes appointments up to %{duree} in advance, no more: dates open until %{date}.",
+    "horizonDuree": {
+      "14": "2 weeks",
+      "30": "1 month",
+      "60": "2 months",
+      "90": "3 months",
+      "180": "6 months",
+      "365": "1 year"
+    },
+    "horizonPro": "your practitioner"
   },
   "commun": {
     "chargement": "Loading...",

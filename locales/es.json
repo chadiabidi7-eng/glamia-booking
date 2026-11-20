@@ -282,7 +282,17 @@
     },
     "offreAutresJours": "Los demás días se pueden reservar, sin la oferta.",
     "offreRetirer": "Ver todos los días sin la oferta",
-    "offreRetirerPack": "Elegir otro servicio"
+    "offreRetirerPack": "Elegir otro servicio",
+    "horizonMessage": "%{pro} acepta citas con hasta %{duree} de antelación, no más: fechas abiertas hasta el %{date}.",
+    "horizonDuree": {
+      "14": "2 semanas",
+      "30": "1 mes",
+      "60": "2 meses",
+      "90": "3 meses",
+      "180": "6 meses",
+      "365": "1 año"
+    },
+    "horizonPro": "tu profesional"
   },
   "commun": {
     "chargement": "Cargando...",

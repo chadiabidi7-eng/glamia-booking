@@ -6,6 +6,7 @@ import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
 import { couleurInitiale } from '@/lib/couleur-initiale'
+import BandeauHorizon, { moisAtteintLimite } from '@/components/reserve/BandeauHorizon'
 import { questionsAPoser, questionsDepuisProfil, type QuestionResa } from '@/lib/questions-resa'
 import SpecialiteIcon from '@/components/SpecialiteIcon'
 import IconeCategorie from '@/components/IconeCategorie'
@@ -4713,6 +4714,10 @@ export default function ReservationPage() {
                                 <button onClick={reprogNextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(reprogCalMonth === 11 ? reprogCalYear + 1 : reprogCalYear, (reprogCalMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
                               </div>
 
+                              {moisAtteintLimite(reprogCalYear, reprogCalMonth, dernierResa) && (
+                                <BandeauHorizon pro={pro?.pseudo || pro?.prenom} horizon={horizonDe(pro?.resa_horizon_jours)} dernier={dernierResa} />
+                              )}
+
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
                                 {JOURS_COURT().map(j => (
                                   <div key={j} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: '#9ca3af', padding: '3px 0' }}>{j}</div>
@@ -4731,7 +4736,9 @@ export default function ReservationPage() {
                                   // ÉQUIPE : comme à la réservation, un jour fermé pour la pro peut être
                                   // ouvert pour l'assistante — ce sont les heures qui décident.
                                   const isOff = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
-                                  const horsLimite = apresLimite(dateStr)
+                                  // Après la limite de la pro : non dessiné (20 nov. 2026), le bandeau dit pourquoi.
+                                  if (apresLimite(dateStr)) return <div key={day} aria-hidden />
+                                  const horsLimite = false
                                   const isDisabled = isPast || isOff || horsLimite
                                   const isSelected = reprogDate === dateStr
 
@@ -5259,6 +5266,11 @@ export default function ReservationPage() {
               <button onClick={nextMonth} style={{ ...S.navBtn, opacity: moisApresLimite(calMonth === 11 ? calYear + 1 : calYear, (calMonth + 1) % 12) ? 0.3 : 1 }}>›</button>
             </div>
 
+            {/* La limite de la pro (« 2 semaines à l'avance ») dite en clair, quand ce mois l'atteint (20 nov. 2026). */}
+            {moisAtteintLimite(calYear, calMonth, dernierResa) && (
+              <BandeauHorizon pro={pro?.pseudo || pro?.prenom} horizon={horizonDe(pro?.resa_horizon_jours)} dernier={dernierResa} />
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
               {JOURS_COURT().map(j => (
                 <div key={j} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#9ca3af', padding: '4px 0' }}>{j}</div>
@@ -5274,6 +5286,9 @@ export default function ReservationPage() {
                 const dateStr = buildDateStr(calYear, calMonth, day)
                 const dayDate = new Date(calYear, calMonth, day)
                 const isPast  = dayDate < today0
+                // APRÈS LA LIMITE DE LA PRO (20 nov. 2026) : le jour n'est pas dessiné. Grisé, il
+                // ressemblait à un jour de repos ; le bandeau au-dessus dit jusqu'à quand on réserve.
+                if (apresLimite(dateStr)) return <div key={day} aria-hidden />
                 // ÉQUIPE : avec une assistante, un jour de repos de la pro n'est pas fermé pour autant — le serveur tranche (jours complets).
                 const isOff   = equipe.length === 0 && (!isDayWorking(dateStr, pro!.horaires, pro!.horaires_specifiques, pro!.planning_variable, pro!.jours_differents) || isDayBlocked(dateStr, pro!.creneaux_bloques))
                 const isComplet = joursComplets.has(dateStr)
@@ -5281,7 +5296,7 @@ export default function ReservationPage() {
                 // propose la liste d'attente. Il garde son apparence « complet »
                 // pour ne pas faire espérer un créneau, mais la porte est ouverte.
                 // Une offre datée n'ouvre que ses jours (26 oct. 2026).
-                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr) || apresLimite(dateStr)
+                const horsOffre = !dansPeriodeOffre(offreAppliquee, dateStr)
                 const isDisabled = isPast || isOff || horsOffre
                 const isSelected = date === dateStr
 
