@@ -130,6 +130,29 @@ export async function occupationsDe(
   return parJour
 }
 
+/**
+ * LES CRÉNEAUX TENUS PENDANT UN PAIEMENT, sous la forme d'un rendez-vous (20 nov. 2026).
+ * Pour les écrans qui lisent les rendez-vous eux-mêmes (déplacer, avancer, modifier,
+ * prochaine dispo) : on les ajoute à leur liste, et la place tenue est occupée
+ * partout, pas seulement sur la page de réservation. `praticienneId` : null = la pro
+ * (sans assistante), une chaîne = cette assistante, absent = toutes.
+ */
+export async function tenusCommeRdv(
+  admin: SupabaseClient, piloteId: string, debut: string, fin: string, praticienneId?: string | null,
+): Promise<{ id: null; date: string; duree: number }[]> {
+  let t = admin
+    .from('creneaux_tenus')
+    .select('date, duree')
+    .eq('pro_id', piloteId)
+    .gte('date', `${debut}T00:00:00.000Z`)
+    .lte('date', `${fin}T23:59:59.999Z`)
+    .gt('expire_le', new Date().toISOString())
+    .limit(200)
+  if (praticienneId !== undefined) t = praticienneId ? t.eq('praticienne_id', praticienneId) : t.is('praticienne_id', null)
+  const { data } = await t
+  return (data ?? []).map(x => ({ id: null, date: x.date as string, duree: (x.duree as number) ?? 0 }))
+}
+
 /** Les rendez-vous existants d'une personne pour UN jour — pour le juge de création. */
 export async function rdvExistantsDe(admin: SupabaseClient, piloteId: string, praticienneId: string | null, date: string, exclureTenue?: string) {
   const m = await occupationsDe(admin, piloteId, praticienneId, date, date, undefined, exclureTenue)

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { creneauReservable, delaiDe, delaiEntreClientes, minToTime } from '@/lib/creneaux'
+import { tenusCommeRdv } from '@/lib/equipe'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { librePour, personnesDuRdv } from '@/lib/deplacement'
 import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
@@ -125,12 +126,14 @@ async function encoreLibreSeule(lu: NonNullable<Awaited<ReturnType<typeof lire>>
   const { data: rdvs } = await supabaseAdmin.from('rendez_vous').select('id, date, duree')
     .eq('pro_id', lu.envoi.pro_id).neq('statut', 'annule')
     .gte('date', `${lu.place.jour}T00:00:00.000Z`).lte('date', `${lu.place.jour}T23:59:59.999Z`)
+  // Une place tenue pendant le paiement d'une autre cliente occupe comme un rendez-vous (20 nov. 2026).
+  const tenus = await tenusCommeRdv(supabaseAdmin, lu.envoi.pro_id as string, lu.place.jour, lu.place.jour)
   const pro = lu.pro as Record<string, unknown>
   const verdict = creneauReservable({
     date: lu.place.jour, heure: minToTime(lu.place.debut_min), duree: (lu.rdv.duree as number) ?? 60,
     joursDifferents: ((pro as { jours_differents?: unknown }).jours_differents ?? {}) as never,
     horaires: (pro.horaires ?? {}) as never,
-    rdvExistants: (rdvs ?? []).filter(r => r.id !== lu.rdv.id).map(r => { const d = new Date(r.date as string); return { heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 } }),
+    rdvExistants: [...(rdvs ?? []), ...tenus].filter(r => r.id !== lu.rdv.id).map(r => { const d = new Date(r.date as string); return { heure: minToTime(d.getUTCHours() * 60 + d.getUTCMinutes()), duree: (r.duree as number) ?? 0 } }),
     bloques: Array.isArray(pro.creneaux_bloques) ? (pro.creneaux_bloques as never) : [],
     horairesSpec: (pro.horaires_specifiques ?? {}) as never,
     planningVar: pro.planning_variable === true,

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { creneauReservable, minToTime, delaiEntreClientes } from '@/lib/creneaux'
+import { tenusCommeRdv } from '@/lib/equipe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — un créneau est-il encore réservable ?
@@ -55,11 +56,13 @@ export async function POST(req: NextRequest) {
       .neq('statut', 'annule')
 
     if (errRdv) return NextResponse.json({ error: 'lecture_rdv' }, { status: 500 })
+    // Une place tenue pendant le paiement d'une autre cliente occupe comme un rendez-vous (20 nov. 2026).
+    const tenus = await tenusCommeRdv(supabaseAdmin, pro_id, date, date)
 
     // Les heures sont stockées en heure murale posée sur UTC — même lecture que
     // partout ailleurs. Le rendez-vous qu'on est en train de DÉPLACER ne doit
     // pas se bloquer lui-même.
-    const rdvExistants = (rdvs ?? [])
+    const rdvExistants = [...(rdvs ?? []), ...tenus]
       .filter(r => !rdv_id || r.id !== rdv_id)
       .map(r => {
         const d = new Date(r.date as string)

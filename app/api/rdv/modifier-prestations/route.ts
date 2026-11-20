@@ -4,7 +4,7 @@ import { creneauReservable, delaiEntreClientes } from '@/lib/creneaux'
 import { normaliserTelephone } from '@/lib/telephone'
 import { delaiAvant } from '@/lib/heure-pro'
 import { jugerDeplacement, librePour, personnesDuRdv, techniquesPropres } from '@/lib/deplacement'
-import { assistanteValide, dureeChezAssistante } from '@/lib/equipe'
+import { assistanteValide, dureeChezAssistante, tenusCommeRdv } from '@/lib/equipe'
 import { messageModification, prevenirDuDeplacement } from '@/lib/notif-deplacement'
 import { refusDelaiModif } from '@/lib/delai-modif'
 
@@ -210,6 +210,8 @@ async function creneauIndisponible(
     .neq('statut', 'annule')
     // Son propre rendez-vous ne doit pas lui barrer la route.
     .neq('id', rdvId)
+  // Une place tenue pendant le paiement d'une autre cliente occupe comme un rendez-vous (20 nov. 2026).
+  const tenus = await tenusCommeRdv(supabaseAdmin, proId, jour, jour)
 
   const verdict = creneauReservable({
     date: jour,
@@ -217,7 +219,7 @@ async function creneauIndisponible(
     duree,
     joursDifferents: (((pro as any) as { jours_differents?: unknown }).jours_differents ?? {}) as never,
     horaires: ((pro as any).horaires ?? {}) as never,
-    rdvExistants: (autres ?? []).map(r => {
+    rdvExistants: [...(autres ?? []), ...tenus].map(r => {
       const d = new Date(r.date)
       return {
         heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,

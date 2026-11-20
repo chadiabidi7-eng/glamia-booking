@@ -7,7 +7,7 @@ import { traduireDans } from '@/lib/i18n'
 import { etiquetteDe } from '@/lib/heures-dates'
 import { adressePourEtape } from '@/lib/adresse-due'
 import { avecCanal } from '@/lib/canal-android'
-import { assistantesDe, type SlotQui } from '@/lib/equipe'
+import { assistantesDe, type SlotQui, tenusCommeRdv } from '@/lib/equipe'
 import { creneauxFusionnes, jugerDeplacement, personnesDuRdv, selonChoix } from '@/lib/deplacement'
 import { messageDecalage, prevenirDuDeplacement } from '@/lib/notif-deplacement'
 import { delaiModifDepasse, infosDelaiModif, messageDelaiModif, refusDelaiModif } from '@/lib/delai-modif'
@@ -103,7 +103,9 @@ export async function GET(
       // plus reprendre son heure, ni celle d'à côté.
       .neq('id', data.id)
 
-    const rdvsJour = (rdvs ?? []).map(r => {
+    // Une place tenue pendant le paiement d'une autre cliente occupe comme un rendez-vous (20 nov. 2026).
+    const tenus = await tenusCommeRdv(supabaseAdmin, data.pro_id as string, slotsDate, slotsDate)
+    const rdvsJour = [...(rdvs ?? []), ...tenus].map(r => {
       const d = new Date(r.date)
       return {
         heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,
@@ -275,7 +277,7 @@ export async function POST(
         heure: nouvelleHeure,
         duree: (rdv.duree as number) ?? 60,
         horaires: ((proRegles as any).horaires ?? {}) as never,
-        rdvExistants: (autresRdvs ?? []).map(r => {
+        rdvExistants: [...(autresRdvs ?? []), ...(await tenusCommeRdv(supabaseAdmin, rdv.pro_id as string, nouvelleDate, nouvelleDate))].map(r => {
           const d = new Date(r.date)
           return {
             heure: `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`,

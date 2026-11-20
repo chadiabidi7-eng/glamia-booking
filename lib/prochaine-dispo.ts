@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateSlots, minToTime, delaiEntreClientes, delaiDe } from '@/lib/creneaux'
-import { assistantesDe, creneauxDe } from '@/lib/equipe'
+import { assistantesDe, creneauxDe, tenusCommeRdv } from '@/lib/equipe'
 import { aPro, formuleDe } from '@/lib/formule'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,8 +83,10 @@ export async function prochaineDispo(admin: SupabaseClient, pro_id: string, hori
       .gte('date', `${jours[0]}T00:00:00.000Z`)
       .lte('date', `${jours[jours.length - 1]}T23:59:59.999Z`)
 
+    // Une place tenue pendant un paiement occupe comme un rendez-vous (20 nov. 2026).
+    const tenus = await tenusCommeRdv(admin, pro_id, jours[0], jours[jours.length - 1], null)
     const parJour = new Map<string, { heure: string; duree: number }[]>()
-    for (const r of rdvs ?? []) {
+    for (const r of [...(rdvs ?? []), ...tenus]) {
       const iso = r.date as string
       const d = new Date(iso)
       const jour = iso.slice(0, 10)
