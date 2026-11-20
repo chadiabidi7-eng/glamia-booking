@@ -76,7 +76,7 @@ export default function PageLienAcompte() {
 
   const accent = lien?.couleur ?? ROSE
   const accentTexte = lien?.couleur ? lisibleSurBlanc(lien.couleur) : ROSE
-  const texteCase = lien ? traduire('resa.consentMollie', { somme: euros(lien.total_cliente), acompte: euros(lien.acompte), frais: euros(lien.frais), delai: lien.delai_annulation }) : ''
+  const texteCase = lien ? traduire('resa.consentMollie', { somme: euros(lien.total_cliente), acompte: euros(lien.acompte), frais: euros(lien.frais), delai: lien.delai_annulation, pro: lien.pro }) : ''
 
   const payer = async () => {
     if (!lien || !coche || envoi) return
@@ -148,7 +148,9 @@ export default function PageLienAcompte() {
         {!coche && <p style={S.aide}>{traduire('lienAcompte.case')}</p>}
         {erreur && <p style={S.erreur}>{erreur}</p>}
         <p style={S.aide}>{traduire('lienAcompte.valable', { date: date(lien.expire_le, false) })}</p>
-        <p style={S.mollie}>{traduire('lienAcompte.fourni')}</p>
+        {/* Qui vend, qui rembourse (20 nov. 2026), et les conditions des clientes. */}
+        <p style={S.aide}>{traduire('resa.paiementProMollie', { pro: lien.pro })}</p>
+        <p style={S.mollie}>{traduire('lienAcompte.fourni')} · <a href={`/conditions-clientes${lien.langue !== 'fr' ? `?lang=${lien.langue}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#A0949A' }}>{traduire('resa.conditionsClientes')}</a></p>
       </section>
     </main>
   )

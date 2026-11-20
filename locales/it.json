@@ -285,7 +285,7 @@
     "offreRetirerPack": "Scegli un altro servizio",
     "paiementSecuriseMollie": "Pagamento sicuro con Mollie: il denaro va direttamente alla tua professionista, Glamia non detiene mai i fondi.",
     "redirigeeMollie": "Pagherai sulla pagina sicura di Mollie (carta, Apple Pay, Google Pay), poi tornerai qui.",
-    "consentMollie": "Accetto di pagare %{somme} ora: %{acompte} di acconto e %{frais} di spese di prenotazione. Se annullo più di %{delai} h prima, l'acconto mi viene rimborsato; le spese di prenotazione non sono rimborsabili. Se non mi presento o annullo meno di %{delai} h prima, l'acconto resta alla professionista.",
+    "consentMollie": "Accetto di pagare ora %{somme} a %{pro}: %{acompte} di acconto e %{frais} di spese di prenotazione. Se annullo più di %{delai} h prima, %{pro} mi rimborsa l'acconto; le spese di prenotazione non sono rimborsabili. Se non mi presento o annullo meno di %{delai} h prima, l'acconto resta a %{pro}.",
     "payerAcompte": "Paga %{somme}",
     "emailPourPaiement": "La tua e-mail, per ricevere la conferma del pagamento",
     "identitePaiement": "Per pagare l'acconto servono nome, cognome e un'e-mail valida.",
@@ -298,7 +298,9 @@
       "180": "6 mesi",
       "365": "1 anno"
     },
-    "horizonPro": "la tua professionista"
+    "horizonPro": "la tua professionista",
+    "paiementProMollie": "Paghi direttamente %{pro}, tramite Mollie: è %{pro} che vende la prestazione e che ti rimborsa secondo la sua politica di cancellazione. Glamia gestisce la prenotazione e non detiene mai il tuo denaro.",
+    "conditionsClientes": "condizioni per le clienti"
   },
   "commun": {
     "chargement": "Caricamento...",
@@ -873,5 +875,46 @@
     "echecTexte": "Non è stato addebitato nulla. Puoi riprovare.",
     "reessayer": "Riprova",
     "fourni": "Pagamento sicuro fornito da Mollie BV"
+  },
+  "conditionsClientes": {
+    "titre": "Condizioni per le clienti",
+    "maj": "Ultimo aggiornamento: 20 novembre 2026",
+    "contact": "Per qualsiasi domanda su Glamia:",
+    "sections": [
+      {
+        "titre": "1. Chi fa cosa",
+        "paragraphes": [
+          "Quando prenoti su una pagina Glamia, prendi appuntamento direttamente con una professionista della bellezza indipendente, il cui nome compare sulla pagina. È lei che vende la prestazione, ne fissa il prezzo e le condizioni, e la esegue.",
+          "Glamia fornisce lo strumento di prenotazione: la pagina, i promemoria e il pagamento online quando la professionista lo propone. Glamia non vende la prestazione."
+        ]
+      },
+      {
+        "titre": "2. Il pagamento",
+        "paragraphes": [
+          "Quando una professionista chiede un acconto o un pagamento online, paghi direttamente la professionista. Il pagamento è gestito da Mollie B.V. (Keizersgracht 126, 1015 CW Amsterdam, Paesi Bassi), istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank. Il denaro va sul conto della professionista: Glamia non detiene mai il tuo denaro.",
+          "Possono aggiungersi spese di prenotazione. Il loro importo è mostrato prima del pagamento."
+        ]
+      },
+      {
+        "titre": "3. Cancellazione e rimborso",
+        "paragraphes": [
+          "Le regole di cancellazione sono quelle della professionista. Sono mostrate prima del pagamento e ricordate nella casella che spunti.",
+          "È la professionista che ti rimborsa, quando le sue regole lo prevedono o quando è lei ad annullare. Glamia avvia questo rimborso dal suo conto non appena possibile. Se annulli tu, le spese di prenotazione non sono rimborsate; se annulla la professionista, sì."
+        ]
+      },
+      {
+        "titre": "4. Una domanda, un problema",
+        "paragraphes": [
+          "Per il tuo appuntamento, un ritardo, un reclamo sulla prestazione o un rimborso, rivolgiti prima alla professionista: i suoi recapiti sono sulla sua pagina e nelle tue e-mail.",
+          "Per un problema con la pagina di prenotazione stessa, scrivici a {contact}."
+        ]
+      },
+      {
+        "titre": "5. I tuoi dati",
+        "paragraphes": [
+          "I tuoi dati sono comunicati alla professionista per gestire il tuo appuntamento. Per sapere come vengono trattati, leggi la nostra {confidentialite}."
+        ]
+      }
+    ]
   }
 }

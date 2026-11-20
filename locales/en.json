@@ -285,7 +285,7 @@
     "offreRetirerPack": "Choose another service",
     "paiementSecuriseMollie": "Secure payment by Mollie — the money goes straight to your professional, Glamia never holds the funds.",
     "redirigeeMollie": "You'll pay on Mollie's secure page (card, Apple Pay, Google Pay), then come back here.",
-    "consentMollie": "I agree to pay %{somme} now: a %{acompte} deposit and a %{frais} booking fee. If I cancel more than %{delai} h before, my deposit is refunded; the booking fee is non-refundable. If I don't show up or cancel less than %{delai} h before, the professional keeps the deposit.",
+    "consentMollie": "I agree to pay %{somme} now to %{pro}: a %{acompte} deposit and a %{frais} booking fee. If I cancel more than %{delai} h before, %{pro} refunds my deposit; the booking fee is non-refundable. If I don't show up or cancel less than %{delai} h before, %{pro} keeps the deposit.",
     "payerAcompte": "Pay %{somme}",
     "emailPourPaiement": "Your email, to receive the payment confirmation",
     "identitePaiement": "To pay the deposit, we need your first name, last name and a valid email.",
@@ -298,7 +298,9 @@
       "180": "6 months",
       "365": "1 year"
     },
-    "horizonPro": "your practitioner"
+    "horizonPro": "your practitioner",
+    "paiementProMollie": "You pay %{pro} directly, through Mollie: %{pro} sells the service and refunds you according to their cancellation policy. Glamia handles the booking and never holds your money.",
+    "conditionsClientes": "terms for clients"
   },
   "commun": {
     "chargement": "Loading...",
@@ -879,5 +881,46 @@
     "echecTexte": "Nothing was charged. You can try again.",
     "reessayer": "Try again",
     "fourni": "Secure payment provided by Mollie BV"
+  },
+  "conditionsClientes": {
+    "titre": "Terms for clients",
+    "maj": "Last updated: 20 November 2026",
+    "contact": "Any question about Glamia:",
+    "sections": [
+      {
+        "titre": "1. Who does what",
+        "paragraphes": [
+          "When you book on a Glamia page, you make an appointment directly with an independent beauty professional, whose name appears on the page. They sell the service, set its price and conditions, and carry it out.",
+          "Glamia provides the booking tool: the page, the reminders, and online payment when the professional offers it. Glamia does not sell the service."
+        ]
+      },
+      {
+        "titre": "2. Payment",
+        "paragraphes": [
+          "When a professional asks for a deposit or an online payment, you pay the professional directly. The payment is processed by Mollie B.V. (Keizersgracht 126, 1015 CW Amsterdam, the Netherlands), a payment institution licensed and supervised by De Nederlandsche Bank. The money goes to the professional's account: Glamia never holds your money.",
+          "A booking fee may be added. Its amount is shown before you pay."
+        ]
+      },
+      {
+        "titre": "3. Cancellation and refunds",
+        "paragraphes": [
+          "The cancellation rules are the professional's. They are shown before payment and repeated in the box you tick.",
+          "The professional refunds you when their rules provide for it, or when they cancel. Glamia triggers this refund from their account as soon as it allows. If you cancel yourself, the booking fee is not refunded; if the professional cancels, it is."
+        ]
+      },
+      {
+        "titre": "4. A question or a problem",
+        "paragraphes": [
+          "For your appointment, a delay, a complaint about the service or a refund, contact the professional first: their details are on their page and in your emails.",
+          "For a problem with the booking page itself, write to us at {contact}."
+        ]
+      },
+      {
+        "titre": "5. Your data",
+        "paragraphes": [
+          "Your details are shared with the professional to manage your appointment. To learn how they are processed, read our {confidentialite}."
+        ]
+      }
+    ]
   }
 }

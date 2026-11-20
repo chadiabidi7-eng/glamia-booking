@@ -3209,6 +3209,7 @@ export default function ReservationPage() {
                 acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
                 frais: fmtCentimes(propay.frais ?? 0, symPropay),
                 delai: propay.delai_annulation ?? 24,
+                pro: pro.pseudo || pro.prenom || '',
               }),
               complet: copieComplete,
               photos: inspirations.slice(0, 3),
@@ -5851,11 +5852,13 @@ export default function ReservationPage() {
                 </div>
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
                   <Lock size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
-                  <span>{traduire(propay.mollie ? 'resa.paiementSecuriseMollie' : 'resa.paiementSecurise')}</span>
+                  {/* QUI VEND, QUI REMBOURSE (Chadi, 20 nov. 2026) : la cliente paie la pro, pas Glamia. */}
+                  <span>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
                   {traduire('resa.fraisCarteEtrangere')}
-                  <a href={`https://booking.glamia.pro/cgu${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsUtilisation')}</a>.
+                  {/* Les conditions écrites POUR LES CLIENTES (20 nov. 2026), plus celles des pros. */}
+                  <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
                 </p>
                 {propay.mollie && (
                   <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45 }}>{traduire('resa.redirigeeMollie')}</p>
@@ -5887,6 +5890,7 @@ export default function ReservationPage() {
                           acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
                           frais: fmtCentimes(propay.frais ?? 0, symPropay),
                           delai: propay.delai_annulation ?? 24,
+                          pro: pro?.pseudo || pro?.prenom || '',
                         })
                       : propay.mode === 'empreinte'
                       ? traduire('resa.consentEmpreinte', {

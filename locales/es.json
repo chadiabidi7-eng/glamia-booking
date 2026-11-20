@@ -285,7 +285,7 @@
     "offreRetirerPack": "Elegir otro servicio",
     "paiementSecuriseMollie": "Pago seguro con Mollie: el dinero va directamente a tu profesional, Glamia nunca guarda los fondos.",
     "redirigeeMollie": "Vas a pagar en la página segura de Mollie (tarjeta, Apple Pay, Google Pay) y luego volverás aquí.",
-    "consentMollie": "Acepto pagar %{somme} ahora: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, se me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, la profesional se queda con la señal.",
+    "consentMollie": "Acepto pagar ahora %{somme} a %{pro}: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, %{pro} me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, %{pro} se queda con la señal.",
     "payerAcompte": "Pagar %{somme}",
     "emailPourPaiement": "Tu correo, para recibir la confirmación del pago",
     "identitePaiement": "Para pagar la señal, necesitamos tu nombre, apellido y un correo válido.",
@@ -298,7 +298,9 @@
       "180": "6 meses",
       "365": "1 año"
     },
-    "horizonPro": "tu profesional"
+    "horizonPro": "tu profesional",
+    "paiementProMollie": "Pagas directamente a %{pro}, a través de Mollie: es %{pro} quien vende la prestación y quien te reembolsa según su política de cancelación. Glamia gestiona la reserva y nunca guarda tu dinero.",
+    "conditionsClientes": "condiciones para clientas"
   },
   "commun": {
     "chargement": "Cargando...",
@@ -876,5 +878,46 @@
     "echecTexte": "No se ha cobrado nada. Puedes volver a intentarlo.",
     "reessayer": "Volver a intentarlo",
     "fourni": "Pago seguro proporcionado por Mollie BV"
+  },
+  "conditionsClientes": {
+    "titre": "Condiciones para clientas",
+    "maj": "Última actualización: 20 de noviembre de 2026",
+    "contact": "Para cualquier pregunta sobre Glamia:",
+    "sections": [
+      {
+        "titre": "1. Quién hace qué",
+        "paragraphes": [
+          "Cuando reservas en una página de Glamia, pides cita directamente a una profesional de la belleza independiente, cuyo nombre aparece en la página. Es ella quien vende la prestación, fija su precio y sus condiciones, y la realiza.",
+          "Glamia proporciona la herramienta de reserva: la página, los recordatorios y el pago en línea cuando la profesional lo ofrece. Glamia no vende la prestación."
+        ]
+      },
+      {
+        "titre": "2. El pago",
+        "paragraphes": [
+          "Cuando una profesional pide una señal o un pago en línea, pagas directamente a la profesional. El pago lo procesa Mollie B.V. (Keizersgracht 126, 1015 CW Ámsterdam, Países Bajos), entidad de pago autorizada y supervisada por De Nederlandsche Bank. El dinero va a la cuenta de la profesional: Glamia nunca guarda tu dinero.",
+          "Pueden añadirse gastos de reserva. Su importe se muestra antes de que pagues."
+        ]
+      },
+      {
+        "titre": "3. Cancelación y reembolso",
+        "paragraphes": [
+          "Las reglas de cancelación son las de la profesional. Se muestran antes del pago y se recuerdan en la casilla que marcas.",
+          "Es la profesional quien te reembolsa, cuando sus reglas lo prevén o cuando es ella quien cancela. Glamia lanza ese reembolso desde su cuenta en cuanto esta lo permite. Si cancelas tú, los gastos de reserva no se devuelven; si cancela la profesional, sí."
+        ]
+      },
+      {
+        "titre": "4. Una pregunta, un problema",
+        "paragraphes": [
+          "Para tu cita, un retraso, una reclamación sobre la prestación o un reembolso, dirígete primero a la profesional: sus datos aparecen en su página y en tus correos.",
+          "Para un problema con la propia página de reserva, escríbenos a {contact}."
+        ]
+      },
+      {
+        "titre": "5. Tus datos",
+        "paragraphes": [
+          "Tus datos se comunican a la profesional para gestionar tu cita. Para saber cómo se tratan, lee nuestra {confidentialite}."
+        ]
+      }
+    ]
   }
 }
