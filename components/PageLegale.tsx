@@ -54,15 +54,37 @@ export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidential
   const sections = i18n.t(`${bloc}.sections`, { locale }) as unknown as Section[];
   const contact = t('contact');
 
+  const retour = i18n.t('pageLegale.retour', { locale });
+  const SITE = 'https://glamia.pro';
+
   return (
-    // Textes à lire attentivement : justifiés, sans jamais couper un mot (Chadi, 20 nov. 2026).
-    <div lang={locale} style={{
-      textAlign: 'justify', hyphens: 'none',
-      maxWidth: 640, margin: '0 auto', padding: '40px 20px',
-      fontFamily: 'system-ui, sans-serif', color: '#1f2937',
-    }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>{t('titre')}</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 32 }}>{t('maj')}</p>
+    // LA PAGE PRÉSENTÉE COMME UN DOCUMENT GLAMIA (Chadi, 20 nov. 2026) : le logo en tête, qui
+    // ramène au site principal, un lien de retour, puis le texte. Les textes à lire
+    // attentivement sont justifiés, sans jamais couper un mot.
+    <div lang={locale} style={{ minHeight: '100dvh', background: '#FAF7F5', fontFamily: 'system-ui, sans-serif', color: '#1f2937', WebkitFontSmoothing: 'antialiased' }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #F0E6EA' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <a href={SITE} aria-label="Glamia" style={{ display: 'flex', alignItems: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/glamia-logo-net.png" alt="Glamia" width={682} height={176} style={{ height: 30, width: 'auto' }} />
+          </a>
+          <a href={SITE} style={{ fontSize: 13.5, fontWeight: 600, color: '#B0578A', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, minHeight: 44 }}>
+            <span aria-hidden>←</span>{retour}
+          </a>
+        </div>
+      </header>
+
+      <main style={{ maxWidth: 720, margin: '0 auto', padding: '28px 16px 48px' }}>
+        <div style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.05)', textAlign: 'justify', hyphens: 'none' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 8px', letterSpacing: -0.3, textAlign: 'left', textWrap: 'balance' }}>{t('titre')}</h1>
+      <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 24px', textAlign: 'left' }}>{t('maj')}</p>
+      {/* À QUI S'ADRESSE CE TEXTE (Chadi, 20 nov. 2026) : dit tout en haut, quand la page le précise. */}
+      {(() => {
+        const pour = i18n.t(`${bloc}.pour`, { locale, defaultValue: '' }) as string;
+        return pour ? (
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: '#4b5563', background: '#FBF1F6', borderRadius: 12, padding: '14px 16px', margin: '0 0 32px' }}>{pour}</p>
+        ) : null;
+      })()}
 
       {sections.map((section, i) => (
         <div key={i} style={{ marginBottom: 28 }}>
@@ -79,6 +101,15 @@ export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidential
           </div>
         </div>
       ))}
+        </div>
+
+        <footer style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <a href={SITE} style={{ fontSize: 14, fontWeight: 600, color: '#B0578A', textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span aria-hidden>←</span>{retour}
+          </a>
+          <p style={{ margin: 0, fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: '#B0578A' }}>{i18n.t('pageLegale.slogan', { locale })}</p>
+        </footer>
+      </main>
     </div>
   );
 }

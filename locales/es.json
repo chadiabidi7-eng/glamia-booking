@@ -880,45 +880,50 @@
     "fourni": "Pago seguro proporcionado por Mollie BV"
   },
   "conditionsClientes": {
-    "titre": "Condiciones para clientas",
+    "titre": "Condiciones aplicables a las clientas",
     "maj": "Última actualización: 20 de noviembre de 2026",
-    "contact": "Para cualquier pregunta sobre Glamia:",
+    "contact": "Contacto de Glamia:",
     "sections": [
       {
-        "titre": "1. Quién hace qué",
+        "titre": "1. Objeto y función de cada parte",
         "paragraphes": [
-          "Cuando reservas en una página de Glamia, pides cita directamente a una profesional de la belleza independiente, cuyo nombre aparece en la página. Es ella quien vende la prestación, fija su precio y sus condiciones, y la realiza.",
-          "Glamia proporciona la herramienta de reserva: la página, los recordatorios y el pago en línea cuando la profesional lo ofrece. Glamia no vende la prestación."
+          "Las presentes condiciones se aplican a toda reserva que usted realice en una página de reserva de Glamia. La reserva se celebra directamente entre usted y la profesional de la belleza independiente cuyo nombre figura en la página de reserva (la «profesional»). La profesional vende la prestación, fija su precio y sus condiciones, y la realiza.",
+          "Glamia proporciona la herramienta de reserva en línea: la página de reserva, los recordatorios y, cuando la profesional lo ofrece, el pago en línea. Glamia no es parte del contrato de prestación y no vende la prestación."
         ]
       },
       {
-        "titre": "2. El pago",
+        "titre": "2. Pago",
         "paragraphes": [
-          "Cuando una profesional pide una señal o un pago en línea, pagas directamente a la profesional. El pago lo procesa Mollie B.V. (Keizersgracht 126, 1015 CW Ámsterdam, Países Bajos), entidad de pago autorizada y supervisada por De Nederlandsche Bank. El dinero va a la cuenta de la profesional: Glamia nunca guarda tu dinero.",
-          "Pueden añadirse gastos de reserva. Su importe se muestra antes de que pagues."
+          "Cuando la profesional solicita una señal o un pago en línea, usted paga directamente a la profesional. El pago lo procesa Mollie B.V., Keizersgracht 126, 1015 CW Ámsterdam, Países Bajos, entidad de pago autorizada y supervisada por De Nederlandsche Bank. Los fondos se abonan en la cuenta de la profesional: Glamia no posee en ningún momento sus fondos.",
+          "Pueden añadirse gastos de reserva al importe pagado. Su importe se le indica antes del pago."
         ]
       },
       {
         "titre": "3. Cancelación y reembolso",
         "paragraphes": [
-          "Las reglas de cancelación son las de la profesional. Se muestran antes del pago y se recuerdan en la casilla que marcas.",
-          "Es la profesional quien te reembolsa, cuando sus reglas lo prevén o cuando es ella quien cancela. Glamia lanza ese reembolso desde su cuenta en cuanto esta lo permite. Si cancelas tú, los gastos de reserva no se devuelven; si cancela la profesional, sí."
+          "Las condiciones de cancelación las fija la profesional. Se ponen en su conocimiento antes del pago y se reproducen en la casilla que usted marca para aceptarlas.",
+          "El reembolso se lo debe la profesional cuando sus condiciones de cancelación lo prevén o cuando ella misma cancela la cita. Glamia ejecuta este reembolso por cuenta de la profesional, desde la cuenta de pago de esta. Si usted cancela, los gastos de reserva no se devuelven; si cancela la profesional, se le reembolsan."
         ]
       },
       {
-        "titre": "4. Una pregunta, un problema",
+        "titre": "4. Reclamaciones",
         "paragraphes": [
-          "Para tu cita, un retraso, una reclamación sobre la prestación o un reembolso, dirígete primero a la profesional: sus datos aparecen en su página y en tus correos.",
-          "Para un problema con la propia página de reserva, escríbenos.",
+          "Cualquier cuestión relativa a su cita, a un retraso, a la prestación o a un reembolso debe dirigirse en primer lugar a la profesional, cuyos datos de contacto figuran en su página de reserva y en los correos que usted ha recibido.",
+          "Para cualquier dificultad relacionada con el funcionamiento de la página de reserva, puede contactar con Glamia.",
           "{contact}"
         ]
       },
       {
-        "titre": "5. Tus datos",
+        "titre": "5. Datos personales",
         "paragraphes": [
-          "Tus datos se comunican a la profesional para gestionar tu cita. Para saber cómo se tratan, lee nuestra {confidentialite}."
+          "Sus datos se comunican a la profesional para la gestión de su cita. Su tratamiento se describe en la {confidentialite}."
         ]
       }
-    ]
+    ],
+    "pour": "Estas condiciones están dirigidas a las clientas que reservan una cita con una profesional de la belleza en una página de reserva de Glamia. Las profesionales que utilizan Glamia están sujetas a las condiciones generales de uso de Glamia."
+  },
+  "pageLegale": {
+    "retour": "Volver al sitio de Glamia",
+    "slogan": "Glamia, la app de las profesionales de la belleza independientes"
   }
 }

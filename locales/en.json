@@ -883,45 +883,50 @@
     "fourni": "Secure payment provided by Mollie BV"
   },
   "conditionsClientes": {
-    "titre": "Terms for clients",
+    "titre": "Terms applicable to clients",
     "maj": "Last updated: 20 November 2026",
-    "contact": "Any question about Glamia:",
+    "contact": "Glamia contact:",
     "sections": [
       {
-        "titre": "1. Who does what",
+        "titre": "1. Purpose and role of each party",
         "paragraphes": [
-          "When you book on a Glamia page, you make an appointment directly with an independent beauty professional, whose name appears on the page. They sell the service, set its price and conditions, and carry it out.",
-          "Glamia provides the booking tool: the page, the reminders, and online payment when the professional offers it. Glamia does not sell the service."
+          "These terms apply to any booking you make on a Glamia booking page. The booking is concluded directly between you and the independent beauty professional whose name appears on the booking page (the \"professional\"). The professional sells the service, sets its price and conditions, and performs it.",
+          "Glamia provides the online booking tool: the booking page, the reminders and, when the professional offers it, online payment. Glamia is not a party to the service contract and does not sell the service."
         ]
       },
       {
         "titre": "2. Payment",
         "paragraphes": [
-          "When a professional asks for a deposit or an online payment, you pay the professional directly. The payment is processed by Mollie B.V. (Keizersgracht 126, 1015 CW Amsterdam, the Netherlands), a payment institution licensed and supervised by De Nederlandsche Bank. The money goes to the professional's account: Glamia never holds your money.",
-          "A booking fee may be added. Its amount is shown before you pay."
+          "When the professional requests a deposit or an online payment, you pay the professional directly. The payment is processed by Mollie B.V., Keizersgracht 126, 1015 CW Amsterdam, the Netherlands, a payment institution licensed and supervised by De Nederlandsche Bank. The funds are paid into the professional's account: Glamia never holds your funds.",
+          "A booking fee may be added to the amount paid. Its amount is shown to you before payment."
         ]
       },
       {
         "titre": "3. Cancellation and refunds",
         "paragraphes": [
-          "The cancellation rules are the professional's. They are shown before payment and repeated in the box you tick.",
-          "The professional refunds you when their rules provide for it, or when they cancel. Glamia triggers this refund from their account as soon as it allows. If you cancel yourself, the booking fee is not refunded; if the professional cancels, it is."
+          "The cancellation terms are set by the professional. They are made known to you before payment and restated in the box you tick to accept them.",
+          "The refund is owed to you by the professional when her cancellation terms provide for it or when she cancels the appointment herself. Glamia triggers this refund on behalf of the professional, from her payment account. If you cancel, the booking fee is retained; if the professional cancels, it is refunded to you."
         ]
       },
       {
-        "titre": "4. A question or a problem",
+        "titre": "4. Complaints",
         "paragraphes": [
-          "For your appointment, a delay, a complaint about the service or a refund, contact the professional first: their details are on their page and in your emails.",
-          "For a problem with the booking page itself, write to us.",
+          "Any question about your appointment, a delay, the service or a refund should first be addressed to the professional, whose contact details appear on her booking page and in the emails you have received.",
+          "For any difficulty with the operation of the booking page, you may contact Glamia.",
           "{contact}"
         ]
       },
       {
-        "titre": "5. Your data",
+        "titre": "5. Personal data",
         "paragraphes": [
-          "Your details are shared with the professional to manage your appointment. To learn how they are processed, read our {confidentialite}."
+          "Your details are shared with the professional to manage your appointment. Their processing is described in the {confidentialite}."
         ]
       }
-    ]
+    ],
+    "pour": "These terms are intended for clients who book an appointment with a beauty professional on a Glamia booking page. Professionals who use Glamia are subject to Glamia's general terms of use."
+  },
+  "pageLegale": {
+    "retour": "Back to the Glamia website",
+    "slogan": "Glamia, the app for independent beauty professionals"
   }
 }

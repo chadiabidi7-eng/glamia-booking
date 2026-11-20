@@ -877,45 +877,50 @@
     "fourni": "Pagamento sicuro fornito da Mollie BV"
   },
   "conditionsClientes": {
-    "titre": "Condizioni per le clienti",
+    "titre": "Condizioni applicabili alle clienti",
     "maj": "Ultimo aggiornamento: 20 novembre 2026",
-    "contact": "Per qualsiasi domanda su Glamia:",
+    "contact": "Contatto Glamia:",
     "sections": [
       {
-        "titre": "1. Chi fa cosa",
+        "titre": "1. Oggetto e ruolo di ciascuno",
         "paragraphes": [
-          "Quando prenoti su una pagina Glamia, prendi appuntamento direttamente con una professionista della bellezza indipendente, il cui nome compare sulla pagina. È lei che vende la prestazione, ne fissa il prezzo e le condizioni, e la esegue.",
-          "Glamia fornisce lo strumento di prenotazione: la pagina, i promemoria e il pagamento online quando la professionista lo propone. Glamia non vende la prestazione."
+          "Le presenti condizioni si applicano a ogni prenotazione che Lei effettua su una pagina di prenotazione Glamia. La prenotazione è conclusa direttamente tra Lei e la professionista della bellezza indipendente il cui nome figura sulla pagina di prenotazione (la «professionista»). La professionista vende la prestazione, ne fissa il prezzo e le condizioni, e la esegue.",
+          "Glamia fornisce lo strumento di prenotazione online: la pagina di prenotazione, i promemoria e, quando la professionista lo propone, il pagamento online. Glamia non è parte del contratto di prestazione e non vende la prestazione."
         ]
       },
       {
-        "titre": "2. Il pagamento",
+        "titre": "2. Pagamento",
         "paragraphes": [
-          "Quando una professionista chiede un acconto o un pagamento online, paghi direttamente la professionista. Il pagamento è gestito da Mollie B.V. (Keizersgracht 126, 1015 CW Amsterdam, Paesi Bassi), istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank. Il denaro va sul conto della professionista: Glamia non detiene mai il tuo denaro.",
-          "Possono aggiungersi spese di prenotazione. Il loro importo è mostrato prima del pagamento."
+          "Quando la professionista richiede un acconto o un pagamento online, Lei paga direttamente la professionista. Il pagamento è gestito da Mollie B.V., Keizersgracht 126, 1015 CW Amsterdam, Paesi Bassi, istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank. I fondi sono versati sul conto della professionista: Glamia non detiene in alcun momento i Suoi fondi.",
+          "All'importo pagato possono aggiungersi spese di prenotazione. Il loro importo Le è indicato prima del pagamento."
         ]
       },
       {
         "titre": "3. Cancellazione e rimborso",
         "paragraphes": [
-          "Le regole di cancellazione sono quelle della professionista. Sono mostrate prima del pagamento e ricordate nella casella che spunti.",
-          "È la professionista che ti rimborsa, quando le sue regole lo prevedono o quando è lei ad annullare. Glamia avvia questo rimborso dal suo conto non appena possibile. Se annulli tu, le spese di prenotazione non sono rimborsate; se annulla la professionista, sì."
+          "Le condizioni di cancellazione sono stabilite dalla professionista. Sono portate a Sua conoscenza prima del pagamento e riprese nella casella che Lei spunta per accettarle.",
+          "Il rimborso Le è dovuto dalla professionista quando le sue condizioni di cancellazione lo prevedono o quando è lei stessa ad annullare l'appuntamento. Glamia esegue tale rimborso per conto della professionista, dal conto di pagamento di quest'ultima. Se Lei annulla, le spese di prenotazione restano acquisite; se annulla la professionista, Le sono rimborsate."
         ]
       },
       {
-        "titre": "4. Una domanda, un problema",
+        "titre": "4. Reclami",
         "paragraphes": [
-          "Per il tuo appuntamento, un ritardo, un reclamo sulla prestazione o un rimborso, rivolgiti prima alla professionista: i suoi recapiti sono sulla sua pagina e nelle tue e-mail.",
-          "Per un problema con la pagina di prenotazione stessa, scrivici.",
+          "Ogni domanda relativa al Suo appuntamento, a un ritardo, alla prestazione o a un rimborso deve essere rivolta in primo luogo alla professionista, i cui recapiti figurano sulla sua pagina di prenotazione e nelle e-mail che ha ricevuto.",
+          "Per qualsiasi difficoltà legata al funzionamento della pagina di prenotazione, può contattare Glamia.",
           "{contact}"
         ]
       },
       {
-        "titre": "5. I tuoi dati",
+        "titre": "5. Dati personali",
         "paragraphes": [
-          "I tuoi dati sono comunicati alla professionista per gestire il tuo appuntamento. Per sapere come vengono trattati, leggi la nostra {confidentialite}."
+          "I Suoi dati sono comunicati alla professionista per la gestione del Suo appuntamento. Il loro trattamento è descritto nella {confidentialite}."
         ]
       }
-    ]
+    ],
+    "pour": "Queste condizioni sono destinate alle clienti che prenotano un appuntamento con una professionista della bellezza su una pagina di prenotazione Glamia. Le professioniste che utilizzano Glamia sono soggette alle condizioni generali d'uso di Glamia."
+  },
+  "pageLegale": {
+    "retour": "Torna al sito Glamia",
+    "slogan": "Glamia, l'app delle professioniste della bellezza indipendenti"
   }
 }

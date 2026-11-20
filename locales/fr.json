@@ -877,45 +877,50 @@
     "fourni": "Paiement sécurisé fourni par Mollie BV"
   },
   "conditionsClientes": {
-    "titre": "Conditions pour les clientes",
+    "titre": "Conditions applicables aux clientes",
     "maj": "Dernière mise à jour : 20 novembre 2026",
-    "contact": "Pour toute question sur Glamia :",
+    "contact": "Contact Glamia :",
     "sections": [
       {
-        "titre": "1. Qui fait quoi",
+        "titre": "1. Objet et rôle de chacun",
         "paragraphes": [
-          "Quand tu réserves sur une page Glamia, tu prends rendez-vous directement avec une professionnelle de la beauté indépendante, dont le nom figure sur la page. C'est elle qui vend la prestation, en fixe le prix et les conditions, et la réalise.",
-          "Glamia fournit l'outil de réservation : la page, les rappels, et le paiement en ligne quand la professionnelle le propose. Glamia ne vend pas la prestation."
+          "Les présentes conditions s'appliquent à toute réservation que vous effectuez sur une page de réservation Glamia. La réservation est conclue directement entre vous et la professionnelle de la beauté indépendante dont le nom figure sur la page de réservation (la « professionnelle »). La professionnelle vend la prestation, en fixe le prix et les conditions, et l'exécute.",
+          "Glamia fournit l'outil de réservation en ligne : la page de réservation, les rappels et, lorsque la professionnelle le propose, le paiement en ligne. Glamia n'est pas partie au contrat de prestation et ne vend pas la prestation."
         ]
       },
       {
-        "titre": "2. Le paiement",
+        "titre": "2. Paiement",
         "paragraphes": [
-          "Quand une professionnelle demande un acompte ou un paiement en ligne, tu paies directement la professionnelle. Le paiement est traité par Mollie B.V. (Keizersgracht 126, 1015 CW Amsterdam, Pays-Bas), établissement de paiement agréé et supervisé par De Nederlandsche Bank. L'argent va sur le compte de la professionnelle : Glamia ne détient jamais ton argent.",
-          "Des frais de réservation peuvent s'ajouter. Leur montant est affiché avant que tu paies."
+          "Lorsque la professionnelle demande un acompte ou un paiement en ligne, vous réglez directement la professionnelle. Le paiement est traité par Mollie B.V., Keizersgracht 126, 1015 CW Amsterdam, Pays-Bas, établissement de paiement agréé et supervisé par De Nederlandsche Bank. Les fonds sont versés sur le compte de la professionnelle : Glamia ne détient à aucun moment vos fonds.",
+          "Des frais de réservation peuvent s'ajouter au montant réglé. Leur montant vous est indiqué avant le paiement."
         ]
       },
       {
         "titre": "3. Annulation et remboursement",
         "paragraphes": [
-          "Les règles d'annulation sont celles de la professionnelle. Elles sont affichées avant le paiement et rappelées dans la case que tu coches.",
-          "C'est la professionnelle qui te rembourse, quand ses règles le prévoient ou quand c'est elle qui annule. Glamia lance ce remboursement depuis son compte, dès que celui-ci le permet. Si tu annules toi-même, les frais de réservation ne sont pas remboursés ; si c'est la professionnelle qui annule, ils le sont."
+          "Les conditions d'annulation sont fixées par la professionnelle. Elles sont portées à votre connaissance avant le paiement et reprises dans la case que vous cochez pour les accepter.",
+          "Le remboursement vous est dû par la professionnelle lorsque ses conditions d'annulation le prévoient ou lorsqu'elle annule elle-même le rendez-vous. Glamia déclenche ce remboursement pour le compte de la professionnelle, depuis le compte de paiement de celle-ci. Si vous annulez, les frais de réservation restent acquis ; si la professionnelle annule, ils vous sont remboursés."
         ]
       },
       {
-        "titre": "4. Une question, un problème",
+        "titre": "4. Réclamations",
         "paragraphes": [
-          "Pour ton rendez-vous, un retard, une réclamation sur la prestation ou un remboursement, adresse-toi d'abord à la professionnelle : ses coordonnées figurent sur sa page et dans tes mails.",
-          "Pour un problème avec la page de réservation elle-même, écris-nous.",
+          "Toute question relative à votre rendez-vous, à un retard, à la prestation ou à un remboursement doit être adressée en priorité à la professionnelle, dont les coordonnées figurent sur sa page de réservation et dans les e-mails que vous avez reçus.",
+          "Pour toute difficulté liée au fonctionnement de la page de réservation, vous pouvez contacter Glamia.",
           "{contact}"
         ]
       },
       {
-        "titre": "5. Tes données",
+        "titre": "5. Données personnelles",
         "paragraphes": [
-          "Tes coordonnées sont transmises à la professionnelle pour gérer ton rendez-vous. Pour savoir comment elles sont traitées, lis notre {confidentialite}."
+          "Vos coordonnées sont transmises à la professionnelle pour la gestion de votre rendez-vous. Leur traitement est décrit dans la {confidentialite}."
         ]
       }
-    ]
+    ],
+    "pour": "Ces conditions s'adressent aux clientes qui réservent un rendez-vous auprès d'une professionnelle de la beauté sur une page de réservation Glamia. Les professionnelles qui utilisent Glamia sont soumises aux conditions générales d'utilisation de Glamia."
+  },
+  "pageLegale": {
+    "retour": "Retour au site Glamia",
+    "slogan": "Glamia, l'app des indépendantes beauté"
   }
 }
