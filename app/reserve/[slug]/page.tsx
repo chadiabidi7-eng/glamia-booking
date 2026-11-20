@@ -5853,7 +5853,7 @@ export default function ReservationPage() {
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
                   <Lock size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
                   {/* QUI VEND, QUI REMBOURSE (Chadi, 20 nov. 2026) : la cliente paie la pro, pas Glamia. */}
-                  <span>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
+                  <span style={{ textAlign: 'justify', hyphens: 'auto' }}>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
                 </p>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
                   {traduire('resa.fraisCarteEtrangere')}
@@ -5877,7 +5877,7 @@ export default function ReservationPage() {
                     onChange={e => setPropayConsent(e.target.checked)}
                     style={{ marginTop: 1, width: 22, height: 22, flexShrink: 0, accentColor: PINK }}
                   />
-                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45, textAlign: 'justify', hyphens: 'auto' }}>
                     {/* LE DÉLAI EST CELUI DE LA PRO, PAS UN 24 ÉCRIT EN DUR.
                         Il l'était ici, et nulle part ailleurs : l'encadré du
                         dessus annonçait 48 h, et la case à cocher — celle qui
