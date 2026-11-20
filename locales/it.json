@@ -288,7 +288,17 @@
     "consentMollie": "Accetto di pagare %{somme} ora: %{acompte} di acconto e %{frais} di spese di prenotazione. Se annullo più di %{delai} h prima, l'acconto mi viene rimborsato; le spese di prenotazione non sono rimborsabili. Se non mi presento o annullo meno di %{delai} h prima, l'acconto resta alla professionista.",
     "payerAcompte": "Paga %{somme}",
     "emailPourPaiement": "La tua e-mail, per ricevere la conferma del pagamento",
-    "identitePaiement": "Per pagare l'acconto servono nome, cognome e un'e-mail valida."
+    "identitePaiement": "Per pagare l'acconto servono nome, cognome e un'e-mail valida.",
+    "horizonMessage": "%{pro} accetta appuntamenti fino a %{duree} in anticipo, non oltre: date aperte fino al %{date}.",
+    "horizonDuree": {
+      "14": "2 settimane",
+      "30": "1 mese",
+      "60": "2 mesi",
+      "90": "3 mesi",
+      "180": "6 mesi",
+      "365": "1 anno"
+    },
+    "horizonPro": "la tua professionista"
   },
   "commun": {
     "chargement": "Caricamento...",

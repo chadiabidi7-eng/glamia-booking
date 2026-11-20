@@ -288,7 +288,17 @@
     "consentMollie": "I agree to pay %{somme} now: a %{acompte} deposit and a %{frais} booking fee. If I cancel more than %{delai} h before, my deposit is refunded; the booking fee is non-refundable. If I don't show up or cancel less than %{delai} h before, the professional keeps the deposit.",
     "payerAcompte": "Pay %{somme}",
     "emailPourPaiement": "Your email, to receive the payment confirmation",
-    "identitePaiement": "To pay the deposit, we need your first name, last name and a valid email."
+    "identitePaiement": "To pay the deposit, we need your first name, last name and a valid email.",
+    "horizonMessage": "%{pro} takes appointments up to %{duree} in advance, no more: dates open until %{date}.",
+    "horizonDuree": {
+      "14": "2 weeks",
+      "30": "1 month",
+      "60": "2 months",
+      "90": "3 months",
+      "180": "6 months",
+      "365": "1 year"
+    },
+    "horizonPro": "your practitioner"
   },
   "commun": {
     "chargement": "Loading...",

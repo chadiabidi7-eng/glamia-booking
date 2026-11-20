@@ -288,7 +288,17 @@
     "consentMollie": "J'accepte de régler %{somme} maintenant : %{acompte} d'acompte et %{frais} de frais de réservation. Si j'annule plus de %{delai} h avant, mon acompte m'est remboursé ; les frais de réservation restent acquis. Si je ne viens pas ou si j'annule moins de %{delai} h avant, l'acompte est conservé par la praticienne.",
     "payerAcompte": "Payer %{somme}",
     "emailPourPaiement": "Ton e-mail, pour recevoir la confirmation du paiement",
-    "identitePaiement": "Pour payer l'acompte, il faut ton prénom, ton nom et un e-mail valable."
+    "identitePaiement": "Pour payer l'acompte, il faut ton prénom, ton nom et un e-mail valable.",
+    "horizonMessage": "%{pro} prend ses rendez-vous jusqu'à %{duree} à l'avance, pas plus : dates ouvertes jusqu'au %{date}.",
+    "horizonDuree": {
+      "14": "2 semaines",
+      "30": "1 mois",
+      "60": "2 mois",
+      "90": "3 mois",
+      "180": "6 mois",
+      "365": "1 an"
+    },
+    "horizonPro": "ta praticienne"
   },
   "commun": {
     "chargement": "Chargement...",

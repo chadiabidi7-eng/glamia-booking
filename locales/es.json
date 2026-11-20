@@ -288,7 +288,17 @@
     "consentMollie": "Acepto pagar %{somme} ahora: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, se me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, la profesional se queda con la señal.",
     "payerAcompte": "Pagar %{somme}",
     "emailPourPaiement": "Tu correo, para recibir la confirmación del pago",
-    "identitePaiement": "Para pagar la señal, necesitamos tu nombre, apellido y un correo válido."
+    "identitePaiement": "Para pagar la señal, necesitamos tu nombre, apellido y un correo válido.",
+    "horizonMessage": "%{pro} acepta citas con hasta %{duree} de antelación, no más: fechas abiertas hasta el %{date}.",
+    "horizonDuree": {
+      "14": "2 semanas",
+      "30": "1 mes",
+      "60": "2 meses",
+      "90": "3 meses",
+      "180": "6 meses",
+      "365": "1 año"
+    },
+    "horizonPro": "tu profesional"
   },
   "commun": {
     "chargement": "Cargando...",

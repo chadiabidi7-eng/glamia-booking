@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { Calendar, Camera, Clock, Sparkles, CreditCard, ImagePlus, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react'
 import { formatPrix } from '@/lib/devise'
 import { isDayWorking, isDayBlocked, dernierJourReservable, horizonDe, type CreneauBloque, type HorairesSpecifiques } from '@/lib/creneaux'
+import BandeauHorizon, { moisAtteintLimite } from '@/components/reserve/BandeauHorizon'
 import { langueActuelle, poserLangue, poserLangueSansPro, traduire } from '@/lib/i18n'
 import { poserPays } from '@/lib/heures-dates'
 
@@ -684,6 +685,14 @@ import { traduire } from '@/lib/i18n';
                   >›</button>
                 </div>
 
+                {/* La limite de la pro dite en clair, quand ce mois l'atteint (20 nov. 2026). */}
+                {(() => {
+                  const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
+                  return moisAtteintLimite(calYear, calMonth, dernier)
+                    ? <BandeauHorizon pro={proDisplayName} horizon={horizonDe(rdv.resa_horizon_jours)} dernier={dernier} />
+                    : null
+                })()}
+
                 {/* Jours de la semaine */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
                   {joursCourts().map(j => (
@@ -706,7 +715,9 @@ import { traduire } from '@/lib/i18n';
                       || isDayBlocked(dateStr, rdv.creneaux_bloques ?? []))
                     // Au-delà de la limite de la pro (31 oct. 2026) : grisé comme un jour fermé.
                     const dernier = dernierJourReservable(horizonDe(rdv.resa_horizon_jours), buildDateStr(today0.getFullYear(), today0.getMonth(), today0.getDate()))
-                    const horsLimite = !!dernier && dateStr > dernier
+                    // Après la limite : non dessiné (20 nov. 2026), le bandeau au-dessus dit pourquoi.
+                    if (dernier && dateStr > dernier) return <div key={day} aria-hidden />
+                    const horsLimite = false
                     const isDisabled = isPast || isOff || horsLimite
                     const isSelected = decDate === dateStr
                     return (
