@@ -906,7 +906,8 @@
         "titre": "4. Una domanda, un problema",
         "paragraphes": [
           "Per il tuo appuntamento, un ritardo, un reclamo sulla prestazione o un rimborso, rivolgiti prima alla professionista: i suoi recapiti sono sulla sua pagina e nelle tue e-mail.",
-          "Per un problema con la pagina di prenotazione stessa, scrivici a {contact}."
+          "Per un problema con la pagina di prenotazione stessa, scrivici.",
+          "{contact}"
         ]
       },
       {

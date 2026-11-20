@@ -906,7 +906,8 @@
         "titre": "4. Une question, un problème",
         "paragraphes": [
           "Pour ton rendez-vous, un retard, une réclamation sur la prestation ou un remboursement, adresse-toi d'abord à la professionnelle : ses coordonnées figurent sur sa page et dans tes mails.",
-          "Pour un problème avec la page de réservation elle-même, écris-nous à {contact}."
+          "Pour un problème avec la page de réservation elle-même, écris-nous.",
+          "{contact}"
         ]
       },
       {

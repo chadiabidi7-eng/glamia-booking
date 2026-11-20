@@ -912,7 +912,8 @@
         "titre": "4. A question or a problem",
         "paragraphes": [
           "For your appointment, a delay, a complaint about the service or a refund, contact the professional first: their details are on their page and in your emails.",
-          "For a problem with the booking page itself, write to us at {contact}."
+          "For a problem with the booking page itself, write to us.",
+          "{contact}"
         ]
       },
       {

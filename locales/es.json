@@ -909,7 +909,8 @@
         "titre": "4. Una pregunta, un problema",
         "paragraphes": [
           "Para tu cita, un retraso, una reclamación sobre la prestación o un reembolso, dirígete primero a la profesional: sus datos aparecen en su página y en tus correos.",
-          "Para un problema con la propia página de reserva, escríbenos a {contact}."
+          "Para un problema con la propia página de reserva, escríbenos.",
+          "{contact}"
         ]
       },
       {
