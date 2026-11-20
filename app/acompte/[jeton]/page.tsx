@@ -149,8 +149,8 @@ export default function PageLienAcompte() {
         {erreur && <p style={S.erreur}>{erreur}</p>}
         <p style={S.aide}>{traduire('lienAcompte.valable', { date: date(lien.expire_le, false) })}</p>
         {/* Qui vend, qui rembourse (20 nov. 2026), et les conditions des clientes. */}
-        <p style={{ ...S.aide, textAlign: 'justify', hyphens: 'auto' }}>{traduire('resa.paiementProMollie', { pro: lien.pro })}</p>
-        <p style={S.mollie}>{traduire('lienAcompte.fourni')} · <a href={`/conditions-clientes${lien.langue !== 'fr' ? `?lang=${lien.langue}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#A0949A' }}>{traduire('resa.conditionsClientes')}</a></p>
+        <p style={{ ...S.aide, textAlign: 'justify', hyphens: 'none' }}>{traduire('resa.paiementProMollie', { pro: lien.pro })}</p>
+        <p style={S.mollie}>{traduire('lienAcompte.fourni')} · <a href={`/conditions-clientes${lien.langue !== 'fr' ? `?lang=${lien.langue}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: accentTexte, fontWeight: 700 }}>{traduire('resa.conditionsClientes')}</a></p>
       </section>
     </main>
   )
@@ -171,7 +171,7 @@ const S: Record<string, React.CSSProperties> = {
   montants: { borderTop: '1px solid #EFE8E4', paddingTop: 10, marginBottom: 16 },
   ligne: { display: 'flex', justifyContent: 'space-between', margin: '6px 0', fontSize: 15, color: '#4A4448', fontVariantNumeric: 'tabular-nums' },
   total: { color: '#1C1C1E', fontWeight: 750, fontSize: 16.5, borderTop: '1px solid #EFE8E4', paddingTop: 10, marginTop: 10 },
-  case: { display: 'flex', gap: 11, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, color: '#4A4448', cursor: 'pointer', marginBottom: 16, textAlign: 'justify', hyphens: 'auto' },
+  case: { display: 'flex', gap: 11, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.5, color: '#4A4448', cursor: 'pointer', marginBottom: 16, textAlign: 'justify', hyphens: 'none' },
   bouton: { width: '100%', minHeight: 52, border: 'none', borderRadius: 999, color: '#fff', fontSize: 16, fontWeight: 750, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginTop: 4 },
   aide: { margin: '10px 0 0', fontSize: 12.5, color: '#8A7F85', textAlign: 'center' },
   erreur: { margin: '10px 0 0', fontSize: 13.5, color: '#B3261E', textAlign: 'center' },

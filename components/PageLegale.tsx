@@ -55,9 +55,9 @@ export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidential
   const contact = t('contact');
 
   return (
-    // Textes à lire attentivement : justifiés, avec césure dans la langue de la page (Chadi, 20 nov. 2026).
+    // Textes à lire attentivement : justifiés, sans jamais couper un mot (Chadi, 20 nov. 2026).
     <div lang={locale} style={{
-      textAlign: 'justify', hyphens: 'auto',
+      textAlign: 'justify', hyphens: 'none',
       maxWidth: 640, margin: '0 auto', padding: '40px 20px',
       fontFamily: 'system-ui, sans-serif', color: '#1f2937',
     }}>

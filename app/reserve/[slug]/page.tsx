@@ -5035,7 +5035,7 @@ export default function ReservationPage() {
                                         sinon. Le chevron ouvre le texte sans choisir le soin ; toucher
                                         ailleurs sur la carte le choisit. */}
                                     {descTech !== '' && descOuverte === t.id && (
-                                      <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap', textAlign: 'justify', hyphens: 'auto' }}>{descTech}</p>
+                                      <p style={{ margin: '6px 0 0', fontSize: 12.5, color: '#6b7280', lineHeight: 1.45, whiteSpace: 'pre-wrap', textAlign: 'justify', hyphens: 'none' }}>{descTech}</p>
                                     )}
                                   </div>
                                   {descTech !== '' && (
@@ -5833,7 +5833,8 @@ export default function ReservationPage() {
                   padding: '10px 12px', margin: '0 0 12px',
                 }}>
                   <AlertCircle size={16} color={PINK_TEXTE} style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45 }}>
+                  {/* Textes à lire : justifiés, sans jamais couper un mot (Chadi, 20 nov. 2026). */}
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>
                     {propay.mode === 'empreinte'
                       ? <><strong style={{ color: '#1f2937' }}>{traduire('resa.condEmpreinteTitre', { delai: propay.delai_annulation ?? 24 })}</strong>{traduire('resa.condEmpreinteSuite', {
                           total: fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0), symPropay),
@@ -5853,15 +5854,15 @@ export default function ReservationPage() {
                 <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#6b7280', margin: '0 0 6px', lineHeight: 1.45 }}>
                   <Lock size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
                   {/* QUI VEND, QUI REMBOURSE (Chadi, 20 nov. 2026) : la cliente paie la pro, pas Glamia. */}
-                  <span style={{ textAlign: 'justify', hyphens: 'auto' }}>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
+                  <span style={{ textAlign: 'justify', hyphens: 'none' }}>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
                 </p>
-                <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4 }}>
+                <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4, textAlign: 'justify', hyphens: 'none' }}>
                   {traduire('resa.fraisCarteEtrangere')}
                   {/* Les conditions écrites POUR LES CLIENTES (20 nov. 2026), plus celles des pros. */}
-                  <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
+                  <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
                 </p>
                 {propay.mollie && (
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45 }}>{traduire('resa.redirigeeMollie')}</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>{traduire('resa.redirigeeMollie')}</p>
                 )}
                 {/* L'e-mail manque sur sa fiche : on le demande ici, il accompagne le paiement et sert au reçu. */}
                 {propay.mollie && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim()) && (
@@ -5877,7 +5878,7 @@ export default function ReservationPage() {
                     onChange={e => setPropayConsent(e.target.checked)}
                     style={{ marginTop: 1, width: 22, height: 22, flexShrink: 0, accentColor: PINK }}
                   />
-                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45, textAlign: 'justify', hyphens: 'auto' }}>
+                  <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>
                     {/* LE DÉLAI EST CELUI DE LA PRO, PAS UN 24 ÉCRIT EN DUR.
                         Il l'était ici, et nulle part ailleurs : l'encadré du
                         dessus annonçait 48 h, et la case à cocher — celle qui
