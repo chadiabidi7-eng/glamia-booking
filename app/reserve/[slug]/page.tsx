@@ -5948,13 +5948,18 @@ export default function ReservationPage() {
 
                 Le bouton dit qu'il attend au lieu de faire semblant d'être
                 prêt : le même « un instant » que le cadre juste au-dessus. */}
+            {/* PAS DE PAIEMENT SANS LA CASE COCHÉE (Chadi, 20 nov. 2026) : le bouton reste
+                grisé et inactif tant que la cliente n'a pas accepté (avant, il paraissait prêt
+                et un appui ouvrait une alerte). Le contrôle dans handleConfirm reste en filet. */}
             <button
               onClick={handleConfirm}
-              disabled={submitting || (acompteActif && propay === null)}
+              disabled={submitting || (acompteActif && propay === null) || (!!propay?.actif && !propayConsent)}
+              aria-disabled={submitting || (acompteActif && propay === null) || (!!propay?.actif && !propayConsent)}
               style={{
                 ...S.btn,
-                opacity: submitting || (acompteActif && propay === null) ? 0.7 : 1,
-                boxShadow: `0 4px 20px ${PINK}55`,
+                opacity: submitting || (acompteActif && propay === null) ? 0.7 : propay?.actif && !propayConsent ? 0.45 : 1,
+                cursor: propay?.actif && !propayConsent ? 'default' : 'pointer',
+                boxShadow: propay?.actif && !propayConsent ? 'none' : `0 4px 20px ${PINK}55`,
               }}
             >
               {submitting
@@ -5965,6 +5970,9 @@ export default function ReservationPage() {
                     ? traduire('resa.payerAcompte', { somme: fmtCentimes(propay.total_cliente ?? 0, symPropay) })
                     : traduire('resa.confirmerReservation')}
             </button>
+            {propay?.actif && !propayConsent && !submitting && (
+              <p style={{ fontSize: 12.5, color: '#6b7280', textAlign: 'center', margin: '8px 0 0' }}>{traduire('lienAcompte.case')}</p>
+            )}
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>
               {traduire('resa.consentementDonnees')}{' '}
