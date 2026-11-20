@@ -5859,7 +5859,7 @@ export default function ReservationPage() {
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4, textAlign: 'justify', hyphens: 'none' }}>
                   {traduire('resa.fraisCarteEtrangere')}
                   {/* Les conditions écrites POUR LES CLIENTES (20 nov. 2026), plus celles des pros. */}
-                  <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
+                  <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
                 </p>
                 {propay.mollie && (
                   <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>{traduire('resa.redirigeeMollie')}</p>
