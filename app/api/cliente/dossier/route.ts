@@ -155,7 +155,22 @@ export async function POST(req: NextRequest) {
     const delaiAnnulation =
       (reglages?.acompte_config as { delai_annulation?: number } | null)?.delai_annulation === 48 ? 48 : 24
 
-    const parRdv = new Map((paiements ?? []).map(p => [p.rdv_id as string, p]))
+    // LES ACOMPTES MOLLIE (3.3.0, 21 nov. 2026) : sans eux, une cliente qui avait payé son acompte
+    // avec Mollie annulait sans aucun avertissement. Et chacun porte SA règle d'annulation, celle
+    // acceptée à la réservation (« annulation-24h-v1 ») : la pro a pu changer la sienne depuis.
+    const { data: mollies } = idsRdv.length
+      ? await supabaseAdmin.from('mollie_paiements')
+          .select('rdv_id, montant, montant_rembourse, statut, politique_version')
+          .in('rdv_id', idsRdv).in('statut', ['paye', 'rembourse_partiel']).limit(200)
+      : { data: [] as { rdv_id: string; montant: number; montant_rembourse: number | null; statut: string; politique_version: string | null }[] }
+    const parRdv = new Map<string, { montant: number; type: string; statut: string; delai?: number }>(
+      (paiements ?? []).map(p => [p.rdv_id as string, p as { montant: number; type: string; statut: string }]))
+    for (const m of (mollies ?? []) as { rdv_id: string; montant: number; montant_rembourse: number | null; politique_version: string | null }[]) {
+      const reste = Math.max(0, m.montant - (m.montant_rembourse ?? 0))
+      if (reste <= 0) continue
+      const h = Number(/annulation-(\d+)h/.exec(m.politique_version ?? '')?.[1])
+      parRdv.set(m.rdv_id, { montant: reste, type: 'acompte', statut: 'acompte_paye', delai: Number.isFinite(h) && h > 0 ? h : undefined })
+    }
     const rdvsAvecPaiement = (rdvs ?? []).map(r => {
       const p = parRdv.get(r.id as string)
       return {
@@ -170,6 +185,8 @@ export async function POST(req: NextRequest) {
               // « empreinte » = rien n'a été débité, la carte est seulement
               // gardée ; « acompte » ou « total » = l'argent est déjà parti.
               nature: p.statut === 'empreinte_posee' ? 'empreinte' : (p.type as string),
+              // La règle acceptée à la réservation, si on la connaît (acomptes Mollie).
+              delai_annulation: p.delai,
             }
           : null,
       }

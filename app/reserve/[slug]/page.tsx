@@ -2266,22 +2266,24 @@ export default function ReservationPage() {
     // — mais cet écran l'avertissait quand même qu'elle perdrait son argent.
     // Elle renonçait donc à annuler, ou annulait la peur au ventre, pour un
     // avertissement que les faits démentaient.
+    // La règle acceptée à la réservation de CE rendez-vous, sinon celle du jour (21 nov. 2026).
+    const delaiRdv = (rdv.paiement as { delai_annulation?: number } | null | undefined)?.delai_annulation ?? delaiAnnulation
     const deplacePro = rdv.date_change_pro_le
-      ? (Date.now() - new Date(rdv.date_change_pro_le).getTime()) / 3_600_000 < delaiAnnulation
+      ? (Date.now() - new Date(rdv.date_change_pro_le).getTime()) / 3_600_000 < delaiRdv
       : false
-    const tardive = !deplacePro && heuresAvant < delaiAnnulation
+    const tardive = !deplacePro && heuresAvant < delaiRdv
 
     let avertissement = ''
     if (rdv.paiement) {
       const somme = fmtCentimes(rdv.paiement.montant, symPropay)
       if (rdv.paiement.nature === 'empreinte') {
         avertissement = tardive
-          ? `\n\n${traduire('resa.annulTardEmpreinte', { delai: delaiAnnulation, somme })}`
-          : `\n\n${traduire('resa.annulTotEmpreinte', { delai: delaiAnnulation })}`
+          ? `\n\n${traduire('resa.annulTardEmpreinte', { delai: delaiRdv, somme })}`
+          : `\n\n${traduire('resa.annulTotEmpreinte', { delai: delaiRdv })}`
       } else {
         avertissement = tardive
-          ? `\n\n${traduire('resa.annulTardAcompte', { delai: delaiAnnulation, somme })}`
-          : `\n\n${traduire('resa.annulTotAcompte', { delai: delaiAnnulation, somme })}`
+          ? `\n\n${traduire('resa.annulTardAcompte', { delai: delaiRdv, somme })}`
+          : `\n\n${traduire('resa.annulTotAcompte', { delai: delaiRdv, somme })}`
       }
     }
 
