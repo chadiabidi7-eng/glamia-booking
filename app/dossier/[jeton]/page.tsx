@@ -89,7 +89,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
         <Lignes l={[
           [t.prestation, prestation],
           [t.date, heureRdv(r.date)],
-          [t.prix, typeof r.prix === 'number' ? euros(Math.round((r.prix as number) * 100), devise) : null],
+          // Pas de « prix » : celui de la fiche ignore les remises (fidélité, offre). Seul compte ce qui a été payé, plus haut.
           [t.reserveLe, instant(r.created_at)],
           [t.rappel, instant(r.rappel_envoye_at)],
           [t.confirmeLe, instant(r.rappel_confirme_at)],
