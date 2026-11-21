@@ -9,7 +9,8 @@
 // paiement n'a pas abouti, ou le créneau est parti (remboursée en entier).
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useState } from 'react'
-import { AlertCircle, Calendar, CheckCircle, Clock, CreditCard, Loader } from 'lucide-react'
+import { AlertCircle, Calendar, CheckCircle, Clock, CreditCard } from 'lucide-react'
+import FleurPaiement, { APRES_COCHE } from './FleurPaiement'
 import { traduire } from '@/lib/i18n'
 
 type Recap = { type?: string; date: string | null; heure: string | null; prestations: string | null; acompte: number; frais: number; total: number; devise: string }
@@ -65,7 +66,8 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
 
   if (etat.etat === 'confirme' && r) {
     return cadre(<>
-      {pastille(<CheckCircle size={40} color={couleurs.accent} />)}
+      <FleurPaiement etat="valide" couleur={couleurs.accent} />
+      <div className="gp-apparait" style={{ animationDelay: `${APRES_COCHE}ms` }}>
       {titre(traduire(r.type === 'jour' ? 'retourMollie.payeTitre' : 'resa.rdvEnregistre'))}
       <div style={{ background: couleurs.roseClair, borderRadius: 16, padding: 16, textAlign: 'left', margin: '16px 0' }}>
         {[
@@ -87,14 +89,17 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
       </div>
       {r.frais > 0 && <p style={{ fontSize: 12, color: '#9ca3af', margin: '6px 0 0', textAlign: 'left' }}>{traduire('resa.dontFrais', { somme: euros(r.frais) })}</p>}
       <p style={{ fontSize: 12.5, color: '#6b7280', margin: '14px 0 0', lineHeight: 1.5, textAlign: 'left' }}>{traduire(r.type === 'jour' ? 'retourMollie.merciPaiement' : 'retourMollie.acompteDeduit')}</p>
+      </div>
     </>)
   }
   if (etat.etat === 'echec') {
     return cadre(<>
-      {pastille(<AlertCircle size={40} color={couleurs.accent} />)}
+      <FleurPaiement etat="echec" couleur={couleurs.accent} />
+      <div className="gp-apparait" style={{ animationDelay: '250ms' }}>
       {titre(traduire('retourMollie.echecTitre'))}
       {texte(traduire('retourMollie.echecTexte'))}
       {bouton(traduire('retourMollie.recommencer'))}
+      </div>
     </>)
   }
   if (etat.etat === 'refuse') {
@@ -113,8 +118,7 @@ export default function RetourMollie({ paiement, slug, couleurs, formatDate }: {
     </>)
   }
   return cadre(<>
-    {pastille(<Loader size={36} color={couleurs.accent} style={{ animation: 'glamia-tourne 1s linear infinite' }} />)}
-    <style>{'@keyframes glamia-tourne { to { transform: rotate(360deg) } } @media (prefers-reduced-motion: reduce) { * { animation: none !important } }'}</style>
+    <FleurPaiement etat="attente" couleur={couleurs.accent} />
     {titre(traduire('retourMollie.verification'))}
     {texte(traduire('retourMollie.verificationTexte'))}
   </>)
