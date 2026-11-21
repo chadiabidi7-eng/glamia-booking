@@ -302,7 +302,8 @@
     "paiementProMollie": "Paid directly to %{pro}, who refunds you according to their cancellation rules, secured by Mollie (card, Apple Pay, Google Pay). Glamia never holds your money.",
     "conditionsClientes": "terms for clients",
     "condMollieTitre": "Free cancellation up to %{delai} h before",
-    "condMollieTexte": ": your %{somme} deposit is returned (the booking fee is not). After that, or if you don't show up, it is kept."
+    "condMollieTexte": ": your %{somme} deposit is returned (the booking fee is not). After that, or if you don't show up, it is kept.",
+    "emailPourContinuer": "Enter your email to continue"
   },
   "commun": {
     "chargement": "Loading...",

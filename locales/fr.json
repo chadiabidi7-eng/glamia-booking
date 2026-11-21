@@ -302,7 +302,8 @@
     "paiementProMollie": "Paiement versé directement à %{pro}, qui te rembourse selon ses règles d'annulation, sécurisé par Mollie (carte, Apple Pay, Google Pay). Glamia ne détient jamais ton argent.",
     "conditionsClientes": "conditions pour les clientes",
     "condMollieTitre": "Annulation gratuite jusqu'à %{delai} h avant",
-    "condMollieTexte": " : ton acompte de %{somme} t'est rendu (les frais de réservation ne le sont pas). Après, ou si tu ne viens pas, il est conservé."
+    "condMollieTexte": " : ton acompte de %{somme} t'est rendu (les frais de réservation ne le sont pas). Après, ou si tu ne viens pas, il est conservé.",
+    "emailPourContinuer": "Indique ton e-mail pour continuer"
   },
   "commun": {
     "chargement": "Chargement...",

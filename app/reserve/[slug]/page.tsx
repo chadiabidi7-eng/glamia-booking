@@ -1454,6 +1454,15 @@ export default function ReservationPage() {
   // sur la devise affichée du salon, puis sur l'euro.
   const symPropay = symboleDevise(propay?.devise?.toUpperCase() ?? pro?.devise ?? 'EUR')
   const [propayConsent, setPropayConsent] = useState(false)
+  // LE BOUTON « PAYER » N'EST ACTIF QUE SI TOUT EST LÀ (Chadi, 20-21 nov. 2026) : la case cochée et,
+  // pour un acompte Mollie, un e-mail valable (le serveur refuse un paiement sans e-mail).
+  const emailPaiementManquant = !!propay?.actif && !!propay.mollie && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim())
+  const payerBloque = !!propay?.actif && (!propayConsent || emailPaiementManquant)
+  // UNE FOIS DEMANDÉ, LE CHAMP E-MAIL RESTE (21 nov. 2026) : il disparaissait dès que l'adresse
+  // « ressemblait » à une adresse (« …@example.c »), et la suite de la frappe partait dans le vide —
+  // la cliente aurait reçu sa confirmation à une mauvaise adresse.
+  const [emailDemande, setEmailDemande] = useState(false)
+  useEffect(() => { if (emailPaiementManquant) setEmailDemande(true) }, [emailPaiementManquant])
   const [fraisExpliques, setFraisExpliques] = useState(false)
   // La pro demande-t-elle un acompte ? Sert à n'afficher l'avertissement
   // d'annulation à moins de 24 h que si un paiement a pu être engagé.
@@ -5872,7 +5881,7 @@ export default function ReservationPage() {
                   <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
                 </p>}
                 {/* L'e-mail manque sur sa fiche : on le demande ici, il accompagne le paiement et sert au reçu. */}
-                {propay.mollie && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim()) && (
+                {propay.mollie && (emailDemande || emailPaiementManquant) && (
                   <div style={{ margin: '8px 0 4px' }}>
                     <label style={{ ...S.label, fontSize: 12 }}>{traduire('resa.emailPourPaiement')}</label>
                     <input type="email" value={clienteEmail} onChange={e => setClienteEmail(e.target.value)} placeholder={traduire('resa.emailPlaceholder')} style={S.input} autoCapitalize="none" />
@@ -5965,13 +5974,13 @@ export default function ReservationPage() {
                 et un appui ouvrait une alerte). Le contrôle dans handleConfirm reste en filet. */}
             <button
               onClick={handleConfirm}
-              disabled={submitting || (acompteActif && propay === null) || (!!propay?.actif && !propayConsent)}
-              aria-disabled={submitting || (acompteActif && propay === null) || (!!propay?.actif && !propayConsent)}
+              disabled={submitting || (acompteActif && propay === null) || payerBloque}
+              aria-disabled={submitting || (acompteActif && propay === null) || payerBloque}
               style={{
                 ...S.btn,
-                opacity: submitting || (acompteActif && propay === null) ? 0.7 : propay?.actif && !propayConsent ? 0.45 : 1,
-                cursor: propay?.actif && !propayConsent ? 'default' : 'pointer',
-                boxShadow: propay?.actif && !propayConsent ? 'none' : `0 4px 20px ${PINK}55`,
+                opacity: submitting || (acompteActif && propay === null) ? 0.7 : payerBloque ? 0.45 : 1,
+                cursor: payerBloque ? 'default' : 'pointer',
+                boxShadow: payerBloque ? 'none' : `0 4px 20px ${PINK}55`,
               }}
             >
               {submitting
@@ -5982,8 +5991,8 @@ export default function ReservationPage() {
                     ? traduire('resa.payerAcompte', { somme: fmtCentimes(propay.total_cliente ?? 0, symPropay) })
                     : traduire('resa.confirmerReservation')}
             </button>
-            {propay?.actif && !propayConsent && !submitting && (
-              <p style={{ fontSize: 12.5, color: '#6b7280', textAlign: 'center', margin: '8px 0 0' }}>{traduire('lienAcompte.case')}</p>
+            {payerBloque && !submitting && (
+              <p style={{ fontSize: 12.5, color: '#6b7280', textAlign: 'center', margin: '8px 0 0' }}>{emailPaiementManquant ? traduire('resa.emailPourContinuer') : traduire('lienAcompte.case')}</p>
             )}
 
             <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', lineHeight: 1.6, marginTop: 16 }}>

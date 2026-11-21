@@ -302,7 +302,8 @@
     "paiementProMollie": "Pago abonado directamente a %{pro}, que te reembolsa según sus reglas de cancelación, protegido por Mollie (tarjeta, Apple Pay, Google Pay). Glamia nunca guarda tu dinero.",
     "conditionsClientes": "condiciones para clientas",
     "condMollieTitre": "Cancelación gratuita hasta %{delai} h antes",
-    "condMollieTexte": ": se te devuelve la señal de %{somme} (los gastos de reserva no). Después, o si no acudes, se conserva."
+    "condMollieTexte": ": se te devuelve la señal de %{somme} (los gastos de reserva no). Después, o si no acudes, se conserva.",
+    "emailPourContinuer": "Indica tu correo para continuar"
   },
   "commun": {
     "chargement": "Cargando...",
