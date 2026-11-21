@@ -3210,6 +3210,7 @@ export default function ReservationPage() {
                 frais: fmtCentimes(propay.frais ?? 0, symPropay),
                 delai: propay.delai_annulation ?? 24,
                 pro: pro.pseudo || pro.prenom || '',
+                conditions: traduire('resa.conditionsClientes'),
               }),
               complet: copieComplete,
               photos: inspirations.slice(0, 3),
@@ -5835,7 +5836,9 @@ export default function ReservationPage() {
                   <AlertCircle size={16} color={PINK_TEXTE} style={{ flexShrink: 0, marginTop: 1 }} />
                   {/* Textes à lire : justifiés, sans jamais couper un mot (Chadi, 20 nov. 2026). */}
                   <span style={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>
-                    {propay.mode === 'empreinte'
+                    {propay.mollie
+                      ? <><strong style={{ color: '#1f2937' }}>{traduire('resa.condMollieTitre', { delai: propay.delai_annulation ?? 24 })}</strong>{traduire('resa.condMollieTexte', { somme: fmtCentimes(propay.acompte ?? 0, symPropay) })}</>
+                      : propay.mode === 'empreinte'
                       ? <><strong style={{ color: '#1f2937' }}>{traduire('resa.condEmpreinteTitre', { delai: propay.delai_annulation ?? 24 })}</strong>{traduire('resa.condEmpreinteSuite', {
                           total: fmtCentimes((propay.acompte ?? 0) + (propay.frais ?? 0), symPropay),
                           empreinte: fmtCentimes(propay.acompte ?? 0, symPropay),
@@ -5856,14 +5859,11 @@ export default function ReservationPage() {
                   {/* QUI VEND, QUI REMBOURSE (Chadi, 20 nov. 2026) : la cliente paie la pro, pas Glamia. */}
                   <span style={{ textAlign: 'justify', hyphens: 'none' }}>{propay.mollie ? traduire('resa.paiementProMollie', { pro: pro?.pseudo || pro?.prenom || '' }) : traduire('resa.paiementSecurise')}</span>
                 </p>
-                <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4, textAlign: 'justify', hyphens: 'none' }}>
+                {!propay.mollie && <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 10px', lineHeight: 1.4, textAlign: 'justify', hyphens: 'none' }}>
                   {traduire('resa.fraisCarteEtrangere')}
                   {/* Les conditions écrites POUR LES CLIENTES (20 nov. 2026), plus celles des pros. */}
                   <a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>.
-                </p>
-                {propay.mollie && (
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px', lineHeight: 1.45, textAlign: 'justify', hyphens: 'none' }}>{traduire('resa.redirigeeMollie')}</p>
-                )}
+                </p>}
                 {/* L'e-mail manque sur sa fiche : on le demande ici, il accompagne le paiement et sert au reçu. */}
                 {propay.mollie && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail.trim()) && (
                   <div style={{ margin: '8px 0 4px' }}>
@@ -5886,13 +5886,18 @@ export default function ReservationPage() {
                         cliente — en promettait 24. Deux règles contradictoires
                         sur le même écran, dont la plus engageante était fausse. */}
                     {propay.mollie
-                      ? traduire('resa.consentMollie', {
-                          somme: fmtCentimes(propay.total_cliente ?? 0, symPropay),
-                          acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
-                          frais: fmtCentimes(propay.frais ?? 0, symPropay),
-                          delai: propay.delai_annulation ?? 24,
-                          pro: pro?.pseudo || pro?.prenom || '',
-                        })
+                      ? (() => {
+                          // Même phrase que celle enregistrée comme preuve ; seul le nom des conditions devient un lien.
+                          const [avant, apres] = traduire('resa.consentMollie', {
+                            somme: fmtCentimes(propay.total_cliente ?? 0, symPropay),
+                            acompte: fmtCentimes(propay.acompte ?? 0, symPropay),
+                            frais: fmtCentimes(propay.frais ?? 0, symPropay),
+                            delai: propay.delai_annulation ?? 24,
+                            pro: pro?.pseudo || pro?.prenom || '',
+                            conditions: '\u0001',
+                          }).split('\u0001')
+                          return <>{avant}<a href={`/conditions-clientes${langueActuelle() !== 'fr' ? `?lang=${langueActuelle()}` : ''}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: GLAMIA_PINK_TEXTE, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>{apres}</>
+                        })()
                       : propay.mode === 'empreinte'
                       ? traduire('resa.consentEmpreinte', {
                           somme: fmtCentimes(propay.acompte ?? 0, symPropay),

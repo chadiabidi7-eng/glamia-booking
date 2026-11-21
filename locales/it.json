@@ -285,7 +285,7 @@
     "offreRetirerPack": "Scegli un altro servizio",
     "paiementSecuriseMollie": "Pagamento sicuro con Mollie: il denaro va direttamente alla tua professionista, Glamia non detiene mai i fondi.",
     "redirigeeMollie": "Pagherai sulla pagina sicura di Mollie (carta, Apple Pay, Google Pay), poi tornerai qui.",
-    "consentMollie": "Accetto di pagare ora %{somme} a %{pro}: %{acompte} di acconto e %{frais} di spese di prenotazione. Se annullo più di %{delai} h prima, %{pro} mi rimborsa l'acconto; le spese di prenotazione non sono rimborsabili. Se non mi presento o annullo meno di %{delai} h prima, l'acconto resta a %{pro}.",
+    "consentMollie": "Accetto di pagare %{somme} a %{pro} (%{acompte} di acconto + %{frais} di spese di prenotazione) e le %{conditions}. Cancellazione più di %{delai} h prima: acconto rimborsato, spese trattenute. Cancellazione meno di %{delai} h prima o assenza: acconto trattenuto.",
     "payerAcompte": "Paga %{somme}",
     "emailPourPaiement": "La tua e-mail, per ricevere la conferma del pagamento",
     "identitePaiement": "Per pagare l'acconto servono nome, cognome e un'e-mail valida.",
@@ -299,8 +299,10 @@
       "365": "1 anno"
     },
     "horizonPro": "la tua professionista",
-    "paiementProMollie": "Paghi direttamente %{pro}, tramite Mollie: è %{pro} che vende la prestazione e che ti rimborsa secondo la sua politica di cancellazione. Glamia gestisce la prenotazione e non detiene mai il tuo denaro.",
-    "conditionsClientes": "condizioni per le clienti"
+    "paiementProMollie": "Pagamento versato direttamente a %{pro}, che ti rimborsa secondo le sue regole di cancellazione, protetto da Mollie (carta, Apple Pay, Google Pay). Glamia non detiene mai il tuo denaro.",
+    "conditionsClientes": "condizioni per le clienti",
+    "condMollieTitre": "Cancellazione gratuita fino a %{delai} h prima",
+    "condMollieTexte": ": il tuo acconto di %{somme} ti viene restituito (le spese di prenotazione no). Dopo, o se non ti presenti, viene trattenuto."
   },
   "commun": {
     "chargement": "Caricamento...",
@@ -623,7 +625,7 @@
   },
   "confidentialite": {
     "titre": "Informativa sulla privacy",
-    "maj": "Ultimo aggiornamento: 19 agosto 2026",
+    "maj": "Ultimo aggiornamento: 21 novembre 2026",
     "contact": "Per esercitare i tuoi diritti, scrivici a:",
     "sections": [
       {
@@ -652,9 +654,8 @@
       {
         "titre": "3. I pagamenti",
         "paragraphes": [
-          "Se paghi online (caparra, carta a garanzia o pagamento Glamia Pay), registriamo l'importo, il tipo e la data della transazione, oltre agli identificativi tecnici del pagamento.",
-          "I dati della tua carta sono inseriti e trattati direttamente da Stripe, fornitore certificato conforme allo standard PCI-DSS. Non passano da Glamia e non vengono mai conservati sui nostri server.",
-          "Quando lasci una carta a garanzia, alla prenotazione non viene addebitato nulla: si tratta di un'autorizzazione che permette alla tua professionista di addebitare l'importo concordato in caso di mancata presentazione senza disdetta, secondo le condizioni mostrate prima che tu autorizzi la carta."
+          "Se paghi online un acconto o un pagamento, registriamo l'importo, il tipo e la data della transazione, oltre agli identificativi tecnici del pagamento.",
+          "I dati della tua carta sono inseriti e trattati direttamente da Mollie B.V., istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank, certificato conforme allo standard PCI-DSS. Non passano da Glamia e non vengono mai conservati sui nostri server."
         ]
       },
       {
@@ -678,7 +679,7 @@
         ],
         "liste": [
           "Hosting: Supabase, su server situati nell'Unione europea.",
-          "Pagamenti: Stripe, per la gestione sicura delle transazioni Glamia Pay.",
+          "Pagamenti: Mollie B.V. (Amsterdam, Paesi Bassi), per la gestione sicura dei pagamenti.",
           "Invio delle email (conferme, promemoria): il nostro fornitore di email.",
           "Notifiche: Expo, per avvisare la tua professionista sul suo telefono."
         ]

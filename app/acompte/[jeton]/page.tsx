@@ -76,7 +76,10 @@ export default function PageLienAcompte() {
 
   const accent = lien?.couleur ?? ROSE
   const accentTexte = lien?.couleur ? lisibleSurBlanc(lien.couleur) : ROSE
-  const texteCase = lien ? traduire('resa.consentMollie', { somme: euros(lien.total_cliente), acompte: euros(lien.acompte), frais: euros(lien.frais), delai: lien.delai_annulation, pro: lien.pro }) : ''
+  const casePour = (conditions: string) => lien ? traduire('resa.consentMollie', { somme: euros(lien.total_cliente), acompte: euros(lien.acompte), frais: euros(lien.frais), delai: lien.delai_annulation, pro: lien.pro, conditions }) : ''
+  // La preuve enregistrée = exactement la phrase affichée, le lien n'étant que le nom des conditions.
+  const texteCase = casePour(traduire('resa.conditionsClientes'))
+  const lienConditions = lien ? `/conditions-clientes${lien.langue !== 'fr' ? `?lang=${lien.langue}` : ''}` : ''
 
   const payer = async () => {
     if (!lien || !coche || envoi) return
@@ -136,9 +139,12 @@ export default function PageLienAcompte() {
           <p style={{ ...S.ligne, ...S.total }}><span>{traduire('lienAcompte.total')}</span><span>{euros(lien.total_cliente)}</span></p>
         </div>
 
+        {/* La règle d'annulation, en clair, avant la case (Chadi, 21 nov. 2026 : texte allégé). */}
+        <p style={S.regle}><strong style={{ color: '#1f2937' }}>{traduire('resa.condMollieTitre', { delai: lien.delai_annulation })}</strong>{traduire('resa.condMollieTexte', { somme: euros(lien.acompte) })}</p>
+
         <label style={S.case}>
           <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} style={{ width: 22, height: 22, accentColor: accent, flexShrink: 0, marginTop: 1 }} />
-          <span>{texteCase}</span>
+          <span>{(() => { const [avant, apres] = casePour('\u0001').split('\u0001'); return <>{avant}<a href={lienConditions} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: accentTexte, fontWeight: 700, textDecoration: 'underline' }}>{traduire('resa.conditionsClientes')}</a>{apres}</> })()}</span>
         </label>
 
         <button style={{ ...S.bouton, background: accent, opacity: coche && !envoi ? 1 : 0.45 }} disabled={!coche || envoi} onClick={payer} aria-disabled={!coche || envoi}>
@@ -150,7 +156,7 @@ export default function PageLienAcompte() {
         <p style={S.aide}>{traduire('lienAcompte.valable', { date: date(lien.expire_le, false) })}</p>
         {/* Qui vend, qui rembourse (20 nov. 2026), et les conditions des clientes. */}
         <p style={{ ...S.aide, textAlign: 'justify', hyphens: 'none' }}>{traduire('resa.paiementProMollie', { pro: lien.pro })}</p>
-        <p style={S.mollie}>{traduire('lienAcompte.fourni')} · <a href={`/conditions-clientes${lien.langue !== 'fr' ? `?lang=${lien.langue}` : ''}`} target="_blank" rel="noopener noreferrer" style={{ color: accentTexte, fontWeight: 700 }}>{traduire('resa.conditionsClientes')}</a></p>
+
       </section>
     </main>
   )
@@ -158,6 +164,7 @@ export default function PageLienAcompte() {
 
 const TOURNE = '@keyframes tourne { to { transform: rotate(360deg) } }'
 const S: Record<string, React.CSSProperties> = {
+  regle: { fontSize: 13, lineHeight: 1.5, color: '#4b5563', background: '#FBF1F6', borderRadius: 12, padding: '12px 14px', margin: '0 0 16px', textAlign: 'justify', hyphens: 'none' },
   fond: { minHeight: '100dvh', background: '#FAF7F5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#1C1C1E', WebkitFontSmoothing: 'antialiased' },
   carte: { width: '100%', maxWidth: 440, background: '#fff', borderRadius: 22, padding: '26px 22px', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.06)' },
   chez: { margin: 0, fontSize: 14, fontWeight: 700 },

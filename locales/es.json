@@ -285,7 +285,7 @@
     "offreRetirerPack": "Elegir otro servicio",
     "paiementSecuriseMollie": "Pago seguro con Mollie: el dinero va directamente a tu profesional, Glamia nunca guarda los fondos.",
     "redirigeeMollie": "Vas a pagar en la página segura de Mollie (tarjeta, Apple Pay, Google Pay) y luego volverás aquí.",
-    "consentMollie": "Acepto pagar ahora %{somme} a %{pro}: %{acompte} de señal y %{frais} de gastos de reserva. Si cancelo con más de %{delai} h de antelación, %{pro} me devuelve la señal; los gastos de reserva no se devuelven. Si no acudo o cancelo con menos de %{delai} h, %{pro} se queda con la señal.",
+    "consentMollie": "Acepto pagar %{somme} a %{pro} (%{acompte} de señal + %{frais} de gastos de reserva) y las %{conditions}. Cancelación con más de %{delai} h de antelación: señal reembolsada, gastos no reembolsados. Cancelación con menos de %{delai} h o ausencia: señal conservada.",
     "payerAcompte": "Pagar %{somme}",
     "emailPourPaiement": "Tu correo, para recibir la confirmación del pago",
     "identitePaiement": "Para pagar la señal, necesitamos tu nombre, apellido y un correo válido.",
@@ -299,8 +299,10 @@
       "365": "1 año"
     },
     "horizonPro": "tu profesional",
-    "paiementProMollie": "Pagas directamente a %{pro}, a través de Mollie: es %{pro} quien vende la prestación y quien te reembolsa según su política de cancelación. Glamia gestiona la reserva y nunca guarda tu dinero.",
-    "conditionsClientes": "condiciones para clientas"
+    "paiementProMollie": "Pago abonado directamente a %{pro}, que te reembolsa según sus reglas de cancelación, protegido por Mollie (tarjeta, Apple Pay, Google Pay). Glamia nunca guarda tu dinero.",
+    "conditionsClientes": "condiciones para clientas",
+    "condMollieTitre": "Cancelación gratuita hasta %{delai} h antes",
+    "condMollieTexte": ": se te devuelve la señal de %{somme} (los gastos de reserva no). Después, o si no acudes, se conserva."
   },
   "commun": {
     "chargement": "Cargando...",
@@ -634,7 +636,7 @@
   },
   "confidentialite": {
     "titre": "Política de privacidad",
-    "maj": "Última actualización: 19 de agosto de 2026",
+    "maj": "Última actualización: 21 de noviembre de 2026",
     "contact": "Para ejercer tus derechos, escríbenos a:",
     "sections": [
       {
@@ -663,9 +665,8 @@
       {
         "titre": "3. Los pagos",
         "paragraphes": [
-          "Si pagas en línea — anticipo, retención en tarjeta o pago con Glamia Pay — registramos el importe, el tipo y la fecha de la operación, así como los identificadores técnicos del pago.",
-          "Los datos de tu tarjeta los introduces y los trata directamente Stripe, proveedor certificado conforme a la norma PCI-DSS. No pasan por Glamia y nunca se guardan en nuestros servidores.",
-          "Cuando dejas una retención en tarjeta, no se cobra ningún importe al reservar: es una autorización que permite a tu profesional cobrar el importe acordado si no vas sin haber cancelado, según las condiciones mostradas antes de que autorizaras la tarjeta."
+          "Si pagas en línea una señal o un pago, registramos el importe, el tipo y la fecha de la operación, así como los identificadores técnicos del pago.",
+          "Los datos de tu tarjeta los introduces y los trata directamente Mollie B.V., entidad de pago autorizada y supervisada por De Nederlandsche Bank, certificada conforme a la norma PCI-DSS. No pasan por Glamia y nunca se guardan en nuestros servidores."
         ]
       },
       {
@@ -689,7 +690,7 @@
         ],
         "liste": [
           "Alojamiento: Supabase, en servidores situados en la Unión Europea.",
-          "Pagos: Stripe, para el tratamiento seguro de las operaciones de Glamia Pay.",
+          "Pagos: Mollie B.V. (Ámsterdam, Países Bajos), para el tratamiento seguro de los pagos.",
           "Envío de correos (confirmaciones, recordatorios): nuestro proveedor de correo.",
           "Avisos: Expo, para avisar a tu profesional en su teléfono."
         ]

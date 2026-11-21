@@ -285,7 +285,7 @@
     "offreRetirerPack": "Choisir une autre prestation",
     "paiementSecuriseMollie": "Paiement sécurisé par Mollie — l'argent va directement à ta professionnelle, Glamia ne détient jamais les fonds.",
     "redirigeeMollie": "Tu vas payer sur la page sécurisée de Mollie (carte, Apple Pay, Google Pay), puis revenir ici.",
-    "consentMollie": "J'accepte de régler %{somme} maintenant à %{pro} : %{acompte} d'acompte et %{frais} de frais de réservation. Si j'annule plus de %{delai} h avant, %{pro} me rembourse mon acompte ; les frais de réservation restent acquis. Si je ne viens pas ou si j'annule moins de %{delai} h avant, l'acompte est conservé par %{pro}.",
+    "consentMollie": "J'accepte de payer %{somme} à %{pro} (%{acompte} d'acompte + %{frais} de frais de réservation) et les %{conditions}. Annulation plus de %{delai} h avant : acompte remboursé, frais conservés. Annulation moins de %{delai} h avant ou absence : acompte conservé.",
     "payerAcompte": "Payer %{somme}",
     "emailPourPaiement": "Ton e-mail, pour recevoir la confirmation du paiement",
     "identitePaiement": "Pour payer l'acompte, il faut ton prénom, ton nom et un e-mail valable.",
@@ -299,8 +299,10 @@
       "365": "1 an"
     },
     "horizonPro": "ta praticienne",
-    "paiementProMollie": "Tu paies %{pro} directement, par Mollie : c'est %{pro} qui vend la prestation et qui te rembourse selon sa politique d'annulation. Glamia gère la réservation et ne détient jamais ton argent.",
-    "conditionsClientes": "conditions pour les clientes"
+    "paiementProMollie": "Paiement versé directement à %{pro}, qui te rembourse selon ses règles d'annulation, sécurisé par Mollie (carte, Apple Pay, Google Pay). Glamia ne détient jamais ton argent.",
+    "conditionsClientes": "conditions pour les clientes",
+    "condMollieTitre": "Annulation gratuite jusqu'à %{delai} h avant",
+    "condMollieTexte": " : ton acompte de %{somme} t'est rendu (les frais de réservation ne le sont pas). Après, ou si tu ne viens pas, il est conservé."
   },
   "commun": {
     "chargement": "Chargement...",
@@ -623,7 +625,7 @@
   },
   "confidentialite": {
     "titre": "Politique de confidentialité",
-    "maj": "Dernière mise à jour : 19 août 2026",
+    "maj": "Dernière mise à jour : 21 novembre 2026",
     "contact": "Pour exercer vos droits, écrivez-nous à :",
     "sections": [
       {
@@ -652,9 +654,8 @@
       {
         "titre": "3. Les paiements",
         "paragraphes": [
-          "Si vous réglez en ligne — acompte, empreinte bancaire ou paiement Glamia Pay — nous enregistrons le montant, le type et la date de la transaction, ainsi que les identifiants techniques du paiement.",
-          "Les données de votre carte sont saisies et traitées directement par Stripe, prestataire certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs.",
-          "Lorsque vous laissez une empreinte bancaire, aucune somme n'est débitée à la réservation : il s'agit d'une autorisation permettant à votre professionnelle de débiter le montant convenu en cas d'absence non annulée, selon les conditions affichées avant que vous n'autorisiez la carte."
+          "Si vous réglez en ligne un acompte ou un paiement, nous enregistrons le montant, le type et la date de la transaction, ainsi que les identifiants techniques du paiement.",
+          "Les données de votre carte sont saisies et traitées directement par Mollie B.V., établissement de paiement agréé et supervisé par De Nederlandsche Bank, certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs."
         ]
       },
       {
@@ -678,7 +679,7 @@
         ],
         "liste": [
           "Hébergement : Supabase, sur des serveurs situés dans l'Union européenne.",
-          "Paiements : Stripe, pour le traitement sécurisé des transactions Glamia Pay.",
+          "Paiements : Mollie B.V. (Amsterdam, Pays-Bas), pour le traitement sécurisé des paiements.",
           "Envoi des emails (confirmations, rappels) : notre prestataire d'emailing.",
           "Notifications : Expo, pour prévenir votre professionnelle sur son téléphone."
         ]

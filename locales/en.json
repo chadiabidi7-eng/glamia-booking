@@ -285,7 +285,7 @@
     "offreRetirerPack": "Choose another service",
     "paiementSecuriseMollie": "Secure payment by Mollie — the money goes straight to your professional, Glamia never holds the funds.",
     "redirigeeMollie": "You'll pay on Mollie's secure page (card, Apple Pay, Google Pay), then come back here.",
-    "consentMollie": "I agree to pay %{somme} now to %{pro}: a %{acompte} deposit and a %{frais} booking fee. If I cancel more than %{delai} h before, %{pro} refunds my deposit; the booking fee is non-refundable. If I don't show up or cancel less than %{delai} h before, %{pro} keeps the deposit.",
+    "consentMollie": "I agree to pay %{somme} to %{pro} (%{acompte} deposit + %{frais} booking fee) and the %{conditions}. Cancellation more than %{delai} h before: deposit refunded, fee kept. Cancellation less than %{delai} h before or no-show: deposit kept.",
     "payerAcompte": "Pay %{somme}",
     "emailPourPaiement": "Your email, to receive the payment confirmation",
     "identitePaiement": "To pay the deposit, we need your first name, last name and a valid email.",
@@ -299,8 +299,10 @@
       "365": "1 year"
     },
     "horizonPro": "your practitioner",
-    "paiementProMollie": "You pay %{pro} directly, through Mollie: %{pro} sells the service and refunds you according to their cancellation policy. Glamia handles the booking and never holds your money.",
-    "conditionsClientes": "terms for clients"
+    "paiementProMollie": "Paid directly to %{pro}, who refunds you according to their cancellation rules, secured by Mollie (card, Apple Pay, Google Pay). Glamia never holds your money.",
+    "conditionsClientes": "terms for clients",
+    "condMollieTitre": "Free cancellation up to %{delai} h before",
+    "condMollieTexte": ": your %{somme} deposit is returned (the booking fee is not). After that, or if you don't show up, it is kept."
   },
   "commun": {
     "chargement": "Loading...",
@@ -625,7 +627,7 @@
   },
   "confidentialite": {
     "titre": "Privacy Policy",
-    "maj": "Last updated: 19 August 2026",
+    "maj": "Last updated: 21 November 2026",
     "contact": "To exercise any of these rights, contact us at:",
     "sections": [
       {
@@ -654,9 +656,8 @@
       {
         "titre": "3. Payments",
         "paragraphes": [
-          "If you pay online — a deposit, a card held on file, or a payment through Glamia Pay — we record the amount, the type and the date of the transaction, and technical payment references.",
-          "Your card details are entered and processed directly by Stripe, a payment provider certified to the PCI-DSS standard. They never pass through Glamia and are never stored on our servers.",
-          "When you leave a card on file, no money is taken at booking. It is an authorisation allowing your professional to charge the agreed amount if you do not turn up without cancelling, under the conditions shown to you before you authorised it."
+          "If you pay a deposit or a payment online, we record the amount, the type and the date of the transaction, and technical payment references.",
+          "Your card details are entered and processed directly by Mollie B.V., a payment institution licensed and supervised by De Nederlandsche Bank and certified to the PCI-DSS standard. They never pass through Glamia and are never stored on our servers."
         ]
       },
       {
@@ -682,7 +683,7 @@
         ],
         "liste": [
           "Hosting: Supabase, on servers located in the European Union.",
-          "Payments: Stripe, for secure processing of Glamia Pay transactions.",
+          "Payments: Mollie B.V. (Amsterdam, the Netherlands), for secure payment processing.",
           "Email delivery: our emailing provider, for confirmations and reminders.",
           "Push notifications: Expo, to alert your professional on her phone."
         ]
