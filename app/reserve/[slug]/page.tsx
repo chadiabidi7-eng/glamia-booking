@@ -5778,14 +5778,16 @@ export default function ReservationPage() {
                       : propay.mode === 'acompte' ? traduire('resa.blocAcompte')
                       : traduire('resa.blocEmpreinte')}
                   </label>
-                  {/* La pastille GLAMIA PAY reste rose : c'est notre marque, pas la couleur de la pro (Chadi, 9 oct. 2026). */}
-                  <span style={{
+                  {/* La pastille GLAMIA PAY reste rose : c'est notre marque, pas la couleur de la pro (Chadi, 9 oct. 2026).
+                      RETIRÉE AVEC MOLLIE (Chadi, 21 nov. 2026) : « Glamia Pay » pouvait laisser croire que Glamia
+                      est un service de paiement ; c'est Mollie qui traite le paiement, et la page le dit. */}
+                  {!propay.mollie && <span style={{
                     background: PINK_DEFAUT, color: '#fff', borderRadius: 8,
                     padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
                     whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     GLAMIA PAY
-                  </span>
+                  </span>}
                 </div>
                 {/* Montant centré sous le titre — jamais coupé */}
                 <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
