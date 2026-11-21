@@ -35,7 +35,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  let body: { pro_id?: unknown; date?: unknown; heure?: unknown; duree?: unknown; praticienne_id?: unknown }
+  let body: { pro_id?: unknown; date?: unknown; heure?: unknown; duree?: unknown; praticienne_id?: unknown; remplace?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -63,7 +63,14 @@ export async function POST(req: NextRequest) {
 
     if (!pro) return NextResponse.json({ ok: false, raison: 'pro_introuvable' }, { status: 404 })
 
-    const rdvExistants = await rdvExistantsDe(supabaseAdmin, proId, praticienneId, date)
+    // Sa propre tentative précédente (revenue de Mollie sans payer) ne la bloque pas.
+    let exclure: string | undefined
+    if (typeof body.remplace === 'string' && /^[0-9a-f-]{36}$/i.test(body.remplace)) {
+      const { data: ancien } = await supabaseAdmin.from('mollie_paiements').select('mollie_paiement_id, statut')
+        .eq('id', body.remplace).eq('pro_id', proId).maybeSingle()
+      if (ancien?.mollie_paiement_id && ancien.statut !== 'paye') exclure = ancien.mollie_paiement_id as string
+    }
+    const rdvExistants = await rdvExistantsDe(supabaseAdmin, proId, praticienneId, date, exclure)
 
     // Exactement le même juge que `rdv/creer`, avec exactement les mêmes
     // données. Deux règles différentes rouvriraient le défaut d'un autre côté :

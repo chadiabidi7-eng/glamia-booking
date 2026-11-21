@@ -41,6 +41,38 @@ export async function POST(req: NextRequest) {
     const cliente = (b.cliente ?? {}) as Record<string, unknown>
     // L'heure de l'acceptation est celle du serveur, pas celle du téléphone.
     const accepteeLe = new Date().toISOString()
+
+    // ── LE CRÉNEAU EST TENU AVANT DE PARTIR CHEZ MOLLIE (Chadi, 21 nov. 2026) ──
+    // « On n'accepte pas un paiement si le créneau n'est plus disponible. » Vérifier puis
+    // tenir se fait en un seul geste en base (tenir_creneau, verrou par pro) : deux
+    // clientes à la même seconde ne peuvent plus passer toutes les deux.
+    const cle = typeof b.cle === 'string' && /^[0-9a-f-]{36}$/i.test(b.cle) ? b.cle : null
+    const crea = ((b.complet as { creation?: Record<string, unknown> } | undefined)?.creation) ?? {}
+    const dureeTenue = Math.round(Number(crea.duree))
+    const praticienne = typeof crea.praticienne_id === 'string' && crea.praticienne_id ? crea.praticienne_id : null
+    if (!cle || typeof b.date !== 'string' || typeof b.heure !== 'string' || !Number.isFinite(dureeTenue) || dureeTenue <= 0) {
+      return NextResponse.json({ error: 'creneau' }, { status: 400 })
+    }
+    // Elle réessaie après être revenue de Mollie sans payer : sa tentative précédente
+    // ne la bloque pas sur son propre créneau (seulement si ce paiement n'est pas payé).
+    if (typeof b.remplace === 'string' && /^[0-9a-f-]{36}$/i.test(b.remplace) && b.remplace !== cle) {
+      const { data: ancien } = await supabaseAdmin.from('mollie_paiements').select('mollie_paiement_id, statut')
+        .eq('id', b.remplace).eq('pro_id', proId).maybeSingle()
+      if (!ancien || ancien.statut === 'cree' || ancien.statut === 'echoue' || ancien.statut === 'expire' || ancien.statut === 'annule') {
+        const ids = [`cle:${b.remplace}`, ...(ancien?.mollie_paiement_id ? [ancien.mollie_paiement_id as string] : [])]
+        await supabaseAdmin.from('creneaux_tenus').delete().eq('pro_id', proId).in('intent_id', ids)
+      }
+    }
+    const { data: tenu, error: errTenu } = await supabaseAdmin.rpc('tenir_creneau', {
+      p_id: `cle:${cle}`, p_pro: proId, p_praticienne: praticienne,
+      p_date: `${b.date}T${b.heure}:00.000Z`, p_duree: dureeTenue, p_minutes: 15,
+    })
+    if (errTenu) {
+      console.error('[mollie/acompte] créneau non tenu', errTenu)
+      return NextResponse.json({ error: 'mollie' }, { status: 503 })
+    }
+    if (tenu !== true) return NextResponse.json({ error: 'occupe' }, { status: 409 })
+
     const { status, d } = await appelerMollieAcompte({
       action: 'payer', ...base,
       cle: b.cle, prestation: b.prestation,
@@ -52,6 +84,8 @@ export async function POST(req: NextRequest) {
       origine: 'booking',
     })
     if (status !== 200 || typeof d.url !== 'string' || typeof d.mollie !== 'string') {
+      // Pas de paiement : le créneau est rendu tout de suite.
+      await supabaseAdmin.from('creneaux_tenus').delete().eq('intent_id', `cle:${cle}`)
       console.error('[mollie/acompte] paiement refusé', status, d.error)
       return NextResponse.json({ error: String(d.error ?? 'mollie') }, { status: status >= 400 ? status : 502 })
     }
@@ -79,17 +113,11 @@ export async function POST(req: NextRequest) {
     // ── LE CRÉNEAU TENU 15 MINUTES PENDANT QU'ELLE PAIE (Chadi, 19 nov. 2026) ──
     // Personne d'autre ne peut le prendre sur la page de réservation. Libéré dès
     // que le rendez-vous existe, que le paiement échoue, ou au bout de 15 minutes.
-    const cr = (complet as { creation?: Record<string, unknown> }).creation ?? {}
-    const duree = Number(cr.duree)
-    if (typeof b.date === 'string' && typeof b.heure === 'string' && Number.isFinite(duree) && duree > 0) {
-      const { error } = await supabaseAdmin.from('creneaux_tenus').upsert({
-        intent_id: d.mollie, pro_id: proId,
-        praticienne_id: typeof cr.praticienne_id === 'string' && cr.praticienne_id ? cr.praticienne_id : null,
-        date: `${b.date}T${b.heure}:00.000Z`, duree: Math.round(duree),
-        expire_le: new Date(Date.now() + 15 * 60_000).toISOString(),
-      }, { onConflict: 'intent_id' })
-      if (error) console.error('[mollie/acompte] créneau non tenu', error)
-    }
+    // Le créneau tenu avant Mollie prend le numéro du paiement Mollie : c'est sous ce numéro
+    // qu'il est libéré (rendez-vous créé, paiement échoué) et ignoré par la création du rendez-vous.
+    const { data: renomme } = await supabaseAdmin.from('creneaux_tenus').update({ intent_id: d.mollie })
+      .eq('intent_id', `cle:${cle}`).select('intent_id')
+    if (!(renomme ?? []).length) console.error('[mollie/acompte] créneau tenu introuvable après Mollie', cle)
     // La preuve d'acceptation : ce qu'elle a vu, d'où, avec quel appareil (21 nov. 2026).
     await enregistrerPreuve(req, { paiementId: d.paiement, page: 'page_reservation', langue: b.langue, encadre: b.encadre, caseTexte: b.politique_texte, accepteeLe })
     return NextResponse.json({ url: d.url, paiement: d.paiement })

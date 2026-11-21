@@ -29,8 +29,8 @@ const MAX_DATES = 95
 
 export async function POST(req: NextRequest) {
   try {
-    const { pro_id, duree, dates, exclure_rdv, personnes, deplacer } = await req.json() as {
-      pro_id?: string; duree?: number; dates?: string[]; exclure_rdv?: string
+    const { pro_id, duree, dates, exclure_rdv, personnes, deplacer, remplace } = await req.json() as {
+      pro_id?: string; duree?: number; dates?: string[]; exclure_rdv?: string; remplace?: string
       /** ÉQUIPE : qui peut recevoir, et en combien de temps chacune. `id` null = la pro. */
       personnes?: { id: string | null; duree: number }[]
       /**
@@ -104,14 +104,22 @@ export async function POST(req: NextRequest) {
     // Heures murales posées sur UTC — même lecture que partout ailleurs.
     // Le rendez-vous qu'on déplace ne doit pas se bloquer lui-même.
     // Les créneaux tenus pendant un paiement (19 nov. 2026) occupent comme un rendez-vous.
-    const { data: tenus } = await supabaseAdmin
+    // Sa propre tentative de paiement non payée ne lui cache pas son créneau (21 nov. 2026).
+    let saTenue: string | null = null
+    if (typeof remplace === 'string' && /^[0-9a-f-]{36}$/i.test(remplace)) {
+      const { data: ancien } = await supabaseAdmin.from('mollie_paiements').select('mollie_paiement_id, statut')
+        .eq('id', remplace).eq('pro_id', pro_id).maybeSingle()
+      if (ancien?.mollie_paiement_id && ancien.statut !== 'paye') saTenue = ancien.mollie_paiement_id as string
+    }
+    const { data: tenusBruts } = await supabaseAdmin
       .from('creneaux_tenus')
-      .select('date, duree')
+      .select('intent_id, date, duree')
       .eq('pro_id', pro_id)
       .gte('date', `${triees[0]}T00:00:00.000Z`)
       .lte('date', `${triees[triees.length - 1]}T23:59:59.999Z`)
       .gt('expire_le', new Date().toISOString())
       .limit(200)
+    const tenus = (tenusBruts ?? []).filter(x => x.intent_id !== saTenue)
     const parJour = new Map<string, { heure: string; duree: number }[]>()
     for (const r of [...(rdvs ?? []), ...(tenus ?? []).map(x => ({ id: null as string | null, date: x.date, duree: x.duree }))]) {
       if (exclure_rdv && r.id === exclure_rdv) continue

@@ -100,7 +100,8 @@ async function creneauxServeur(
   const rep = await fetch('/api/creneaux', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes, deplacer }),
+    // Sa dernière tentative de paiement (revenue de Mollie sans payer) ne lui cache pas son propre créneau.
+    body: JSON.stringify({ pro_id: proId, duree, dates, exclure_rdv: exclureRdv, personnes, deplacer, remplace: (() => { try { return sessionStorage.getItem(`glamia_paiement_${proId}`) } catch { return null } })() }),
   })
   if (!rep.ok) throw new Error('creneaux')
   const { creneaux } = await rep.json()
@@ -2994,6 +2995,15 @@ export default function ReservationPage() {
   // Apple Pay / Google Pay, juste avant que l'argent parte. Deux secondes,
   // jamais bloquant : si le filet ne répond pas, on laisse passer, la
   // création tranchera.
+  // SA DERNIÈRE TENTATIVE DE PAIEMENT (21 nov. 2026) : revenue de Mollie sans payer, elle
+  // réessaie ; son créneau, tenu 15 minutes par cette tentative, ne doit pas la bloquer elle.
+  function derniereCle(proId: string): string | null {
+    try { return sessionStorage.getItem(`glamia_paiement_${proId}`) } catch { return null }
+  }
+  function retenirCle(proId: string, cle: string) {
+    try { sessionStorage.setItem(`glamia_paiement_${proId}`, cle) } catch { /* sans mémoire : le créneau se libère seul en 15 minutes */ }
+  }
+
   async function controlerCreneau(): Promise<{ ok: true } | { ok: false; message?: string }> {
     if (!pro) return { ok: true }
     try {
@@ -3001,7 +3011,7 @@ export default function ReservationPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(2000),
-        body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeChoisie, praticienne_id: quiChoisi }),
+        body: JSON.stringify({ pro_id: pro.id, date, heure, duree: dureeChoisie, praticienne_id: quiChoisi, remplace: derniereCle(pro.id) }),
       })
       const verdict = await controle.json().catch(() => ({ ok: true }))
       if (verdict?.ok === false) return { ok: false, message: verdict?.message }
@@ -3200,6 +3210,8 @@ export default function ReservationPage() {
             return
           }
           const cle = crypto.randomUUID()
+          const remplace = derniereCle(pro.id)
+          retenirCle(pro.id, cle)
           const rep = await fetch('/api/mollie/acompte', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3209,7 +3221,7 @@ export default function ReservationPage() {
               offre_id: offreAppliquee?.id ?? null,
               fidelite_appliquee: recompenseFidelite ?? null,
               reduction_appliquee: reductionCliente ?? null,
-              cle, slug, langue: langueActuelle(),
+              cle, remplace, slug, langue: langueActuelle(),
               prestation: techniquesStr,
               cliente: { prenom: clientePrenom.trim(), nom: clienteNom.trim(), mail: clienteEmail.trim() },
               // Le texte exact de la case qu'elle vient de cocher : la preuve.
@@ -3231,7 +3243,12 @@ export default function ReservationPage() {
               complet: copieComplete,
               photos: inspirations.slice(0, 3),
             }),
-          }).then(r => r.json()).catch(() => null) as { url?: string } | null
+          }).then(r => r.json()).catch(() => null) as { url?: string; error?: string } | null
+          // Le créneau vient d'être pris par une autre cliente : rien n'est payé, elle en choisit un autre.
+          if (rep?.error === 'occupe') {
+            surCreneauRefuse()
+            return
+          }
           if (!rep?.url) {
             alert(traduire('resa.paiementInjoignable'))
             setSubmitting(false)
