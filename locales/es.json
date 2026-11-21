@@ -666,7 +666,8 @@
         "titre": "3. Los pagos",
         "paragraphes": [
           "Si pagas en línea una señal o un pago, registramos el importe, el tipo y la fecha de la operación, así como los identificadores técnicos del pago.",
-          "Los datos de tu tarjeta los introduces y los trata directamente Mollie B.V., entidad de pago autorizada y supervisada por De Nederlandsche Bank, certificada conforme a la norma PCI-DSS. No pasan por Glamia y nunca se guardan en nuestros servidores."
+          "Los datos de tu tarjeta los introduces y los trata directamente Mollie B.V., entidad de pago autorizada y supervisada por De Nederlandsche Bank, certificada conforme a la norma PCI-DSS. No pasan por Glamia y nunca se guardan en nuestros servidores.",
+          "Cuando aceptas las condiciones de un pago en línea, conservamos la prueba de esa aceptación: los textos mostrados, la fecha y la hora, tu dirección IP y el tipo de dispositivo utilizado. Esta prueba sirve únicamente para responder a una posible impugnación del pago (interés legítimo, artículo 6.1.f del RGPD) y se conserva 18 meses después de la cita."
         ]
       },
       {

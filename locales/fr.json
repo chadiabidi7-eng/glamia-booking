@@ -655,7 +655,8 @@
         "titre": "3. Les paiements",
         "paragraphes": [
           "Si vous réglez en ligne un acompte ou un paiement, nous enregistrons le montant, le type et la date de la transaction, ainsi que les identifiants techniques du paiement.",
-          "Les données de votre carte sont saisies et traitées directement par Mollie B.V., établissement de paiement agréé et supervisé par De Nederlandsche Bank, certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs."
+          "Les données de votre carte sont saisies et traitées directement par Mollie B.V., établissement de paiement agréé et supervisé par De Nederlandsche Bank, certifié conforme à la norme PCI-DSS. Elles ne transitent pas par Glamia et ne sont jamais conservées sur nos serveurs.",
+          "Lorsque vous acceptez les conditions d'un paiement en ligne, nous conservons la preuve de cette acceptation : les textes affichés, la date et l'heure, votre adresse IP et le type d'appareil utilisé. Cette preuve sert uniquement à répondre à une éventuelle contestation du paiement (intérêt légitime, article 6.1.f du RGPD) et est conservée 18 mois après le rendez-vous."
         ]
       },
       {

@@ -657,7 +657,8 @@
         "titre": "3. Payments",
         "paragraphes": [
           "If you pay a deposit or a payment online, we record the amount, the type and the date of the transaction, and technical payment references.",
-          "Your card details are entered and processed directly by Mollie B.V., a payment institution licensed and supervised by De Nederlandsche Bank and certified to the PCI-DSS standard. They never pass through Glamia and are never stored on our servers."
+          "Your card details are entered and processed directly by Mollie B.V., a payment institution licensed and supervised by De Nederlandsche Bank and certified to the PCI-DSS standard. They never pass through Glamia and are never stored on our servers.",
+          "When you accept the terms of an online payment, we keep proof of that acceptance: the texts displayed, the date and time, your IP address and the type of device used. This proof is used solely to respond to a possible dispute of the payment (legitimate interest, Article 6.1.f GDPR) and is kept for 18 months after the appointment."
         ]
       },
       {

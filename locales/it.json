@@ -655,7 +655,8 @@
         "titre": "3. I pagamenti",
         "paragraphes": [
           "Se paghi online un acconto o un pagamento, registriamo l'importo, il tipo e la data della transazione, oltre agli identificativi tecnici del pagamento.",
-          "I dati della tua carta sono inseriti e trattati direttamente da Mollie B.V., istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank, certificato conforme allo standard PCI-DSS. Non passano da Glamia e non vengono mai conservati sui nostri server."
+          "I dati della tua carta sono inseriti e trattati direttamente da Mollie B.V., istituto di pagamento autorizzato e vigilato da De Nederlandsche Bank, certificato conforme allo standard PCI-DSS. Non passano da Glamia e non vengono mai conservati sui nostri server.",
+          "Quando accetti le condizioni di un pagamento online, conserviamo la prova di tale accettazione: i testi mostrati, la data e l'ora, il tuo indirizzo IP e il tipo di dispositivo utilizzato. Questa prova serve unicamente a rispondere a un'eventuale contestazione del pagamento (interesse legittimo, articolo 6.1.f del GDPR) ed è conservata per 18 mesi dopo l'appuntamento."
         ]
       },
       {
