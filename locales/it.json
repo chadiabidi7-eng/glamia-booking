@@ -370,7 +370,7 @@
     "dejaRegleDetail": "Questo pagamento è già stato effettuato. Grazie 💅",
     "voirFacture": "Vedi la mia ricevuta",
     "indisponible": "Pagamento non disponibile",
-    "paiementSecurise": "Pagamento sicuro · Glamia Pay",
+    "paiementSecurise": "Pagamento sicuro · Mollie",
     "echec": "Il pagamento non è andato a buon fine. Riprova.",
     "echecCourt": "Il pagamento non è andato a buon fine.",
     "regleEnSecuriteAvecPrenom": "Ciao %{prenom}, paga il tuo servizio in tutta sicurezza.",
@@ -493,7 +493,7 @@
     "metaTitre": "Aiuto e assistenza — Glamia",
     "essaiTitre": "Come funziona la prova gratuita?",
     "essaiSuite": "Alla fine della prova puoi restare con la versione gratuita o passare a Glamia Pro per clienti illimitate e statistiche avanzate. Non viene addebitato nulla finché non scegli un abbonamento.",
-    "payTitre": "Glamia Pay: come farsi pagare?",
+    "payTitre": "Pagamenti: come farsi pagare?",
     "payTexte": "Dall'app puoi incassare dalle tue clienti con carta, senza POS (la carta si appoggia sul tuo iPhone), chiedere una caparra o una carta a garanzia alla prenotazione e mandare un link di pagamento via SMS. Trovi tutto nella tua cassa Glamia. Se hai un dubbio su un pagamento o un rimborso, scrivici: lo guardiamo insieme.",
     "bugTexte": "Chiudi completamente l'app e riaprila; se il problema resta, esci e rientra nel tuo account. Se non basta, scrivici a contact@glamia.pro descrivendo cosa succede (e, se puoi, con uno screenshot): ti rispondiamo in fretta.",
     "supprimerCompteTexte": "Puoi chiedere in qualsiasi momento l'eliminazione definitiva del tuo account e di tutti i tuoi dati scrivendoci a contact@glamia.pro dall'indirizzo del tuo account. L'eliminazione avviene entro pochi giorni, nel rispetto del GDPR.",
@@ -551,7 +551,7 @@
       {
         "titre": "6. I pagamenti",
         "paragraphes": [
-          "Glamia Pay ti permette di chiedere una caparra, di tenere una carta a garanzia, di incassare con carta e di inviare link di pagamento. I pagamenti sono gestiti da Stripe. Glamia non è una banca e non trattiene mai i tuoi soldi: i fondi vanno dalla tua cliente direttamente al tuo account collegato.",
+          "Glamia ti permette di chiedere una caparra, di tenere una carta a garanzia, di incassare con carta e di inviare link di pagamento. I pagamenti sono gestiti da Stripe. Glamia non è una banca e non trattiene mai i tuoi soldi: i fondi vanno dalla tua cliente direttamente al tuo account collegato.",
           "Resti responsabile dei prezzi che fissi, delle condizioni di disdetta e di mancata presentazione che mostri alle tue clienti, dei rimborsi che devi e dei tuoi obblighi fiscali e contabili.",
           "I redditi che incassi tramite Glamia sono imponibili e devono essere dichiarati. In Francia devi dichiararli all'amministrazione fiscale (impots.gouv.fr) e dichiarare i tuoi contributi sociali all'Urssaf (urssaf.fr; per i micro-imprenditori: autoentrepreneur.urssaf.fr). Se eserciti fuori dalla Francia, questi adempimenti si svolgono presso le amministrazioni del tuo paese. Ai sensi dell'articolo 242 bis del Codice generale delle imposte francese, ti ricordiamo questi obblighi e, quando la legge lo richiede (articoli 1649 ter A e seguenti dello stesso codice), comunichiamo all'amministrazione fiscale gli importi che hai percepito tramite Glamia.",
           "Quando addebiti una carta a garanzia per una mancata presentazione, devi aver mostrato le condizioni alla tua cliente PRIMA che paghi o autorizzi la sua carta. Le contestazioni bancarie riguardano te e la tua cliente; ti forniremo le tracce in nostro possesso per aiutarti a rispondere."
