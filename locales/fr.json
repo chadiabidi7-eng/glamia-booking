@@ -883,7 +883,7 @@
   },
   "conditionsClientes": {
     "titre": "Conditions applicables aux clientes",
-    "maj": "Dernière mise à jour : 20 novembre 2026",
+    "maj": "Dernière mise à jour : 21 novembre 2026",
     "contact": "Contact Glamia :",
     "sections": [
       {
@@ -904,7 +904,7 @@
         "titre": "3. Annulation et remboursement",
         "paragraphes": [
           "Les conditions d'annulation sont fixées par la professionnelle. Elles sont portées à votre connaissance avant le paiement et reprises dans la case que vous cochez pour les accepter.",
-          "Le remboursement vous est dû par la professionnelle lorsque ses conditions d'annulation le prévoient ou lorsqu'elle annule elle-même le rendez-vous. Glamia déclenche ce remboursement pour le compte de la professionnelle, depuis le compte de paiement de celle-ci. Si vous annulez, les frais de réservation restent acquis ; si la professionnelle annule, ils vous sont remboursés."
+          "Le remboursement vous est dû par la professionnelle lorsque ses conditions d'annulation le prévoient ou lorsqu'elle annule elle-même le rendez-vous. Glamia déclenche ce remboursement pour le compte de la professionnelle, depuis le compte de paiement de celle-ci. Les frais de réservation restent acquis, que l'annulation vienne de vous ou de la professionnelle. Seule exception : si votre paiement aboutit alors que le créneau n'est plus disponible, vous êtes remboursée en totalité, frais de réservation compris."
         ]
       },
       {

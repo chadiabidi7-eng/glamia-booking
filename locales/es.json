@@ -886,7 +886,7 @@
   },
   "conditionsClientes": {
     "titre": "Condiciones aplicables a las clientas",
-    "maj": "Última actualización: 20 de noviembre de 2026",
+    "maj": "Última actualización: 21 de noviembre de 2026",
     "contact": "Contacto de Glamia:",
     "sections": [
       {
@@ -907,7 +907,7 @@
         "titre": "3. Cancelación y reembolso",
         "paragraphes": [
           "Las condiciones de cancelación las fija la profesional. Se ponen en su conocimiento antes del pago y se reproducen en la casilla que usted marca para aceptarlas.",
-          "El reembolso se lo debe la profesional cuando sus condiciones de cancelación lo prevén o cuando ella misma cancela la cita. Glamia ejecuta este reembolso por cuenta de la profesional, desde la cuenta de pago de esta. Si usted cancela, los gastos de reserva no se devuelven; si cancela la profesional, se le reembolsan."
+          "El reembolso se lo debe la profesional cuando sus condiciones de cancelación lo prevén o cuando ella misma cancela la cita. Glamia ejecuta este reembolso por cuenta de la profesional, desde la cuenta de pago de esta. Los gastos de reserva no se devuelven, tanto si la cancelación viene de usted como de la profesional. Única excepción: si su pago se completa cuando la franja horaria ya no está disponible, se le reembolsa la totalidad, gastos de reserva incluidos."
         ]
       },
       {

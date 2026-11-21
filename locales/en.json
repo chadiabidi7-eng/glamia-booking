@@ -889,7 +889,7 @@
   },
   "conditionsClientes": {
     "titre": "Terms applicable to clients",
-    "maj": "Last updated: 20 November 2026",
+    "maj": "Last updated: 21 November 2026",
     "contact": "Glamia contact:",
     "sections": [
       {
@@ -910,7 +910,7 @@
         "titre": "3. Cancellation and refunds",
         "paragraphes": [
           "The cancellation terms are set by the professional. They are made known to you before payment and restated in the box you tick to accept them.",
-          "The refund is owed to you by the professional when her cancellation terms provide for it or when she cancels the appointment herself. Glamia triggers this refund on behalf of the professional, from her payment account. If you cancel, the booking fee is retained; if the professional cancels, it is refunded to you."
+          "The refund is owed to you by the professional when her cancellation terms provide for it or when she cancels the appointment herself. Glamia triggers this refund on behalf of the professional, from her payment account. The booking fee is retained, whether the cancellation comes from you or from the professional. The only exception: if your payment goes through when the time slot is no longer available, you are refunded in full, booking fee included."
         ]
       },
       {
