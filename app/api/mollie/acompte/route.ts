@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { appelerMollieAcompte, prixEtCliente, SECRET_MOLLIE, supabaseAdmin } from '@/lib/mollie-reservation'
+import { enregistrerPreuve } from '@/lib/preuve-acceptation'
 
 export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => null) as Record<string, unknown> | null
@@ -38,13 +39,14 @@ export async function POST(req: NextRequest) {
 
     const slug = String(b.slug ?? '')
     const cliente = (b.cliente ?? {}) as Record<string, unknown>
+    // L'heure de l'acceptation est celle du serveur, pas celle du téléphone.
+    const accepteeLe = new Date().toISOString()
     const { status, d } = await appelerMollieAcompte({
       action: 'payer', ...base,
       cle: b.cle, prestation: b.prestation,
       cliente: { prenom: cliente.prenom, nom: cliente.nom, mail: cliente.mail },
       politique_texte: b.politique_texte,
-      // L'heure de l'acceptation est celle du serveur, pas celle du téléphone.
-      politique_acceptee_le: new Date().toISOString(),
+      politique_acceptee_le: accepteeLe,
       retour: `/reserve/${slug}`,
       langue: b.langue,
       origine: 'booking',
@@ -88,6 +90,8 @@ export async function POST(req: NextRequest) {
       }, { onConflict: 'intent_id' })
       if (error) console.error('[mollie/acompte] créneau non tenu', error)
     }
+    // La preuve d'acceptation : ce qu'elle a vu, d'où, avec quel appareil (21 nov. 2026).
+    await enregistrerPreuve(req, { paiementId: d.paiement, page: 'page_reservation', langue: b.langue, encadre: b.encadre, caseTexte: b.politique_texte, accepteeLe })
     return NextResponse.json({ url: d.url, paiement: d.paiement })
   } catch (e) {
     console.error('[mollie/acompte]', e)

@@ -86,7 +86,13 @@ export default function PageLienAcompte() {
     setEnvoi(true); setErreur(null)
     const r = await fetch('/api/mollie/lien-acompte', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'payer', jeton, cle: crypto.randomUUID(), langue: lien.langue, politique_texte: texteCase }),
+      body: JSON.stringify({ action: 'payer', jeton, cle: crypto.randomUUID(), langue: lien.langue, politique_texte: texteCase,
+        // Les textes de l'encadré, tels qu'affichés : gardés comme preuve d'acceptation.
+        encadre: {
+          regle: traduire('resa.condMollieTitre', { delai: lien.delai_annulation }) + traduire('resa.condMollieTexte', { somme: euros(lien.acompte) }),
+          paiement: traduire('resa.paiementProMollie', { pro: lien.pro }),
+          valeurs: { delai: lien.delai_annulation, acompte: lien.acompte, frais: lien.frais, total: lien.total_cliente, pro: lien.pro },
+        } }),
     }).then(x => x.json()).catch(() => null) as { url?: string; error?: string } | null
     if (r?.url) { window.location.href = r.url; return }
     setEnvoi(false)

@@ -3212,6 +3212,13 @@ export default function ReservationPage() {
                 pro: pro.pseudo || pro.prenom || '',
                 conditions: traduire('resa.conditionsClientes'),
               }),
+              // Les textes de l'encadré, tels qu'affichés : gardés comme preuve d'acceptation.
+              encadre: {
+                regle: traduire('resa.condMollieTitre', { delai: propay.delai_annulation ?? 24 }) + traduire('resa.condMollieTexte', { somme: fmtCentimes(propay.acompte ?? 0, symPropay) }),
+                paiement: traduire('resa.paiementProMollie', { pro: pro.pseudo || pro.prenom || '' }),
+                // Les valeurs affichées, pour traduire l'encadré à l'identique dans le dossier (Mollie le lit en anglais).
+                valeurs: { delai: propay.delai_annulation ?? 24, acompte: propay.acompte ?? 0, frais: propay.frais ?? 0, total: propay.total_cliente ?? 0, pro: pro.pseudo || pro.prenom || '' },
+              },
               complet: copieComplete,
               photos: inspirations.slice(0, 3),
             }),
