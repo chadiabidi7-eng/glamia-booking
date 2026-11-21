@@ -15,7 +15,7 @@ const T = {
     imprimer: 'Enregistrer en PDF', anglais: 'English version',
     resume: 'En résumé',
     rPaye: '{cliente} a payé {total} à {pro} pour ce rendez-vous, le {date}.',
-    rAccord: 'Avant de payer, elle a coché une case acceptant explicitement le montant et les conditions d\'annulation, le {date} (heure du serveur Glamia). Le bouton « Payer » restait inactif tant que la case n\'était pas cochée.',
+    rAccord: 'Avant de payer, elle a coché une case acceptant explicitement le montant et les conditions affichées, le {date} (heure du serveur Glamia). Le bouton « Payer » restait inactif tant que la case n\'était pas cochée.',
     r3ds: 'Le paiement a été authentifié par sa banque (3-D Secure).',
     rAnnuleCliente: 'Le rendez-vous a été annulé par la cliente le {date}.',
     rAnnulePro: 'Le rendez-vous a été annulé par la professionnelle le {date}.',
@@ -30,7 +30,7 @@ const T = {
     traduction: 'Traduction exacte', affichee: 'Textes affichés à la cliente en {langue}. Sous chacun, sa traduction exacte, avec les mêmes valeurs.',
     accordIntro: 'Textes affichés juste au-dessus du bouton « Payer », enregistrés mot pour mot au moment du paiement.',
     regle: 'Règle d\'annulation affichée', quiPaie: 'Qui encaisse et qui rembourse', caseCochee: 'Case cochée par la cliente',
-    accepteLe: 'Acceptée le', page: 'Page', pageResa: 'Page de réservation de la professionnelle', pageLien: 'Lien d\'acompte envoyé par la professionnelle',
+    accepteLe: 'Acceptée le', page: 'Page', pageResa: 'Page de réservation de la professionnelle', pageLien: 'Lien d\'acompte envoyé par la professionnelle', pageJour: 'Lien de paiement envoyé par la professionnelle',
     langue: 'Langue affichée', conditions: 'Conditions applicables aux clientes', version: 'version du {v}', politique: 'Politique d\'annulation', ip: 'Adresse IP', appareil: 'Appareil',
     sansPreuve: 'Paiement antérieur au 21 novembre 2026 : seul le texte de la case cochée et son heure ont été conservés.',
     rdv: 'Le rendez-vous', prestation: 'Prestation', date: 'Date', prix: 'Prix', reserveLe: 'Réservé le', rappel: 'Rappel envoyé le', confirmeLe: 'Venue confirmée par la cliente le',
@@ -45,7 +45,7 @@ const T = {
     imprimer: 'Save as PDF', anglais: 'English version',
     resume: 'Summary',
     rPaye: '{cliente} paid {total} to {pro} for this appointment on {date}.',
-    rAccord: 'Before paying, she ticked a box explicitly accepting the amount and the cancellation terms, on {date} (Glamia server time). The "Pay" button stayed disabled until the box was ticked.',
+    rAccord: 'Before paying, she ticked a box explicitly accepting the amount and the terms displayed, on {date} (Glamia server time). The "Pay" button stayed disabled until the box was ticked.',
     r3ds: 'The payment was authenticated by her bank (3-D Secure).',
     rAnnuleCliente: 'The appointment was cancelled by the client on {date}.',
     rAnnulePro: 'The appointment was cancelled by the professional on {date}.',
@@ -60,7 +60,7 @@ const T = {
     traduction: 'Exact translation', affichee: 'Texts shown to the client in {langue}. Under each one, its exact translation with the same values.',
     accordIntro: 'Texts displayed just above the "Pay" button, recorded word for word at the time of payment.',
     regle: 'Cancellation rule displayed', quiPaie: 'Who collects and who refunds', caseCochee: 'Box ticked by the client',
-    accepteLe: 'Accepted on', page: 'Page', pageResa: 'Professional\'s booking page', pageLien: 'Deposit link sent by the professional',
+    accepteLe: 'Accepted on', page: 'Page', pageResa: 'Professional\'s booking page', pageLien: 'Deposit link sent by the professional', pageJour: 'Payment link sent by the professional',
     langue: 'Display language', conditions: 'Terms applicable to clients', version: 'version of {v}', politique: 'Cancellation policy', ip: 'IP address', appareil: 'Device',
     sansPreuve: 'Payment made before 21 November 2026: only the text of the ticked box and its time were kept.',
     rdv: 'The appointment', prestation: 'Service', date: 'Date', prix: 'Price', reserveLe: 'Booked on', rappel: 'Reminder sent on', confirmeLe: 'Attendance confirmed by the client on',
@@ -75,7 +75,7 @@ const T = {
     imprimer: 'Guardar en PDF', anglais: 'English version',
     resume: 'Resumen',
     rPaye: '{cliente} pagó {total} a {pro} por esta cita el {date}.',
-    rAccord: 'Antes de pagar, marcó una casilla aceptando expresamente el importe y las condiciones de cancelación, el {date} (hora del servidor de Glamia). El botón «Pagar» permanecía inactivo mientras la casilla no estuviera marcada.',
+    rAccord: 'Antes de pagar, marcó una casilla aceptando expresamente el importe y las condiciones mostradas, el {date} (hora del servidor de Glamia). El botón «Pagar» permanecía inactivo mientras la casilla no estuviera marcada.',
     r3ds: 'El pago fue autenticado por su banco (3-D Secure).',
     rAnnuleCliente: 'La cita fue cancelada por la clienta el {date}.',
     rAnnulePro: 'La cita fue cancelada por la profesional el {date}.',
@@ -90,7 +90,7 @@ const T = {
     traduction: 'Traducción exacta', affichee: 'Textos mostrados a la clienta en {langue}. Bajo cada uno, su traducción exacta con los mismos valores.',
     accordIntro: 'Textos mostrados justo encima del botón «Pagar», registrados palabra por palabra en el momento del pago.',
     regle: 'Regla de cancelación mostrada', quiPaie: 'Quién cobra y quién reembolsa', caseCochee: 'Casilla marcada por la clienta',
-    accepteLe: 'Aceptada el', page: 'Página', pageResa: 'Página de reserva de la profesional', pageLien: 'Enlace de señal enviado por la profesional',
+    accepteLe: 'Aceptada el', page: 'Página', pageResa: 'Página de reserva de la profesional', pageLien: 'Enlace de señal enviado por la profesional', pageJour: 'Enlace de pago enviado por la profesional',
     langue: 'Idioma mostrado', conditions: 'Condiciones aplicables a las clientas', version: 'versión del {v}', politique: 'Política de cancelación', ip: 'Dirección IP', appareil: 'Dispositivo',
     sansPreuve: 'Pago anterior al 21 de noviembre de 2026: solo se conservaron el texto de la casilla marcada y su hora.',
     rdv: 'La cita', prestation: 'Servicio', date: 'Fecha', prix: 'Precio', reserveLe: 'Reservada el', rappel: 'Recordatorio enviado el', confirmeLe: 'Asistencia confirmada por la clienta el',
@@ -105,7 +105,7 @@ const T = {
     imprimer: 'Salva in PDF', anglais: 'English version',
     resume: 'In sintesi',
     rPaye: '{cliente} ha pagato {total} a {pro} per questo appuntamento il {date}.',
-    rAccord: 'Prima di pagare, ha spuntato una casella accettando esplicitamente l\'importo e le condizioni di cancellazione, il {date} (ora del server Glamia). Il pulsante «Paga» restava inattivo finché la casella non era spuntata.',
+    rAccord: 'Prima di pagare, ha spuntato una casella accettando esplicitamente l\'importo e le condizioni mostrate, il {date} (ora del server Glamia). Il pulsante «Paga» restava inattivo finché la casella non era spuntata.',
     r3ds: 'Il pagamento è stato autenticato dalla sua banca (3-D Secure).',
     rAnnuleCliente: 'L\'appuntamento è stato annullato dalla cliente il {date}.',
     rAnnulePro: 'L\'appuntamento è stato annullato dalla professionista il {date}.',
@@ -120,7 +120,7 @@ const T = {
     traduction: 'Traduzione esatta', affichee: 'Testi mostrati alla cliente in {langue}. Sotto ciascuno, la sua traduzione esatta con gli stessi valori.',
     accordIntro: 'Testi mostrati appena sopra il pulsante «Paga», registrati parola per parola al momento del pagamento.',
     regle: 'Regola di cancellazione mostrata', quiPaie: 'Chi incassa e chi rimborsa', caseCochee: 'Casella spuntata dalla cliente',
-    accepteLe: 'Accettata il', page: 'Pagina', pageResa: 'Pagina di prenotazione della professionista', pageLien: 'Link di acconto inviato dalla professionista',
+    accepteLe: 'Accettata il', page: 'Pagina', pageResa: 'Pagina di prenotazione della professionista', pageLien: 'Link di acconto inviato dalla professionista', pageJour: 'Link di pagamento inviato dalla professionista',
     langue: 'Lingua mostrata', conditions: 'Condizioni applicabili alle clienti', version: 'versione del {v}', politique: 'Politica di cancellazione', ip: 'Indirizzo IP', appareil: 'Dispositivo',
     sansPreuve: 'Pagamento anteriore al 21 novembre 2026: sono stati conservati solo il testo della casella spuntata e la sua ora.',
     rdv: 'L\'appuntamento', prestation: 'Prestazione', date: 'Data', prix: 'Prezzo', reserveLe: 'Prenotato il', rappel: 'Promemoria inviato il', confirmeLe: 'Presenza confermata dalla cliente il',
@@ -142,9 +142,18 @@ import en from '@/locales/en.json'
 import es from '@/locales/es.json'
 import it from '@/locales/it.json'
 const RESA: Record<string, Record<string, string>> = { fr: fr.resa, en: en.resa, es: es.resa, it: it.resa } as unknown as Record<string, Record<string, string>>
-export type Valeurs = { delai?: number | null; acompte?: number | null; frais?: number | null; total?: number | null; pro?: string | null }
-export function encadreTraduit(langue: string, v: Valeurs | null | undefined): { regle: string; paiement: string; case: string } | null {
+export type Valeurs = { type?: string | null; delai?: number | null; acompte?: number | null; montant?: number | null; frais?: number | null; total?: number | null; pro?: string | null; date?: string | null }
+export function encadreTraduit(langue: string, v: Valeurs | null | undefined): { regle: string | null; paiement: string; case: string } | null {
   const r = RESA[langue]
+  // Le lien du jour : pas de règle d'annulation, une case avec la date de la prestation.
+  if (r && v?.type === 'jour') {
+    if (v.montant == null || v.frais == null || v.total == null || !v.pro || !v.date) return null
+    const eurJ = (c: number) => (c / 100).toLocaleString(LOCALES[langue as Langue] ?? 'en-GB', { style: 'currency', currency: 'EUR', minimumFractionDigits: c % 100 ? 2 : 0 })
+    const jour = new Date(`${v.date}T12:00:00Z`).toLocaleDateString(LOCALES[langue as Langue] ?? 'en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+    const pj: Record<string, string> = { somme: eurJ(v.total), pro: v.pro, date: jour, montant: eurJ(v.montant), frais: eurJ(v.frais), conditions: r.conditionsClientes }
+    const fj = (cle: string) => (r[cle] ?? '').replace(/%\{(\w+)\}/g, (_, k) => pj[k] ?? '')
+    return { regle: null, paiement: fj('paiementJourMollie'), case: fj('consentJourMollie') }
+  }
   if (!r || !v || v.delai == null || v.acompte == null || v.frais == null || v.total == null || !v.pro) return null
   const eur = (c: number) => (c / 100).toLocaleString(LOCALES[langue as Langue] ?? 'en-GB', { style: 'currency', currency: 'EUR', minimumFractionDigits: c % 100 ? 2 : 0 })
   const p: Record<string, string> = { delai: String(v.delai), somme: eur(v.acompte), pro: v.pro, acompte: eur(v.acompte), frais: eur(v.frais), conditions: r.conditionsClientes }

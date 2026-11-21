@@ -303,7 +303,9 @@
     "conditionsClientes": "condiciones para clientas",
     "condMollieTitre": "Cancelación gratuita hasta %{delai} h antes",
     "condMollieTexte": ": se te devuelve la señal de %{somme} (los gastos de reserva no). Después, o si no acudes, se conserva.",
-    "emailPourContinuer": "Indica tu correo para continuar"
+    "emailPourContinuer": "Indica tu correo para continuar",
+    "paiementJourMollie": "Pago abonado directamente a %{pro}, protegido por Mollie (tarjeta, Apple Pay, Google Pay). Glamia nunca guarda tu dinero.",
+    "consentJourMollie": "Acepto pagar %{somme} a %{pro} por mi servicio del %{date} (%{montant} + %{frais} de gastos de reserva) y las %{conditions}."
   },
   "commun": {
     "chargement": "Cargando...",
@@ -928,5 +930,16 @@
   "pageLegale": {
     "retour": "Volver al sitio de Glamia",
     "slogan": "Glamia, la app de las profesionales de la belleza independientes"
+  },
+  "lienJour": {
+    "titre": "Paga tu servicio",
+    "prestation": "Servicio",
+    "dejaRegle": "Ya pagado (señal)",
+    "frais": "Gastos de reserva",
+    "total": "Total",
+    "valable": "Enlace válido hasta la medianoche del %{date}.",
+    "payeTitre": "Tu servicio está pagado",
+    "payeTexte": "¡Gracias! Recibirás la confirmación del pago por correo.",
+    "fermeTexte": "Contacta con %{pro} para pagar tu servicio."
   }
 }

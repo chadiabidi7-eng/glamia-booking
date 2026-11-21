@@ -303,7 +303,9 @@
     "conditionsClientes": "terms for clients",
     "condMollieTitre": "Free cancellation up to %{delai} h before",
     "condMollieTexte": ": your %{somme} deposit is returned (the booking fee is not). After that, or if you don't show up, it is kept.",
-    "emailPourContinuer": "Enter your email to continue"
+    "emailPourContinuer": "Enter your email to continue",
+    "paiementJourMollie": "Paid directly to %{pro}, secured by Mollie (card, Apple Pay, Google Pay). Glamia never holds your money.",
+    "consentJourMollie": "I agree to pay %{somme} to %{pro} for my service on %{date} (%{montant} + %{frais} booking fee) and the %{conditions}."
   },
   "commun": {
     "chargement": "Loading...",
@@ -931,5 +933,16 @@
   "pageLegale": {
     "retour": "Back to the Glamia website",
     "slogan": "Glamia, the app for independent beauty professionals"
+  },
+  "lienJour": {
+    "titre": "Pay for your service",
+    "prestation": "Service",
+    "dejaRegle": "Already paid (deposit)",
+    "frais": "Booking fee",
+    "total": "Total",
+    "valable": "Link valid until midnight on %{date}.",
+    "payeTitre": "Your service is paid",
+    "payeTexte": "Thank you! You will receive the payment confirmation by email.",
+    "fermeTexte": "Contact %{pro} to pay for your service."
   }
 }

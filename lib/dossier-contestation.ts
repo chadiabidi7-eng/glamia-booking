@@ -29,7 +29,7 @@ export type Paiement = {
   devise: string; statut: string; montant_rembourse: number; politique_texte: string | null; politique_version: string | null
   politique_acceptee_le: string | null; cliente_mail: string | null; cree_le: string; paye_le: string | null
   preuve: {
-    acceptee_le: string; page: string; langue: string | null; encadre: { regle?: string | null; paiement?: string | null; case?: string | null; valeurs?: { delai?: number | null; acompte?: number | null; frais?: number | null; total?: number | null; pro?: string | null } }
+    acceptee_le: string; page: string; langue: string | null; encadre: { regle?: string | null; paiement?: string | null; case?: string | null; valeurs?: { type?: string | null; delai?: number | null; acompte?: number | null; montant?: number | null; frais?: number | null; total?: number | null; pro?: string | null; date?: string | null } }
     conditions_version: string | null; ip: string | null; appareil: string | null
     // Aucune donnée de carte (Chadi, 21 nov. 2026) : le moyen et la vérification par la banque, rien d'autre.
     mollie: { methode?: string; securite?: string | null; portefeuille?: string | null } | null

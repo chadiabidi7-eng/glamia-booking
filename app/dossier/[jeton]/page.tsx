@@ -136,12 +136,12 @@ function BlocPaiement({ p, t, langue, instant, euros }: { p: Paiement; t: Return
       <Bloc titre={t.accord}>
         <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>{pr ? t.accordIntro : t.sansPreuve}</p>
         {traduit && <p style={{ margin: '-6px 0 14px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>{t.affichee.replace('{langue}', nomLangue(langue, pr!.langue!))}</p>}
-        {pr?.encadre?.regle && <Citation titre={t.regle} texte={pr.encadre.regle} traduction={traduit?.regle} legende={legende} />}
+        {pr?.encadre?.regle && <Citation titre={t.regle} texte={pr.encadre.regle} traduction={traduit?.regle ?? null} legende={legende} />}
         {pr?.encadre?.paiement && <Citation titre={t.quiPaie} texte={pr.encadre.paiement} traduction={traduit?.paiement} legende={legende} />}
         {(pr?.encadre?.case || p.politique_texte) && <Citation titre={t.caseCochee} texte={`☑ ${pr?.encadre?.case || p.politique_texte}`} traduction={traduit ? `☑ ${traduit.case}` : null} legende={legende} />}
         <Lignes l={[
           [t.accepteLe, instant(pr?.acceptee_le ?? p.politique_acceptee_le)],
-          [t.page, pr ? (pr.page === 'lien_acompte' ? t.pageLien : t.pageResa) : null],
+          [t.page, pr ? (pr.page === 'lien_acompte' ? t.pageLien : pr.page === 'lien_jour' ? t.pageJour : t.pageResa) : null],
           [t.langue, pr?.langue?.toUpperCase() ?? null],
           [t.conditions, pr?.conditions_version ? <><a href={conditionsUrl} style={{ color: ROSE }}>{remplir(t.version, { v: pr.conditions_version })}</a></> : null],
           [t.politique, p.politique_version],

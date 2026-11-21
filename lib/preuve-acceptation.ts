@@ -25,7 +25,7 @@ const texte = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? v.
 
 export async function enregistrerPreuve(req: NextRequest, p: {
   paiementId: unknown
-  page: 'page_reservation' | 'lien_acompte'
+  page: 'page_reservation' | 'lien_acompte' | 'lien_jour'
   langue: unknown
   encadre: unknown
   caseTexte: unknown
@@ -35,7 +35,11 @@ export async function enregistrerPreuve(req: NextRequest, p: {
   const e = (p.encadre && typeof p.encadre === 'object' ? p.encadre : {}) as Record<string, unknown>
   const v = (e.valeurs && typeof e.valeurs === 'object' ? e.valeurs : {}) as Record<string, unknown>
   const entier = (x: unknown) => (Number.isInteger(x) && (x as number) >= 0 && (x as number) < 10_000_000 ? x as number : null)
-  const valeurs = { delai: entier(v.delai), acompte: entier(v.acompte), frais: entier(v.frais), total: entier(v.total), pro: texte(v.pro, 80) }
+  const valeurs = {
+    type: v.type === 'jour' ? 'jour' : 'acompte',
+    delai: entier(v.delai), acompte: entier(v.acompte), montant: entier(v.montant), frais: entier(v.frais), total: entier(v.total),
+    pro: texte(v.pro, 80), date: texte(v.date, 10),
+  }
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null
   const { error } = await supabaseAdmin.from('mollie_preuves').upsert({
     paiement_id: p.paiementId,
