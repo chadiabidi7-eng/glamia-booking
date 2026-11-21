@@ -31,7 +31,8 @@ export type Paiement = {
   preuve: {
     acceptee_le: string; page: string; langue: string | null; encadre: { regle?: string | null; paiement?: string | null; case?: string | null; valeurs?: { delai?: number | null; acompte?: number | null; frais?: number | null; total?: number | null; pro?: string | null } }
     conditions_version: string | null; ip: string | null; appareil: string | null
-    mollie: { methode?: string; carte?: string | null; fin?: string | null; pays?: string | null; securite?: string | null; portefeuille?: string | null } | null
+    // Aucune donnée de carte (Chadi, 21 nov. 2026) : le moyen et la vérification par la banque, rien d'autre.
+    mollie: { methode?: string; securite?: string | null; portefeuille?: string | null } | null
   } | null
 }
 

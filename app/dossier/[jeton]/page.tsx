@@ -110,7 +110,8 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
 
 function BlocPaiement({ p, t, langue, instant, euros }: { p: Paiement; t: ReturnType<typeof textesDossier>; langue: Langue; instant: (v: unknown) => string | null; euros: (c: number, d?: string) => string }) {
   const m = p.preuve?.mollie
-  const moyen = m ? [m.portefeuille === 'applepay' ? 'Apple Pay' : m.portefeuille === 'googlepay' ? 'Google Pay' : null, m.carte, m.fin ? `•••• ${m.fin}` : null].filter(Boolean).join(' · ') || m.methode : null
+  // Le moyen seulement : aucune donnée de carte n'est gardée chez Glamia (la référence Mollie suffit à les retrouver).
+  const moyen = m ? (m.portefeuille === 'applepay' ? 'Apple Pay' : m.portefeuille === 'googlepay' ? 'Google Pay' : m.methode === 'creditcard' ? t.carteBancaire : m.methode ?? null) : null
   const pr = p.preuve
   // Lu dans une autre langue que celle qu'a vue la cliente : la traduction exacte sous chaque texte.
   const traduit = pr?.langue && pr.langue !== langue ? encadreTraduit(langue, pr.encadre?.valeurs) : null
@@ -127,7 +128,6 @@ function BlocPaiement({ p, t, langue, instant, euros }: { p: Paiement; t: Return
           [t.moyen, moyen],
           // Mollie ne dit pas toujours si la banque a vérifié : sans réponse, la ligne n'apparaît pas.
           [t.auth, m?.securite === '3dsecure' ? t.authOui : m?.securite === 'normal' ? t.authNon : null],
-          [t.pays, m?.pays ?? null],
           [t.ref, p.mollie_paiement_id],
           [t.rembourse, p.montant_rembourse > 0 ? euros(p.montant_rembourse, p.devise) : t.aucun],
           [t.etat, t.etats[p.statut] ?? p.statut],
