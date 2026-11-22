@@ -3,7 +3,7 @@
 // site (loi pour la confiance dans l'économie numérique, art. 6 ; Code de la consommation)
 // et regardée par Mollie à la vérification. Affichée en bas des conditions d'utilisation,
 // des conditions clientes et de la politique de confidentialité.
-// À compléter quand Chadi l'aura donné : le numéro de téléphone (et la mention de TVA).
+// Téléphone et franchise de TVA donnés par Chadi le 22 nov. 2026 (pas de numéro de TVA).
 // ─────────────────────────────────────────────────────────────────────────────
 import i18n from '@/lib/i18n';
 
@@ -14,6 +14,7 @@ export const EDITEUR = {
   siret: '108 656 331 00015',
   adresse: '21 boulevard François et Émile Zola, 13100 Aix-en-Provence, France',
   email: 'contact@glamia.pro',
+  telephone: '+33 6 52 82 03 57',
 };
 
 export default function Editeur({ locale }: { locale: string }) {
@@ -26,7 +27,8 @@ export default function Editeur({ locale }: { locale: string }) {
         <p style={ligne}>{t('qui', { nom: EDITEUR.nom, commercial: EDITEUR.commercial })}</p>
         <p style={ligne}>SIREN {EDITEUR.siren} · SIRET {EDITEUR.siret}</p>
         <p style={ligne}>{t('adresse')} : {EDITEUR.adresse}</p>
-        <p style={ligne}>{t('contact')} : <a href={`mailto:${EDITEUR.email}`} style={{ color: '#B0578A' }}>{EDITEUR.email}</a></p>
+        <p style={ligne}>{t('contact')} : <a href={`mailto:${EDITEUR.email}`} style={{ color: '#B0578A' }}>{EDITEUR.email}</a> · <a href={`tel:${EDITEUR.telephone.replace(/ /g, '')}`} style={{ color: '#B0578A' }}>{EDITEUR.telephone}</a></p>
+        <p style={ligne}>{t('tva')}</p>
         <p style={ligne}>{t('publication', { nom: EDITEUR.nom })}</p>
         <p style={{ margin: 0 }}>{t('hebergement')}</p>
       </div>

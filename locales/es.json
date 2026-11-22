@@ -934,6 +934,7 @@
       "adresse": "Dirección",
       "contact": "Contacto",
       "publication": "Responsable de la publicación: %{nom}.",
+      "tva": "IVA no aplicable, artículo 293 B del Código general de impuestos francés.",
       "hebergement": "Alojamiento del sitio: Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, Estados Unidos. Los datos se alojan en la Unión Europea."
     },
     "retour": "Volver al sitio de Glamia",

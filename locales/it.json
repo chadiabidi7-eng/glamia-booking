@@ -931,6 +931,7 @@
       "adresse": "Indirizzo",
       "contact": "Contatto",
       "publication": "Responsabile della pubblicazione: %{nom}.",
+      "tva": "IVA non applicabile, articolo 293 B del Codice generale delle imposte francese.",
       "hebergement": "Hosting del sito: Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, Stati Uniti. I dati sono ospitati nell'Unione europea."
     },
     "retour": "Torna al sito Glamia",
