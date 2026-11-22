@@ -1,3 +1,4 @@
+import Editeur from '@/components/Editeur';
 import i18n from '@/lib/i18n';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidential
           </div>
         </div>
       ))}
+      <Editeur locale={locale} />
         </div>
 
         <footer style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>

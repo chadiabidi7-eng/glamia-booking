@@ -931,6 +931,14 @@
     "pour": "These terms are intended for clients who book an appointment with a beauty professional on a Glamia booking page. Professionals who use Glamia are subject to Glamia's general terms of use."
   },
   "pageLegale": {
+    "editeur": {
+      "titre": "Who publishes Glamia",
+      "qui": "Glamia is published by %{nom}, sole trader (entrepreneur individuel, EI), trading as %{commercial}.",
+      "adresse": "Address",
+      "contact": "Contact",
+      "publication": "Publication manager: %{nom}.",
+      "hebergement": "Website hosting: Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, United States. Data is hosted in the European Union."
+    },
     "retour": "Back to the Glamia website",
     "slogan": "Glamia, the app for independent beauty professionals"
   },

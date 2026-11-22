@@ -925,6 +925,14 @@
     "pour": "Ces conditions s'adressent aux clientes qui réservent un rendez-vous auprès d'une professionnelle de la beauté sur une page de réservation Glamia. Les professionnelles qui utilisent Glamia sont soumises aux conditions générales d'utilisation de Glamia."
   },
   "pageLegale": {
+    "editeur": {
+      "titre": "Qui édite Glamia",
+      "qui": "Glamia est édité par %{nom}, entrepreneur individuel (EI), nom commercial %{commercial}.",
+      "adresse": "Adresse",
+      "contact": "Contact",
+      "publication": "Responsable de la publication : %{nom}.",
+      "hebergement": "Hébergement du site : Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Les données sont hébergées dans l'Union européenne."
+    },
     "retour": "Retour au site Glamia",
     "slogan": "Glamia, l'app des indépendantes beauté"
   },

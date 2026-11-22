@@ -925,6 +925,14 @@
     "pour": "Queste condizioni sono destinate alle clienti che prenotano un appuntamento con una professionista della bellezza su una pagina di prenotazione Glamia. Le professioniste che utilizzano Glamia sono soggette alle condizioni generali d'uso di Glamia."
   },
   "pageLegale": {
+    "editeur": {
+      "titre": "Chi pubblica Glamia",
+      "qui": "Glamia è pubblicato da %{nom}, imprenditrice individuale (entrepreneur individuel, EI), nome commerciale %{commercial}.",
+      "adresse": "Indirizzo",
+      "contact": "Contatto",
+      "publication": "Responsabile della pubblicazione: %{nom}.",
+      "hebergement": "Hosting del sito: Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, Stati Uniti. I dati sono ospitati nell'Unione europea."
+    },
     "retour": "Torna al sito Glamia",
     "slogan": "Glamia, l'app delle professioniste della bellezza indipendenti"
   },
