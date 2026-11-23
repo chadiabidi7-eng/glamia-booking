@@ -7,7 +7,9 @@ export const dynamic = 'force-static'
 export function GET() {
   return Response.json({
     applinks: {
-      details: [{ appIDs: ['W46Z5S22LX.com.chadiabidi.glamia'], components: [{ '/': '/ouvrir/*' }] }],
+      // Transfert de l'app vers le compte de Nina (23 nov. 2026) : les deux équipes, le temps que
+      // tous les iPhone aient la version construite par l'équipe de Nina (S2YH36B727).
+      details: [{ appIDs: ['W46Z5S22LX.com.chadiabidi.glamia', 'S2YH36B727.com.chadiabidi.glamia'], components: [{ '/': '/ouvrir/*' }] }],
     },
   })
 }
