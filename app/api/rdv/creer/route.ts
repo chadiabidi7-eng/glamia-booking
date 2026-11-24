@@ -92,7 +92,10 @@ export async function POST(req: NextRequest) {
     const entetesGarde = parLeServeur && req.headers.get('x-glamia-source')
       ? new Headers({ 'x-forwarded-for': req.headers.get('x-glamia-source')! })
       : req.headers
-    const garde = await gardeReservation(pro_id, (body as { telephone?: unknown }).telephone, entetesGarde)
+    // UNE CLIENTE QUI A DÉJÀ PAYÉ N'EST PAS UN AUTOMATE (24 nov. 2026) : quand le serveur crée le
+    // rendez-vous d'un acompte payé, la garde ne s'applique pas. Sinon son refus était pris pour une
+    // panne, réessayé pendant 26 h, et l'argent restait chez la pro sans rendez-vous.
+    const garde = parLeServeur && intentId ? { ok: true as const } : await gardeReservation(pro_id, (body as { telephone?: unknown }).telephone, entetesGarde)
     if (garde.ok === false) {
       console.warn('[rdv/creer] garde :', garde.raison, pro_id)
       return NextResponse.json({ ok: false, raison: garde.raison }, { status: 429 })

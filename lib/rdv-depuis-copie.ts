@@ -67,7 +67,10 @@ export async function rdvDepuisCopie(admin: SupabaseClient, p: {
   const { date, heure } = copie.creation
   const { data: pro } = await admin.from('profiles').select('timezone').eq('id', proId).maybeSingle()
   if (`${date}T${heure}` <= jourChezLaPro(pro?.timezone) + 'T' + new Intl.DateTimeFormat('fr-FR', { timeZone: pro?.timezone || 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date())) {
-    return { ok: false, raison: 'date_passee' }
+    // L'heure est passée quand la confirmation du paiement arrive (24 nov. 2026) : la cliente est
+    // remboursée en entier (Glamia absorbe les frais), au lieu de laisser l'argent sans rendez-vous.
+    await p.rembourser().catch(() => null)
+    return { ok: false, raison: 'date_passee', extra: { rembourse: true } }
   }
 
   // ── LA CLIENTE ─────────────────────────────────────────────────────────
