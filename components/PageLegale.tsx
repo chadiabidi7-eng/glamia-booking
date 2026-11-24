@@ -94,7 +94,10 @@ export default function PageLegale({ bloc, lang }: { bloc: 'cgu' | 'confidential
           </h2>
           <div style={{ fontSize: 14, lineHeight: 1.7, color: '#374151' }}>
             {section.paragraphes.map((p, j) => (
-              <Paragraphe key={j} texte={p.replace('{contact}', `${contact} {contact}`)} lang={lang} />
+              // Un espace entre deux paragraphes (24 nov. 2026) : les longs passages étaient collés.
+              <div key={j} style={{ marginBottom: j < section.paragraphes.length - 1 ? 12 : 0 }}>
+                <Paragraphe texte={p.replace('{contact}', `${contact} {contact}`)} lang={lang} />
+              </div>
             ))}
             {section.liste && (
               <ul>{section.liste.map((l, j) => <li key={j}>{l}</li>)}</ul>
