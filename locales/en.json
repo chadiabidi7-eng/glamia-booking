@@ -501,7 +501,7 @@
   },
   "cgu": {
     "titre": "Terms of Use",
-    "maj": "Last updated: 28 October 2026",
+    "maj": "Last updated: 24 November 2026",
     "contact": "For any question:",
     "sections": [
       {
@@ -551,10 +551,15 @@
       {
         "titre": "6. Payments",
         "paragraphes": [
-          "Glamia lets you ask for a deposit, hold a card on file, take card payments and send payment links. Payments are processed by Stripe. Glamia is not a bank and never holds your money: funds move from your client to your own connected account.",
+          "Glamia lets you request a deposit when a client books, send a deposit link for an appointment already booked, and send a payment link on the day of the appointment. These payments are processed by Mollie B.V., Keizersgracht 126, 1015 CW Amsterdam, the Netherlands, a licensed payment institution supervised by De Nederlandsche Bank.",
+          "To take payments, you open your own Mollie account, in your name, from the app. That account is governed by the agreement you enter into directly with Mollie. Glamia is not a bank and never holds your money: every payment goes straight to your Mollie account, and you manage the payouts to your bank account.",
+          "By turning on payments, you authorise Glamia to act on your behalf on your Mollie account, within what you accepted in the app: view the payments for your appointments, collect Glamia's share of the booking fees, and refund your clients according to the cancellation policy you set and they accepted. You can withdraw this authorisation at any time from your Mollie account; online payments then stop.",
+          "Your clients pay a booking fee on top of the deposit, and you receive your deposit in full. Mollie deducts its own fees from your balance, in particular for each refund and for certain cards (business cards or cards issued outside Europe), at the amounts shown in the app. Mollie fees already deducted from a payment are not returned when it is refunded.",
+          "When a refund is owed to a client (cancellation within your policy's notice period, cancellation on your side, or a slot already taken at the time of payment), Glamia triggers it from your Mollie account, which requires your balance to cover it. Glamia recommends keeping on your account the amounts needed for upcoming refunds. If your balance is not enough, the refund waits until you top up your account, and new deposits are paused until it has gone out.",
           "You are responsible for the prices you set, for the cancellation and no-show terms you display to your clients, for issuing any refund you owe, and for your own tax and accounting obligations.",
           "The income you receive through Glamia is taxable and must be declared. In France, you must declare it to the tax authorities (impots.gouv.fr) and declare your social contributions to Urssaf (urssaf.fr; for micro-entrepreneurs: autoentrepreneur.urssaf.fr). If you work outside France, these steps are carried out with the authorities of your country. In accordance with Article 242 bis of the French General Tax Code, we remind you of these obligations and, where the law requires it (Articles 1649 ter A et seq. of the same code), we report to the tax authorities the amounts you received through Glamia.",
-          "Where you charge a card on file for a no-show, you must have shown your client the conditions before she paid or authorised the card. Chargebacks and disputes raised by your clients are between you and your client; we will give you the records we hold to help you respond."
+          "Chargebacks are between your client and you. Glamia gives you the evidence it holds, in particular the terms your client accepted with their date and time, to help you respond. In case of repeated chargebacks, deposits may be paused on your booking page.",
+          "If, following a refund or a chargeback on a payment collected on your Mollie account through Glamia, Glamia has to pay an amount to Mollie because your balance did not cover it, you agree to repay that amount to Glamia within 30 days."
         ]
       },
       {
@@ -568,7 +573,7 @@
         "titre": "8. The Service is provided “as is”",
         "paragraphes": [
           "We work hard to keep the Service available and accurate, but we do not promise that it will be uninterrupted, error-free, or fit for any particular purpose beyond what these Terms describe. To the fullest extent permitted by law, we exclude all implied warranties.",
-          "The Service depends on third parties — Apple, Stripe, hosting and email providers, mobile networks. We are not responsible for their failures, though we will do what we reasonably can to limit the effect on you."
+          "The Service relies on third parties — Apple, Mollie, our host, our email provider, mobile networks. We are not liable for their failures, while doing what is reasonably in our power to limit their effect on you."
         ]
       },
       {

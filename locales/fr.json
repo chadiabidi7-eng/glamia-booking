@@ -501,7 +501,7 @@
   },
   "cgu": {
     "titre": "Conditions Générales d'Utilisation",
-    "maj": "Dernière mise à jour : 28 octobre 2026",
+    "maj": "Dernière mise à jour : 24 novembre 2026",
     "contact": "Pour toute question :",
     "sections": [
       {
@@ -551,10 +551,15 @@
       {
         "titre": "6. Les paiements",
         "paragraphes": [
-          "Glamia vous permet de demander un acompte, de garder une empreinte bancaire, d'encaisser par carte et d'envoyer des liens de paiement. Les paiements sont traités par Stripe. Glamia n'est pas une banque et ne détient jamais votre argent : les fonds vont de votre cliente à votre propre compte connecté.",
+          "Glamia vous permet de demander un acompte au moment de la réservation, d'envoyer un lien d'acompte pour un rendez-vous déjà pris, et d'envoyer un lien de paiement le jour du rendez-vous. Ces paiements sont traités par Mollie B.V., Keizersgracht 126, 1015 CW Amsterdam, Pays-Bas, établissement de paiement agréé et supervisé par De Nederlandsche Bank.",
+          "Pour encaisser, vous ouvrez depuis l'application votre propre compte Mollie, à votre nom. Ce compte est régi par le contrat que vous concluez directement avec Mollie. Glamia n'est pas une banque et ne détient jamais votre argent : chaque paiement arrive directement sur votre compte Mollie, et c'est vous qui en gérez les versements vers votre compte bancaire.",
+          "En activant les paiements, vous autorisez Glamia à agir pour vous sur votre compte Mollie, dans la limite de ce que vous avez accepté dans l'application : consulter les paiements de vos rendez-vous, prélever la part de Glamia sur les frais de réservation, et rembourser vos clientes selon la politique d'annulation que vous avez fixée et qu'elles ont acceptée. Vous pouvez retirer cette autorisation à tout moment depuis votre compte Mollie ; les paiements en ligne s'arrêtent alors.",
+          "Vos clientes paient des frais de réservation en plus de l'acompte, et vous recevez votre acompte en entier. Mollie prélève sur votre solde ses propres frais, notamment pour chaque remboursement et pour certaines cartes (cartes professionnelles ou émises hors d'Europe), selon les montants indiqués dans l'application. Les frais de Mollie déjà prélevés sur un paiement ne sont pas rendus en cas de remboursement.",
+          "Lorsqu'un remboursement est dû à une cliente (annulation dans les délais de votre politique, annulation de votre fait, ou créneau déjà pris au moment du paiement), Glamia le déclenche depuis votre compte Mollie, ce qui suppose que votre solde le couvre. Glamia vous recommande de garder sur votre compte les sommes nécessaires aux remboursements à venir. Si votre solde ne suffit pas, le remboursement attend que vous créditiez votre compte, et les nouveaux acomptes sont mis en pause jusqu'à ce qu'il soit parti.",
           "Vous restez responsable des prix que vous fixez, des conditions d'annulation et d'absence que vous affichez à vos clientes, des remboursements que vous devez, et de vos obligations fiscales et comptables.",
           "Les revenus que vous encaissez grâce à Glamia sont imposables et doivent être déclarés. En France, vous devez les déclarer à l'administration fiscale (impots.gouv.fr) et déclarer vos cotisations sociales à l'Urssaf (urssaf.fr ; pour les micro-entrepreneurs : autoentrepreneur.urssaf.fr). Si vous exercez hors de France, ces démarches se font auprès des administrations de votre pays. Conformément à l'article 242 bis du Code général des impôts, nous vous rappelons ces obligations, et lorsque la loi l'exige (articles 1649 ter A et suivants du même code), nous transmettons à l'administration fiscale les montants que vous avez perçus par l'intermédiaire de Glamia.",
-          "Lorsque vous prélevez une empreinte pour une absence, vous devez avoir affiché les conditions à votre cliente AVANT qu'elle ne paie ou n'autorise sa carte. Les contestations bancaires opposent votre cliente et vous ; nous vous remettrons les traces dont nous disposons pour vous aider à y répondre."
+          "Les contestations bancaires opposent votre cliente et vous. Glamia vous remet les preuves dont elle dispose, notamment les conditions acceptées par votre cliente avec leur date et leur heure, pour vous aider à y répondre. En cas de contestations répétées, les acomptes peuvent être mis en pause sur votre page de réservation.",
+          "Si, à la suite d'un remboursement ou d'une contestation concernant un paiement encaissé sur votre compte Mollie par l'intermédiaire de Glamia, Glamia est amenée à payer une somme à Mollie parce que votre solde ne la couvrait pas, vous vous engagez à rembourser cette somme à Glamia dans un délai de 30 jours."
         ]
       },
       {
@@ -568,7 +573,7 @@
         "titre": "8. Le Service est fourni en l'état",
         "paragraphes": [
           "Nous mettons tout en œuvre pour que le Service soit disponible et exact, sans pouvoir garantir un fonctionnement ininterrompu ni exempt d'erreur. Nous sommes tenus d'une obligation de moyens.",
-          "Le Service dépend de tiers — Apple, Stripe, hébergeur, prestataire d'emails, réseaux mobiles. Nous ne répondons pas de leurs défaillances, tout en faisant ce qui est raisonnablement en notre pouvoir pour en limiter l'effet sur vous."
+          "Le Service dépend de tiers — Apple, Mollie, hébergeur, prestataire d'emails, réseaux mobiles. Nous ne répondons pas de leurs défaillances, tout en faisant ce qui est raisonnablement en notre pouvoir pour en limiter l'effet sur vous."
         ]
       },
       {

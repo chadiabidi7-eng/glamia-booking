@@ -509,7 +509,7 @@
   },
   "cgu": {
     "titre": "Condiciones Generales de Uso",
-    "maj": "Última actualización: 28 de octubre de 2026",
+    "maj": "Última actualización: 24 de noviembre de 2026",
     "contact": "Para cualquier duda:",
     "sections": [
       {
@@ -559,10 +559,15 @@
       {
         "titre": "6. Los pagos",
         "paragraphes": [
-          "Glamia te permite pedir un anticipo, guardar una retención en tarjeta, cobrar con tarjeta y enviar enlaces de pago. Los pagos los procesa Stripe. Glamia no es un banco y nunca retiene tu dinero: los fondos van de tu clienta a tu propia cuenta conectada.",
+          "Glamia te permite pedir un anticipo en el momento de la reserva, enviar un enlace de anticipo para una cita ya reservada y enviar un enlace de pago el día de la cita. Estos pagos los procesa Mollie B.V., Keizersgracht 126, 1015 CW Ámsterdam, Países Bajos, entidad de pago autorizada y supervisada por De Nederlandsche Bank.",
+          "Para cobrar, abres desde la aplicación tu propia cuenta Mollie, a tu nombre. Esa cuenta se rige por el contrato que celebras directamente con Mollie. Glamia no es un banco y nunca tiene tu dinero: cada pago llega directamente a tu cuenta Mollie, y eres tú quien gestiona las transferencias a tu cuenta bancaria.",
+          "Al activar los pagos, autorizas a Glamia a actuar por ti en tu cuenta Mollie, dentro de lo que aceptaste en la aplicación: consultar los pagos de tus citas, cobrar la parte de Glamia de los gastos de reserva y reembolsar a tus clientas según la política de cancelación que fijaste y que ellas aceptaron. Puedes retirar esta autorización en cualquier momento desde tu cuenta Mollie; los pagos en línea se detienen entonces.",
+          "Tus clientas pagan unos gastos de reserva además del anticipo, y tú recibes el anticipo íntegro. Mollie descuenta de tu saldo sus propias comisiones, en particular por cada reembolso y por ciertas tarjetas (tarjetas de empresa o emitidas fuera de Europa), según los importes indicados en la aplicación. Las comisiones de Mollie ya descontadas de un pago no se devuelven en caso de reembolso.",
+          "Cuando se debe un reembolso a una clienta (cancelación dentro del plazo de tu política, cancelación por tu parte o franja ya ocupada en el momento del pago), Glamia lo inicia desde tu cuenta Mollie, para lo cual tu saldo debe cubrirlo. Glamia te recomienda mantener en tu cuenta las cantidades necesarias para los próximos reembolsos. Si tu saldo no basta, el reembolso espera a que recargues tu cuenta, y los nuevos anticipos se pausan hasta que se haya realizado.",
           "Sigues siendo responsable de los precios que fijas, de las condiciones de cancelación y de ausencia que muestras a tus clientas, de las devoluciones que debas hacer y de tus obligaciones fiscales y contables.",
           "Los ingresos que cobras a través de Glamia están sujetos a impuestos y deben declararse. En Francia, debes declararlos a la administración tributaria (impots.gouv.fr) y declarar tus cotizaciones sociales a la Urssaf (urssaf.fr; para microempresarios: autoentrepreneur.urssaf.fr). Si ejerces fuera de Francia, estos trámites se realizan ante las administraciones de tu país. De conformidad con el artículo 242 bis del Código General de Impuestos francés, te recordamos estas obligaciones y, cuando la ley lo exige (artículos 1649 ter A y siguientes del mismo código), comunicamos a la administración tributaria los importes que has percibido a través de Glamia.",
-          "Cuando cobras una retención por una ausencia, debes haber mostrado las condiciones a tu clienta ANTES de que pagara o autorizara su tarjeta. Las reclamaciones bancarias son un asunto entre tu clienta y tú; te entregaremos los registros de que dispongamos para ayudarte a responder."
+          "Las disputas bancarias son entre tu clienta y tú. Glamia te entrega las pruebas de que dispone, en particular las condiciones aceptadas por tu clienta con su fecha y hora, para ayudarte a responder. En caso de disputas repetidas, los anticipos pueden pausarse en tu página de reservas.",
+          "Si, a raíz de un reembolso o de una disputa sobre un pago cobrado en tu cuenta Mollie a través de Glamia, Glamia tiene que pagar una cantidad a Mollie porque tu saldo no la cubría, te comprometes a devolver esa cantidad a Glamia en un plazo de 30 días."
         ]
       },
       {
@@ -576,7 +581,7 @@
         "titre": "8. El Servicio se presta tal cual",
         "paragraphes": [
           "Hacemos todo lo posible para que el Servicio esté disponible y sea exacto, sin poder garantizar un funcionamiento ininterrumpido ni libre de errores. Asumimos una obligación de medios.",
-          "El Servicio depende de terceros — Apple, Stripe, el proveedor de alojamiento, el proveedor de correo, las redes móviles. No respondemos de sus fallos, aunque hacemos lo que razonablemente está en nuestra mano para limitar su efecto sobre ti."
+          "El Servicio depende de terceros — Apple, Mollie, el proveedor de alojamiento, el proveedor de correo electrónico, las redes móviles. No respondemos de sus fallos, aunque hacemos lo razonablemente posible para limitar su efecto sobre ti."
         ]
       },
       {
