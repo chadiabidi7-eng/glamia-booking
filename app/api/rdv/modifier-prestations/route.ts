@@ -7,6 +7,8 @@ import { jugerDeplacement, librePour, personnesDuRdv, techniquesPropres } from '
 import { assistanteValide, dureeChezAssistante, tenusCommeRdv } from '@/lib/equipe'
 import { messageModification, prevenirDuDeplacement } from '@/lib/notif-deplacement'
 import { refusDelaiModif } from '@/lib/delai-modif'
+import { prixReelDuPanier } from '@/lib/prix-serveur'
+import { majorer } from '@/lib/majoration'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guichet serveur — modification des prestations d'un RDV par la CLIENTE.
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rdv } = await supabaseAdmin
     .from('rendez_vous')
-    .select('id, date, duree, techniques, praticienne_id, statut, nb_decalages, pro_id, cliente:clientes(telephone, prenom)')
+    .select('id, date, duree, techniques, praticienne_id, statut, nb_decalages, pro_id, cliente_id, majoration_appliquee, fidelite_appliquee, reduction_appliquee, cliente:clientes(telephone, prenom)')
     .eq('id', rdvId)
     .maybeSingle()
   if (!rdv) return NextResponse.json({ error: 'rdv_introuvable' }, { status: 404 })
@@ -78,13 +80,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'rdv_annule' }, { status: 409 })
   }
 
-  const prix = typeof body.prix === 'number' && body.prix > 0 ? body.prix : null
+  // LE PRIX EST RECALCULÉ PAR LE SERVEUR (24 nov. 2026) : avant, le prix envoyé par la page était
+  // repris tel quel, et une cliente pouvait envoyer un prix plus bas puis payer moins avec le lien
+  // du jour. Comme à la réservation : le catalogue de la pro, la majoration du créneau déjà
+  // appliquée, puis les remises vérifiées (fidélité, réduction) de cette cliente.
+  const reel = await prixReelDuPanier(rdv.pro_id as string, body.techniques, null, String(newDate ?? rdv.date).slice(0, 10))
+  if (!reel) return NextResponse.json({ error: 'prestation_inconnue' }, { status: 409 })
+  // Les remises DÉJÀ ACCORDÉES à ce rendez-vous (vérifiées par le serveur à la réservation, écrites
+  // par lui) sont réappliquées telles quelles : les revérifier les ferait perdre, la récompense de
+  // fidélité ayant été consommée par ce rendez-vous même.
+  const appliquer = (prixBase: number, r: unknown): number => {
+    const x = (r ?? null) as { type?: string; valeur?: number } | null
+    if (!x) return prixBase
+    if (x.type === 'gratuit') return 0
+    if (typeof x.valeur !== 'number' || x.valeur <= 0) return prixBase
+    return x.type === 'euros' ? Math.max(0, prixBase - x.valeur) : Math.round(prixBase * (1 - x.valeur / 100))
+  }
+  const avecMajoration = majorer(reel.prix, Number((rdv.majoration_appliquee as { pourcentage?: number } | null)?.pourcentage) || 0)
+  const apresFidelite = appliquer(avecMajoration, rdv.fidelite_appliquee)
+  const final = apresFidelite > 0 ? appliquer(apresFidelite, rdv.reduction_appliquee) : 0
+  const prix = final > 0 ? final : null
+  if (typeof body.prix === 'number' && prix !== null && Math.abs(body.prix - prix) > 0.009) {
+    console.warn('[rdv/modifier-prestations] prix de la page corrigé par le serveur', rdvId, body.prix, '→', prix)
+  }
   let praticienneApres: string | null = (rdv.praticienne_id as string | null) ?? null
   const patch: Record<string, unknown> = {
-    techniques: body.techniques,
+    techniques: reel.techniques,
     technique: body.technique,
     specialite: body.specialite,
-    duree: body.duree,
+    duree: reel.duree,
     prix,
   }
 
