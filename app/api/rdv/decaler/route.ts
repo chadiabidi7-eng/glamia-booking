@@ -32,7 +32,14 @@ async function decalageBloque(rdvId: string, dateRdv: string, proId: string): Pr
   const { data } = await supabaseAdmin
     .from('paiements').select('id').eq('rdv_id', rdvId)
     .in('statut', ['empreinte_posee', 'acompte_paye', 'paye']).limit(1)
-  return (data ?? []).length > 0
+  if ((data ?? []).length > 0) return true
+  // MOLLIE (24 nov. 2026) : la même règle pour un acompte Mollie encore gardé. Sans elle, une
+  // cliente décalait son rendez-vous du lendemain à la semaine suivante, puis annulait « à
+  // temps » et était remboursée (constaté en essai).
+  const { data: mollie } = await supabaseAdmin
+    .from('mollie_paiements').select('id').eq('rdv_id', rdvId)
+    .in('statut', ['paye', 'rembourse_partiel']).limit(1)
+  return (mollie ?? []).length > 0
 }
 
 export async function POST(req: NextRequest) {
